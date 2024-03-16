@@ -1,0 +1,15 @@
+{
+    "image": "opencfd/openfoam-default",
+    "features": {
+        "ghcr.io/devcontainers/features/git": {},
+        "ghcr.io/devcontainers/features/python": {}
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "github.vscode-github-actions"
+            ]
+        }
+    },
+    "remoteUser": "sudofoam"
+}
