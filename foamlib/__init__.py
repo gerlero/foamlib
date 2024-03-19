@@ -1,4 +1,4 @@
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 from ._cases import FoamCase, AsyncFoamCase, FoamTimeDirectory
 from ._dictionaries import FoamFile, FoamDictionary, FoamDimensioned, FoamDimensionSet
