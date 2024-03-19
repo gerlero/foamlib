@@ -19,25 +19,241 @@ try:
 except ModuleNotFoundError:
     np = None
 
+FoamValue = Union[str, int, float, bool, Sequence["FoamValue"]]
 
-class FoamDictionary(
-    MutableMapping[str, Union["FoamDictionary.Value", "FoamDictionary"]]
-):
-    Value = Union[str, int, float, bool, Sequence["Value"]]
-    DimensionSet = namedtuple(
-        "DimensionSet",
-        [
-            "mass",
-            "length",
-            "time",
-            "temperature",
-            "moles",
-            "current",
-            "luminous_intensity",
-        ],
-        defaults=(0, 0, 0, 0, 0, 0, 0),
-    )
-    Dimensioned = namedtuple("Dimensioned", ["name", "dimensions", "value"])
+FoamDimensionSet = namedtuple(
+    "FoamDimensionSet",
+    [
+        "mass",
+        "length",
+        "time",
+        "temperature",
+        "moles",
+        "current",
+        "luminous_intensity",
+    ],
+    defaults=(0, 0, 0, 0, 0, 0, 0),
+)
+
+FoamDimensioned = namedtuple("FoamDimensioned", ["name", "dimensions", "value"])
+
+
+def _parse_bool(value: str) -> bool:
+    if value == "yes":
+        return True
+    elif value == "no":
+        return False
+    else:
+        raise ValueError(f"Cannot parse '{value}' as a boolean")
+
+
+def _parse_number(value: str) -> Union[int, float]:
+    with suppress(ValueError):
+        return int(value)
+    with suppress(ValueError):
+        return float(value)
+    raise ValueError(f"Cannot parse '{value}' as a number")
+
+
+def _parse_sequence(value: str) -> Sequence[FoamValue]:
+    start = value.find("(")
+    if start != -1:
+        assert value.endswith(")")
+        seq = []
+        nested = 0
+        start += 1
+        for i, c in enumerate(value[start:], start=start):
+            if c == "(":
+                nested += 1
+            elif c == ")":
+                nested -= 1
+            if c.isspace() and not nested:
+                v = value[start:i].strip()
+                if v:
+                    seq.append(_parse(v))
+                start = i + 1
+
+        v = value[start:-1].strip()
+        if v:
+            seq.append(_parse(v))
+
+        return seq
+
+    else:
+        raise ValueError(f"Cannot parse '{value}' as a sequence")
+
+
+def _parse_field(value: str) -> FoamValue:
+    if value.startswith("uniform "):
+        value = value[len("uniform ") :]
+        return _parse(value)
+    elif value.startswith("nonuniform "):
+        value = value[len("nonuniform ") :]
+        return _parse_sequence(value)
+    else:
+        raise ValueError(f"Cannot parse '{value}' as a field")
+
+
+def _parse_dimensions(value: str) -> FoamDimensionSet:
+    if value.startswith("["):
+        assert value.endswith("]")
+        return FoamDimensionSet(*(_parse_number(v) for v in value[1:-1].split()))
+    else:
+        raise ValueError(f"Cannot parse '{value}' as a dimension set")
+
+
+def _parse_dimensioned(value: str) -> FoamDimensioned:
+    start = value.find("[", 1)
+    if start != -1:
+        name = value[:start].strip()
+        end = value.find("]", start)
+        if end != -1:
+            dimensions = _parse_dimensions(value[start : end + 1])
+            value = value[end + 1 :].strip()
+            return FoamDimensioned(name, dimensions, _parse(value))
+
+    raise ValueError(f"Cannot parse '{value}' as a dimensioned value")
+
+
+def _parse(value: str) -> FoamValue:
+    with suppress(ValueError):
+        return _parse_bool(value)
+
+    with suppress(ValueError):
+        return _parse_field(value)
+
+    with suppress(ValueError):
+        return _parse_number(value)
+
+    with suppress(ValueError):
+        return _parse_dimensions(value)
+
+    with suppress(ValueError):
+        return _parse_dimensioned(value)
+
+    with suppress(ValueError):
+        return _parse_sequence(value)
+
+    return value
+
+
+def _serialize_mapping(mapping: Any) -> str:
+    if isinstance(mapping, FoamDictionary):
+        return mapping._cmd(["-value"])
+    elif isinstance(mapping, Mapping):
+        m = {
+            k: _serialize(
+                v,
+                assume_field=(k == "internalField" or k == "value"),
+                assume_dimensions=(k == "dimensions"),
+            )
+            for k, v in mapping.items()
+        }
+        return f"{{{' '.join(f'{k} {v};' for k, v in m.items())}}}"
+    else:
+        raise TypeError(f"Not a mapping: {type(mapping)}")
+
+
+def _serialize_bool(value: Any) -> str:
+    if value is True:
+        return "yes"
+    elif value is False:
+        return "no"
+    else:
+        raise TypeError(f"Not a bool: {type(value)}")
+
+
+def _serialize_sequence(sequence: Any) -> str:
+    if (
+        isinstance(sequence, Sequence)
+        and not isinstance(sequence, str)
+        or np
+        and isinstance(sequence, np.ndarray)
+    ):
+        return f"({' '.join(_serialize(v) for v in sequence)})"
+    else:
+        raise TypeError(f"Not a valid sequence: {type(sequence)}")
+
+
+def _serialize_field(value: Any) -> str:
+    if isinstance(value, (int, float)):
+        return f"uniform {value}"
+    else:
+        try:
+            s = _serialize_sequence(value)
+        except TypeError:
+            raise TypeError(f"Not a valid field: {type(value)}") from None
+        else:
+            if len(value) < 10:
+                return f"uniform {s}"
+            else:
+                if isinstance(value[0], (int, float)):
+                    kind = "scalar"
+                elif len(value[0]) == 3:
+                    kind = "vector"
+                elif len(value[0]) == 6:
+                    kind = "symmTensor"
+                elif len(value[0]) == 9:
+                    kind = "tensor"
+                else:
+                    raise TypeError(
+                        f"Unsupported sequence length for field: {len(value[0])}"
+                    )
+                return f"nonuniform List<{kind}> {len(value)}{s}"
+
+
+def _serialize_dimensions(value: Any) -> str:
+    if (
+        isinstance(value, Sequence)
+        and not isinstance(value, str)
+        or np
+        and isinstance(value, np.ndarray)
+    ) and len(value) == 7:
+        return f"[{' '.join(str(v) for v in value)}]"
+    else:
+        raise TypeError(f"Not a valid dimension set: {type(value)}")
+
+
+def _serialize_dimensioned(value: Any) -> str:
+    if (
+        isinstance(value, Sequence)
+        and not isinstance(value, str)
+        and len(value) == 3
+        and isinstance(value[0], str)
+    ):
+        return f"{value[0]} {_serialize_dimensions(value[1])} {_serialize(value[2])}"
+    else:
+        raise TypeError(f"Not a valid dimensioned value: {type(value)}")
+
+
+def _serialize(
+    value: Any, assume_field: bool = False, assume_dimensions: bool = False
+) -> str:
+    with suppress(TypeError):
+        return _serialize_mapping(value)
+
+    if isinstance(value, FoamDimensionSet) or assume_dimensions:
+        with suppress(TypeError):
+            return _serialize_dimensions(value)
+
+    if assume_field:
+        with suppress(TypeError):
+            return _serialize_field(value)
+
+    with suppress(TypeError):
+        return _serialize_dimensioned(value)
+
+    with suppress(TypeError):
+        return _serialize_sequence(value)
+
+    with suppress(TypeError):
+        return _serialize_bool(value)
+
+    return str(value)
+
+
+class FoamDictionary(MutableMapping[str, Union[FoamValue, "FoamDictionary"]]):
+    Value = FoamValue  # for backwards compatibility
 
     def __init__(self, _file: "FoamFile", _keywords: Sequence[str]) -> None:
         self._file = _file
@@ -69,231 +285,17 @@ class FoamDictionary(
                     f"{e.cmd} failed with return code {e.returncode}\n{e.stderr.decode()}"
                 ) from None
 
-    @staticmethod
-    def _parse_bool(value: str) -> bool:
-        if value == "yes":
-            return True
-        elif value == "no":
-            return False
-        else:
-            raise ValueError(f"Cannot parse '{value}' as a boolean")
-
-    @staticmethod
-    def _parse_number(value: str) -> Union[int, float]:
-        with suppress(ValueError):
-            return int(value)
-        with suppress(ValueError):
-            return float(value)
-        raise ValueError(f"Cannot parse '{value}' as a number")
-
-    @staticmethod
-    def _parse_sequence(value: str) -> Sequence[Value]:
-        start = value.find("(")
-        if start != -1:
-            assert value.endswith(")")
-            seq = []
-            nested = 0
-            start += 1
-            for i, c in enumerate(value[start:], start=start):
-                if c == "(":
-                    nested += 1
-                elif c == ")":
-                    nested -= 1
-                if c.isspace() and not nested:
-                    v = value[start:i].strip()
-                    if v:
-                        seq.append(FoamDictionary._parse(v))
-                    start = i + 1
-
-            v = value[start:-1].strip()
-            if v:
-                seq.append(FoamDictionary._parse(v))
-
-            return seq
-
-        else:
-            raise ValueError(f"Cannot parse '{value}' as a sequence")
-
-    @staticmethod
-    def _parse_field(value: str) -> Value:
-        if value.startswith("uniform "):
-            value = value[len("uniform ") :]
-            return FoamDictionary._parse(value)
-        elif value.startswith("nonuniform "):
-            value = value[len("nonuniform ") :]
-            return FoamDictionary._parse_sequence(value)
-        else:
-            raise ValueError(f"Cannot parse '{value}' as a field")
-
-    @staticmethod
-    def _parse_dimensions(value: str) -> DimensionSet:
-        if value.startswith("["):
-            assert value.endswith("]")
-            return FoamDictionary.DimensionSet(
-                *(FoamDictionary._parse_number(v) for v in value[1:-1].split())
-            )
-        else:
-            raise ValueError(f"Cannot parse '{value}' as a dimension set")
-
-    @staticmethod
-    def _parse_dimensioned(value: str) -> Dimensioned:
-        start = value.find("[", 1)
-        if start != -1:
-            name = value[:start].strip()
-            end = value.find("]", start)
-            if end != -1:
-                dimensions = FoamDictionary._parse_dimensions(value[start : end + 1])
-                value = value[end + 1 :].strip()
-                return FoamDictionary.Dimensioned(
-                    name, dimensions, FoamDictionary._parse(value)
-                )
-
-        raise ValueError(f"Cannot parse '{value}' as a dimensioned value")
-
-    @staticmethod
-    def _parse(value: str) -> Value:
-        with suppress(ValueError):
-            return FoamDictionary._parse_bool(value)
-
-        with suppress(ValueError):
-            return FoamDictionary._parse_field(value)
-
-        with suppress(ValueError):
-            return FoamDictionary._parse_number(value)
-
-        with suppress(ValueError):
-            return FoamDictionary._parse_dimensions(value)
-
-        with suppress(ValueError):
-            return FoamDictionary._parse_dimensioned(value)
-
-        with suppress(ValueError):
-            return FoamDictionary._parse_sequence(value)
-
-        return value
-
-    @staticmethod
-    def _str_mapping(mapping: Any) -> str:
-        if isinstance(mapping, FoamDictionary):
-            return mapping._cmd(["-value"])
-        elif isinstance(mapping, Mapping):
-            m = {
-                k: FoamDictionary._str(
-                    v,
-                    assume_field=(k == "internalField" or k == "value"),
-                    assume_dimensions=(k == "dimensions"),
-                )
-                for k, v in mapping.items()
-            }
-            return f"{{{' '.join(f'{k} {v};' for k, v in m.items())}}}"
-        else:
-            raise TypeError(f"Not a mapping: {type(mapping)}")
-
-    @staticmethod
-    def _str_bool(value: Any) -> str:
-        if value is True:
-            return "yes"
-        elif value is False:
-            return "no"
-        else:
-            raise TypeError(f"Not a bool: {type(value)}")
-
-    @staticmethod
-    def _str_sequence(sequence: Any) -> str:
-        if (
-            isinstance(sequence, Sequence)
-            and not isinstance(sequence, str)
-            or np
-            and isinstance(sequence, np.ndarray)
-        ):
-            return f"({' '.join(FoamDictionary._str(v) for v in sequence)})"
-        else:
-            raise TypeError(f"Not a valid sequence: {type(sequence)}")
-
-    @staticmethod
-    def _str_field(value: Any) -> str:
-        if isinstance(value, (int, float)):
-            return f"uniform {value}"
-        else:
-            try:
-                s = FoamDictionary._str_sequence(value)
-            except TypeError:
-                raise TypeError(f"Not a valid field: {type(value)}") from None
-            else:
-                if len(value) < 10:
-                    return f"uniform {s}"
-                else:
-                    if isinstance(value[0], (int, float)):
-                        kind = "scalar"
-                    elif len(value[0]) == 3:
-                        kind = "vector"
-                    elif len(value[0]) == 6:
-                        kind = "symmTensor"
-                    elif len(value[0]) == 9:
-                        kind = "tensor"
-                    else:
-                        raise TypeError(
-                            f"Unsupported sequence length for field: {len(value[0])}"
-                        )
-                    return f"nonuniform List<{kind}> {len(value)}{s}"
-
-    def _str_dimensions(value: Any) -> str:
-        if (
-            isinstance(value, Sequence)
-            and not isinstance(value, str)
-            and len(value) == 7
-        ):
-            return f"[{' '.join(str(v) for v in value)}]"
-        else:
-            raise TypeError(f"Not a valid dimension set: {type(value)}")
-
-    def _str_dimensioned(value: Any) -> str:
-        if (
-            isinstance(value, Sequence)
-            and not isinstance(value, str)
-            and len(value) == 3
-        ):
-            return f"{value[0]} {FoamDictionary._str_dimensions(value[1])} {FoamDictionary._str(value[2])}"
-        else:
-            raise TypeError(f"Not a valid dimensioned value: {type(value)}")
-
-    @staticmethod
-    def _str(
-        value: Any, assume_field: bool = False, assume_dimensions: bool = False
-    ) -> str:
-        with suppress(TypeError):
-            return FoamDictionary._str_mapping(value)
-
-        if isinstance(value, FoamDictionary.DimensionSet) or assume_dimensions:
-            with suppress(TypeError):
-                return FoamDictionary._str_dimensions(value)
-
-        if assume_field:
-            with suppress(TypeError):
-                return FoamDictionary._str_field(value)
-
-        with suppress(TypeError):
-            return FoamDictionary._str_dimensioned(value)
-
-        with suppress(TypeError):
-            return FoamDictionary._str_sequence(value)
-
-        with suppress(TypeError):
-            return FoamDictionary._str_bool(value)
-
-        return str(value)
-
-    def __getitem__(self, key: str) -> Union[Value, "FoamDictionary"]:
+    def __getitem__(self, key: str) -> Union[FoamValue, "FoamDictionary"]:
         value = self._cmd(["-value"], key=key)
 
         if value.startswith("{"):
             assert value.endswith("}")
             return FoamDictionary(self._file, [*self._keywords, key])
         else:
-            return FoamDictionary._parse(value)
+            return _parse(value)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        value = self._str(
+        value = _serialize(
             value,
             assume_field=(key == "internalField" or key == "value"),
             assume_dimensions=(key == "dimensions"),
@@ -336,12 +338,12 @@ class FoamFile(FoamDictionary):
             raise FileNotFoundError(self.path)
 
     @property
-    def dimensions(self) -> FoamDictionary.DimensionSet:
+    def dimensions(self) -> FoamDimensionSet:
         """
         Alias of `self["dimensions"]`.
         """
         ret = self["dimensions"]
-        if not isinstance(ret, FoamDictionary.DimensionSet):
+        if not isinstance(ret, FoamDimensionSet):
             raise TypeError("dimensions is not a DimensionSet")
         return ret
 
@@ -350,7 +352,7 @@ class FoamFile(FoamDictionary):
         self["dimensions"] = value
 
     @property
-    def internal_field(self) -> FoamDictionary.Value:
+    def internal_field(self) -> FoamValue:
         """
         Alias of `self["internalField"]`.
         """

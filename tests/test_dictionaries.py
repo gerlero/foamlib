@@ -6,23 +6,24 @@ from typing import Sequence
 
 import numpy as np
 
-from foamlib import FoamFile, FoamDictionary, FoamCase
+from foamlib import *
+from foamlib._dictionaries import _parse
 
 
 def test_parse() -> None:
-    assert FoamDictionary._parse("1") == 1
-    assert FoamDictionary._parse("1.0") == 1.0
-    assert FoamDictionary._parse("1.0e-3") == 1.0e-3
-    assert FoamDictionary._parse("yes") == True
-    assert FoamDictionary._parse("no") == False
-    assert FoamDictionary._parse("uniform 1") == 1
-    assert FoamDictionary._parse("uniform 1.0") == 1.0
-    assert FoamDictionary._parse("uniform 1.0e-3") == 1.0e-3
-    assert FoamDictionary._parse("(1.0 2.0 3.0)") == [1.0, 2.0, 3.0]
-    assert FoamDictionary._parse("nonuniform List<scalar> 2(1 2)") == [1, 2]
-    assert FoamDictionary._parse("3(1 2 3)") == [1, 2, 3]
-    assert FoamDictionary._parse("2((1 2 3) (4 5 6))") == [[1, 2, 3], [4, 5, 6]]
-    assert FoamDictionary._parse("nonuniform List<vector> 2((1 2 3) (4 5 6))") == [
+    assert _parse("1") == 1
+    assert _parse("1.0") == 1.0
+    assert _parse("1.0e-3") == 1.0e-3
+    assert _parse("yes") == True
+    assert _parse("no") == False
+    assert _parse("uniform 1") == 1
+    assert _parse("uniform 1.0") == 1.0
+    assert _parse("uniform 1.0e-3") == 1.0e-3
+    assert _parse("(1.0 2.0 3.0)") == [1.0, 2.0, 3.0]
+    assert _parse("nonuniform List<scalar> 2(1 2)") == [1, 2]
+    assert _parse("3(1 2 3)") == [1, 2, 3]
+    assert _parse("2((1 2 3) (4 5 6))") == [[1, 2, 3], [4, 5, 6]]
+    assert _parse("nonuniform List<vector> 2((1 2 3) (4 5 6))") == [
         [1, 2, 3],
         [4, 5, 6],
     ]
@@ -77,8 +78,8 @@ def test_write_read(tmp_path: Path) -> None:
     assert sd["nestedList"] == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
     sd["g"] = ("g", [1, 1, -2, 0, 0, 0, 0], [0, 0, -9.81])
-    assert sd["g"] == FoamDictionary.Dimensioned(
-        "g", FoamDictionary.DimensionSet(mass=1, length=1, time=-2), [0, 0, -9.81]
+    assert sd["g"] == FoamDimensioned(
+        "g", FoamDimensionSet(mass=1, length=1, time=-2), [0, 0, -9.81]
     )
 
 
@@ -126,11 +127,9 @@ def test_field(pitz: FoamCase) -> None:
 
 
 def test_dimensions(pitz: FoamCase) -> None:
-    assert pitz[0]["p"].dimensions == FoamDictionary.DimensionSet(length=2, time=-2)
-    assert pitz[0]["U"].dimensions == FoamDictionary.DimensionSet(length=1, time=-1)
+    assert pitz[0]["p"].dimensions == FoamDimensionSet(length=2, time=-2)
+    assert pitz[0]["U"].dimensions == FoamDimensionSet(length=1, time=-1)
 
-    pitz[0]["p"].dimensions = FoamDictionary.DimensionSet(mass=1, length=1, time=-2)
+    pitz[0]["p"].dimensions = FoamDimensionSet(mass=1, length=1, time=-2)
 
-    assert pitz[0]["p"].dimensions == FoamDictionary.DimensionSet(
-        mass=1, length=1, time=-2
-    )
+    assert pitz[0]["p"].dimensions == FoamDimensionSet(mass=1, length=1, time=-2)
