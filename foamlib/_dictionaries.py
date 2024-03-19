@@ -9,6 +9,7 @@ from typing import (
     MutableMapping,
 )
 from collections import namedtuple
+from dataclasses import dataclass
 from contextlib import suppress
 
 from ._subprocesses import run_process, CalledProcessError
@@ -18,8 +19,6 @@ try:
     import numpy as np
 except ModuleNotFoundError:
     np = None
-
-FoamValue = Union[str, int, float, bool, Sequence["FoamValue"]]
 
 FoamDimensionSet = namedtuple(
     "FoamDimensionSet",
@@ -35,7 +34,30 @@ FoamDimensionSet = namedtuple(
     defaults=(0, 0, 0, 0, 0, 0, 0),
 )
 
-FoamDimensioned = namedtuple("FoamDimensioned", ["name", "dimensions", "value"])
+
+@dataclass
+class FoamDimensioned:
+    name: Optional[str] = None
+    dimensions: Union[FoamDimensionSet, Sequence[Union[int, float]]] = (
+        FoamDimensionSet()
+    )
+    value: Union["FoamValue", Sequence["FoamValue"]] = 0
+
+    def __post_init__(self) -> None:
+        if self.name is not None and not isinstance(self.name, str) and self.value == 0:
+            self.value = self.name
+            self.name = None
+
+        if not isinstance(self.dimensions, FoamDimensionSet):
+            self.dimensions = FoamDimensionSet(*self.dimensions)
+
+
+FoamValue = Union[
+    str, int, float, bool, FoamDimensioned, FoamDimensionSet, Sequence["FoamValue"]
+]
+"""
+A value that can be stored in an OpenFOAM dictionary.
+"""
 
 
 def _parse_bool(value: str) -> bool:
@@ -215,19 +237,14 @@ def _serialize_dimensions(value: Any) -> str:
 
 
 def _serialize_dimensioned(value: Any) -> str:
-    if (
-        isinstance(value, Sequence)
-        and not isinstance(value, str)
-        and len(value) == 3
-        and isinstance(value[0], str)
-    ):
-        return f"{value[0]} {_serialize_dimensions(value[1])} {_serialize(value[2])}"
+    if isinstance(value, FoamDimensioned):
+        return f"{value.name or 'unnamed'} {_serialize_dimensions(value.dimensions)} {_serialize(value.value)}"
     else:
         raise TypeError(f"Not a valid dimensioned value: {type(value)}")
 
 
 def _serialize(
-    value: Any, assume_field: bool = False, assume_dimensions: bool = False
+    value: Any, *, assume_field: bool = False, assume_dimensions: bool = False
 ) -> str:
     with suppress(TypeError):
         return _serialize_mapping(value)
