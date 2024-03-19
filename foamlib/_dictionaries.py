@@ -170,11 +170,13 @@ class FoamDictionary(
 
         value = self._str(value, assume_field=assume_field)
 
-        self._cmd(["-set", "_foamlib_value_"], key=key)
-
-        contents = self._file.path.read_text()
-        contents = contents.replace("_foamlib_value_", value, 1)
-        self._file.path.write_text(contents)
+        if len(value) < 1000:
+            self._cmd(["-set", value], key=key)
+        else:
+            self._cmd(["-set", "_foamlib_value_"], key=key)
+            contents = self._file.path.read_text()
+            contents = contents.replace("_foamlib_value_", value, 1)
+            self._file.path.write_text(contents)
 
     def __delitem__(self, key: str) -> None:
         if key not in self:
