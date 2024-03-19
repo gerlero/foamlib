@@ -7,7 +7,6 @@ from typing import (
     Optional,
     Mapping,
     MutableMapping,
-    Tuple,
 )
 from contextlib import suppress
 
@@ -56,21 +55,24 @@ class FoamDictionary(
                 ) from None
 
     @staticmethod
-    def _parse(value: str) -> Value:
+    def _parse_bool(value: str) -> bool:
         if value == "yes":
             return True
         elif value == "no":
             return False
+        else:
+            raise ValueError(f"Cannot parse '{value}' as a boolean")
 
-        if value.startswith("uniform "):
-            value = value[len("uniform ") :]
-
+    @staticmethod
+    def _parse_number(value: str) -> Union[int, float]:
         with suppress(ValueError):
             return int(value)
-
         with suppress(ValueError):
             return float(value)
+        raise ValueError(f"Cannot parse '{value}' as a number")
 
+    @staticmethod
+    def _parse_sequence(value: str) -> Sequence[Value]:
         start = value.find("(")
         if start != -1:
             assert value.endswith(")")
@@ -94,59 +96,117 @@ class FoamDictionary(
 
             return seq
 
+        else:
+            raise ValueError(f"Cannot parse '{value}' as a sequence")
+
+    @staticmethod
+    def _parse_field(value: str) -> Value:
+        if value.startswith("uniform "):
+            value = value[len("uniform ") :]
+            return FoamDictionary._parse(value)
+        elif value.startswith("nonuniform "):
+            value = value[len("nonuniform ") :]
+            return FoamDictionary._parse_sequence(value)
+        else:
+            raise ValueError(f"Cannot parse '{value}' as a field")
+
+    @staticmethod
+    def _parse(value: str) -> Value:
+        with suppress(ValueError):
+            return FoamDictionary._parse_bool(value)
+
+        with suppress(ValueError):
+            return FoamDictionary._parse_field(value)
+
+        with suppress(ValueError):
+            return FoamDictionary._parse_number(value)
+
+        with suppress(ValueError):
+            return FoamDictionary._parse_sequence(value)
+
         return value
 
     @staticmethod
-    def _str(value: Union[Value, "FoamDictionary"], assume_field: bool = False) -> str:
-        if isinstance(value, FoamDictionary):
-            return value._cmd(["-value"])
-        elif isinstance(value, Mapping):
-            out = "{ "
-            for k, v in value.items():
-                assume_field = k == "internalField" or k == "value"
-                out += f"{k} {FoamDictionary._str(v, assume_field=assume_field)}"
-                if not isinstance(v, Mapping):
-                    out += "; "
-            out += "} "
-            return out
+    def _str_mapping(mapping: Any) -> str:
+        if isinstance(mapping, FoamDictionary):
+            return mapping._cmd(["-value"])
+        elif isinstance(mapping, Mapping):
+            m = {
+                k: FoamDictionary._str(
+                    v, assume_field=(k == "internalField" or k == "value")
+                )
+                for k, v in mapping.items()
+            }
+            return f"{{{' '.join(f'{k} {v};' for k, v in m.items())}}}"
+        else:
+            raise TypeError(f"Not a mapping: {type(mapping)}")
+
+    @staticmethod
+    def _str_bool(value: Any) -> str:
+        if value is True:
+            return "yes"
+        elif value is False:
+            return "no"
+        else:
+            raise TypeError(f"Not a bool: {type(value)}")
+
+    @staticmethod
+    def _str_sequence(sequence: Any) -> str:
+        if (
+            isinstance(sequence, Sequence)
+            and not isinstance(sequence, str)
+            or np
+            and isinstance(sequence, np.ndarray)
+        ):
+            return f"({' '.join(FoamDictionary._str(v) for v in sequence)})"
+        else:
+            raise TypeError(f"Not a valid sequence: {type(sequence)}")
+
+    @staticmethod
+    def _str_field(value: Any) -> str:
+        if isinstance(value, (int, float)):
+            return f"uniform {value}"
         elif (
             isinstance(value, Sequence)
             and not isinstance(value, str)
             or np
             and isinstance(value, np.ndarray)
         ):
-            out = ""
-            if assume_field:
-                if len(value) < 10:
-                    out += "uniform "
+            if len(value) < 10:
+                return f"uniform {FoamDictionary._str_sequence(value)}"
+            else:
+                if isinstance(value[0], (int, float)):
+                    kind = "scalar"
+                elif len(value[0]) == 3:
+                    kind = "vector"
+                elif len(value[0]) == 6:
+                    kind = "symmTensor"
+                elif len(value[0]) == 9:
+                    kind = "tensor"
                 else:
-                    out += "nonuniform List<"
-                    if not isinstance(value[0], Sequence) and (
-                        not np or not isinstance(value[0], np.ndarray)
-                    ):
-                        out += "scalar"
-                    elif len(value[0]) == 3:
-                        out += "vector"
-                    elif len(value[0]) == 6:
-                        out += "symmTensor"
-                    elif len(value[0]) == 9:
-                        out += "tensor"
-                    else:
-                        raise ValueError(
-                            f"Unsupported sequence length for field: {len(value[0])}"
-                        )
-                    out += "> "
-            out += "( "
-            for v in value:
-                out += f"{FoamDictionary._str(v)} "
-            out += ") "
-            return out
-        elif isinstance(value, bool):
-            return "yes" if value else "no"
-        elif assume_field and isinstance(value, (int, float)):
-            return f"uniform {value}"
+                    raise TypeError(
+                        f"Unsupported sequence length for field: {len(value[0])}"
+                    )
+                return f"nonuniform List<{kind}> {len(value)}{FoamDictionary._str_sequence(value)}"
         else:
-            return str(value)
+            raise TypeError(f"Not a valid field: {type(value)}")
+
+    @staticmethod
+    def _str(value: Union[Value, "FoamDictionary"], assume_field: bool = False) -> str:
+        with suppress(TypeError):
+            return FoamDictionary._str_mapping(value)
+
+        if assume_field:
+            with suppress(TypeError):
+                return FoamDictionary._str_field(value)
+
+        with suppress(TypeError):
+            return FoamDictionary._str_sequence(value)
+
+        with suppress(TypeError):
+            return FoamDictionary._str_bool(value)
+
+        return str(value)
 
     def __getitem__(self, key: str) -> Union[Value, "FoamDictionary"]:
         value = self._cmd(["-value"], key=key)
@@ -158,17 +218,9 @@ class FoamDictionary(
             return FoamDictionary._parse(value)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        assume_field = False
-        if key == "internalField":
-            assume_field = True
-        elif (
-            key == "value"
-            and len(self._keywords) == 2
-            and self._keywords[0] == "boundaryField"
-        ):
-            assume_field = True
-
-        value = self._str(value, assume_field=assume_field)
+        value = self._str(
+            value, assume_field=(key == "internalField" or key == "value")
+        )
 
         if len(value) < 1000:
             self._cmd(["-set", value], key=key)
