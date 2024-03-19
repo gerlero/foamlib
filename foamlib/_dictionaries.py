@@ -1,8 +1,23 @@
 from pathlib import Path
-from typing import Any, Union, Sequence, Iterator, Optional, Mapping, MutableMapping
+from typing import (
+    Any,
+    Union,
+    Sequence,
+    Iterator,
+    Optional,
+    Mapping,
+    MutableMapping,
+    Tuple,
+)
 from contextlib import suppress
 
 from ._subprocesses import run_process, CalledProcessError
+
+np: Optional[Any]
+try:
+    import numpy as np
+except ModuleNotFoundError:
+    np = None
 
 
 class FoamDictionary(
@@ -94,14 +109,21 @@ class FoamDictionary(
                     out += "; "
             out += "} "
             return out
-        elif isinstance(value, Sequence) and not isinstance(value, str):
+        elif (
+            isinstance(value, Sequence)
+            and not isinstance(value, str)
+            or np
+            and isinstance(value, np.ndarray)
+        ):
             out = ""
             if assume_field:
                 if len(value) < 10:
                     out += "uniform "
                 else:
                     out += "nonuniform List<"
-                    if not isinstance(value[0], Sequence):
+                    if not isinstance(value[0], Sequence) and (
+                        not np or not isinstance(value[0], np.ndarray)
+                    ):
                         out += "scalar"
                     elif len(value[0]) == 3:
                         out += "vector"
@@ -193,7 +215,7 @@ class FoamFile(FoamDictionary):
         return ret
 
     @internal_field.setter
-    def internal_field(self, value: FoamDictionary.Value) -> None:
+    def internal_field(self, value: Any) -> None:
         self["internalField"] = value
 
     @property

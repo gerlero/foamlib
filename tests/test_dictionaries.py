@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from typing import Sequence
 
+import numpy as np
+
 from foamlib import FoamFile, FoamDictionary, FoamCase
 
 
@@ -103,14 +105,16 @@ def test_field(pitz: FoamCase) -> None:
 
     pitz.clean()
 
-    p = [x * 1e-6 for x in range(size)]
-    U = [[-x * 1e-6, x * 1e-6, 0] for x in range(size)]
+    p_arr = np.arange(size) * 1e-6
+    U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
 
-    pitz[0]["p"].internal_field = p
-    pitz[0]["U"].internal_field = U
+    pitz[0]["p"].internal_field = p_arr  # type: ignore
+    pitz[0]["U"].internal_field = U_arr
 
-    assert pitz[0]["p"].internal_field == pytest.approx(p)
-    for u in pitz[0]["U"].internal_field:
-        assert u == pytest.approx(u)
+    assert pitz[0]["p"].internal_field == pytest.approx(p_arr)
+    U = pitz[-1]["U"].internal_field
+    assert isinstance(U, Sequence)
+    for u, u_arr in zip(U, U_arr):
+        assert u == pytest.approx(u_arr)
 
     pitz.run()
