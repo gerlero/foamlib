@@ -27,6 +27,10 @@ def test_parse() -> None:
         [1, 2, 3],
         [4, 5, 6],
     ]
+    assert _parse("[1 1 -2 0 0 0 0]") == FoamDimensionSet(mass=1, length=1, time=-2)
+    assert _parse("g [1 1 -2 0 0 0 0] (0 0 -9.81)") == FoamDimensioned(
+        "g", FoamDimensionSet(mass=1, length=1, time=-2), [0, 0, -9.81]
+    )
 
 
 def test_write_read(tmp_path: Path) -> None:
