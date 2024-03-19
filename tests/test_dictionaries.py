@@ -1,8 +1,10 @@
 import pytest
 
+import os
 from pathlib import Path
+from typing import Sequence
 
-from foamlib import FoamFile, FoamDictionary
+from foamlib import FoamFile, FoamDictionary, FoamCase
 
 
 def test_parse() -> None:
@@ -71,3 +73,44 @@ def test_write_read(tmp_path: Path) -> None:
 
     sd["nestedList"] = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
     assert sd["nestedList"] == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+
+
+PITZ = FoamCase(
+    Path(os.environ["FOAM_TUTORIALS"]) / "incompressible" / "simpleFoam" / "pitzDaily"
+)
+
+
+@pytest.fixture
+def pitz(tmp_path: Path) -> FoamCase:
+    return PITZ.clone(tmp_path / PITZ.name)
+
+
+def test_field(pitz: FoamCase) -> None:
+    pitz[0]["p"].internal_field = 0.5
+    pitz[0]["U"].internal_field = [1.5, 2.0, 3]
+
+    assert pitz[0]["p"].internal_field == 0.5
+    assert pitz[0]["U"].internal_field == [1.5, 2.0, 3]
+
+    pitz.run()
+
+    p = pitz[-1]["p"].internal_field
+    assert isinstance(p, Sequence)
+    U = pitz[-1]["U"].internal_field
+    assert isinstance(U, Sequence)
+    size = len(p)
+    assert len(U) == size
+
+    pitz.clean()
+
+    p = [x * 1e-6 for x in range(size)]
+    U = [[-x * 1e-6, x * 1e-6, 0] for x in range(size)]
+
+    pitz[0]["p"].internal_field = p
+    pitz[0]["U"].internal_field = U
+
+    assert pitz[0]["p"].internal_field == pytest.approx(p)
+    for u in pitz[0]["U"].internal_field:
+        assert u == pytest.approx(u)
+
+    pitz.run()
