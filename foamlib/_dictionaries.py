@@ -41,7 +41,7 @@ class FoamDictionary(
                 ) from None
 
     @staticmethod
-    def _parse(value: str) -> "FoamDictionary.Value":
+    def _parse(value: str) -> Value:
         if value == "yes":
             return True
         elif value == "no":
@@ -82,25 +82,47 @@ class FoamDictionary(
         return value
 
     @staticmethod
-    def _str(value: Union[Value, "FoamDictionary"]) -> str:
+    def _str(value: Union[Value, "FoamDictionary"], assume_field: bool = False) -> str:
         if isinstance(value, FoamDictionary):
             return value._cmd(["-value"])
         elif isinstance(value, Mapping):
             out = "{ "
             for k, v in value.items():
-                out += f"{k} {FoamDictionary._str(v)}"
+                assume_field = k == "internalField" or k == "value"
+                out += f"{k} {FoamDictionary._str(v, assume_field=assume_field)}"
                 if not isinstance(v, Mapping):
                     out += "; "
             out += "} "
             return out
         elif isinstance(value, Sequence) and not isinstance(value, str):
-            out = "( "
+            out = ""
+            if assume_field:
+                if len(value) < 10:
+                    out += "uniform "
+                else:
+                    out += "nonuniform List<"
+                    if not isinstance(value[0], Sequence):
+                        out += "scalar"
+                    elif len(value[0]) == 3:
+                        out += "vector"
+                    elif len(value[0]) == 6:
+                        out += "symmTensor"
+                    elif len(value[0]) == 9:
+                        out += "tensor"
+                    else:
+                        raise ValueError(
+                            f"Unsupported sequence length for field: {len(value[0])}"
+                        )
+                    out += "> "
+            out += "( "
             for v in value:
                 out += f"{FoamDictionary._str(v)} "
             out += ") "
             return out
         elif isinstance(value, bool):
             return "yes" if value else "no"
+        elif assume_field and isinstance(value, (int, float)):
+            return f"uniform {value}"
         else:
             return str(value)
 
@@ -114,7 +136,17 @@ class FoamDictionary(
             return FoamDictionary._parse(value)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        self._cmd(["-set", self._str(value)], key=key)
+        assume_field = False
+        if key == "internalField":
+            assume_field = True
+        elif (
+            key == "value"
+            and len(self._keywords) == 2
+            and self._keywords[0] == "boundaryField"
+        ):
+            assume_field = True
+
+        self._cmd(["-set", self._str(value, assume_field=assume_field)], key=key)
 
     def __delitem__(self, key: str) -> None:
         if key not in self:
@@ -153,6 +185,10 @@ class FoamFile(FoamDictionary):
         if isinstance(ret, FoamDictionary):
             raise TypeError("internalField is a dictionary")
         return ret
+
+    @internal_field.setter
+    def internal_field(self, value: FoamDictionary.Value) -> None:
+        self["internalField"] = value
 
     @property
     def boundary_field(self) -> FoamDictionary:
