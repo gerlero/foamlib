@@ -37,6 +37,7 @@ class FoamDictionary(
         ],
         defaults=(0, 0, 0, 0, 0, 0, 0),
     )
+    Dimensioned = namedtuple("Dimensioned", ["name", "dimensions", "value"])
 
     def __init__(self, _file: "FoamFile", _keywords: Sequence[str]) -> None:
         self._file = _file
@@ -135,6 +136,21 @@ class FoamDictionary(
             raise ValueError(f"Cannot parse '{value}' as a dimension set")
 
     @staticmethod
+    def _parse_dimensioned(value: str) -> Dimensioned:
+        start = value.find("[", 1)
+        if start != -1:
+            name = value[:start].strip()
+            end = value.find("]", start)
+            if end != -1:
+                dimensions = FoamDictionary._parse_dimensions(value[start : end + 1])
+                value = value[end + 1 :].strip()
+                return FoamDictionary.Dimensioned(
+                    name, dimensions, FoamDictionary._parse(value)
+                )
+
+        raise ValueError(f"Cannot parse '{value}' as a dimensioned value")
+
+    @staticmethod
     def _parse(value: str) -> Value:
         with suppress(ValueError):
             return FoamDictionary._parse_bool(value)
@@ -147,6 +163,9 @@ class FoamDictionary(
 
         with suppress(ValueError):
             return FoamDictionary._parse_dimensions(value)
+
+        with suppress(ValueError):
+            return FoamDictionary._parse_dimensioned(value)
 
         with suppress(ValueError):
             return FoamDictionary._parse_sequence(value)
@@ -228,6 +247,16 @@ class FoamDictionary(
         else:
             raise TypeError(f"Not a valid dimension set: {type(value)}")
 
+    def _str_dimensioned(value: Any) -> str:
+        if (
+            isinstance(value, Sequence)
+            and not isinstance(value, str)
+            and len(value) == 3
+        ):
+            return f"{value[0]} {FoamDictionary._str_dimensions(value[1])} {FoamDictionary._str(value[2])}"
+        else:
+            raise TypeError(f"Not a valid dimensioned value: {type(value)}")
+
     @staticmethod
     def _str(
         value: Any, assume_field: bool = False, assume_dimensions: bool = False
@@ -242,6 +271,9 @@ class FoamDictionary(
         if assume_field:
             with suppress(TypeError):
                 return FoamDictionary._str_field(value)
+
+        with suppress(TypeError):
+            return FoamDictionary._str_dimensioned(value)
 
         with suppress(TypeError):
             return FoamDictionary._str_sequence(value)

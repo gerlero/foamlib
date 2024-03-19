@@ -76,6 +76,11 @@ def test_write_read(tmp_path: Path) -> None:
     sd["nestedList"] = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
     assert sd["nestedList"] == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
+    sd["g"] = ("g", [1, 1, -2, 0, 0, 0, 0], [0, 0, -9.81])
+    assert sd["g"] == FoamDictionary.Dimensioned(
+        "g", FoamDictionary.DimensionSet(mass=1, length=1, time=-2), [0, 0, -9.81]
+    )
+
 
 PITZ = FoamCase(
     Path(os.environ["FOAM_TUTORIALS"]) / "incompressible" / "simpleFoam" / "pitzDaily"
