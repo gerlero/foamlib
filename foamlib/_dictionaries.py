@@ -166,30 +166,28 @@ class FoamDictionary(
     def _str_field(value: Any) -> str:
         if isinstance(value, (int, float)):
             return f"uniform {value}"
-        elif (
-            isinstance(value, Sequence)
-            and not isinstance(value, str)
-            or np
-            and isinstance(value, np.ndarray)
-        ):
-            if len(value) < 10:
-                return f"uniform {FoamDictionary._str_sequence(value)}"
-            else:
-                if isinstance(value[0], (int, float)):
-                    kind = "scalar"
-                elif len(value[0]) == 3:
-                    kind = "vector"
-                elif len(value[0]) == 6:
-                    kind = "symmTensor"
-                elif len(value[0]) == 9:
-                    kind = "tensor"
-                else:
-                    raise TypeError(
-                        f"Unsupported sequence length for field: {len(value[0])}"
-                    )
-                return f"nonuniform List<{kind}> {len(value)}{FoamDictionary._str_sequence(value)}"
         else:
-            raise TypeError(f"Not a valid field: {type(value)}")
+            try:
+                s = FoamDictionary._str_sequence(value)
+            except TypeError:
+                raise TypeError(f"Not a valid field: {type(value)}") from None
+            else:
+                if len(value) < 10:
+                    return f"uniform {s}"
+                else:
+                    if isinstance(value[0], (int, float)):
+                        kind = "scalar"
+                    elif len(value[0]) == 3:
+                        kind = "vector"
+                    elif len(value[0]) == 6:
+                        kind = "symmTensor"
+                    elif len(value[0]) == 9:
+                        kind = "tensor"
+                    else:
+                        raise TypeError(
+                            f"Unsupported sequence length for field: {len(value[0])}"
+                        )
+                    return f"nonuniform List<{kind}> {len(value)}{s}"
 
     @staticmethod
     def _str(value: Union[Value, "FoamDictionary"], assume_field: bool = False) -> str:
