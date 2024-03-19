@@ -118,3 +118,14 @@ def test_field(pitz: FoamCase) -> None:
         assert u == pytest.approx(u_arr)
 
     pitz.run()
+
+
+def test_dimensions(pitz: FoamCase) -> None:
+    assert pitz[0]["p"].dimensions == FoamDictionary.DimensionSet(length=2, time=-2)
+    assert pitz[0]["U"].dimensions == FoamDictionary.DimensionSet(length=1, time=-1)
+
+    pitz[0]["p"].dimensions = FoamDictionary.DimensionSet(mass=1, length=1, time=-2)
+
+    assert pitz[0]["p"].dimensions == FoamDictionary.DimensionSet(
+        mass=1, length=1, time=-2
+    )

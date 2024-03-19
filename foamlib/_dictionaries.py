@@ -8,6 +8,7 @@ from typing import (
     Mapping,
     MutableMapping,
 )
+from collections import namedtuple
 from contextlib import suppress
 
 from ._subprocesses import run_process, CalledProcessError
@@ -23,6 +24,19 @@ class FoamDictionary(
     MutableMapping[str, Union["FoamDictionary.Value", "FoamDictionary"]]
 ):
     Value = Union[str, int, float, bool, Sequence["Value"]]
+    DimensionSet = namedtuple(
+        "DimensionSet",
+        [
+            "mass",
+            "length",
+            "time",
+            "temperature",
+            "moles",
+            "current",
+            "luminous_intensity",
+        ],
+        defaults=(0, 0, 0, 0, 0, 0, 0),
+    )
 
     def __init__(self, _file: "FoamFile", _keywords: Sequence[str]) -> None:
         self._file = _file
@@ -111,6 +125,16 @@ class FoamDictionary(
             raise ValueError(f"Cannot parse '{value}' as a field")
 
     @staticmethod
+    def _parse_dimensions(value: str) -> DimensionSet:
+        if value.startswith("["):
+            assert value.endswith("]")
+            return FoamDictionary.DimensionSet(
+                *(FoamDictionary._parse_number(v) for v in value[1:-1].split())
+            )
+        else:
+            raise ValueError(f"Cannot parse '{value}' as a dimension set")
+
+    @staticmethod
     def _parse(value: str) -> Value:
         with suppress(ValueError):
             return FoamDictionary._parse_bool(value)
@@ -120,6 +144,9 @@ class FoamDictionary(
 
         with suppress(ValueError):
             return FoamDictionary._parse_number(value)
+
+        with suppress(ValueError):
+            return FoamDictionary._parse_dimensions(value)
 
         with suppress(ValueError):
             return FoamDictionary._parse_sequence(value)
@@ -133,7 +160,9 @@ class FoamDictionary(
         elif isinstance(mapping, Mapping):
             m = {
                 k: FoamDictionary._str(
-                    v, assume_field=(k == "internalField" or k == "value")
+                    v,
+                    assume_field=(k == "internalField" or k == "value"),
+                    assume_dimensions=(k == "dimensions"),
                 )
                 for k, v in mapping.items()
             }
@@ -189,10 +218,26 @@ class FoamDictionary(
                         )
                     return f"nonuniform List<{kind}> {len(value)}{s}"
 
+    def _str_dimensions(value: Any) -> str:
+        if (
+            isinstance(value, Sequence)
+            and not isinstance(value, str)
+            and len(value) == 7
+        ):
+            return f"[{' '.join(str(v) for v in value)}]"
+        else:
+            raise TypeError(f"Not a valid dimension set: {type(value)}")
+
     @staticmethod
-    def _str(value: Union[Value, "FoamDictionary"], assume_field: bool = False) -> str:
+    def _str(
+        value: Any, assume_field: bool = False, assume_dimensions: bool = False
+    ) -> str:
         with suppress(TypeError):
             return FoamDictionary._str_mapping(value)
+
+        if isinstance(value, FoamDictionary.DimensionSet) or assume_dimensions:
+            with suppress(TypeError):
+                return FoamDictionary._str_dimensions(value)
 
         if assume_field:
             with suppress(TypeError):
@@ -217,7 +262,9 @@ class FoamDictionary(
 
     def __setitem__(self, key: str, value: Any) -> None:
         value = self._str(
-            value, assume_field=(key == "internalField" or key == "value")
+            value,
+            assume_field=(key == "internalField" or key == "value"),
+            assume_dimensions=(key == "dimensions"),
         )
 
         if len(value) < 1000:
@@ -255,6 +302,20 @@ class FoamFile(FoamDictionary):
             raise IsADirectoryError(self.path)
         elif not self.path.is_file():
             raise FileNotFoundError(self.path)
+
+    @property
+    def dimensions(self) -> FoamDictionary.DimensionSet:
+        """
+        Alias of `self["dimensions"]`.
+        """
+        ret = self["dimensions"]
+        if not isinstance(ret, FoamDictionary.DimensionSet):
+            raise TypeError("dimensions is not a DimensionSet")
+        return ret
+
+    @dimensions.setter
+    def dimensions(self, value: Any) -> None:
+        self["dimensions"] = value
 
     @property
     def internal_field(self) -> FoamDictionary.Value:
