@@ -393,7 +393,10 @@ class FoamBoundaryDictionary(FoamDictionary):
     def value(
         self,
         value: Union[
-            int, float, Sequence[Union[int, float, Sequence[Union[int, float]]]]
+            int,
+            float,
+            Sequence[Union[int, float, Sequence[Union[int, float]]]],
+            NDArray[np.generic],
         ],
     ) -> None:
         self["value"] = value
@@ -483,17 +486,21 @@ class FoamFieldFile(FoamFile):
     def internal_field(
         self,
         value: Union[
-            int, float, Sequence[Union[int, float, Sequence[Union[int, float]]]]
+            int,
+            float,
+            Sequence[Union[int, float, Sequence[Union[int, float]]]],
+            NDArray[np.generic],
         ],
     ) -> None:
         self["internalField"] = value
 
     @property
-    def boundary_field(self) -> FoamDictionary:
+    def boundary_field(self) -> FoamBoundariesDictionary:
         """
         Alias of `self["boundaryField"]`.
         """
         ret = self["boundaryField"]
-        if not isinstance(ret, FoamDictionary):
+        if not isinstance(ret, FoamBoundariesDictionary):
+            assert not isinstance(ret, FoamDictionary)
             raise TypeError("boundaryField is not a dictionary")
         return ret
