@@ -164,23 +164,6 @@ def _parse(value: str) -> FoamValue:
     return value
 
 
-def _serialize_mapping(mapping: Any) -> str:
-    if isinstance(mapping, FoamDictionary):
-        return mapping._cmd(["-value"])
-    elif isinstance(mapping, Mapping):
-        m = {
-            k: _serialize(
-                v,
-                assume_field=(k == "internalField" or k == "value"),
-                assume_dimensions=(k == "dimensions"),
-            )
-            for k, v in mapping.items()
-        }
-        return f"{{{' '.join(f'{k} {v};' for k, v in m.items())}}}"
-    else:
-        raise TypeError(f"Not a mapping: {type(mapping)}")
-
-
 def _serialize_bool(value: Any) -> str:
     if value is True:
         return "yes"
@@ -251,9 +234,6 @@ def _serialize_dimensioned(value: Any) -> str:
 def _serialize(
     value: Any, *, assume_field: bool = False, assume_dimensions: bool = False
 ) -> str:
-    with suppress(TypeError):
-        return _serialize_mapping(value)
-
     if isinstance(value, FoamDimensionSet) or assume_dimensions:
         with suppress(TypeError):
             return _serialize_dimensions(value)
@@ -316,12 +296,27 @@ class FoamDictionary(MutableMapping[str, Union[FoamValue, "FoamDictionary"]]):
         else:
             return _parse(value)
 
-    def __setitem__(self, key: str, value: Any) -> None:
-        value = _serialize(
-            value,
-            assume_field=(key == "internalField" or key == "value"),
-            assume_dimensions=(key == "dimensions"),
-        )
+    def _setitem(
+        self,
+        key: str,
+        value: Any,
+        *,
+        assume_field: bool = False,
+        assume_dimensions: bool = False,
+    ) -> None:
+        if isinstance(value, FoamDictionary):
+            value = value._cmd(["-value"])
+        elif isinstance(value, Mapping):
+            self._cmd(["-set", "{}"], key=key)
+            subdict = self[key]
+            assert isinstance(subdict, FoamDictionary)
+            for k, v in value.items():
+                subdict[k] = v
+            return
+        else:
+            value = _serialize(
+                value, assume_field=assume_field, assume_dimensions=assume_dimensions
+            )
 
         if len(value) < 1000:
             self._cmd(["-set", value], key=key)
@@ -330,6 +325,9 @@ class FoamDictionary(MutableMapping[str, Union[FoamValue, "FoamDictionary"]]):
             contents = self._file.path.read_text()
             contents = contents.replace("_foamlib_value_", value, 1)
             self._file.path.write_text(contents)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._setitem(key, value)
 
     def __delitem__(self, key: str) -> None:
         if key not in self:
@@ -348,6 +346,63 @@ class FoamDictionary(MutableMapping[str, Union[FoamValue, "FoamDictionary"]]):
         return type(self).__name__
 
 
+class FoamBoundaryDictionary(FoamDictionary):
+    """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        if key == "value":
+            self._setitem(key, value, assume_field=True)
+        else:
+            self._setitem(key, value)
+
+    @property
+    def type(self) -> str:
+        """
+        Alias of `self["type"]`.
+        """
+        ret = self["type"]
+        if not isinstance(ret, str):
+            raise TypeError("type is not a string")
+        return ret
+
+    @type.setter
+    def type(self, value: str) -> None:
+        self["type"] = value
+
+    @property
+    def value(
+        self,
+    ) -> Union[int, float, Sequence[Union[int, float, Sequence[Union[int, float]]]]]:
+        """
+        Alias of `self["value"]`.
+        """
+        ret = self["value"]
+        if not isinstance(ret, (int, float, Sequence)):
+            raise TypeError("value is not a field")
+        return cast(Union[int, float, Sequence[Union[int, float]]], ret)
+
+    @value.setter
+    def value(
+        self,
+        value: Union[
+            int, float, Sequence[Union[int, float, Sequence[Union[int, float]]]]
+        ],
+    ) -> None:
+        self["value"] = value
+
+    @value.deleter
+    def value(self) -> None:
+        del self["value"]
+
+
+class FoamBoundariesDictionary(FoamDictionary):
+    def __getitem__(self, key: str) -> Union[FoamValue, FoamBoundaryDictionary]:
+        ret = super().__getitem__(key)
+        if isinstance(ret, FoamDictionary):
+            ret = FoamBoundaryDictionary(self._file, [*self._keywords, key])
+        return ret
+
+
 class FoamFile(FoamDictionary):
     """An OpenFOAM dictionary file as a mutable mapping."""
 
@@ -358,6 +413,30 @@ class FoamFile(FoamDictionary):
             raise IsADirectoryError(self.path)
         elif not self.path.is_file():
             raise FileNotFoundError(self.path)
+
+    def __fspath__(self) -> str:
+        return str(self.path)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.path})"
+
+
+class FoamFieldFile(FoamFile):
+    """An OpenFOAM dictionary file representing a field as a mutable mapping."""
+
+    def __getitem__(self, key: str) -> Union[FoamValue, FoamDictionary]:
+        ret = super().__getitem__(key)
+        if key == "boundaryField" and isinstance(ret, FoamDictionary):
+            ret = FoamBoundariesDictionary(self, [key])
+        return ret
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        if key == "internalField":
+            self._setitem(key, value, assume_field=True)
+        elif key == "dimensions":
+            self._setitem(key, value, assume_dimensions=True)
+        else:
+            self._setitem(key, value)
 
     @property
     def dimensions(self) -> FoamDimensionSet:
@@ -405,9 +484,3 @@ class FoamFile(FoamDictionary):
         if not isinstance(ret, FoamDictionary):
             raise TypeError("boundaryField is not a dictionary")
         return ret
-
-    def __fspath__(self) -> str:
-        return str(self.path)
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.path})"

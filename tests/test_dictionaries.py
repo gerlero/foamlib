@@ -97,7 +97,29 @@ def pitz(tmp_path: Path) -> FoamCase:
     return PITZ.clone(tmp_path / PITZ.name)
 
 
-def test_field(pitz: FoamCase) -> None:
+def test_dimensions(pitz: FoamCase) -> None:
+    assert pitz[0]["p"].dimensions == FoamDimensionSet(length=2, time=-2)
+    assert pitz[0]["U"].dimensions == FoamDimensionSet(length=1, time=-1)
+
+    pitz[0]["p"].dimensions = FoamDimensionSet(mass=1, length=1, time=-2)
+
+    assert pitz[0]["p"].dimensions == FoamDimensionSet(mass=1, length=1, time=-2)
+
+
+def test_boundary_field(pitz: FoamCase) -> None:
+    outlet = pitz[0]["p"].boundary_field["outlet"]
+    assert isinstance(outlet, FoamBoundaryDictionary)
+    assert outlet.type == "fixedValue"
+    assert outlet.value == 0
+
+    outlet.type = "zeroGradient"
+    del outlet.value
+
+    assert outlet.type == "zeroGradient"
+    assert "value" not in outlet
+
+
+def test_internal_field(pitz: FoamCase) -> None:
     pitz[0]["p"].internal_field = 0.5
     pitz[0]["U"].internal_field = [1.5, 2.0, 3]
 
@@ -128,12 +150,3 @@ def test_field(pitz: FoamCase) -> None:
         assert u == pytest.approx(u_arr)
 
     pitz.run()
-
-
-def test_dimensions(pitz: FoamCase) -> None:
-    assert pitz[0]["p"].dimensions == FoamDimensionSet(length=2, time=-2)
-    assert pitz[0]["U"].dimensions == FoamDimensionSet(length=1, time=-1)
-
-    pitz[0]["p"].dimensions = FoamDimensionSet(mass=1, length=1, time=-2)
-
-    assert pitz[0]["p"].dimensions == FoamDimensionSet(mass=1, length=1, time=-2)
