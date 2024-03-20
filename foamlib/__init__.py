@@ -1,6 +1,6 @@
 __version__ = "0.1.3"
 
-from ._cases import FoamCase, AsyncFoamCase, FoamTimeDirectory
+from ._cases import FoamCase, AsyncFoamCase, FoamTimeDirectory, FoamCaseBase
 from ._dictionaries import (
     FoamFile,
     FoamFieldFile,
@@ -15,6 +15,7 @@ __all__ = [
     "FoamCase",
     "AsyncFoamCase",
     "FoamTimeDirectory",
+    "FoamCaseBase",
     "FoamFile",
     "FoamFieldFile",
     "FoamDictionary",
