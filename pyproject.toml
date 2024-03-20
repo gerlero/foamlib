@@ -48,6 +48,7 @@ test = [
 docs = [
     "sphinx>=7,<8",
     "sphinx_rtd_theme",
+    "numpy>=1,<2",
 ]
 
 [project.urls]
