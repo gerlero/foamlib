@@ -25,7 +25,7 @@ from ._subprocesses import run_process, run_process_async, CalledProcessError
 from ._dictionaries import FoamFile, FoamFieldFile
 
 
-class _FoamCaseBase(Sequence["FoamTimeDirectory"]):
+class FoamCaseBase(Sequence["FoamTimeDirectory"]):
     def __init__(self, path: Union[Path, str]):
         self.path = Path(path).absolute()
         if not self.path.is_dir():
@@ -271,7 +271,7 @@ class _FoamCaseBase(Sequence["FoamTimeDirectory"]):
         return str(self.path)
 
 
-class FoamCase(_FoamCaseBase):
+class FoamCase(FoamCaseBase):
     """
     An OpenFOAM case.
 
@@ -407,7 +407,7 @@ class FoamCase(_FoamCaseBase):
         return FoamCase(dest)
 
 
-class AsyncFoamCase(_FoamCaseBase):
+class AsyncFoamCase(FoamCaseBase):
     """
     An OpenFOAM case with asynchronous support.
 
