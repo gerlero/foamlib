@@ -15,11 +15,14 @@ from contextlib import suppress
 
 from ._subprocesses import run_process, CalledProcessError
 
-np: Optional[Any]
 try:
     import numpy as np
+    from numpy.typing import NDArray
 except ModuleNotFoundError:
-    np = None
+    numpy = False
+else:
+    numpy = True
+
 
 FoamDimensionSet = namedtuple(
     "FoamDimensionSet",
@@ -177,7 +180,7 @@ def _serialize_sequence(sequence: Any) -> str:
     if (
         isinstance(sequence, Sequence)
         and not isinstance(sequence, str)
-        or np
+        or numpy
         and isinstance(sequence, np.ndarray)
     ):
         return f"({' '.join(_serialize(v) for v in sequence)})"
@@ -216,7 +219,7 @@ def _serialize_dimensions(value: Any) -> str:
     if (
         isinstance(value, Sequence)
         and not isinstance(value, str)
-        or np
+        or numpy
         and isinstance(value, np.ndarray)
     ) and len(value) == 7:
         return f"[{' '.join(str(v) for v in value)}]"
@@ -372,7 +375,12 @@ class FoamBoundaryDictionary(FoamDictionary):
     @property
     def value(
         self,
-    ) -> Union[int, float, Sequence[Union[int, float, Sequence[Union[int, float]]]]]:
+    ) -> Union[
+        int,
+        float,
+        Sequence[Union[int, float, Sequence[Union[int, float]]]],
+        NDArray[np.generic],
+    ]:
         """
         Alias of `self["value"]`.
         """
@@ -457,7 +465,12 @@ class FoamFieldFile(FoamFile):
     @property
     def internal_field(
         self,
-    ) -> Union[int, float, Sequence[Union[int, float, Sequence[Union[int, float]]]]]:
+    ) -> Union[
+        int,
+        float,
+        Sequence[Union[int, float, Sequence[Union[int, float]]]],
+        NDArray[np.generic],
+    ]:
         """
         Alias of `self["internalField"]`.
         """
