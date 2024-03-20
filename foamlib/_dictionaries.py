@@ -7,6 +7,7 @@ from typing import (
     Optional,
     Mapping,
     MutableMapping,
+    cast,
 )
 from collections import namedtuple
 from dataclasses import dataclass
@@ -41,7 +42,7 @@ class FoamDimensioned:
     dimensions: Union[FoamDimensionSet, Sequence[Union[int, float]]] = (
         FoamDimensionSet()
     )
-    value: Union["FoamValue", Sequence["FoamValue"]] = 0
+    value: Union[int, float, Sequence[Union[int, float]]] = 0
 
     def __post_init__(self) -> None:
         if self.name is not None and not isinstance(self.name, str) and self.value == 0:
@@ -132,7 +133,11 @@ def _parse_dimensioned(value: str) -> FoamDimensioned:
         if end != -1:
             dimensions = _parse_dimensions(value[start : end + 1])
             value = value[end + 1 :].strip()
-            return FoamDimensioned(name, dimensions, _parse(value))
+            return FoamDimensioned(
+                name,
+                dimensions,
+                cast(Union[int, float, Sequence[Union[int, float]]], _parse(value)),
+            )
 
     raise ValueError(f"Cannot parse '{value}' as a dimensioned value")
 
@@ -365,21 +370,30 @@ class FoamFile(FoamDictionary):
         return ret
 
     @dimensions.setter
-    def dimensions(self, value: Any) -> None:
+    def dimensions(
+        self, value: Union[FoamDimensionSet, Sequence[Union[int, float]]]
+    ) -> None:
         self["dimensions"] = value
 
     @property
-    def internal_field(self) -> FoamValue:
+    def internal_field(
+        self,
+    ) -> Union[int, float, Sequence[Union[int, float, Sequence[Union[int, float]]]]]:
         """
         Alias of `self["internalField"]`.
         """
         ret = self["internalField"]
-        if isinstance(ret, FoamDictionary):
-            raise TypeError("internalField is a dictionary")
-        return ret
+        if not isinstance(ret, (int, float, Sequence)):
+            raise TypeError("internalField is not a field")
+        return cast(Union[int, float, Sequence[Union[int, float]]], ret)
 
     @internal_field.setter
-    def internal_field(self, value: Any) -> None:
+    def internal_field(
+        self,
+        value: Union[
+            int, float, Sequence[Union[int, float, Sequence[Union[int, float]]]]
+        ],
+    ) -> None:
         self["internalField"] = value
 
     @property
