@@ -22,7 +22,7 @@ from typing import (
 import aioshutil
 
 from ._subprocesses import run_process, run_process_async, CalledProcessError
-from ._dictionaries import FoamFile
+from ._dictionaries import FoamFile, FoamFieldFile
 
 
 class _FoamCaseBase(Sequence["FoamTimeDirectory"]):
@@ -601,7 +601,7 @@ class AsyncFoamCase(_FoamCaseBase):
         return AsyncFoamCase(dest)
 
 
-class FoamTimeDirectory(Mapping[str, FoamFile]):
+class FoamTimeDirectory(Mapping[str, FoamFieldFile]):
     """
     An OpenFOAM time directory in a case.
 
@@ -629,9 +629,9 @@ class FoamTimeDirectory(Mapping[str, FoamFile]):
         """
         return self.path.name
 
-    def __getitem__(self, key: str) -> FoamFile:
+    def __getitem__(self, key: str) -> FoamFieldFile:
         try:
-            return FoamFile(self.path / key)
+            return FoamFieldFile(self.path / key)
         except FileNotFoundError as e:
             raise KeyError(key) from e
 

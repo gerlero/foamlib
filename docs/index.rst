@@ -8,7 +8,7 @@ Documentation for `foamlib <https://github.com/gerlero/foamlib>`_
 .. automodule:: foamlib
    :members:
    :undoc-members:
-   :inherited-members:
+   :show-inheritance:
 
 Indices and tables
 ==================
