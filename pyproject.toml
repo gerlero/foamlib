@@ -27,7 +27,10 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-dependencies = ["aioshutil>=1,<2"]
+dependencies = [
+    "aioshutil>=1,<2",
+    "pyparsing>=3,<4",
+]
 
 dynamic = ["version"]
 
