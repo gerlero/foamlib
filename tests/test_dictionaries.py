@@ -14,8 +14,8 @@ def test_parse() -> None:
     assert _parse("1") == 1
     assert _parse("1.0") == 1.0
     assert _parse("1.0e-3") == 1.0e-3
-    assert _parse("yes") == True
-    assert _parse("no") == False
+    assert _parse("yes") is True
+    assert _parse("no") is False
     assert _parse("uniform 1") == 1
     assert _parse("uniform 1.0") == 1.0
     assert _parse("uniform 1.0e-3") == 1.0e-3
