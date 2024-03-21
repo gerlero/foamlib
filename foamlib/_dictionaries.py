@@ -23,6 +23,7 @@ except ModuleNotFoundError:
 else:
     numpy = True
 
+from pyparsing import Group, Keyword, Opt, ZeroOrMore, Literal, Forward, common
 
 FoamDimensionSet = namedtuple(
     "FoamDimensionSet",
@@ -63,108 +64,45 @@ FoamValue = Union[
 A value that can be stored in an OpenFOAM dictionary.
 """
 
+_yes = Keyword("yes").set_parse_action(lambda s, loc, tks: True)
+_no = Keyword("no").set_parse_action(lambda s, loc, tks: False)
+_value = Forward()
+_list = (
+    Opt(common.integer).suppress()
+    + Literal("(").suppress()
+    + Group(ZeroOrMore(_value))
+    + Literal(")").suppress()
+)
+_uniform_field = Keyword("uniform").suppress() + _value
+_nonuniform_field = (
+    Keyword("nonuniform").suppress()
+    + Literal("List<").suppress()
+    + common.identifier.suppress()
+    + Literal(">").suppress()
+    + _list
+)
+_dimensions = (
+    Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
+).set_parse_action(lambda s, loc, tks: FoamDimensionSet(*tks))
+_dimensioned = (common.identifier + _dimensions + _value).set_parse_action(
+    lambda s, loc, tks: FoamDimensioned(tks[0], tks[1], tks[2].as_list())
+)
 
-def _parse_bool(value: str) -> bool:
-    if value == "yes":
-        return True
-    elif value == "no":
-        return False
-    else:
-        raise ValueError(f"Cannot parse '{value}' as a boolean")
-
-
-def _parse_number(value: str) -> Union[int, float]:
-    with suppress(ValueError):
-        return int(value)
-    with suppress(ValueError):
-        return float(value)
-    raise ValueError(f"Cannot parse '{value}' as a number")
-
-
-def _parse_sequence(value: str) -> Sequence[FoamValue]:
-    start = value.find("(")
-    if start != -1:
-        assert value.endswith(")")
-        seq = []
-        nested = 0
-        start += 1
-        for i, c in enumerate(value[start:], start=start):
-            if c == "(":
-                nested += 1
-            elif c == ")":
-                nested -= 1
-            if c.isspace() and not nested:
-                v = value[start:i].strip()
-                if v:
-                    seq.append(_parse(v))
-                start = i + 1
-
-        v = value[start:-1].strip()
-        if v:
-            seq.append(_parse(v))
-
-        return seq
-
-    else:
-        raise ValueError(f"Cannot parse '{value}' as a sequence")
-
-
-def _parse_field(value: str) -> FoamValue:
-    if value.startswith("uniform "):
-        value = value[len("uniform ") :]
-        return _parse(value)
-    elif value.startswith("nonuniform "):
-        value = value[len("nonuniform ") :]
-        return _parse_sequence(value)
-    else:
-        raise ValueError(f"Cannot parse '{value}' as a field")
-
-
-def _parse_dimensions(value: str) -> FoamDimensionSet:
-    if value.startswith("["):
-        assert value.endswith("]")
-        return FoamDimensionSet(*(_parse_number(v) for v in value[1:-1].split()))
-    else:
-        raise ValueError(f"Cannot parse '{value}' as a dimension set")
-
-
-def _parse_dimensioned(value: str) -> FoamDimensioned:
-    start = value.find("[", 1)
-    if start != -1:
-        name = value[:start].strip()
-        end = value.find("]", start)
-        if end != -1:
-            dimensions = _parse_dimensions(value[start : end + 1])
-            value = value[end + 1 :].strip()
-            return FoamDimensioned(
-                name,
-                dimensions,
-                cast(Union[int, float, Sequence[Union[int, float]]], _parse(value)),
-            )
-
-    raise ValueError(f"Cannot parse '{value}' as a dimensioned value")
+_value << (
+    _uniform_field
+    | _nonuniform_field
+    | _list
+    | _dimensioned
+    | _dimensions
+    | common.number
+    | _yes
+    | _no
+    | common.identifier
+)
 
 
 def _parse(value: str) -> FoamValue:
-    with suppress(ValueError):
-        return _parse_bool(value)
-
-    with suppress(ValueError):
-        return _parse_field(value)
-
-    with suppress(ValueError):
-        return _parse_number(value)
-
-    with suppress(ValueError):
-        return _parse_dimensions(value)
-
-    with suppress(ValueError):
-        return _parse_dimensioned(value)
-
-    with suppress(ValueError):
-        return _parse_sequence(value)
-
-    return value
+    return cast(FoamValue, _value.parse_string(value, parse_all=True).as_list()[0])
 
 
 def _serialize_bool(value: Any) -> str:
@@ -176,7 +114,7 @@ def _serialize_bool(value: Any) -> str:
         raise TypeError(f"Not a bool: {type(value)}")
 
 
-def _serialize_sequence(sequence: Any) -> str:
+def _serialize_list(sequence: Any) -> str:
     if (
         isinstance(sequence, Sequence)
         and not isinstance(sequence, str)
@@ -193,7 +131,7 @@ def _serialize_field(value: Any) -> str:
         return f"uniform {value}"
     else:
         try:
-            s = _serialize_sequence(value)
+            s = _serialize_list(value)
         except TypeError:
             raise TypeError(f"Not a valid field: {type(value)}") from None
         else:
@@ -249,7 +187,7 @@ def _serialize(
         return _serialize_dimensioned(value)
 
     with suppress(TypeError):
-        return _serialize_sequence(value)
+        return _serialize_list(value)
 
     with suppress(TypeError):
         return _serialize_bool(value)
