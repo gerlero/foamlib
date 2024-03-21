@@ -67,20 +67,21 @@ A value that can be stored in an OpenFOAM dictionary.
 _yes = Keyword("yes").set_parse_action(lambda s, loc, tks: True)
 _no = Keyword("no").set_parse_action(lambda s, loc, tks: False)
 _value = Forward()
-_list = (
-    Opt(common.integer).suppress()
-    + Literal("(").suppress()
-    + Group(ZeroOrMore(_value))
-    + Literal(")").suppress()
+_list = Opt(
+    Literal("List") + Literal("<") + common.identifier + Literal(">")
+).suppress() + (
+    (
+        Opt(common.integer).suppress()
+        + Literal("(").suppress()
+        + Group(ZeroOrMore(_value))
+        + Literal(")").suppress()
+    )
+    | (
+        common.integer + Literal("{").suppress() + _value + Literal("}").suppress()
+    ).set_parse_action(lambda s, loc, tks: [tks[1]] * tks[0])
 )
 _uniform_field = Keyword("uniform").suppress() + _value
-_nonuniform_field = (
-    Keyword("nonuniform").suppress()
-    + Literal("List<").suppress()
-    + common.identifier.suppress()
-    + Literal(">").suppress()
-    + _list
-)
+_nonuniform_field = Keyword("nonuniform").suppress() + _list
 _dimensions = (
     Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
 ).set_parse_action(lambda s, loc, tks: FoamDimensionSet(*tks))

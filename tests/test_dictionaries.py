@@ -137,6 +137,18 @@ def test_internal_field(pitz: FoamCase) -> None:
 
     pitz.clean()
 
+    p_arr = np.zeros(size)
+    U_arr = np.zeros((size, 3))
+
+    pitz[0]["p"].internal_field = p_arr
+    pitz[0]["U"].internal_field = U_arr
+
+    assert pitz[0]["p"].internal_field == pytest.approx(p_arr)
+    U = pitz[0]["U"].internal_field
+    assert isinstance(U, Sequence)
+    for u, u_arr in zip(U, U_arr):
+        assert u == pytest.approx(u_arr)
+
     p_arr = np.arange(size) * 1e-6
     U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
 
@@ -144,7 +156,7 @@ def test_internal_field(pitz: FoamCase) -> None:
     pitz[0]["U"].internal_field = U_arr
 
     assert pitz[0]["p"].internal_field == pytest.approx(p_arr)
-    U = pitz[-1]["U"].internal_field
+    U = pitz[0]["U"].internal_field
     assert isinstance(U, Sequence)
     for u, u_arr in zip(U, U_arr):
         assert u == pytest.approx(u_arr)
