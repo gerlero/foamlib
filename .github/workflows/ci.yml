@@ -18,7 +18,7 @@ jobs:
     - name: Format code with Black
       uses: psf/black@stable
 
-  typing:
+  lint:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -27,7 +27,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.x'
-    - name: Install typing dependencies
+    - name: Install linting dependencies
       run: |
         pip install .[lint]
     - name: Check types with mypy
