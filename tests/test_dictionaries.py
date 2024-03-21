@@ -162,3 +162,11 @@ def test_internal_field(pitz: FoamCase) -> None:
         assert u == pytest.approx(u_arr)
 
     pitz.run()
+
+
+def test_fv_schemes(pitz: FoamCase) -> None:
+    div_schemes = pitz.fv_schemes["divSchemes"]
+    assert isinstance(div_schemes, FoamDictionary)
+    scheme = div_schemes["div(phi,U)"]
+    assert isinstance(scheme, str)
+    assert scheme == "bounded Gauss linearUpwind grad(U)"
