@@ -64,46 +64,46 @@ FoamValue = Union[
 A value that can be stored in an OpenFOAM dictionary.
 """
 
-_yes = Keyword("yes").set_parse_action(lambda s, loc, tks: True)
-_no = Keyword("no").set_parse_action(lambda s, loc, tks: False)
-_value = Forward()
-_list = Opt(
+_YES = Keyword("yes").set_parse_action(lambda s, loc, tks: True)
+_NO = Keyword("no").set_parse_action(lambda s, loc, tks: False)
+_VALUE = Forward()
+_LIST = Opt(
     Literal("List") + Literal("<") + common.identifier + Literal(">")
 ).suppress() + (
     (
         Opt(common.integer).suppress()
         + Literal("(").suppress()
-        + Group(ZeroOrMore(_value))
+        + Group(ZeroOrMore(_VALUE))
         + Literal(")").suppress()
     )
     | (
-        common.integer + Literal("{").suppress() + _value + Literal("}").suppress()
+        common.integer + Literal("{").suppress() + _VALUE + Literal("}").suppress()
     ).set_parse_action(lambda s, loc, tks: [tks[1]] * tks[0])
 )
-_uniform_field = Keyword("uniform").suppress() + _value
-_nonuniform_field = Keyword("nonuniform").suppress() + _list
-_dimensions = (
+_FIELD = (Keyword("uniform").suppress() + _VALUE) | (
+    Keyword("nonuniform").suppress() + _LIST
+)
+_DIMENSIONS = (
     Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
 ).set_parse_action(lambda s, loc, tks: FoamDimensionSet(*tks))
-_dimensioned = (common.identifier + _dimensions + _value).set_parse_action(
+_DIMENSIONED = (common.identifier + _DIMENSIONS + _VALUE).set_parse_action(
     lambda s, loc, tks: FoamDimensioned(tks[0], tks[1], tks[2].as_list())
 )
 
-_value << (
-    _uniform_field
-    | _nonuniform_field
-    | _list
-    | _dimensioned
-    | _dimensions
+_VALUE << (
+    _FIELD
+    | _LIST
+    | _DIMENSIONED
+    | _DIMENSIONS
     | common.number
-    | _yes
-    | _no
+    | _YES
+    | _NO
     | common.identifier
 )
 
 
 def _parse(value: str) -> FoamValue:
-    return cast(FoamValue, _value.parse_string(value, parse_all=True).as_list()[0])
+    return cast(FoamValue, _VALUE.parse_string(value, parse_all=True).as_list()[0])
 
 
 def _serialize_bool(value: Any) -> str:
@@ -115,22 +115,24 @@ def _serialize_bool(value: Any) -> str:
         raise TypeError(f"Not a bool: {type(value)}")
 
 
-def _serialize_list(sequence: Any) -> str:
-    if (
-        isinstance(sequence, Sequence)
-        and not isinstance(sequence, str)
+def _is_sequence(value: Any) -> bool:
+    return (
+        isinstance(value, Sequence)
+        and not isinstance(value, str)
         or numpy
-        and isinstance(sequence, np.ndarray)
-    ):
-        return f"({' '.join(_serialize(v) for v in sequence)})"
+        and isinstance(value, np.ndarray)
+    )
+
+
+def _serialize_list(value: Any) -> str:
+    if _is_sequence(value):
+        return f"({' '.join(_serialize(v) for v in value)})"
     else:
-        raise TypeError(f"Not a valid sequence: {type(sequence)}")
+        raise TypeError(f"Not a valid sequence: {type(value)}")
 
 
 def _serialize_field(value: Any) -> str:
-    if isinstance(value, (int, float)):
-        return f"uniform {value}"
-    else:
+    if _is_sequence(value):
         try:
             s = _serialize_list(value)
         except TypeError:
@@ -152,15 +154,12 @@ def _serialize_field(value: Any) -> str:
                         f"Unsupported sequence length for field: {len(value[0])}"
                     )
                 return f"nonuniform List<{kind}> {len(value)}{s}"
+    else:
+        return f"uniform {value}"
 
 
 def _serialize_dimensions(value: Any) -> str:
-    if (
-        isinstance(value, Sequence)
-        and not isinstance(value, str)
-        or numpy
-        and isinstance(value, np.ndarray)
-    ) and len(value) == 7:
+    if _is_sequence(value) and len(value) == 7:
         return f"[{' '.join(str(v) for v in value)}]"
     else:
         raise TypeError(f"Not a valid dimension set: {type(value)}")
