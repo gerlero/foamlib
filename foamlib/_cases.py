@@ -14,7 +14,6 @@ from typing import (
     Sequence,
     AsyncGenerator,
     Callable,
-    Mapping,
     Iterator,
     overload,
 )
