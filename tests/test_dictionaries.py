@@ -34,6 +34,10 @@ def test_parse() -> None:
     assert _parse("g [1 1 -2 0 0 0 0] (0 0 -9.81)") == FoamDimensioned(
         "g", FoamDimensionSet(mass=1, length=1, time=-2), [0, 0, -9.81]
     )
+    assert (
+        _parse("hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")
+        == "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
+    )
 
 
 def test_write_read(tmp_path: Path) -> None:
