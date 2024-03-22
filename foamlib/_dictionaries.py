@@ -319,7 +319,7 @@ class FoamBoundaryDictionary(FoamDictionary):
         int,
         float,
         Sequence[Union[int, float, Sequence[Union[int, float]]]],
-        NDArray[np.generic],
+        "NDArray[np.generic]",
     ]:
         """
         Alias of `self["value"]`.
@@ -412,7 +412,7 @@ class FoamFieldFile(FoamFile):
         int,
         float,
         Sequence[Union[int, float, Sequence[Union[int, float]]]],
-        NDArray[np.generic],
+        "NDArray[np.generic]",
     ]:
         """
         Alias of `self["internalField"]`.
