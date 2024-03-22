@@ -32,7 +32,12 @@ def test_parse() -> None:
     ]
     assert _parse("[1 1 -2 0 0 0 0]") == FoamDimensionSet(mass=1, length=1, time=-2)
     assert _parse("g [1 1 -2 0 0 0 0] (0 0 -9.81)") == FoamDimensioned(
-        "g", FoamDimensionSet(mass=1, length=1, time=-2), [0, 0, -9.81]
+        name="g",
+        dimensions=FoamDimensionSet(mass=1, length=1, time=-2),
+        value=[0, 0, -9.81],
+    )
+    assert _parse("[1 1 -2 0 0 0 0] 9.81") == FoamDimensioned(
+        dimensions=FoamDimensionSet(mass=1, length=1, time=-2), value=9.81
     )
     assert (
         _parse("hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")
@@ -88,9 +93,13 @@ def test_write_read(tmp_path: Path) -> None:
     sd["nestedList"] = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
     assert sd["nestedList"] == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
-    sd["g"] = FoamDimensioned("g", [1, 1, -2, 0, 0, 0, 0], [0, 0, -9.81])
+    sd["g"] = FoamDimensioned(
+        name="g", dimensions=[1, 1, -2, 0, 0, 0, 0], value=[0, 0, -9.81]
+    )
     assert sd["g"] == FoamDimensioned(
-        "g", FoamDimensionSet(mass=1, length=1, time=-2), [0, 0, -9.81]
+        name="g",
+        dimensions=FoamDimensionSet(mass=1, length=1, time=-2),
+        value=[0, 0, -9.81],
     )
 
 
