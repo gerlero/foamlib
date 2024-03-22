@@ -29,11 +29,8 @@ from pyparsing import (
     Keyword,
     Literal,
     Opt,
-    QuotedString,
-    Word,
+    ParseException,
     common,
-    identchars,
-    identbodychars,
 )
 
 FoamDimensionSet = namedtuple(
@@ -77,10 +74,6 @@ A value that can be stored in an OpenFOAM dictionary.
 
 _YES = Keyword("yes").set_parse_action(lambda s, loc, tks: True)
 _NO = Keyword("no").set_parse_action(lambda s, loc, tks: False)
-_WORDS = Word(identchars, identbodychars + "(),")[1, ...].set_parse_action(
-    lambda s, loc, tks: " ".join(tks)
-)
-_STRING = QuotedString('"', unquote_results=False)
 _VALUE = Forward()
 _LIST = Opt(
     Literal("List") + Literal("<") + common.identifier + Literal(">")
@@ -105,21 +98,14 @@ _DIMENSIONED = (common.identifier + _DIMENSIONS + _VALUE).set_parse_action(
     lambda s, loc, tks: FoamDimensioned(tks[0], tks[1], tks[2].as_list())
 )
 
-_VALUE << (
-    _FIELD
-    | _LIST
-    | _DIMENSIONED
-    | _DIMENSIONS
-    | common.number
-    | _YES
-    | _NO
-    | _WORDS
-    | _STRING
-)
+_VALUE << (_FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _YES | _NO)
 
 
 def _parse(value: str) -> FoamValue:
-    return cast(FoamValue, _VALUE.parse_string(value, parse_all=True).as_list()[0])
+    try:
+        return cast(FoamValue, _VALUE.parse_string(value, parse_all=True).as_list()[0])
+    except ParseException:
+        return value
 
 
 def _serialize_bool(value: Any) -> str:
