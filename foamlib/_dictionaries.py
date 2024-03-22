@@ -50,17 +50,13 @@ FoamDimensionSet = namedtuple(
 
 @dataclass
 class FoamDimensioned:
-    name: Optional[str] = None
+    value: Union[int, float, Sequence[Union[int, float]]] = 0
     dimensions: Union[FoamDimensionSet, Sequence[Union[int, float]]] = (
         FoamDimensionSet()
     )
-    value: Union[int, float, Sequence[Union[int, float]]] = 0
+    name: Optional[str] = None
 
     def __post_init__(self) -> None:
-        if self.name is not None and not isinstance(self.name, str) and self.value == 0:
-            self.value = self.name
-            self.name = None
-
         if not isinstance(self.dimensions, FoamDimensionSet):
             self.dimensions = FoamDimensionSet(*self.dimensions)
 
@@ -94,8 +90,8 @@ _FIELD = (Keyword("uniform").suppress() + _VALUE) | (
 _DIMENSIONS = (
     Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
 ).set_parse_action(lambda s, loc, tks: FoamDimensionSet(*tks))
-_DIMENSIONED = (common.identifier + _DIMENSIONS + _VALUE).set_parse_action(
-    lambda s, loc, tks: FoamDimensioned(tks[0], tks[1], tks[2].as_list())
+_DIMENSIONED = (Opt(common.identifier) + _DIMENSIONS + _VALUE).set_parse_action(
+    lambda s, loc, tks: FoamDimensioned(*reversed(tks.as_list()))
 )
 
 _VALUE << (_FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _YES | _NO)
@@ -169,7 +165,12 @@ def _serialize_dimensions(value: Any) -> str:
 
 def _serialize_dimensioned(value: Any) -> str:
     if isinstance(value, FoamDimensioned):
-        return f"{value.name or 'unnamed'} {_serialize_dimensions(value.dimensions)} {_serialize(value.value)}"
+        if value.name is not None:
+            return f"{value.name} {_serialize_dimensions(value.dimensions)} {_serialize(value.value)}"
+        else:
+            return (
+                f"{_serialize_dimensions(value.dimensions)} {_serialize(value.value)}"
+            )
     else:
         raise TypeError(f"Not a valid dimensioned value: {type(value)}")
 
