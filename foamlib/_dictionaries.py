@@ -28,10 +28,9 @@ from pyparsing import (
     Group,
     Keyword,
     Literal,
-    OneOrMore,
     Opt,
+    QuotedString,
     Word,
-    ZeroOrMore,
     common,
     identchars,
     identbodychars,
@@ -78,9 +77,10 @@ A value that can be stored in an OpenFOAM dictionary.
 
 _YES = Keyword("yes").set_parse_action(lambda s, loc, tks: True)
 _NO = Keyword("no").set_parse_action(lambda s, loc, tks: False)
-_WORDS = OneOrMore(Word(identchars, identbodychars + "(),")).set_parse_action(
+_WORDS = Word(identchars, identbodychars + "(),")[1, ...].set_parse_action(
     lambda s, loc, tks: " ".join(tks)
 )
+_STRING = QuotedString('"', unquote_results=False)
 _VALUE = Forward()
 _LIST = Opt(
     Literal("List") + Literal("<") + common.identifier + Literal(">")
@@ -88,7 +88,7 @@ _LIST = Opt(
     (
         Opt(common.integer).suppress()
         + Literal("(").suppress()
-        + Group(ZeroOrMore(_VALUE))
+        + Group(_VALUE[...])
         + Literal(")").suppress()
     )
     | (
@@ -106,7 +106,15 @@ _DIMENSIONED = (common.identifier + _DIMENSIONS + _VALUE).set_parse_action(
 )
 
 _VALUE << (
-    _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _YES | _NO | _WORDS
+    _FIELD
+    | _LIST
+    | _DIMENSIONED
+    | _DIMENSIONS
+    | common.number
+    | _YES
+    | _NO
+    | _WORDS
+    | _STRING
 )
 
 
