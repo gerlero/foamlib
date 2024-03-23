@@ -32,7 +32,7 @@ from pyparsing import (
     QuotedString,
     Word,
     common,
-    identbodychars,
+    printables,
 )
 
 FoamDimensionSet = namedtuple(
@@ -100,7 +100,7 @@ _ITEM <<= (
     _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _YES | _NO | _TOKEN
 )
 
-_TOKENS = (Word(identbodychars + "(),") | QuotedString('"', unquote_results=False))[
+_TOKENS = (QuotedString('"', unquote_results=False) | Word(printables))[
     1, ...
 ].set_parse_action(lambda s, loc, tks: " ".join(tks))
 
