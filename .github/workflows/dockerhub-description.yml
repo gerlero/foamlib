@@ -1,0 +1,28 @@
+name: Update Docker Hub description
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - README.md
+      - .github/workflows/dockerhub-description.yml
+  workflow_dispatch:
+
+jobs:
+  dockerhub-description:
+    if: vars.DOCKERHUB_REPOSITORY
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Modify README.md for Docker Hub
+      run: |
+        sed -i "s|^\s*#\s\+\(.\+\)|# [\1]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)|" README.md
+    - name: Update Docker Hub description
+      uses: peter-evans/dockerhub-description@v4
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        repository: ${{ vars.DOCKERHUB_REPOSITORY }}
+        short-description: ${{ github.event.repository.description }}
+        enable-url-completion: true
