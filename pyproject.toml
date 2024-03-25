@@ -61,9 +61,6 @@ Homepage = "https://github.com/gerlero/foamlib"
 Repository = "https://github.com/gerlero/foamlib"
 Documentation = "https://foamlib.readthedocs.io"
 
-[tool.setuptools]
-packages = ["foamlib"]
-
 [tool.setuptools.dynamic]
 version = {attr = "foamlib.__version__"}
 

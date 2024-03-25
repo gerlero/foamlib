@@ -7,40 +7,40 @@ from typing import Sequence
 import numpy as np
 
 from foamlib import *
-from foamlib._dictionaries import _parse
+from foamlib._dictionaries._parsing import parse
 
 
 def test_parse() -> None:
-    assert _parse("1") == 1
-    assert _parse("1.0") == 1.0
-    assert _parse("1.0e-3") == 1.0e-3
-    assert _parse("yes") is True
-    assert _parse("no") is False
-    assert _parse("word") == "word"
-    assert _parse("word word") == "word word"
-    assert _parse('"a string"') == '"a string"'
-    assert _parse("uniform 1") == 1
-    assert _parse("uniform 1.0") == 1.0
-    assert _parse("uniform 1.0e-3") == 1.0e-3
-    assert _parse("(1.0 2.0 3.0)") == [1.0, 2.0, 3.0]
-    assert _parse("nonuniform List<scalar> 2(1 2)") == [1, 2]
-    assert _parse("3(1 2 3)") == [1, 2, 3]
-    assert _parse("2((1 2 3) (4 5 6))") == [[1, 2, 3], [4, 5, 6]]
-    assert _parse("nonuniform List<vector> 2((1 2 3) (4 5 6))") == [
+    assert parse("1") == 1
+    assert parse("1.0") == 1.0
+    assert parse("1.0e-3") == 1.0e-3
+    assert parse("yes") is True
+    assert parse("no") is False
+    assert parse("word") == "word"
+    assert parse("word word") == "word word"
+    assert parse('"a string"') == '"a string"'
+    assert parse("uniform 1") == 1
+    assert parse("uniform 1.0") == 1.0
+    assert parse("uniform 1.0e-3") == 1.0e-3
+    assert parse("(1.0 2.0 3.0)") == [1.0, 2.0, 3.0]
+    assert parse("nonuniform List<scalar> 2(1 2)") == [1, 2]
+    assert parse("3(1 2 3)") == [1, 2, 3]
+    assert parse("2((1 2 3) (4 5 6))") == [[1, 2, 3], [4, 5, 6]]
+    assert parse("nonuniform List<vector> 2((1 2 3) (4 5 6))") == [
         [1, 2, 3],
         [4, 5, 6],
     ]
-    assert _parse("[1 1 -2 0 0 0 0]") == FoamDimensionSet(mass=1, length=1, time=-2)
-    assert _parse("g [1 1 -2 0 0 0 0] (0 0 -9.81)") == FoamDimensioned(
+    assert parse("[1 1 -2 0 0 0 0]") == FoamDimensionSet(mass=1, length=1, time=-2)
+    assert parse("g [1 1 -2 0 0 0 0] (0 0 -9.81)") == FoamDimensioned(
         name="g",
         dimensions=FoamDimensionSet(mass=1, length=1, time=-2),
         value=[0, 0, -9.81],
     )
-    assert _parse("[1 1 -2 0 0 0 0] 9.81") == FoamDimensioned(
+    assert parse("[1 1 -2 0 0 0 0] 9.81") == FoamDimensioned(
         dimensions=FoamDimensionSet(mass=1, length=1, time=-2), value=9.81
     )
     assert (
-        _parse("hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")
+        parse("hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")
         == "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
 
