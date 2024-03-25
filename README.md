@@ -7,7 +7,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PyPI](https://img.shields.io/pypi/v/foamlib)](https://pypi.org/project/foamlib/)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/foamlib)](https://pypi.org/project/foamlib/)
-
+[![Docker image](https://img.shields.io/badge/docker%20image-gerlero%2Ffoamlib-informational)](https://hub.docker.com/r/gerlero/foamlib/)
 
 **foamlib** provides a simple, modern and ergonomic Python interface for interacting with [OpenFOAM](https://www.openfoam.com).
 
