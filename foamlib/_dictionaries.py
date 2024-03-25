@@ -286,9 +286,7 @@ class FoamDictionary(MutableMapping[str, Union[FoamValue, "FoamDictionary"]]):
         self._cmd(["-remove"], key=key)
 
     def __iter__(self) -> Iterator[str]:
-        for key in self._cmd(["-keywords"]).splitlines():
-            if not key.startswith('"'):
-                yield key
+        yield from self._cmd(["-keywords"]).splitlines()
 
     def __len__(self) -> int:
         return len(list(iter(self)))
