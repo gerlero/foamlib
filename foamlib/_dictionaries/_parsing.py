@@ -1,18 +1,23 @@
-from typing import cast
-
 from pyparsing import (
+    Dict,
     Forward,
     Group,
     Keyword,
+    LineEnd,
     Literal,
+    Located,
     Opt,
     QuotedString,
     Word,
+    c_style_comment,
     common,
+    cpp_style_comment,
     printables,
+    identchars,
+    identbodychars,
 )
 
-from ._values import FoamValue, FoamDimensionSet, FoamDimensioned
+from ._values import FoamDimensionSet, FoamDimensioned
 
 
 _YES = Keyword("yes").set_parse_action(lambda: True)
@@ -20,7 +25,9 @@ _NO = Keyword("no").set_parse_action(lambda: False)
 _DIMENSIONS = (
     Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
 ).set_parse_action(lambda tks: FoamDimensionSet(*tks))
-_TOKEN = common.identifier | QuotedString('"', unquote_results=False)
+_TOKEN = QuotedString('"', unquote_results=False) | Word(
+    identchars + "$", identbodychars
+)
 _ITEM = Forward()
 _LIST = Opt(
     Literal("List") + Literal("<") + common.identifier + Literal(">")
@@ -45,12 +52,33 @@ _ITEM <<= (
     _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _YES | _NO | _TOKEN
 )
 
-_TOKENS = (QuotedString('"', unquote_results=False) | Word(printables))[
-    1, ...
-].set_parse_action(lambda tks: " ".join(tks))
+_TOKENS = (
+    QuotedString('"', unquote_results=False)
+    | Word(printables.replace(";", "").replace("{", "").replace("}", ""))
+)[2, ...].set_parse_action(lambda tks: " ".join(tks))
 
-_VALUE = _ITEM ^ _TOKENS
+VALUE = (_ITEM ^ _TOKENS).ignore(c_style_comment).ignore(cpp_style_comment)
 
 
-def parse(value: str) -> FoamValue:
-    return cast(FoamValue, _VALUE.parse_string(value, parse_all=True).as_list()[0])
+_UNPARSED_VALUE = (
+    QuotedString('"', unquote_results=False)
+    | Word(printables.replace(";", "").replace("{", "").replace("}", ""))
+)[...]
+_KEYWORD = QuotedString('"', unquote_results=False) | Word(
+    identchars + "$(,.)", identbodychars + "$(,.)"
+)
+DICTIONARY = Forward()
+_ENTRY = _KEYWORD + (
+    (
+        Located(_UNPARSED_VALUE).set_parse_action(lambda tks: (tks[0], tks[2]))
+        + Literal(";").suppress()
+    )
+    | (Literal("{").suppress() + DICTIONARY + Literal("}").suppress())
+)
+DICTIONARY <<= (
+    Dict(Group(_ENTRY)[...])
+    .set_parse_action(lambda tks: {} if not tks else tks)
+    .ignore(c_style_comment)
+    .ignore(cpp_style_comment)
+    .ignore(Literal("#include") + ... + LineEnd())  # type: ignore
+)
