@@ -10,7 +10,7 @@ from typing import (
     cast,
 )
 from ._values import FoamDimensionSet, FoamDimensioned, FoamValue
-from ._parsing import parse
+from ._parsing import DICTIONARY, VALUE
 from ._serialization import serialize
 from .._subprocesses import run_process, CalledProcessError
 
@@ -67,13 +67,17 @@ class FoamDictionary(MutableMapping[str, Union[FoamValue, "FoamDictionary"]]):
                 ) from None
 
     def __getitem__(self, key: str) -> Union[FoamValue, "FoamDictionary"]:
-        value = self._cmd(["-value"], key=key)
+        contents = self._file.path.read_text()
+        value = DICTIONARY.parse_string(contents, parse_all=True).as_dict()
 
-        if value.startswith("{"):
-            assert value.endswith("}")
+        for key in [*self._keywords, key]:
+            value = value[key]
+
+        if isinstance(value, dict):
             return FoamDictionary(self._file, [*self._keywords, key])
         else:
-            return parse(value)
+            start, end = value
+            return VALUE.parse_string(contents[start:end], parse_all=True).as_list()[0]
 
     def _setitem(
         self,
@@ -88,6 +92,7 @@ class FoamDictionary(MutableMapping[str, Union[FoamValue, "FoamDictionary"]]):
         elif isinstance(value, Mapping):
             self._cmd(["-set", "{}"], key=key)
             subdict = self[key]
+            print(subdict)
             assert isinstance(subdict, FoamDictionary)
             for k, v in value.items():
                 subdict[k] = v
@@ -114,7 +119,12 @@ class FoamDictionary(MutableMapping[str, Union[FoamValue, "FoamDictionary"]]):
         self._cmd(["-remove"], key=key)
 
     def __iter__(self) -> Iterator[str]:
-        yield from self._cmd(["-keywords"]).splitlines()
+        value = DICTIONARY.parse_file(self._file.path, parse_all=True).as_dict()
+
+        for key in self._keywords:
+            value = value[key]
+
+        yield from value
 
     def __len__(self) -> int:
         return len(list(iter(self)))

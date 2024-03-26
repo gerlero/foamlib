@@ -7,40 +7,52 @@ from typing import Sequence
 import numpy as np
 
 from foamlib import *
-from foamlib._dictionaries._parsing import parse
+from foamlib._dictionaries._parsing import VALUE
 
 
-def test_parse() -> None:
-    assert parse("1") == 1
-    assert parse("1.0") == 1.0
-    assert parse("1.0e-3") == 1.0e-3
-    assert parse("yes") is True
-    assert parse("no") is False
-    assert parse("word") == "word"
-    assert parse("word word") == "word word"
-    assert parse('"a string"') == '"a string"'
-    assert parse("uniform 1") == 1
-    assert parse("uniform 1.0") == 1.0
-    assert parse("uniform 1.0e-3") == 1.0e-3
-    assert parse("(1.0 2.0 3.0)") == [1.0, 2.0, 3.0]
-    assert parse("nonuniform List<scalar> 2(1 2)") == [1, 2]
-    assert parse("3(1 2 3)") == [1, 2, 3]
-    assert parse("2((1 2 3) (4 5 6))") == [[1, 2, 3], [4, 5, 6]]
-    assert parse("nonuniform List<vector> 2((1 2 3) (4 5 6))") == [
+def test_parse_value() -> None:
+    assert VALUE.parse_string("1").as_list()[0] == 1
+    assert VALUE.parse_string("1.0").as_list()[0] == 1.0
+    assert VALUE.parse_string("1.0e-3").as_list()[0] == 1.0e-3
+    assert VALUE.parse_string("yes").as_list()[0] is True
+    assert VALUE.parse_string("no").as_list()[0] is False
+    assert VALUE.parse_string("word").as_list()[0] == "word"
+    assert VALUE.parse_string("word word").as_list()[0] == "word word"
+    assert VALUE.parse_string('"a string"').as_list()[0] == '"a string"'
+    assert VALUE.parse_string("uniform 1").as_list()[0] == 1
+    assert VALUE.parse_string("uniform 1.0").as_list()[0] == 1.0
+    assert VALUE.parse_string("uniform 1.0e-3").as_list()[0] == 1.0e-3
+    assert VALUE.parse_string("(1.0 2.0 3.0)").as_list()[0] == [1.0, 2.0, 3.0]
+    assert VALUE.parse_string("uniform (1 2 3)").as_list()[0] == [1, 2, 3]
+    assert VALUE.parse_string("nonuniform List<scalar> 2(1 2)").as_list()[0] == [1, 2]
+    assert VALUE.parse_string("3(1 2 3)").as_list()[0] == [1, 2, 3]
+    assert VALUE.parse_string("2((1 2 3) (4 5 6))").as_list()[0] == [
         [1, 2, 3],
         [4, 5, 6],
     ]
-    assert parse("[1 1 -2 0 0 0 0]") == FoamDimensionSet(mass=1, length=1, time=-2)
-    assert parse("g [1 1 -2 0 0 0 0] (0 0 -9.81)") == FoamDimensioned(
+    assert VALUE.parse_string("nonuniform List<vector> 2((1 2 3) (4 5 6))").as_list()[
+        0
+    ] == [
+        [1, 2, 3],
+        [4, 5, 6],
+    ]
+    assert VALUE.parse_string("[1 1 -2 0 0 0 0]").as_list()[0] == FoamDimensionSet(
+        mass=1, length=1, time=-2
+    )
+    assert VALUE.parse_string("g [1 1 -2 0 0 0 0] (0 0 -9.81)").as_list()[
+        0
+    ] == FoamDimensioned(
         name="g",
         dimensions=FoamDimensionSet(mass=1, length=1, time=-2),
         value=[0, 0, -9.81],
     )
-    assert parse("[1 1 -2 0 0 0 0] 9.81") == FoamDimensioned(
+    assert VALUE.parse_string("[1 1 -2 0 0 0 0] 9.81").as_list()[0] == FoamDimensioned(
         dimensions=FoamDimensionSet(mass=1, length=1, time=-2), value=9.81
     )
     assert (
-        parse("hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")
+        VALUE.parse_string(
+            "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
+        ).as_list()[0]
         == "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
 
