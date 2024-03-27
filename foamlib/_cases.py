@@ -24,14 +24,65 @@ from ._subprocesses import run_process, run_process_async, CalledProcessError
 from ._dictionaries import FoamFile, FoamFieldFile
 
 
-class FoamCaseBase(Sequence["FoamTimeDirectory"]):
+class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
     def __init__(self, path: Union[Path, str]):
         self.path = Path(path).absolute()
         if not self.path.is_dir():
             raise NotADirectoryError(f"{self.path} is not a directory")
 
+    class TimeDirectory(Set[FoamFieldFile]):
+        """
+        An OpenFOAM time directory in a case.
+
+        Use to access field files in the directory, e.g. `time["U"]`.
+
+        :param path: The path to the time directory.
+        """
+
+        def __init__(self, path: Union[Path, str]):
+            self.path = Path(path).absolute()
+            if not self.path.is_dir():
+                raise NotADirectoryError(f"{self.path} is not a directory")
+
+        @property
+        def time(self) -> float:
+            """
+            The time that corresponds to this directory.
+            """
+            return float(self.path.name)
+
+        @property
+        def name(self) -> str:
+            """
+            The name of this time directory.
+            """
+            return self.path.name
+
+        def __getitem__(self, key: str) -> FoamFieldFile:
+            try:
+                return FoamFieldFile(self.path / key)
+            except FileNotFoundError as e:
+                raise KeyError(key) from e
+
+        def __iter__(self) -> Iterator[FoamFieldFile]:
+            for p in self.path.iterdir():
+                if p.is_file():
+                    yield FoamFieldFile(p.name)
+
+        def __len__(self) -> int:
+            return len(list(iter(self)))
+
+        def __fspath__(self) -> str:
+            return str(self.path)
+
+        def __repr__(self) -> str:
+            return f"{type(self).__name__}({self.path})"
+
+        def __str__(self) -> str:
+            return str(self.path)
+
     @property
-    def _times(self) -> Sequence["FoamTimeDirectory"]:
+    def _times(self) -> Sequence["FoamCaseBase.TimeDirectory"]:
         times = []
         for p in self.path.iterdir():
             if p.is_dir():
@@ -40,23 +91,25 @@ class FoamCaseBase(Sequence["FoamTimeDirectory"]):
                 except ValueError:
                     pass
                 else:
-                    times.append(FoamTimeDirectory(p))
+                    times.append(FoamCaseBase.TimeDirectory(p))
 
         times.sort(key=lambda t: t.time)
 
         return times
 
     @overload
-    def __getitem__(self, index: Union[int, float, str]) -> "FoamTimeDirectory": ...
+    def __getitem__(
+        self, index: Union[int, float, str]
+    ) -> "FoamCaseBase.TimeDirectory": ...
 
     @overload
-    def __getitem__(self, index: slice) -> Sequence["FoamTimeDirectory"]: ...
+    def __getitem__(self, index: slice) -> Sequence["FoamCaseBase.TimeDirectory"]: ...
 
     def __getitem__(
         self, index: Union[int, slice, float, str]
-    ) -> Union["FoamTimeDirectory", Sequence["FoamTimeDirectory"]]:
+    ) -> Union["FoamCaseBase.TimeDirectory", Sequence["FoamCaseBase.TimeDirectory"]]:
         if isinstance(index, str):
-            return FoamTimeDirectory(self.path / str(index))
+            return FoamCaseBase.TimeDirectory(self.path / str(index))
         elif isinstance(index, float):
             for time in self._times:
                 if time.time == index:
@@ -598,55 +651,3 @@ class AsyncFoamCase(FoamCaseBase):
         )
 
         return AsyncFoamCase(dest)
-
-
-class FoamTimeDirectory(Mapping[str, FoamFieldFile]):
-    """
-    An OpenFOAM time directory in a case.
-
-    Use as a mapping to access field files in the directory, e.g. `time["U"]`.
-
-    :param path: The path to the time directory.
-    """
-
-    def __init__(self, path: Union[Path, str]):
-        self.path = Path(path).absolute()
-        if not self.path.is_dir():
-            raise NotADirectoryError(f"{self.path} is not a directory")
-
-    @property
-    def time(self) -> float:
-        """
-        The time that corresponds to this directory.
-        """
-        return float(self.path.name)
-
-    @property
-    def name(self) -> str:
-        """
-        The name of this time directory.
-        """
-        return self.path.name
-
-    def __getitem__(self, key: str) -> FoamFieldFile:
-        try:
-            return FoamFieldFile(self.path / key)
-        except FileNotFoundError as e:
-            raise KeyError(key) from e
-
-    def __iter__(self) -> Iterator[str]:
-        for p in self.path.iterdir():
-            if p.is_file():
-                yield p.name
-
-    def __len__(self) -> int:
-        return len(list(iter(self)))
-
-    def __fspath__(self) -> str:
-        return str(self.path)
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.path})"
-
-    def __str__(self) -> str:
-        return str(self.path)
