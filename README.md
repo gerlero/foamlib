@@ -15,7 +15,7 @@ It offers the following classes (among a few others):
 
 * [`FoamCase`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamCase): a class for manipulating, executing and accessing the results of OpenFOAM cases.
 * [`AsyncFoamCase`](https://foamlib.readthedocs.io/en/stable/#foamlib.AsyncFoamCase): variant of `FoamCase` with asynchronous methods for running multiple cases at once.
-* [`FoamFile`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamFile): read-write access to OpenFOAM configuration and field files as if they were Python `dict`s (uses OpenFOAM's `foamDictionary` utility with custom parsing).
+* [`FoamFile`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamFile): read-write access to OpenFOAM configuration and field files as if they were Python `dict`s.
 
 ## Get started
 
