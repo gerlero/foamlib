@@ -7,50 +7,52 @@ from typing import Sequence
 import numpy as np
 
 from foamlib import *
-from foamlib._dictionaries._parsing import VALUE
+from foamlib._dictionaries import _VALUE
 
 
 def test_parse_value() -> None:
-    assert VALUE.parse_string("1").as_list()[0] == 1
-    assert VALUE.parse_string("1.0").as_list()[0] == 1.0
-    assert VALUE.parse_string("1.0e-3").as_list()[0] == 1.0e-3
-    assert VALUE.parse_string("yes").as_list()[0] is True
-    assert VALUE.parse_string("no").as_list()[0] is False
-    assert VALUE.parse_string("word").as_list()[0] == "word"
-    assert VALUE.parse_string("word word").as_list()[0] == "word word"
-    assert VALUE.parse_string('"a string"').as_list()[0] == '"a string"'
-    assert VALUE.parse_string("uniform 1").as_list()[0] == 1
-    assert VALUE.parse_string("uniform 1.0").as_list()[0] == 1.0
-    assert VALUE.parse_string("uniform 1.0e-3").as_list()[0] == 1.0e-3
-    assert VALUE.parse_string("(1.0 2.0 3.0)").as_list()[0] == [1.0, 2.0, 3.0]
-    assert VALUE.parse_string("uniform (1 2 3)").as_list()[0] == [1, 2, 3]
-    assert VALUE.parse_string("nonuniform List<scalar> 2(1 2)").as_list()[0] == [1, 2]
-    assert VALUE.parse_string("3(1 2 3)").as_list()[0] == [1, 2, 3]
-    assert VALUE.parse_string("2((1 2 3) (4 5 6))").as_list()[0] == [
+    assert _VALUE.parse_string("1").as_list()[0] == 1
+    assert _VALUE.parse_string("1.0").as_list()[0] == 1.0
+    assert _VALUE.parse_string("1.0e-3").as_list()[0] == 1.0e-3
+    assert _VALUE.parse_string("yes").as_list()[0] is True
+    assert _VALUE.parse_string("no").as_list()[0] is False
+    assert _VALUE.parse_string("word").as_list()[0] == "word"
+    assert _VALUE.parse_string("word word").as_list()[0] == "word word"
+    assert _VALUE.parse_string('"a string"').as_list()[0] == '"a string"'
+    assert _VALUE.parse_string("uniform 1").as_list()[0] == 1
+    assert _VALUE.parse_string("uniform 1.0").as_list()[0] == 1.0
+    assert _VALUE.parse_string("uniform 1.0e-3").as_list()[0] == 1.0e-3
+    assert _VALUE.parse_string("(1.0 2.0 3.0)").as_list()[0] == [1.0, 2.0, 3.0]
+    assert _VALUE.parse_string("uniform (1 2 3)").as_list()[0] == [1, 2, 3]
+    assert _VALUE.parse_string("nonuniform List<scalar> 2(1 2)").as_list()[0] == [1, 2]
+    assert _VALUE.parse_string("3(1 2 3)").as_list()[0] == [1, 2, 3]
+    assert _VALUE.parse_string("2((1 2 3) (4 5 6))").as_list()[0] == [
         [1, 2, 3],
         [4, 5, 6],
     ]
-    assert VALUE.parse_string("nonuniform List<vector> 2((1 2 3) (4 5 6))").as_list()[
+    assert _VALUE.parse_string("nonuniform List<vector> 2((1 2 3) (4 5 6))").as_list()[
         0
     ] == [
         [1, 2, 3],
         [4, 5, 6],
     ]
-    assert VALUE.parse_string("[1 1 -2 0 0 0 0]").as_list()[0] == FoamDimensionSet(
-        mass=1, length=1, time=-2
-    )
-    assert VALUE.parse_string("g [1 1 -2 0 0 0 0] (0 0 -9.81)").as_list()[
+    assert _VALUE.parse_string("[1 1 -2 0 0 0 0]").as_list()[
         0
-    ] == FoamDimensioned(
+    ] == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert _VALUE.parse_string("g [1 1 -2 0 0 0 0] (0 0 -9.81)").as_list()[
+        0
+    ] == FoamFile.Dimensioned(
         name="g",
-        dimensions=FoamDimensionSet(mass=1, length=1, time=-2),
+        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2),
         value=[0, 0, -9.81],
     )
-    assert VALUE.parse_string("[1 1 -2 0 0 0 0] 9.81").as_list()[0] == FoamDimensioned(
-        dimensions=FoamDimensionSet(mass=1, length=1, time=-2), value=9.81
+    assert _VALUE.parse_string("[1 1 -2 0 0 0 0] 9.81").as_list()[
+        0
+    ] == FoamFile.Dimensioned(
+        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2), value=9.81
     )
     assert (
-        VALUE.parse_string(
+        _VALUE.parse_string(
             "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
         ).as_list()[0]
         == "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
@@ -82,21 +84,21 @@ def test_write_read(tmp_path: Path) -> None:
 
     d["subdict"] = {"key": "value"}
     sd = d["subdict"]
-    assert isinstance(sd, FoamDictionary)
+    assert isinstance(sd, FoamFile.Dictionary)
     assert sd["key"] == "value"
     assert len(sd) == 1
     assert list(sd) == ["key"]
 
     d["subdict2"] = d["subdict"]
     sd2 = d["subdict2"]
-    assert isinstance(sd2, FoamDictionary)
+    assert isinstance(sd2, FoamFile.Dictionary)
     assert sd2["key"] == "value"
     assert len(sd) == 1
     assert list(sd) == ["key"]
 
     sd["subsubdict"] = d["subdict"]
     ssd = sd["subsubdict"]
-    assert isinstance(ssd, FoamDictionary)
+    assert isinstance(ssd, FoamFile.Dictionary)
     assert ssd["key"] == "value"
 
     sd["list"] = [1, 2, 3]
@@ -105,12 +107,12 @@ def test_write_read(tmp_path: Path) -> None:
     sd["nestedList"] = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
     assert sd["nestedList"] == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
-    sd["g"] = FoamDimensioned(
+    sd["g"] = FoamFile.Dimensioned(
         name="g", dimensions=[1, 1, -2, 0, 0, 0, 0], value=[0, 0, -9.81]
     )
-    assert sd["g"] == FoamDimensioned(
+    assert sd["g"] == FoamFile.Dimensioned(
         name="g",
-        dimensions=FoamDimensionSet(mass=1, length=1, time=-2),
+        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2),
         value=[0, 0, -9.81],
     )
 
@@ -126,17 +128,17 @@ def pitz(tmp_path: Path) -> FoamCase:
 
 
 def test_dimensions(pitz: FoamCase) -> None:
-    assert pitz[0]["p"].dimensions == FoamDimensionSet(length=2, time=-2)
-    assert pitz[0]["U"].dimensions == FoamDimensionSet(length=1, time=-1)
+    assert pitz[0]["p"].dimensions == FoamFile.DimensionSet(length=2, time=-2)
+    assert pitz[0]["U"].dimensions == FoamFile.DimensionSet(length=1, time=-1)
 
-    pitz[0]["p"].dimensions = FoamDimensionSet(mass=1, length=1, time=-2)
+    pitz[0]["p"].dimensions = FoamFile.DimensionSet(mass=1, length=1, time=-2)
 
-    assert pitz[0]["p"].dimensions == FoamDimensionSet(mass=1, length=1, time=-2)
+    assert pitz[0]["p"].dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
 
 
 def test_boundary_field(pitz: FoamCase) -> None:
     outlet = pitz[0]["p"].boundary_field["outlet"]
-    assert isinstance(outlet, FoamBoundaryDictionary)
+    assert isinstance(outlet, FoamFieldFile.BoundaryDictionary)
     assert outlet.type == "fixedValue"
     assert outlet.value == 0
 
@@ -194,7 +196,7 @@ def test_internal_field(pitz: FoamCase) -> None:
 
 def test_fv_schemes(pitz: FoamCase) -> None:
     div_schemes = pitz.fv_schemes["divSchemes"]
-    assert isinstance(div_schemes, FoamDictionary)
+    assert isinstance(div_schemes, FoamFile.Dictionary)
     scheme = div_schemes["div(phi,U)"]
     assert isinstance(scheme, str)
     assert scheme == "bounded Gauss linearUpwind grad(U)"
