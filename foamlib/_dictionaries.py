@@ -205,6 +205,9 @@ class FoamFieldFile(FoamFile):
                 )
             return ret
 
+        def __repr__(self) -> str:
+            return "FoamFieldFile.BoundariesDictionary"
+
     class BoundaryDictionary(_FoamDictionary):
         """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""
 
@@ -277,9 +280,6 @@ class FoamFieldFile(FoamFile):
             self._setitem(key, value, assume_dimensions=True)
         else:
             self._setitem(key, value)
-
-    def __repr__(self) -> str:
-        return "FoamFieldFile.BoundariesDictionary"
 
     @property
     def dimensions(self) -> FoamFile.DimensionSet:
