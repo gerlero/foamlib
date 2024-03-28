@@ -21,6 +21,7 @@ from pyparsing import (
     LineEnd,
     Literal,
     Opt,
+    ParserElement,
     QuotedString,
     Word,
     c_style_comment,
@@ -338,84 +339,53 @@ _NO = Keyword("no").set_parse_action(lambda: False)
 _DIMENSIONS = (
     Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
 ).set_parse_action(lambda tks: FoamFile.DimensionSet(*tks))
+
+
+def _list_of(elem: ParserElement) -> ParserElement:
+    return Opt(
+        Literal("List") + Literal("<") + common.identifier + Literal(">")
+    ).suppress() + (
+        (
+            Opt(common.integer).suppress()
+            + (Literal("(").suppress() + Group((elem)[...]) + Literal(")").suppress())
+        )
+        | (
+            common.integer + Literal("{").suppress() + elem + Literal("}").suppress()
+        ).set_parse_action(lambda tks: [[tks[1].as_list()] * tks[0]])
+    )
+
+
+_TENSOR = _list_of(common.number) | common.number
+_DIMENSIONED = (Opt(common.identifier) + _DIMENSIONS + _TENSOR).set_parse_action(
+    lambda tks: FoamFile.Dimensioned(*reversed(tks.as_list()))
+)
+_FIELD = (Keyword("uniform").suppress() + _TENSOR) | (
+    Keyword("nonuniform").suppress() + _list_of(_TENSOR)
+)
 _TOKEN = QuotedString('"', unquote_results=False) | Word(
     identchars + "$", identbodychars
 )
-_ITEM = Forward()
 _DICTIONARY = Forward()
 _SUBDICT = Literal("{").suppress() + _DICTIONARY + Literal("}").suppress()
-_LIST = Opt(
-    Literal("List") + Literal("<") + common.identifier + Literal(">")
-).suppress() + (
-    (
-        Opt(common.integer).suppress()
-        + Literal("(").suppress()
-        + Group(_ITEM[...])
-        + Literal(")").suppress()
-    )
-    | (
-        common.integer + Literal("{").suppress() + _ITEM + Literal("}").suppress()
-    ).set_parse_action(lambda tks: [[tks[1].as_list()] * tks[0]])
-)
-_DIMENSIONED = (Opt(common.identifier) + _DIMENSIONS + _ITEM).set_parse_action(
-    lambda tks: FoamFile.Dimensioned(*reversed(tks.as_list()))
-)
+_ITEM = Forward()
+_LIST = _list_of(_ITEM)
 _ITEM <<= (
-    _LIST | _SUBDICT | _DIMENSIONED | _DIMENSIONS | common.number | _YES | _NO | _TOKEN
-)
-
-_FIELD = (
-    Keyword("uniform").suppress()
-    + (
-        common.number
-        | (
-            Literal("(").suppress()
-            + Group(common.number[3, 9])
-            + Literal(")").suppress()
-        )
-    )
-) | (
-    Keyword("nonuniform").suppress()
-    + Opt(Literal("List") + Literal("<") + common.identifier + Literal(">")).suppress()
-    + (
-        (
-            Opt(common.integer).suppress()
-            + (
-                Literal("(").suppress()
-                + Group(
-                    (
-                        common.number
-                        | (
-                            Literal("(").suppress()
-                            + Group(common.number[3, 9])
-                            + Literal(")").suppress()
-                        )
-                    )[...]
-                )
-                + Literal(")").suppress()
-            )
-        )
-        | (
-            common.integer
-            + Literal("{").suppress()
-            + (
-                common.number
-                | (
-                    Literal("(").suppress()
-                    + Group(common.number[3, 9])
-                    + Literal(")").suppress()
-                )
-            )
-            + Literal("}").suppress()
-        ).set_parse_action(lambda tks: [[tks[1].as_list()] * tks[0]])
-    )
+    _FIELD
+    | _LIST
+    | _SUBDICT
+    | _DIMENSIONED
+    | _DIMENSIONS
+    | common.number
+    | _YES
+    | _NO
+    | _TOKEN
 )
 _TOKENS = (
     QuotedString('"', unquote_results=False)
     | Word(printables.replace(";", "").replace("{", "").replace("}", ""))
 )[2, ...].set_parse_action(lambda tks: " ".join(tks))
 
-_VALUE = ((_FIELD | _ITEM) ^ _TOKENS).ignore(c_style_comment).ignore(cpp_style_comment)
+_VALUE = _ITEM ^ _TOKENS
 
 _KEYWORD = QuotedString('"', unquote_results=False) | Word(
     identchars + "$(,.)", identbodychars + "$(,.)"
@@ -426,7 +396,7 @@ _DICTIONARY <<= (
     .set_parse_action(lambda tks: {} if not tks else tks)
     .ignore(c_style_comment)
     .ignore(cpp_style_comment)
-    .ignore(Literal("#include") + ... + LineEnd())  # type: ignore
+    .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]
 )
 
 
