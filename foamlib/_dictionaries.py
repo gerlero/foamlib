@@ -75,8 +75,7 @@ class _FoamDictionary(MutableMapping[str, Union["FoamFile.Value", "_FoamDictiona
                 ) from None
 
     def __getitem__(self, key: str) -> Union["FoamFile.Value", "_FoamDictionary"]:
-        contents = self._file.path.read_text()
-        value = _DICTIONARY.parse_string(contents, parse_all=True).as_dict()
+        value = _DICTIONARY.parse_file(self._file.path, parse_all=True).as_dict()
 
         for key in [*self._keywords, key]:
             value = value[key]
@@ -356,8 +355,15 @@ _LIST = Opt(
     )
     | (
         common.integer + Literal("{").suppress() + _ITEM + Literal("}").suppress()
-    ).set_parse_action(lambda tks: [tks[1]] * tks[0])
+    ).set_parse_action(lambda tks: [[tks[1].as_list()] * tks[0]])
 )
+_DIMENSIONED = (Opt(common.identifier) + _DIMENSIONS + _ITEM).set_parse_action(
+    lambda tks: FoamFile.Dimensioned(*reversed(tks.as_list()))
+)
+_ITEM <<= (
+    _LIST | _SUBDICT | _DIMENSIONED | _DIMENSIONS | common.number | _YES | _NO | _TOKEN
+)
+
 _FIELD = (
     Keyword("uniform").suppress()
     + (
@@ -371,43 +377,45 @@ _FIELD = (
 ) | (
     Keyword("nonuniform").suppress()
     + Opt(Literal("List") + Literal("<") + common.identifier + Literal(">")).suppress()
-    + Opt(common.integer).suppress()
     + (
-        Literal("(").suppress()
-        + Group(
-            (
+        (
+            Opt(common.integer).suppress()
+            + (
+                Literal("(").suppress()
+                + Group(
+                    (
+                        common.number
+                        | (
+                            Literal("(").suppress()
+                            + Group(common.number[3, 9])
+                            + Literal(")").suppress()
+                        )
+                    )[...]
+                )
+                + Literal(")").suppress()
+            )
+        )
+        | (
+            common.integer
+            + Literal("{").suppress()
+            + (
                 common.number
                 | (
                     Literal("(").suppress()
                     + Group(common.number[3, 9])
                     + Literal(")").suppress()
                 )
-            )[...]
-        )
-        + Literal(")").suppress()
+            )
+            + Literal("}").suppress()
+        ).set_parse_action(lambda tks: [[tks[1].as_list()] * tks[0]])
     )
 )
-_DIMENSIONED = (Opt(common.identifier) + _DIMENSIONS + _ITEM).set_parse_action(
-    lambda tks: FoamFile.Dimensioned(*reversed(tks.as_list()))
-)
-_ITEM <<= (
-    _FIELD
-    | _LIST
-    | _SUBDICT
-    | _DIMENSIONED
-    | _DIMENSIONS
-    | common.number
-    | _YES
-    | _NO
-    | _TOKEN
-)
-
 _TOKENS = (
     QuotedString('"', unquote_results=False)
     | Word(printables.replace(";", "").replace("{", "").replace("}", ""))
 )[2, ...].set_parse_action(lambda tks: " ".join(tks))
 
-_VALUE = (_ITEM ^ _TOKENS).ignore(c_style_comment).ignore(cpp_style_comment)
+_VALUE = ((_FIELD | _ITEM) ^ _TOKENS).ignore(c_style_comment).ignore(cpp_style_comment)
 
 _KEYWORD = QuotedString('"', unquote_results=False) | Word(
     identchars + "$(,.)", identbodychars + "$(,.)"

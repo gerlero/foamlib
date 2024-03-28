@@ -30,11 +30,19 @@ def test_parse_value() -> None:
         [1, 2, 3],
         [4, 5, 6],
     ]
+    assert _VALUE.parse_string("2{(1 2 3)}").as_list()[0] == [
+        [1, 2, 3],
+        [1, 2, 3],
+    ]
     assert _VALUE.parse_string("nonuniform List<vector> 2((1 2 3) (4 5 6))").as_list()[
         0
     ] == [
         [1, 2, 3],
         [4, 5, 6],
+    ]
+    assert _VALUE.parse_string("nonuniform List<vector> 2{(1 2 3)}").as_list()[0] == [
+        [1, 2, 3],
+        [1, 2, 3],
     ]
     assert _VALUE.parse_string("[1 1 -2 0 0 0 0]").as_list()[
         0
