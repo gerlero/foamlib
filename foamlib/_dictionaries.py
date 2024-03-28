@@ -20,7 +20,6 @@ from pyparsing import (
     Keyword,
     LineEnd,
     Literal,
-    Located,
     Opt,
     QuotedString,
     Word,
@@ -85,8 +84,7 @@ class _FoamDictionary(MutableMapping[str, Union["FoamFile.Value", "_FoamDictiona
         if isinstance(value, dict):
             return _FoamDictionary(self._file, [*self._keywords, key])
         else:
-            start, end = value
-            return _VALUE.parse_string(contents[start:end], parse_all=True).as_list()[0]
+            return value
 
     def _setitem(
         self,
@@ -347,6 +345,8 @@ _TOKEN = QuotedString('"', unquote_results=False) | Word(
     identchars + "$", identbodychars
 )
 _ITEM = Forward()
+_DICTIONARY = Forward()
+_SUBDICT = Literal("{").suppress() + _DICTIONARY + Literal("}").suppress()
 _LIST = Opt(
     Literal("List") + Literal("<") + common.identifier + Literal(">")
 ).suppress() + (
@@ -360,14 +360,48 @@ _LIST = Opt(
         common.integer + Literal("{").suppress() + _ITEM + Literal("}").suppress()
     ).set_parse_action(lambda tks: [tks[1]] * tks[0])
 )
-_FIELD = (Keyword("uniform").suppress() + _ITEM) | (
-    Keyword("nonuniform").suppress() + _LIST
+_FIELD = (
+    Keyword("uniform").suppress()
+    + (
+        common.number
+        | (
+            Literal("(").suppress()
+            + Group(common.number[3, 9])
+            + Literal(")").suppress()
+        )
+    )
+) | (
+    Keyword("nonuniform").suppress()
+    + Opt(Literal("List") + Literal("<") + common.identifier + Literal(">")).suppress()
+    + Opt(common.integer).suppress()
+    + (
+        Literal("(").suppress()
+        + Group(
+            (
+                common.number
+                | (
+                    Literal("(").suppress()
+                    + Group(common.number[3, 9])
+                    + Literal(")").suppress()
+                )
+            )[...]
+        )
+        + Literal(")").suppress()
+    )
 )
 _DIMENSIONED = (Opt(common.identifier) + _DIMENSIONS + _ITEM).set_parse_action(
     lambda tks: FoamFile.Dimensioned(*reversed(tks.as_list()))
 )
 _ITEM <<= (
-    _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _YES | _NO | _TOKEN
+    _FIELD
+    | _LIST
+    | _SUBDICT
+    | _DIMENSIONED
+    | _DIMENSIONS
+    | common.number
+    | _YES
+    | _NO
+    | _TOKEN
 )
 
 _TOKENS = (
@@ -377,22 +411,10 @@ _TOKENS = (
 
 _VALUE = (_ITEM ^ _TOKENS).ignore(c_style_comment).ignore(cpp_style_comment)
 
-
-_UNPARSED_VALUE = (
-    QuotedString('"', unquote_results=False)
-    | Word(printables.replace(";", "").replace("{", "").replace("}", ""))
-)[...]
 _KEYWORD = QuotedString('"', unquote_results=False) | Word(
     identchars + "$(,.)", identbodychars + "$(,.)"
 )
-_DICTIONARY = Forward()
-_ENTRY = _KEYWORD + (
-    (
-        Located(_UNPARSED_VALUE).set_parse_action(lambda tks: (tks[0], tks[2]))
-        + Literal(";").suppress()
-    )
-    | (Literal("{").suppress() + _DICTIONARY + Literal("}").suppress())
-)
+_ENTRY = _KEYWORD + ((_VALUE + Literal(";").suppress()) | _SUBDICT)
 _DICTIONARY <<= (
     Dict(Group(_ENTRY)[...])
     .set_parse_action(lambda tks: {} if not tks else tks)
