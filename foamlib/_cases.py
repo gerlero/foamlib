@@ -64,6 +64,14 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             except FileNotFoundError as e:
                 raise KeyError(key) from e
 
+        def __contains__(self, obj: object) -> bool:
+            if isinstance(obj, FoamFieldFile):
+                return obj.path.parent == self.path
+            elif isinstance(obj, str):
+                return (self.path / obj).is_file()
+            else:
+                return False
+
         def __iter__(self) -> Iterator[FoamFieldFile]:
             for p in self.path.iterdir():
                 if p.is_file():
