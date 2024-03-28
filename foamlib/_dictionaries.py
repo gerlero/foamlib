@@ -27,9 +27,9 @@ from pyparsing import (
     c_style_comment,
     common,
     cpp_style_comment,
-    printables,
     identchars,
     identbodychars,
+    printables,
 )
 
 try:
@@ -356,15 +356,14 @@ def _list_of(elem: ParserElement) -> ParserElement:
 
 
 _TENSOR = _list_of(common.number) | common.number
-_DIMENSIONED = (Opt(common.identifier) + _DIMENSIONS + _TENSOR).set_parse_action(
+_IDENTIFIER = Word(identchars + "$", identbodychars + "({,./:^!)}")
+_DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: FoamFile.Dimensioned(*reversed(tks.as_list()))
 )
 _FIELD = (Keyword("uniform").suppress() + _TENSOR) | (
     Keyword("nonuniform").suppress() + _list_of(_TENSOR)
 )
-_TOKEN = QuotedString('"', unquote_results=False) | Word(
-    identchars + "$", identbodychars
-)
+_TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
 _DICTIONARY = Forward()
 _SUBDICT = Literal("{").suppress() + _DICTIONARY + Literal("}").suppress()
 _ITEM = Forward()
@@ -381,16 +380,14 @@ _ITEM <<= (
     | _TOKEN
 )
 _TOKENS = (
-    QuotedString('"', unquote_results=False)
-    | Word(printables.replace(";", "").replace("{", "").replace("}", ""))
+    QuotedString('"', unquote_results=False) | Word(printables.replace(";", ""))
 )[2, ...].set_parse_action(lambda tks: " ".join(tks))
 
 _VALUE = _ITEM ^ _TOKENS
 
-_KEYWORD = QuotedString('"', unquote_results=False) | Word(
-    identchars + "$(,.)", identbodychars + "$(,.)"
+_ENTRY = _IDENTIFIER + (
+    (Opt(_VALUE, default=None) + Literal(";").suppress()) | _SUBDICT
 )
-_ENTRY = _KEYWORD + ((_VALUE + Literal(";").suppress()) | _SUBDICT)
 _DICTIONARY <<= (
     Dict(Group(_ENTRY)[...])
     .set_parse_action(lambda tks: {} if not tks else tks)
