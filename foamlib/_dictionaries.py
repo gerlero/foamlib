@@ -1,6 +1,5 @@
 from pathlib import Path
 from dataclasses import dataclass
-from collections import namedtuple
 from contextlib import suppress
 from typing import (
     Any,
@@ -10,6 +9,7 @@ from typing import (
     Optional,
     Mapping,
     MutableMapping,
+    NamedTuple,
     cast,
 )
 
@@ -145,19 +145,17 @@ class FoamFile(_FoamDictionary):
 
     Dictionary = _FoamDictionary
 
-    DimensionSet = namedtuple(
-        "DimensionSet",
-        [
-            "mass",
-            "length",
-            "time",
-            "temperature",
-            "moles",
-            "current",
-            "luminous_intensity",
-        ],
-        defaults=(0, 0, 0, 0, 0, 0, 0),
-    )
+    class DimensionSet(NamedTuple):
+        mass: Union[int, float] = 0
+        length: Union[int, float] = 0
+        time: Union[int, float] = 0
+        temperature: Union[int, float] = 0
+        moles: Union[int, float] = 0
+        current: Union[int, float] = 0
+        luminous_intensity: Union[int, float] = 0
+
+        def __repr__(self) -> str:
+            return f"{type(self).__qualname__}({', '.join(f'{n}={v}' for n, v in zip(self._fields, self) if v != 0)})"
 
     @dataclass
     class Dimensioned:
