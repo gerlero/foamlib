@@ -25,6 +25,7 @@ def test_parse_value() -> None:
     assert _VALUE.parse_string("(1.0 2.0 3.0)").as_list()[0] == [1.0, 2.0, 3.0]
     assert _VALUE.parse_string("uniform (1 2 3)").as_list()[0] == [1, 2, 3]
     assert _VALUE.parse_string("nonuniform List<scalar> 2(1 2)").as_list()[0] == [1, 2]
+    assert _VALUE.parse_string("nonuniform List<scalar> 2{1}").as_list()[0] == [1, 1]
     assert _VALUE.parse_string("3(1 2 3)").as_list()[0] == [1, 2, 3]
     assert _VALUE.parse_string("2((1 2 3) (4 5 6))").as_list()[0] == [
         [1, 2, 3],
