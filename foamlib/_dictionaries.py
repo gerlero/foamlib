@@ -98,7 +98,6 @@ class _FoamDictionary(MutableMapping[str, Union["FoamFile.Value", "_FoamDictiona
         elif isinstance(value, Mapping):
             self._cmd(["-set", "{}"], key=key)
             subdict = self[key]
-            print(subdict)
             assert isinstance(subdict, _FoamDictionary)
             for k, v in value.items():
                 subdict[k] = v
