@@ -27,7 +27,6 @@ from pyparsing import (
     c_style_comment,
     common,
     cpp_style_comment,
-    identchars,
     identbodychars,
     printables,
 )
@@ -356,7 +355,7 @@ def _list_of(elem: ParserElement) -> ParserElement:
 
 
 _TENSOR = _list_of(common.number) | common.number
-_IDENTIFIER = Word(identchars + "$", identbodychars + "({,./:^!)}")
+_IDENTIFIER = Word(identbodychars + "$", identbodychars + "({,./:^!)}")
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: FoamFile.Dimensioned(*reversed(tks.as_list()))
 )
