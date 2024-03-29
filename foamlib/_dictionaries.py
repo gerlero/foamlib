@@ -136,7 +136,7 @@ class _FoamDictionary(MutableMapping[str, Union["FoamFile.Value", "_FoamDictiona
         return len(list(iter(self)))
 
     def __repr__(self) -> str:
-        return "FoamFile.Dictionary"
+        return f"FoamFile.Dictionary({self._file}, {self._keywords})"
 
 
 class FoamFile(_FoamDictionary):
@@ -201,7 +201,7 @@ class FoamFieldFile(FoamFile):
             return ret
 
         def __repr__(self) -> str:
-            return "FoamFieldFile.BoundariesDictionary"
+            return f"{type(self).__qualname__}({self._file}, {self._keywords})"
 
     class BoundaryDictionary(_FoamDictionary):
         """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""
@@ -260,7 +260,7 @@ class FoamFieldFile(FoamFile):
             del self["value"]
 
         def __repr__(self) -> str:
-            return "FoamFieldFile.BoundaryDictionary"
+            return f"{type(self).__qualname__}({self._file}, {self._keywords})"
 
     def __getitem__(self, key: str) -> Union[FoamFile.Value, _FoamDictionary]:
         ret = super().__getitem__(key)
