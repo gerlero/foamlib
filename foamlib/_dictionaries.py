@@ -10,6 +10,7 @@ from typing import (
     Mapping,
     MutableMapping,
     NamedTuple,
+    Tuple,
     cast,
 )
 
@@ -20,7 +21,9 @@ from pyparsing import (
     Keyword,
     LineEnd,
     Literal,
+    Located,
     Opt,
+    ParseResults,
     ParserElement,
     QuotedString,
     Word,
@@ -75,12 +78,12 @@ class _FoamDictionary(MutableMapping[str, Union["FoamFile.Value", "_FoamDictiona
                 ) from None
 
     def __getitem__(self, key: str) -> Union["FoamFile.Value", "_FoamDictionary"]:
-        value = _DICTIONARY.parse_file(self._file.path, parse_all=True).as_dict()
+        contents = self._file.path.read_text()
+        parsed = _parse(contents)
 
-        for key in [*self._keywords, key]:
-            value = value[key]
+        _, value, _ = parsed[(*self._keywords, key)]
 
-        if isinstance(value, dict):
+        if value is None:
             return _FoamDictionary(self._file, [*self._keywords, key])
         else:
             return value
@@ -119,17 +122,20 @@ class _FoamDictionary(MutableMapping[str, Union["FoamFile.Value", "_FoamDictiona
         self._setitem(key, value)
 
     def __delitem__(self, key: str) -> None:
-        if key not in self:
-            raise KeyError(key)
-        self._cmd(["-remove"], key=key)
+        contents = self._file.path.read_text()
+        parsed = _parse(contents)
+
+        start, _, end = parsed[(*self._keywords, key)]
+
+        self._file.path.write_text(contents[:start] + contents[end:])
 
     def __iter__(self) -> Iterator[str]:
-        value = _DICTIONARY.parse_file(self._file.path, parse_all=True).as_dict()
+        contents = self._file.path.read_text()
+        parsed = _parse(contents)
 
-        for key in self._keywords:
-            value = value[key]
-
-        yield from value
+        for keywords in parsed:
+            if keywords[:-1] == tuple(self._keywords):
+                yield keywords[-1]
 
     def __len__(self) -> int:
         return len(list(iter(self)))
@@ -165,7 +171,16 @@ class FoamFile(_FoamDictionary):
             if not isinstance(self.dimensions, FoamFile.DimensionSet):
                 self.dimensions = FoamFile.DimensionSet(*self.dimensions)
 
-    Value = Union[str, int, float, bool, Dimensioned, DimensionSet, Sequence["Value"]]
+    Value = Union[
+        str,
+        int,
+        float,
+        bool,
+        Dimensioned,
+        DimensionSet,
+        Sequence["Value"],
+        Mapping[str, "Value"],
+    ]
     """
     A value that can be stored in an OpenFOAM dictionary.
     """
@@ -358,7 +373,7 @@ def _list_of(elem: ParserElement) -> ParserElement:
 
 
 _TENSOR = _list_of(common.number) | common.number
-_IDENTIFIER = Word(identbodychars + "$", identbodychars + "({,./:^!)}")
+_IDENTIFIER = Word(identbodychars + "$", printables.replace(";", ""))
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: FoamFile.Dimensioned(*reversed(tks.as_list()))
 )
@@ -366,20 +381,10 @@ _FIELD = (Keyword("uniform").suppress() + _TENSOR) | (
     Keyword("nonuniform").suppress() + _list_of(_TENSOR)
 )
 _TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
-_DICTIONARY = Forward()
-_SUBDICT = Literal("{").suppress() + _DICTIONARY + Literal("}").suppress()
 _ITEM = Forward()
 _LIST = _list_of(_ITEM)
 _ITEM <<= (
-    _FIELD
-    | _LIST
-    | _SUBDICT
-    | _DIMENSIONED
-    | _DIMENSIONS
-    | common.number
-    | _YES
-    | _NO
-    | _TOKEN
+    _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _YES | _NO | _TOKEN
 )
 _TOKENS = (
     QuotedString('"', unquote_results=False) | Word(printables.replace(";", ""))
@@ -387,16 +392,51 @@ _TOKENS = (
 
 _VALUE = _ITEM ^ _TOKENS
 
-_ENTRY = _IDENTIFIER + (
-    (Opt(_VALUE, default=None) + Literal(";").suppress()) | _SUBDICT
+_ENTRY = Forward()
+_DICTIONARY = Dict(Group(_ENTRY)[...])
+_ENTRY <<= Located(
+    _TOKEN
+    + (
+        (Literal("{").suppress() + _DICTIONARY + Literal("}").suppress())
+        | (Opt(_VALUE, default="") + Literal(";").suppress())
+    )
 )
-_DICTIONARY <<= (
-    Dict(Group(_ENTRY)[...])
-    .set_parse_action(lambda tks: {} if not tks else tks)
-    .ignore(c_style_comment)
+_FILE = (
+    _DICTIONARY.ignore(c_style_comment)
     .ignore(cpp_style_comment)
     .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]
 )
+
+
+def _flatten_result(
+    parse_result: ParseResults, *, _keywords: Sequence[str] = ()
+) -> Mapping[Sequence[str], Tuple[int, Optional[FoamFile.Value], int]]:
+    ret: MutableMapping[Sequence[str], Tuple[int, Optional[FoamFile.Value], int]] = {}
+    start = parse_result.locn_start
+    assert isinstance(start, int)
+    item = parse_result.value
+    assert isinstance(item, Sequence)
+    end = parse_result.locn_end
+    assert isinstance(end, int)
+    key, *values = item
+    assert isinstance(key, str)
+    ret[(*_keywords, key)] = (start, None, end)
+    for value in values:
+        if isinstance(value, ParseResults):
+            ret.update(_flatten_result(value, _keywords=(*_keywords, key)))
+        else:
+            ret[(*_keywords, key)] = (start, value, end)
+    return ret
+
+
+def _parse(
+    contents: str,
+) -> Mapping[Sequence[str], Tuple[int, Optional[FoamFile.Value], int]]:
+    parse_results = _FILE.parse_string(contents, parse_all=True)
+    ret: MutableMapping[Sequence[str], Tuple[int, Optional[FoamFile.Value], int]] = {}
+    for parse_result in parse_results:
+        ret.update(_flatten_result(parse_result))
+    return ret
 
 
 def _serialize_bool(value: Any) -> str:
