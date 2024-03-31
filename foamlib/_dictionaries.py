@@ -171,16 +171,7 @@ class FoamFile(_FoamDictionary):
             if not isinstance(self.dimensions, FoamFile.DimensionSet):
                 self.dimensions = FoamFile.DimensionSet(*self.dimensions)
 
-    Value = Union[
-        str,
-        int,
-        float,
-        bool,
-        Dimensioned,
-        DimensionSet,
-        Sequence["Value"],
-        Mapping[str, "Value"],
-    ]
+    Value = Union[str, int, float, bool, Dimensioned, DimensionSet, Sequence["Value"]]
     """
     A value that can be stored in an OpenFOAM dictionary.
     """
