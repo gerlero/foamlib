@@ -353,7 +353,7 @@ def _list_of(elem: ParserElement) -> ParserElement:
             Opt(common.integer).suppress()
             + (
                 Literal("(").suppress()
-                + Group((elem)[...]).set_parse_action(lambda tks: tks.as_list())
+                + Group((elem)[...], aslist=True)
                 + Literal(")").suppress()
             )
         )
