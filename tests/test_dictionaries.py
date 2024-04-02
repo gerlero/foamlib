@@ -7,7 +7,7 @@ from typing import Sequence
 import numpy as np
 
 from foamlib import *
-from foamlib._dictionaries import _VALUE
+from foamlib._dictionaries._parsing import _VALUE
 
 
 def test_parse_value() -> None:
