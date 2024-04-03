@@ -11,6 +11,8 @@ from typing import (
     cast,
 )
 
+from typing_extensions import Self
+
 from ._base import FoamDictionaryBase
 from ._parsing import Parsed, as_dict, get_entry_locn, get_value, parse
 from ._serialization import serialize_value
@@ -22,9 +24,62 @@ except ModuleNotFoundError:
     pass
 
 
+class _FoamFileBase:
+    def __init__(self, path: Union[str, Path]) -> None:
+        self.path = Path(path).absolute()
+        if self.path.is_dir():
+            raise IsADirectoryError(self.path)
+        elif not self.path.is_file():
+            raise FileNotFoundError(self.path)
+
+        self.__contents: Optional[str] = None
+        self.__parsed: Optional[Parsed] = None
+        self.__defer_io = 0
+        self.__dirty = False
+
+    def __enter__(self) -> Self:
+        if self.__defer_io == 0:
+            self._read()
+        self.__defer_io += 1
+        return self
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        self.__defer_io -= 1
+        if self.__defer_io == 0 and self.__dirty:
+            assert self.__contents is not None
+            self._write(self.__contents)
+        assert not self.__dirty
+
+    def _read(self) -> Tuple[str, Parsed]:
+        if not self.__defer_io:
+            contents = self.path.read_text()
+            if contents != self.__contents:
+                self.__contents = contents
+                self.__parsed = None
+
+        assert self.__contents is not None
+
+        if self.__parsed is None:
+            self.__parsed = parse(self.__contents)
+
+        return self.__contents, self.__parsed
+
+    def _write(self, contents: str) -> None:
+        self.__contents = contents
+        self.__parsed = None
+        if not self.__defer_io:
+            self.path.write_text(contents)
+            self.__dirty = False
+        else:
+            self.__dirty = True
+
+
 class FoamFile(
+    _FoamFileBase,
     FoamDictionaryBase,
-    MutableMapping[str, Union["FoamFile.Value", "FoamFile.Dictionary"]],
+    MutableMapping[
+        Union[str, Tuple[str, ...]], Union["FoamFile.Value", "FoamFile.Dictionary"]
+    ],
 ):
     """
     An OpenFOAM dictionary file.
@@ -75,8 +130,19 @@ class FoamFile(
         def __iter__(self) -> Iterator[str]:
             return self._file._iter(tuple(self._keywords))
 
+        def __contains__(self, keyword: object) -> bool:
+            return (*self._keywords, keyword) in self._file
+
         def __len__(self) -> int:
             return len(list(iter(self)))
+
+        def update(self, *args: Any, **kwargs: Any) -> None:
+            with self._file:
+                super().update(*args, **kwargs)
+
+        def clear(self) -> None:
+            with self._file:
+                super().clear()
 
         def __repr__(self) -> str:
             return f"{type(self).__qualname__}({self._file}, {self._keywords})"
@@ -94,54 +160,6 @@ class FoamFile(
                 ret = v
 
             return ret
-
-    def __init__(self, path: Union[str, Path]) -> None:
-        self.path = Path(path).absolute()
-        if self.path.is_dir():
-            raise IsADirectoryError(self.path)
-        elif not self.path.is_file():
-            raise FileNotFoundError(self.path)
-
-        self._contents: Optional[str] = None
-        self._parsed: Optional[Parsed] = None
-        self._defer_io = 0
-        self._dirty = False
-
-    def __enter__(self) -> "FoamFile":
-        if self._defer_io == 0:
-            self._read()
-        self._defer_io += 1
-        return self
-
-    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
-        self._defer_io -= 1
-        if self._defer_io == 0 and self._dirty:
-            assert self._contents is not None
-            self._write(self._contents)
-        assert not self._dirty
-
-    def _read(self) -> Tuple[str, Parsed]:
-        if not self._defer_io:
-            contents = self.path.read_text()
-            if contents != self._contents:
-                self._contents = contents
-                self._parsed = None
-
-        assert self._contents is not None
-
-        if self._parsed is None:
-            self._parsed = parse(self._contents)
-
-        return self._contents, self._parsed
-
-    def _write(self, contents: str) -> None:
-        self._contents = contents
-        self._parsed = None
-        if not self._defer_io:
-            self.path.write_text(contents)
-            self._dirty = False
-        else:
-            self._dirty = True
 
     def __getitem__(
         self, keywords: Union[str, Tuple[str, ...]]
@@ -220,8 +238,22 @@ class FoamFile(
     def __iter__(self) -> Iterator[str]:
         return self._iter()
 
+    def __contains__(self, keywords: object) -> bool:
+        if not isinstance(keywords, tuple):
+            keywords = (keywords,)
+        _, parsed = self._read()
+        return keywords in parsed
+
     def __len__(self) -> int:
         return len(list(iter(self)))
+
+    def update(self, *args: Any, **kwargs: Any) -> None:
+        with self:
+            super().update(*args, **kwargs)
+
+    def clear(self) -> None:
+        with self:
+            super().clear()
 
     def __fspath__(self) -> str:
         return str(self.path)
