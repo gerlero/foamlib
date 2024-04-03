@@ -1,8 +1,18 @@
 from pathlib import Path
-from typing import Any, Iterator, Mapping, MutableMapping, Sequence, Tuple, Union, cast
+from typing import (
+    Any,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
 from ._base import FoamDictionaryBase
-from ._parsing import entry_locn, parse
+from ._parsing import Parsed, as_dict, get_entry_locn, get_value, parse
 from ._serialization import serialize_value
 
 try:
@@ -16,12 +26,22 @@ class FoamFile(
     FoamDictionaryBase,
     MutableMapping[str, Union["FoamFile.Value", "FoamFile.Dictionary"]],
 ):
-    """An OpenFOAM dictionary file as a mutable mapping."""
+    """
+    An OpenFOAM dictionary file.
+
+    Use as a mutable mapping (i.e., like a dict) to access and modify entries.
+
+    Use as a context manager to make multiple changes to the file while saving all changes only once at the end.
+    """
 
     class Dictionary(
         FoamDictionaryBase,
         MutableMapping[str, Union["FoamFile.Value", "FoamFile.Dictionary"]],
     ):
+        """
+        An OpenFOAM dictionary within a file as a mutable mapping.
+        """
+
         def __init__(self, _file: "FoamFile", _keywords: Sequence[str]) -> None:
             self._file = _file
             self._keywords = _keywords
@@ -82,16 +102,56 @@ class FoamFile(
         elif not self.path.is_file():
             raise FileNotFoundError(self.path)
 
+        self._contents: Optional[str] = None
+        self._parsed: Optional[Parsed] = None
+        self._defer_io = 0
+        self._dirty = False
+
+    def __enter__(self) -> "FoamFile":
+        if self._defer_io == 0:
+            self._read()
+        self._defer_io += 1
+        return self
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        self._defer_io -= 1
+        if self._defer_io == 0 and self._dirty:
+            assert self._contents is not None
+            self._write(self._contents)
+        assert not self._dirty
+
+    def _read(self) -> Tuple[str, Parsed]:
+        if not self._defer_io:
+            contents = self.path.read_text()
+            if contents != self._contents:
+                self._contents = contents
+                self._parsed = None
+
+        assert self._contents is not None
+
+        if self._parsed is None:
+            self._parsed = parse(self._contents)
+
+        return self._contents, self._parsed
+
+    def _write(self, contents: str) -> None:
+        self._contents = contents
+        self._parsed = None
+        if not self._defer_io:
+            self.path.write_text(contents)
+            self._dirty = False
+        else:
+            self._dirty = True
+
     def __getitem__(
         self, keywords: Union[str, Tuple[str, ...]]
     ) -> Union["FoamFile.Value", "FoamFile.Dictionary"]:
         if not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        contents = self.path.read_text()
-        parsed = parse(contents)
+        _, parsed = self._read()
 
-        _, value, _ = parsed[keywords]
+        value = get_value(parsed, keywords)
 
         if value is None:
             return FoamFile.Dictionary(self, keywords)
@@ -109,29 +169,31 @@ class FoamFile(
         if not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        contents = self.path.read_text()
-        parsed = parse(contents)
+        contents, parsed = self._read()
 
         if isinstance(value, Mapping):
-            if isinstance(value, FoamDictionaryBase):
-                value = value.as_dict()
+            with self:
+                if isinstance(value, FoamDictionaryBase):
+                    value = value.as_dict()
 
-            start, end = entry_locn(parsed, keywords)
+                start, end = get_entry_locn(parsed, keywords, missing_ok=True)
 
-            contents = f"{contents[:start]} {keywords[-1]} {{\n}}\n {contents[end:]}"
-            self.path.write_text(contents)
+                self._write(
+                    f"{contents[:start]} {keywords[-1]} {{\n}}\n {contents[end:]}"
+                )
 
-            for k, v in value.items():
-                self[(*keywords, k)] = v
+                for k, v in value.items():
+                    self[(*keywords, k)] = v
         else:
-            start, end = entry_locn(parsed, keywords)
+            start, end = get_entry_locn(parsed, keywords, missing_ok=True)
 
             value = serialize_value(
                 value, assume_field=assume_field, assume_dimensions=assume_dimensions
             )
 
-            contents = f"{contents[:start]} {keywords[-1]} {value};\n {contents[end:]}"
-            self.path.write_text(contents)
+            self._write(
+                f"{contents[:start]} {keywords[-1]} {value};\n {contents[end:]}"
+            )
 
     def __setitem__(self, keywords: Union[str, Tuple[str, ...]], value: Any) -> None:
         self._setitem(keywords, value)
@@ -140,12 +202,11 @@ class FoamFile(
         if not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        contents = self.path.read_text()
-        parsed = parse(contents)
+        contents, parsed = self._read()
 
-        start, _, end = parsed[keywords]
+        start, end = get_entry_locn(parsed, keywords)
 
-        self.path.write_text(contents[:start] + contents[end:])
+        self._write(contents[:start] + contents[end:])
 
     def _iter(self, keywords: Union[str, Tuple[str, ...]] = ()) -> Iterator[str]:
         if not isinstance(keywords, tuple):
@@ -172,22 +233,8 @@ class FoamFile(
         """
         Return a nested dict representation of the file.
         """
-        contents = self.path.read_text()
-        parsed = parse(contents)
-        ret: FoamDictionaryBase._Dict = {}
-        for keywords, (_, value, _) in parsed.items():
-
-            r = ret
-            for k in keywords[:-1]:
-                assert isinstance(r, dict)
-                v = r[k]
-                assert isinstance(v, dict)
-                r = v
-
-            assert isinstance(r, dict)
-            r[keywords[-1]] = {} if value is None else value
-
-        return ret
+        _, parsed = self._read()
+        return as_dict(parsed)
 
 
 class FoamFieldFile(FoamFile):
