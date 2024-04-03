@@ -1,5 +1,5 @@
 from contextlib import suppress
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from ._base import FoamDictionaryBase
 
@@ -31,7 +31,7 @@ def _serialize_bool(value: Any) -> str:
 
 def _serialize_list(value: Any) -> str:
     if _is_sequence(value):
-        return f"({' '.join(serialize_value(v) for v in value)})"
+        return f"({' '.join(_serialize_value(v) for v in value)})"
     else:
         raise TypeError(f"Not a valid sequence: {type(value)}")
 
@@ -73,14 +73,14 @@ def _serialize_dimensions(value: Any) -> str:
 def _serialize_dimensioned(value: Any) -> str:
     if isinstance(value, FoamDictionaryBase.Dimensioned):
         if value.name is not None:
-            return f"{value.name} {_serialize_dimensions(value.dimensions)} {serialize_value(value.value)}"
+            return f"{value.name} {_serialize_dimensions(value.dimensions)} {_serialize_value(value.value)}"
         else:
-            return f"{_serialize_dimensions(value.dimensions)} {serialize_value(value.value)}"
+            return f"{_serialize_dimensions(value.dimensions)} {_serialize_value(value.value)}"
     else:
         raise TypeError(f"Not a valid dimensioned value: {type(value)}")
 
 
-def serialize_value(
+def _serialize_value(
     value: Any, *, assume_field: bool = False, assume_dimensions: bool = False
 ) -> str:
     if isinstance(value, FoamDictionaryBase.DimensionSet) or assume_dimensions:
@@ -101,3 +101,23 @@ def serialize_value(
         return _serialize_bool(value)
 
     return str(value)
+
+
+def _serialize_dictionary(value: Any) -> str:
+    if isinstance(value, Mapping):
+        return "\n".join(serialize_entry(k, v) for k, v in value.items())
+    else:
+        raise TypeError(f"Not a valid dictionary: {type(value)}")
+
+
+def serialize_entry(
+    keyword: str,
+    value: Any,
+    *,
+    assume_field: bool = False,
+    assume_dimensions: bool = False,
+) -> str:
+    try:
+        return f"{keyword}\n{{\n{_serialize_dictionary(value)}\n}}"
+    except TypeError:
+        return f"{keyword} {_serialize_value(value, assume_field=assume_field, assume_dimensions=assume_dimensions)};"
