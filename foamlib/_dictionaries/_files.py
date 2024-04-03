@@ -113,7 +113,7 @@ class FoamFile(
         parsed = parse(contents)
 
         if isinstance(value, Mapping):
-            if isinstance(value, FoamFile.Dictionary):
+            if isinstance(value, FoamDictionaryBase):
                 value = value.as_dict()
 
             start, end = entry_locn(parsed, keywords)
