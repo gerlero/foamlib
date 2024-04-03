@@ -82,10 +82,12 @@ _FILE = (
     .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]
 )
 
+Parsed = Mapping[Sequence[str], Tuple[int, Optional[FoamDictionaryBase.Value], int]]
+
 
 def _flatten_result(
     parse_result: ParseResults, *, _keywords: Sequence[str] = ()
-) -> Mapping[Sequence[str], Tuple[int, Optional[FoamDictionaryBase.Value], int]]:
+) -> Parsed:
     ret: MutableMapping[
         Sequence[str], Tuple[int, Optional[FoamDictionaryBase.Value], int]
     ] = {}
@@ -108,7 +110,7 @@ def _flatten_result(
 
 def parse(
     contents: str,
-) -> Mapping[Sequence[str], Tuple[int, Optional[FoamDictionaryBase.Value], int]]:
+) -> Parsed:
     parse_results = _FILE.parse_string(contents, parse_all=True)
     ret: MutableMapping[
         Sequence[str], Tuple[int, Optional[FoamDictionaryBase.Value], int]
@@ -118,9 +120,22 @@ def parse(
     return ret
 
 
-def entry_locn(
-    parsed: Mapping[Sequence[str], Tuple[int, Optional[FoamDictionaryBase.Value], int]],
+def get_value(
+    parsed: Parsed,
     keywords: Tuple[str, ...],
+) -> Optional[FoamDictionaryBase.Value]:
+    """
+    Value of an entry.
+    """
+    _, value, _ = parsed[keywords]
+    return value
+
+
+def get_entry_locn(
+    parsed: Parsed,
+    keywords: Tuple[str, ...],
+    *,
+    missing_ok: bool = False,
 ) -> Tuple[int, int]:
     """
     Location of an entry or where it should be inserted.
@@ -128,12 +143,35 @@ def entry_locn(
     try:
         start, _, end = parsed[keywords]
     except KeyError:
-        if len(keywords) > 1:
-            _, _, end = parsed[keywords[:-1]]
-            end -= 1
-        else:
-            end = -1
+        if missing_ok:
+            if len(keywords) > 1:
+                _, _, end = parsed[keywords[:-1]]
+                end -= 1
+            else:
+                end = -1
 
-        start = end
+            start = end
+        else:
+            raise
 
     return start, end
+
+
+def as_dict(parsed: Parsed) -> FoamDictionaryBase._Dict:
+    """
+    Return a nested dict representation of the file.
+    """
+    ret: FoamDictionaryBase._Dict = {}
+    for keywords, (_, value, _) in parsed.items():
+
+        r = ret
+        for k in keywords[:-1]:
+            assert isinstance(r, dict)
+            v = r[k]
+            assert isinstance(v, dict)
+            r = v
+
+        assert isinstance(r, dict)
+        r[keywords[-1]] = {} if value is None else value
+
+    return ret
