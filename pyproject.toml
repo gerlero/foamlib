@@ -30,6 +30,7 @@ classifiers = [
 dependencies = [
     "aioshutil>=1,<2",
     "pyparsing>=3,<4",
+    "typing-extensions>=4,<5",
 ]
 
 dynamic = ["version"]
