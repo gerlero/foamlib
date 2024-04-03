@@ -15,7 +15,7 @@ from typing_extensions import Self
 
 from ._base import FoamDictionaryBase
 from ._parsing import Parsed, as_dict, get_entry_locn, get_value, parse
-from ._serialization import serialize_value
+from ._serialization import serialize_entry
 
 try:
     import numpy as np
@@ -197,7 +197,7 @@ class FoamFile(
                 start, end = get_entry_locn(parsed, keywords, missing_ok=True)
 
                 self._write(
-                    f"{contents[:start]} {keywords[-1]} {{\n}}\n {contents[end:]}"
+                    f"{contents[:start]}\n{serialize_entry(keywords[-1], {})}\n{contents[end:]}"
                 )
 
                 for k, v in value.items():
@@ -205,12 +205,8 @@ class FoamFile(
         else:
             start, end = get_entry_locn(parsed, keywords, missing_ok=True)
 
-            value = serialize_value(
-                value, assume_field=assume_field, assume_dimensions=assume_dimensions
-            )
-
             self._write(
-                f"{contents[:start]} {keywords[-1]} {value};\n {contents[end:]}"
+                f"{contents[:start]}\n{serialize_entry(keywords[-1], value, assume_field=assume_field, assume_dimensions=assume_dimensions)}\n{contents[end:]}"
             )
 
     def __setitem__(self, keywords: Union[str, Tuple[str, ...]], value: Any) -> None:
