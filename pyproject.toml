@@ -36,14 +36,12 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-lint = [
+lint = ["ruff"]
+typing = [
     "mypy>=1,<2",
     "pytest>=7,<9",
     "pytest-asyncio>=0.21,<0.24",
     "numpy>=1,<2",
-    "black",
-    "flake8",
-    "Flake8-pyproject",
 ]
 test = [
     "pytest>=7,<9",
@@ -74,22 +72,3 @@ packages = [
     "tests",
 ]
 strict = true
-
-[tool.flake8]
-count = true
-ignore = [
-    "E203",  # whitespace before ':'
-    "E501",  # line too long
-    "E704",  # multiple statements on one line (def)
-    "F403",  # 'from foamlib import *' used; unable to detect undefined names
-    "F405",  # 'FoamDimensionSet' may be undefined, or defined from star imports: foamlib
-    "W503",  # line break before binary operator
-]
-exclude = [
-    ".git",
-    "__pycache__",
-    "docs/source/conf.py",
-    "build",
-    "dist",
-    "venv",
-]

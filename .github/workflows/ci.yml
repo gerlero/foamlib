@@ -10,15 +10,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  format:
+  lint:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Format code with Black
-      uses: psf/black@stable
+    - name: Lint with Ruff
+      uses: chartboost/ruff-action@v1
+    - name: Format with Ruff
+      uses: chartboost/ruff-action@v1
+      with:
+        args: 'format --check'
 
-  lint:
+  typing:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -29,13 +33,10 @@ jobs:
         python-version: '3.x'
     - name: Install linting dependencies
       run: |
-        pip install .[lint]
+        pip install .[typing]
     - name: Check types with mypy
       run: |
         mypy
-    - name: Check code style with flake8
-      run: |
-        flake8
 
   test:
     runs-on: ubuntu-latest

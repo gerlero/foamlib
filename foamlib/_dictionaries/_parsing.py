@@ -163,7 +163,6 @@ def as_dict(parsed: Parsed) -> FoamDictionaryBase._Dict:
     """
     ret: FoamDictionaryBase._Dict = {}
     for keywords, (_, value, _) in parsed.items():
-
         r = ret
         for k in keywords[:-1]:
             assert isinstance(r, dict)
