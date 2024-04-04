@@ -7,7 +7,9 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "github.vscode-github-actions"
+                "github.vscode-github-actions",
+                "ms-python.mypy-type-checker",
+                "charliermarsh.ruff"
             ]
         }
     },
