@@ -1,23 +1,8 @@
 from contextlib import suppress
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 
 from ._base import FoamDictionaryBase
-
-try:
-    import numpy as np
-except ModuleNotFoundError:
-    numpy = False
-else:
-    numpy = True
-
-
-def _is_sequence(value: Any) -> bool:
-    return (
-        isinstance(value, Sequence)
-        and not isinstance(value, str)
-        or numpy
-        and isinstance(value, np.ndarray)
-    )
+from .._util import is_sequence
 
 
 def _serialize_bool(value: Any) -> str:
@@ -30,14 +15,14 @@ def _serialize_bool(value: Any) -> str:
 
 
 def _serialize_list(value: Any) -> str:
-    if _is_sequence(value):
+    if is_sequence(value):
         return f"({' '.join(_serialize_value(v) for v in value)})"
     else:
         raise TypeError(f"Not a valid sequence: {type(value)}")
 
 
 def _serialize_field(value: Any) -> str:
-    if _is_sequence(value):
+    if is_sequence(value):
         try:
             s = _serialize_list(value)
         except TypeError:
@@ -64,7 +49,7 @@ def _serialize_field(value: Any) -> str:
 
 
 def _serialize_dimensions(value: Any) -> str:
-    if _is_sequence(value) and len(value) == 7:
+    if is_sequence(value) and len(value) == 7:
         return f"[{' '.join(str(v) for v in value)}]"
     else:
         raise TypeError(f"Not a valid dimension set: {type(value)}")

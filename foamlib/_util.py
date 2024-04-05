@@ -1,12 +1,32 @@
 import asyncio
 import sys
+import subprocess
 
 from pathlib import Path
-from typing import Union, Sequence, Mapping
-import subprocess
-from subprocess import CalledProcessError
+from typing import Any, Mapping, Sequence, Union
 
-__all__ = ["run_process", "run_process_async", "CalledProcessError"]
+from typing_extensions import TypeGuard
+
+try:
+    import numpy as np
+except ModuleNotFoundError:
+    numpy = False
+else:
+    numpy = True
+
+
+def is_sequence(
+    value: Any,
+) -> TypeGuard[Union["Sequence[Any]", "np.ndarray[Any, Any]"]]:
+    return (
+        isinstance(value, Sequence)
+        and not isinstance(value, str)
+        or numpy
+        and isinstance(value, np.ndarray)
+    )
+
+
+CalledProcessError = subprocess.CalledProcessError
 
 
 def run_process(
@@ -16,7 +36,7 @@ def run_process(
     cwd: Union[None, str, Path] = None,
     env: Union[None, Mapping[str, str]] = None,
 ) -> "subprocess.CompletedProcess[bytes]":
-    shell = isinstance(cmd, str) or not isinstance(cmd, Sequence)
+    shell = not is_sequence(cmd)
 
     if sys.version_info < (3, 8):
         if shell:
@@ -28,8 +48,7 @@ def run_process(
         cmd,
         cwd=cwd,
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         shell=shell,
         check=check,
     )
@@ -44,7 +63,7 @@ async def run_process_async(
     cwd: Union[None, str, Path] = None,
     env: Union[None, Mapping[str, str]] = None,
 ) -> "subprocess.CompletedProcess[bytes]":
-    if isinstance(cmd, str) or not isinstance(cmd, Sequence):
+    if not is_sequence(cmd):
         proc = await asyncio.create_subprocess_shell(
             str(cmd),
             cwd=cwd,
