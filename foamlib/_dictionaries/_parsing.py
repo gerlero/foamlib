@@ -1,4 +1,11 @@
-from typing import Mapping, MutableMapping, Optional, Sequence, Tuple
+import sys
+
+from typing import Optional, Tuple
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Mapping, MutableMapping, Sequence
+else:
+    from typing import Mapping, MutableMapping, Sequence
 
 from pyparsing import (
     Dict,

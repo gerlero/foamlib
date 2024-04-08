@@ -3,9 +3,17 @@ import sys
 import subprocess
 
 from pathlib import Path
-from typing import Any, Mapping, Sequence, Union
+from typing import Any, Union
 
-from typing_extensions import TypeGuard
+if sys.version_info >= (3, 9):
+    from collections.abc import Mapping, Sequence
+else:
+    from typing import Mapping, Sequence
+
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
 
 try:
     import numpy as np

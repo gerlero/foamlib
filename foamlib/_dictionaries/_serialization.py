@@ -1,5 +1,12 @@
+import sys
+
 from contextlib import suppress
-from typing import Any, Mapping
+from typing import Any
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Mapping
+else:
+    from typing import Mapping
 
 from ._base import FoamDictionaryBase
 from .._util import is_sequence
