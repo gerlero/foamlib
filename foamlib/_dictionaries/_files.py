@@ -1,5 +1,4 @@
 import sys
-
 from pathlib import Path
 from typing import (
     Any,
@@ -99,9 +98,7 @@ class FoamFile(
         FoamDictionaryBase,
         MutableMapping[str, Union["FoamFile.Value", "FoamFile.Dictionary"]],
     ):
-        """
-        An OpenFOAM dictionary within a file as a mutable mapping.
-        """
+        """An OpenFOAM dictionary within a file as a mutable mapping."""
 
         def __init__(self, _file: "FoamFile", _keywords: Sequence[str]) -> None:
             self._file = _file
@@ -154,9 +151,7 @@ class FoamFile(
             return f"{type(self).__qualname__}({self._file}, {self._keywords})"
 
         def as_dict(self) -> FoamDictionaryBase._Dict:
-            """
-            Return a nested dict representation of the dictionary.
-            """
+            """Return a nested dict representation of the dictionary."""
             ret = self._file.as_dict()
 
             for k in self._keywords:
@@ -264,9 +259,7 @@ class FoamFile(
         return f"{type(self).__name__}({self.path})"
 
     def as_dict(self) -> FoamDictionaryBase._Dict:
-        """
-        Return a nested dict representation of the file.
-        """
+        """Return a nested dict representation of the file."""
         _, parsed = self._read()
         return as_dict(parsed)
 
@@ -289,9 +282,7 @@ class FoamFieldFile(FoamFile):
 
         @property
         def type(self) -> str:
-            """
-            Alias of `self["type"]`.
-            """
+            """Alias of `self["type"]`."""
             ret = self["type"]
             if not isinstance(ret, str):
                 raise TypeError("type is not a string")
@@ -310,9 +301,7 @@ class FoamFieldFile(FoamFile):
             Sequence[Union[int, float, Sequence[Union[int, float]]]],
             "NDArray[np.generic]",
         ]:
-            """
-            Alias of `self["value"]`.
-            """
+            """Alias of `self["value"]`."""
             ret = self["value"]
             if not isinstance(ret, (int, float, Sequence)):
                 raise TypeError("value is not a field")
@@ -361,9 +350,7 @@ class FoamFieldFile(FoamFile):
 
     @property
     def dimensions(self) -> FoamFile.DimensionSet:
-        """
-        Alias of `self["dimensions"]`.
-        """
+        """Alias of `self["dimensions"]`."""
         ret = self["dimensions"]
         if not isinstance(ret, FoamFile.DimensionSet):
             raise TypeError("dimensions is not a DimensionSet")
@@ -384,9 +371,7 @@ class FoamFieldFile(FoamFile):
         Sequence[Union[int, float, Sequence[Union[int, float]]]],
         "NDArray[np.generic]",
     ]:
-        """
-        Alias of `self["internalField"]`.
-        """
+        """Alias of `self["internalField"]`."""
         ret = self["internalField"]
         if not isinstance(ret, (int, float, Sequence)):
             raise TypeError("internalField is not a field")
@@ -406,9 +391,7 @@ class FoamFieldFile(FoamFile):
 
     @property
     def boundary_field(self) -> "FoamFieldFile.BoundariesDictionary":
-        """
-        Alias of `self["boundaryField"]`.
-        """
+        """Alias of `self["boundaryField"]`."""
         ret = self["boundaryField"]
         if not isinstance(ret, FoamFieldFile.BoundariesDictionary):
             assert not isinstance(ret, FoamFile.Dictionary)

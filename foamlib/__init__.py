@@ -1,7 +1,9 @@
+"""A Python interface for interacting with OpenFOAM."""
+
 __version__ = "0.2.5"
 
-from ._cases import FoamCase, AsyncFoamCase, FoamCaseBase
-from ._dictionaries import FoamFile, FoamFieldFile, FoamDictionaryBase
+from ._cases import AsyncFoamCase, FoamCase, FoamCaseBase
+from ._dictionaries import FoamDictionaryBase, FoamFieldFile, FoamFile
 
 __all__ = [
     "FoamCase",

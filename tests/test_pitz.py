@@ -1,9 +1,8 @@
-import pytest
-
 import os
 from pathlib import Path
 from typing import Sequence
 
+import pytest
 from foamlib import FoamCase
 
 PITZ = FoamCase(

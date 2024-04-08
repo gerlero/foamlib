@@ -1,5 +1,4 @@
 import pytest
-
 from foamlib import FoamCase
 
 

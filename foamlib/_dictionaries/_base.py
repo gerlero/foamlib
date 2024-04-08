@@ -1,5 +1,4 @@
 import sys
-
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Dict, NamedTuple, Optional, Union
@@ -44,7 +43,5 @@ class FoamDictionaryBase:
 
     @abstractmethod
     def as_dict(self) -> _Dict:
-        """
-        Return a nested dict representation of the dictionary.
-        """
+        """Return a nested dict representation of the dictionary."""
         raise NotImplementedError

@@ -1,11 +1,10 @@
-import sys
-import os
 import asyncio
 import multiprocessing
+import os
 import shutil
-
-from pathlib import Path
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import (
     Optional,
     Union,
@@ -14,22 +13,22 @@ from typing import (
 
 if sys.version_info >= (3, 9):
     from collections.abc import (
-        Collection,
-        Mapping,
-        Set,
-        Sequence,
         AsyncGenerator,
         Callable,
+        Collection,
         Iterator,
+        Mapping,
+        Sequence,
+        Set,
     )
 else:
-    from typing import Collection, Mapping, Sequence, AsyncGenerator, Callable, Iterator
     from typing import AbstractSet as Set
+    from typing import AsyncGenerator, Callable, Collection, Iterator, Mapping, Sequence
 
 import aioshutil
 
-from ._util import is_sequence, run_process, run_process_async, CalledProcessError
-from ._dictionaries import FoamFile, FoamFieldFile
+from ._dictionaries import FoamFieldFile, FoamFile
+from ._util import CalledProcessError, is_sequence, run_process, run_process_async
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
@@ -54,16 +53,12 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
         @property
         def time(self) -> float:
-            """
-            The time that corresponds to this directory.
-            """
+            """The time that corresponds to this directory."""
             return float(self.path.name)
 
         @property
         def name(self) -> str:
-            """
-            The name of this time directory.
-            """
+            """The name of this time directory."""
             return self.path.name
 
         def __getitem__(self, key: str) -> FoamFieldFile:
@@ -172,9 +167,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         return ignore
 
     def _clean_script(self) -> Optional[Path]:
-        """
-        Return the path to the (All)clean script, or None if no clean script is found.
-        """
+        """Return the path to the (All)clean script, or None if no clean script is found."""
         clean = self.path / "clean"
         all_clean = self.path / "Allclean"
 
@@ -186,9 +179,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             return None
 
     def _run_script(self, *, parallel: Optional[bool]) -> Optional[Path]:
-        """
-        Return the path to the (All)run script, or None if no run script is found.
-        """
+        """Return the path to the (All)run script, or None if no run script is found."""
         run = self.path / "run"
         run_parallel = self.path / "run-parallel"
         all_run = self.path / "Allrun"
@@ -213,9 +204,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             return None
 
     def _env(self) -> Mapping[str, str]:
-        """
-        Return the environment variables for this case.
-        """
+        """Return the environment variables for this case."""
         env = os.environ.copy()
         env["PWD"] = str(self.path)
         return env
@@ -237,22 +226,16 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
     @property
     def name(self) -> str:
-        """
-        The name of the case.
-        """
+        """The name of the case."""
         return self.path.name
 
     def file(self, path: Union[Path, str]) -> FoamFile:
-        """
-        Return a FoamFile object for the given path in the case.
-        """
+        """Return a FoamFile object for the given path in the case."""
         return FoamFile(self.path / path)
 
     @property
     def _nsubdomains(self) -> Optional[int]:
-        """
-        Return the number of subdomains as set in the decomposeParDict, or None if no decomposeParDict is found.
-        """
+        """Return the number of subdomains as set in the decomposeParDict, or None if no decomposeParDict is found."""
         try:
             nsubdomains = self.decompose_par_dict["numberOfSubdomains"]
             if not isinstance(nsubdomains, int):
@@ -265,16 +248,12 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
     @property
     def _nprocessors(self) -> int:
-        """
-        Return the number of processor directories in the case.
-        """
+        """Return the number of processor directories in the case."""
         return len(list(self.path.glob("processor*")))
 
     @property
     def application(self) -> str:
-        """
-        The application name as set in the controlDict.
-        """
+        """The application name as set in the controlDict."""
         application = self.control_dict["application"]
         if not isinstance(application, str):
             raise TypeError(f"application in {self.control_dict} is not a string")
@@ -282,51 +261,37 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
     @property
     def control_dict(self) -> FoamFile:
-        """
-        The controlDict file.
-        """
+        """The controlDict file."""
         return self.file("system/controlDict")
 
     @property
     def fv_schemes(self) -> FoamFile:
-        """
-        The fvSchemes file.
-        """
+        """The fvSchemes file."""
         return self.file("system/fvSchemes")
 
     @property
     def fv_solution(self) -> FoamFile:
-        """
-        The fvSolution file.
-        """
+        """The fvSolution file."""
         return self.file("system/fvSolution")
 
     @property
     def decompose_par_dict(self) -> FoamFile:
-        """
-        The decomposeParDict file.
-        """
+        """The decomposeParDict file."""
         return self.file("system/decomposeParDict")
 
     @property
     def block_mesh_dict(self) -> FoamFile:
-        """
-        The blockMeshDict file.
-        """
+        """The blockMeshDict file."""
         return self.file("system/blockMeshDict")
 
     @property
     def transport_properties(self) -> FoamFile:
-        """
-        The transportProperties file.
-        """
+        """The transportProperties file."""
         return self.file("constant/transportProperties")
 
     @property
     def turbulence_properties(self) -> FoamFile:
-        """
-        The turbulenceProperties file.
-        """
+        """The turbulenceProperties file."""
         return self.file("constant/turbulenceProperties")
 
     def __fspath__(self) -> str:
@@ -432,21 +397,15 @@ class FoamCase(FoamCaseBase):
                 )
 
     def block_mesh(self, *, check: bool = True) -> None:
-        """
-        Run blockMesh on this case.
-        """
+        """Run blockMesh on this case."""
         self.run(["blockMesh"], check=check)
 
     def decompose_par(self, *, check: bool = True) -> None:
-        """
-        Decompose this case for parallel running.
-        """
+        """Decompose this case for parallel running."""
         self.run(["decomposePar"], check=check)
 
     def reconstruct_par(self, *, check: bool = True) -> None:
-        """
-        Reconstruct this case after parallel running.
-        """
+        """Reconstruct this case after parallel running."""
         self.run(["reconstructPar"], check=check)
 
     def copy(self, dest: Union[Path, str]) -> "FoamCase":
@@ -624,21 +583,15 @@ class AsyncFoamCase(FoamCaseBase):
                 )
 
     async def block_mesh(self, *, check: bool = True) -> None:
-        """
-        Run blockMesh on this case.
-        """
+        """Run blockMesh on this case."""
         await self.run(["blockMesh"], check=check)
 
     async def decompose_par(self, *, check: bool = True) -> None:
-        """
-        Decompose this case for parallel running.
-        """
+        """Decompose this case for parallel running."""
         await self.run(["decomposePar"], check=check)
 
     async def reconstruct_par(self, *, check: bool = True) -> None:
-        """
-        Reconstruct this case after parallel running.
-        """
+        """Reconstruct this case after parallel running."""
         await self.run(["reconstructPar"], check=check)
 
     async def copy(self, dest: Union[Path, str]) -> "AsyncFoamCase":
