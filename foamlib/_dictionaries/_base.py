@@ -1,6 +1,13 @@
+import sys
+
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Dict, NamedTuple, Optional, Sequence, Union
+from typing import Dict, NamedTuple, Optional, Union
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Sequence
+else:
+    from typing import Sequence
 
 
 class FoamDictionaryBase:

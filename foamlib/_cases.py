@@ -1,3 +1,4 @@
+import sys
 import os
 import asyncio
 import multiprocessing
@@ -8,15 +9,22 @@ from contextlib import asynccontextmanager
 from typing import (
     Optional,
     Union,
-    Collection,
-    Mapping,
-    Set,
-    Sequence,
-    AsyncGenerator,
-    Callable,
-    Iterator,
     overload,
 )
+
+if sys.version_info >= (3, 9):
+    from collections.abc import (
+        Collection,
+        Mapping,
+        Set,
+        Sequence,
+        AsyncGenerator,
+        Callable,
+        Iterator,
+    )
+else:
+    from typing import Collection, Mapping, Sequence, AsyncGenerator, Callable, Iterator
+    from typing import AbstractSet as Set
 
 import aioshutil
 
@@ -132,7 +140,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         has_decompose_par_dict = (self.path / "system" / "decomposeParDict").is_file()
         has_block_mesh_dict = (self.path / "system" / "blockMeshDict").is_file()
 
-        paths: Set[Path] = set()
+        paths = set()
 
         for p in self.path.iterdir():
             if p.is_dir():

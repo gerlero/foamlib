@@ -1,27 +1,33 @@
+import sys
+
 from pathlib import Path
 from typing import (
     Any,
-    Iterator,
-    Mapping,
-    MutableMapping,
     Optional,
-    Sequence,
     Tuple,
     Union,
     cast,
 )
 
-from typing_extensions import Self
+if sys.version_info >= (3, 9):
+    from collections.abc import Iterator, Mapping, MutableMapping, Sequence
+else:
+    from typing import Iterator, Mapping, MutableMapping, Sequence
 
-from ._base import FoamDictionaryBase
-from ._parsing import Parsed, as_dict, get_entry_locn, get_value, parse
-from ._serialization import serialize_entry
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 try:
     import numpy as np
     from numpy.typing import NDArray
 except ModuleNotFoundError:
     pass
+
+from ._base import FoamDictionaryBase
+from ._parsing import Parsed, as_dict, get_entry_locn, get_value, parse
+from ._serialization import serialize_entry
 
 
 class _FoamFileBase:
