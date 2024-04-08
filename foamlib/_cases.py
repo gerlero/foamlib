@@ -20,7 +20,7 @@ from typing import (
 
 import aioshutil
 
-from ._subprocesses import run_process, run_process_async, CalledProcessError
+from ._util import is_sequence, run_process, run_process_async, CalledProcessError
 from ._dictionaries import FoamFile, FoamFieldFile
 
 
@@ -215,7 +215,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
     def _parallel_cmd(
         self, cmd: Union[Sequence[Union[str, Path]], str, Path]
     ) -> Union[Sequence[Union[str, Path]], str]:
-        if isinstance(cmd, str) or not isinstance(cmd, Sequence):
+        if not is_sequence(cmd):
             return f"mpiexec -np {self._nprocessors} {cmd} -parallel"
         else:
             return [
