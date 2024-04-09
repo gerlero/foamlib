@@ -11,7 +11,7 @@ from .._util import is_sequence
 from ._base import FoamDictionaryBase
 
 
-def _serialize_bool(value: Any) -> str:
+def _serialize_switch(value: Any) -> str:
     if value is True:
         return "yes"
     elif value is False:
@@ -89,7 +89,7 @@ def _serialize_value(
         return _serialize_list(value)
 
     with suppress(TypeError):
-        return _serialize_bool(value)
+        return _serialize_switch(value)
 
     return str(value)
 
