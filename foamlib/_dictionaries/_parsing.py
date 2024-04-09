@@ -28,8 +28,11 @@ from pyparsing import (
 
 from ._base import FoamDictionaryBase
 
-_YES = Keyword("yes").set_parse_action(lambda: True)
-_NO = Keyword("no").set_parse_action(lambda: False)
+_SWITCH = (
+    Keyword("yes") | Keyword("true") | Keyword("on") | Keyword("y") | Keyword("t")
+).set_parse_action(lambda: True) | (
+    Keyword("no") | Keyword("false") | Keyword("off") | Keyword("n") | Keyword("f")
+).set_parse_action(lambda: False)
 _DIMENSIONS = (
     Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
 ).set_parse_action(lambda tks: FoamDictionaryBase.DimensionSet(*tks))
@@ -64,9 +67,7 @@ _FIELD = (Keyword("uniform").suppress() + _TENSOR) | (
 _TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
 _ITEM = Forward()
 _LIST = _list_of(_ITEM)
-_ITEM <<= (
-    _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _YES | _NO | _TOKEN
-)
+_ITEM <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _SWITCH | _TOKEN
 _TOKENS = (
     QuotedString('"', unquote_results=False) | Word(printables.replace(";", ""))
 )[2, ...].set_parse_action(lambda tks: " ".join(tks))
