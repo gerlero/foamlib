@@ -1,8 +1,7 @@
-import pytest
-
 import os
 from pathlib import Path
 
+import pytest
 from foamlib import FoamCase
 
 FLANGE = FoamCase(

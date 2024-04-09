@@ -1,5 +1,4 @@
 import sys
-
 from contextlib import suppress
 from typing import Any
 
@@ -8,8 +7,8 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Mapping
 
-from ._base import FoamDictionaryBase
 from .._util import is_sequence
+from ._base import FoamDictionaryBase
 
 
 def _serialize_bool(value: Any) -> str:

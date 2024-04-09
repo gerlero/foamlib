@@ -72,3 +72,9 @@ packages = [
     "tests",
 ]
 strict = true
+
+[tool.ruff.lint]
+select = ["D", "I", "RUF"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"

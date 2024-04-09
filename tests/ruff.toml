@@ -1,0 +1,4 @@
+extend = "../pyproject.toml"
+
+[lint]
+ignore = ["D"]

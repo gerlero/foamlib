@@ -1,9 +1,8 @@
-import pytest
-import pytest_asyncio
-
 import os
 from pathlib import Path
 
+import pytest
+import pytest_asyncio
 from foamlib import AsyncFoamCase
 
 FLANGE = AsyncFoamCase(

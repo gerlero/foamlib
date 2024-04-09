@@ -1,5 +1,4 @@
 import sys
-
 from typing import Optional, Tuple
 
 if sys.version_info >= (3, 9):
@@ -16,8 +15,8 @@ from pyparsing import (
     Literal,
     Located,
     Opt,
-    ParseResults,
     ParserElement,
+    ParseResults,
     QuotedString,
     Word,
     c_style_comment,
@@ -131,9 +130,7 @@ def get_value(
     parsed: Parsed,
     keywords: Tuple[str, ...],
 ) -> Optional[FoamDictionaryBase.Value]:
-    """
-    Value of an entry.
-    """
+    """Value of an entry."""
     _, value, _ = parsed[keywords]
     return value
 
@@ -144,9 +141,7 @@ def get_entry_locn(
     *,
     missing_ok: bool = False,
 ) -> Tuple[int, int]:
-    """
-    Location of an entry or where it should be inserted.
-    """
+    """Location of an entry or where it should be inserted."""
     try:
         start, _, end = parsed[keywords]
     except KeyError:
@@ -165,9 +160,7 @@ def get_entry_locn(
 
 
 def as_dict(parsed: Parsed) -> FoamDictionaryBase._Dict:
-    """
-    Return a nested dict representation of the file.
-    """
+    """Return a nested dict representation of the file."""
     ret: FoamDictionaryBase._Dict = {}
     for keywords, (_, value, _) in parsed.items():
         r = ret

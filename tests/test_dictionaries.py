@@ -1,12 +1,10 @@
-import pytest
-
 import os
 from pathlib import Path
 from typing import Sequence
 
 import numpy as np
-
-from foamlib import FoamCase, FoamFile, FoamFieldFile
+import pytest
+from foamlib import FoamCase, FoamFieldFile, FoamFile
 from foamlib._dictionaries._parsing import _VALUE
 
 
