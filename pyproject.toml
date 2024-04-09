@@ -74,7 +74,7 @@ packages = [
 strict = true
 
 [tool.ruff.lint]
-select = ["D", "I", "RUF"]
+extend-select = ["D", "I", "RUF", "UP"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
