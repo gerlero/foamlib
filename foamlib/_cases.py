@@ -364,7 +364,7 @@ class FoamCase(FoamCaseBase):
                 )
             except CalledProcessError as e:
                 raise RuntimeError(
-                    f"{e.cmd} failed with return code {e.returncode}\n{e.stderr.decode()}"
+                    f"{e.cmd} failed with return code {e.returncode}\n{e.stderr}"
                 ) from None
 
         else:
@@ -533,7 +533,7 @@ class AsyncFoamCase(FoamCaseBase):
                     )
             except CalledProcessError as e:
                 raise RuntimeError(
-                    f"{e.cmd} failed with return code {e.returncode}\n{e.stderr.decode()}"
+                    f"{e.cmd} failed with return code {e.returncode}\n{e.stderr}"
                 ) from None
 
         else:

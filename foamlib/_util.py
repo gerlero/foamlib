@@ -35,6 +35,11 @@ def is_sequence(
 
 CalledProcessError = subprocess.CalledProcessError
 
+if sys.version_info >= (3, 9):
+    CompletedProcess = subprocess.CompletedProcess[str]
+else:
+    CompletedProcess = subprocess.CompletedProcess
+
 
 def run_process(
     cmd: Union[Sequence[Union[str, Path]], str, Path],
@@ -42,7 +47,7 @@ def run_process(
     check: bool = True,
     cwd: Union[None, str, Path] = None,
     env: Union[None, Mapping[str, str]] = None,
-) -> "subprocess.CompletedProcess[bytes]":
+) -> CompletedProcess:
     shell = not is_sequence(cmd)
 
     if sys.version_info < (3, 8):
@@ -55,7 +60,9 @@ def run_process(
         cmd,
         cwd=cwd,
         env=env,
-        capture_output=True,
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.PIPE,
+        text=True,
         shell=shell,
         check=check,
     )
@@ -69,13 +76,13 @@ async def run_process_async(
     check: bool = True,
     cwd: Union[None, str, Path] = None,
     env: Union[None, Mapping[str, str]] = None,
-) -> "subprocess.CompletedProcess[bytes]":
+) -> CompletedProcess:
     if not is_sequence(cmd):
         proc = await asyncio.create_subprocess_shell(
             str(cmd),
             cwd=cwd,
             env=env,
-            stdout=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE,
         )
 
@@ -86,15 +93,16 @@ async def run_process_async(
             *cmd,
             cwd=cwd,
             env=env,
-            stdout=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE,
         )
 
     stdout, stderr = await proc.communicate()
 
+    assert stdout is None
     assert proc.returncode is not None
 
-    ret = subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
+    ret = CompletedProcess(cmd, proc.returncode, None, stderr.decode())
 
     if check:
         ret.check_returncode()
