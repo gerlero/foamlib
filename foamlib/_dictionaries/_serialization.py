@@ -34,10 +34,10 @@ def _serialize_field(value: Any) -> str:
         except TypeError:
             raise TypeError(f"Not a valid field: {type(value)}") from None
         else:
-            if len(value) < 10:
+            if not is_sequence(value[0]) and len(value) < 10:
                 return f"uniform {s}"
             else:
-                if isinstance(value[0], (int, float)):
+                if not is_sequence(value[0]):
                     kind = "scalar"
                 elif len(value[0]) == 3:
                     kind = "vector"
