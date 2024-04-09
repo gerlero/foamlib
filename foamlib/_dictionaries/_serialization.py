@@ -1,6 +1,6 @@
 import sys
 from contextlib import suppress
-from typing import Any
+from typing import Union
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping
@@ -11,7 +11,9 @@ from .._util import is_sequence
 from ._base import FoamDictionaryBase
 
 
-def _serialize_switch(value: Any) -> str:
+def _serialize_switch(
+    value: Union[FoamDictionaryBase._SetValue, FoamDictionaryBase._SetMapping],
+) -> str:
     if value is True:
         return "yes"
     elif value is False:
@@ -20,14 +22,18 @@ def _serialize_switch(value: Any) -> str:
         raise TypeError(f"Not a bool: {type(value)}")
 
 
-def _serialize_list(value: Any) -> str:
+def _serialize_list(
+    value: Union[FoamDictionaryBase._SetValue, FoamDictionaryBase._SetMapping],
+) -> str:
     if is_sequence(value):
         return f"({' '.join(_serialize_value(v) for v in value)})"
     else:
         raise TypeError(f"Not a valid sequence: {type(value)}")
 
 
-def _serialize_field(value: Any) -> str:
+def _serialize_field(
+    value: Union[FoamDictionaryBase._SetValue, FoamDictionaryBase._SetMapping],
+) -> str:
     if is_sequence(value):
         try:
             s = _serialize_list(value)
@@ -54,14 +60,18 @@ def _serialize_field(value: Any) -> str:
         return f"uniform {value}"
 
 
-def _serialize_dimensions(value: Any) -> str:
+def _serialize_dimensions(
+    value: Union[FoamDictionaryBase._SetValue, FoamDictionaryBase._SetMapping],
+) -> str:
     if is_sequence(value) and len(value) == 7:
         return f"[{' '.join(str(v) for v in value)}]"
     else:
         raise TypeError(f"Not a valid dimension set: {type(value)}")
 
 
-def _serialize_dimensioned(value: Any) -> str:
+def _serialize_dimensioned(
+    value: Union[FoamDictionaryBase._SetValue, FoamDictionaryBase._SetMapping],
+) -> str:
     if isinstance(value, FoamDictionaryBase.Dimensioned):
         if value.name is not None:
             return f"{value.name} {_serialize_dimensions(value.dimensions)} {_serialize_value(value.value)}"
@@ -72,7 +82,10 @@ def _serialize_dimensioned(value: Any) -> str:
 
 
 def _serialize_value(
-    value: Any, *, assume_field: bool = False, assume_dimensions: bool = False
+    value: Union[FoamDictionaryBase._SetValue, FoamDictionaryBase._SetMapping],
+    *,
+    assume_field: bool = False,
+    assume_dimensions: bool = False,
 ) -> str:
     if isinstance(value, FoamDictionaryBase.DimensionSet) or assume_dimensions:
         with suppress(TypeError):
@@ -94,7 +107,9 @@ def _serialize_value(
     return str(value)
 
 
-def _serialize_dictionary(value: Any) -> str:
+def _serialize_dictionary(
+    value: Union[FoamDictionaryBase._SetValue, FoamDictionaryBase._SetMapping],
+) -> str:
     if isinstance(value, Mapping):
         return "\n".join(serialize_entry(k, v) for k, v in value.items())
     else:
@@ -103,7 +118,7 @@ def _serialize_dictionary(value: Any) -> str:
 
 def serialize_entry(
     keyword: str,
-    value: Any,
+    value: Union[FoamDictionaryBase._SetValue, FoamDictionaryBase._SetMapping],
     *,
     assume_field: bool = False,
     assume_dimensions: bool = False,
