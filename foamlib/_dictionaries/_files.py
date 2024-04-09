@@ -1,9 +1,11 @@
 import sys
 from pathlib import Path
+from types import TracebackType
 from typing import (
     Any,
     Optional,
     Tuple,
+    Type,
     Union,
     cast,
 )
@@ -48,7 +50,12 @@ class _FoamFileBase:
         self.__defer_io += 1
         return self
 
-    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         self.__defer_io -= 1
         if self.__defer_io == 0 and self.__dirty:
             assert self.__contents is not None
@@ -124,7 +131,11 @@ class FoamFile(
                 assume_dimensions=assume_dimensions,
             )
 
-        def __setitem__(self, keyword: str, value: Any) -> None:
+        def __setitem__(
+            self,
+            keyword: str,
+            value: Union["FoamFile._SetValue", "FoamFile._SetMapping"],
+        ) -> None:
             self._setitem(keyword, value)
 
         def __delitem__(self, keyword: str) -> None:
@@ -180,7 +191,7 @@ class FoamFile(
     def _setitem(
         self,
         keywords: Union[str, Tuple[str, ...]],
-        value: Any,
+        value: Union["FoamFile._SetValue", "FoamFile._SetMapping"],
         *,
         assume_field: bool = False,
         assume_dimensions: bool = False,
@@ -210,7 +221,11 @@ class FoamFile(
                 f"{contents[:start]}\n{serialize_entry(keywords[-1], value, assume_field=assume_field, assume_dimensions=assume_dimensions)}\n{contents[end:]}"
             )
 
-    def __setitem__(self, keywords: Union[str, Tuple[str, ...]], value: Any) -> None:
+    def __setitem__(
+        self,
+        keywords: Union[str, Tuple[str, ...]],
+        value: Union["FoamFile._SetValue", "FoamFile._SetMapping"],
+    ) -> None:
         self._setitem(keywords, value)
 
     def __delitem__(self, keywords: Union[str, Tuple[str, ...]]) -> None:
@@ -274,7 +289,11 @@ class FoamFieldFile(FoamFile):
     class BoundaryDictionary(FoamFile.Dictionary):
         """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""
 
-        def __setitem__(self, key: str, value: Any) -> None:
+        def __setitem__(
+            self,
+            key: str,
+            value: Union[FoamFile._SetValue, FoamFile._SetMapping],
+        ) -> None:
             if key == "value":
                 self._setitem(key, value, assume_field=True)
             else:

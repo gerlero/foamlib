@@ -4,9 +4,15 @@ from dataclasses import dataclass
 from typing import Dict, NamedTuple, Optional, Union
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 else:
-    from typing import Sequence
+    from typing import Mapping, Sequence
+
+try:
+    import numpy as np
+    from numpy.typing import NDArray
+except ModuleNotFoundError:
+    pass
 
 
 class FoamDictionaryBase:
@@ -39,9 +45,13 @@ class FoamDictionaryBase:
     A value that can be stored in an OpenFOAM dictionary.
     """
 
-    _Dict = Dict[str, Union["FoamDictionaryBase.Value", "_Dict"]]
+    _Dict = Dict[str, Union["Value", "_Dict"]]
 
     @abstractmethod
     def as_dict(self) -> _Dict:
         """Return a nested dict representation of the dictionary."""
         raise NotImplementedError
+
+    _SetValue = Union[Value, "NDArray[np.generic]"]
+
+    _SetMapping = Mapping[str, Union["_SetValue", "_SetMapping"]]
