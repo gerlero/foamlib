@@ -131,11 +131,7 @@ class FoamFile(
                 assume_dimensions=assume_dimensions,
             )
 
-        def __setitem__(
-            self,
-            keyword: str,
-            value: Union["FoamFile._SetValue", "FoamFile._SetMapping"],
-        ) -> None:
+        def __setitem__(self, keyword: str, value: "FoamFile._SetValue") -> None:
             self._setitem(keyword, value)
 
         def __delitem__(self, keyword: str) -> None:
@@ -191,7 +187,7 @@ class FoamFile(
     def _setitem(
         self,
         keywords: Union[str, Tuple[str, ...]],
-        value: Union["FoamFile._SetValue", "FoamFile._SetMapping"],
+        value: "FoamFile._SetValue",
         *,
         assume_field: bool = False,
         assume_dimensions: bool = False,
@@ -224,7 +220,7 @@ class FoamFile(
     def __setitem__(
         self,
         keywords: Union[str, Tuple[str, ...]],
-        value: Union["FoamFile._SetValue", "FoamFile._SetMapping"],
+        value: "FoamFile._SetValue",
     ) -> None:
         self._setitem(keywords, value)
 
@@ -284,7 +280,11 @@ class FoamFieldFile(FoamFile):
 
     class BoundariesDictionary(FoamFile.Dictionary):
         def __getitem__(self, keyword: str) -> "FoamFieldFile.BoundaryDictionary":
-            return cast(FoamFieldFile.BoundaryDictionary, super().__getitem__(keyword))
+            value = super().__getitem__(keyword)
+            if not isinstance(value, FoamFieldFile.BoundaryDictionary):
+                assert not isinstance(value, FoamFile.Dictionary)
+                raise TypeError(f"boundary {keyword} is not a dictionary")
+            return value
 
     class BoundaryDictionary(FoamFile.Dictionary):
         """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""
@@ -292,7 +292,7 @@ class FoamFieldFile(FoamFile):
         def __setitem__(
             self,
             key: str,
-            value: Union[FoamFile._SetValue, FoamFile._SetMapping],
+            value: FoamFile._SetValue,
         ) -> None:
             if key == "value":
                 self._setitem(key, value, assume_field=True)

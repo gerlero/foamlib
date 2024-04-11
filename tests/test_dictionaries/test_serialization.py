@@ -50,3 +50,9 @@ def test_serialize_value() -> None:
         _serialize_value("hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")
         == "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
+    assert _serialize_value([{"a": "b"}, {"c": "d"}]) == "(a b; c d;)"
+    assert (
+        _serialize_value([{"a": {"b": "c"}}, {"d": {"e": "g"}}])
+        == "(a\n{\nb c;\n} d\n{\ne g;\n})"
+    )
+    assert _serialize_value(({"a": [0, 1, 2]}, {"b": {}})) == "(a (0 1 2); b\n{\n\n})"
