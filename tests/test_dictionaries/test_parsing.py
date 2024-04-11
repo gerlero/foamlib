@@ -52,3 +52,9 @@ def test_parse_value() -> None:
         _VALUE.parse_string("hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")[0]
         == "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
+    assert _VALUE.parse_string("(a b; c d;)")[0] == [{"a": "b"}, {"c": "d"}]
+    assert _VALUE.parse_string("(a {b c;} d {e g;})")[0] == [
+        {"a": {"b": "c"}},
+        {"d": {"e": "g"}},
+    ]
+    assert _VALUE.parse_string("(a (0 1 2); b {})")[0] == [{"a": [0, 1, 2]}, {"b": {}}]

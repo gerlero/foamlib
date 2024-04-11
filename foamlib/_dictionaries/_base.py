@@ -40,7 +40,16 @@ class FoamDictionaryBase:
             if not isinstance(self.dimensions, FoamDictionaryBase.DimensionSet):
                 self.dimensions = FoamDictionaryBase.DimensionSet(*self.dimensions)
 
-    Value = Union[str, int, float, bool, Dimensioned, DimensionSet, Sequence["Value"]]
+    Value = Union[
+        str,
+        int,
+        float,
+        bool,
+        Dimensioned,
+        DimensionSet,
+        Sequence["Value"],
+        Mapping[str, "Value"],
+    ]
     """
     A value that can be stored in an OpenFOAM dictionary.
     """
@@ -53,5 +62,3 @@ class FoamDictionaryBase:
         raise NotImplementedError
 
     _SetValue = Union[Value, "NDArray[np.generic]"]
-
-    _SetMapping = Mapping[str, Union["_SetValue", "_SetMapping"]]

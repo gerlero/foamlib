@@ -1,10 +1,15 @@
 import sys
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, MutableMapping, Sequence
 else:
     from typing import Mapping, MutableMapping, Sequence
+
+if sys.version_info >= (3, 10):
+    from types import EllipsisType
+else:
+    from typing import Any as EllipsisType
 
 from pyparsing import (
     Dict,
@@ -56,6 +61,28 @@ def _list_of(elem: ParserElement) -> ParserElement:
     )
 
 
+def _dictionary_of(
+    keyword: ParserElement,
+    value: ParserElement,
+    *,
+    len: Union[int, EllipsisType] = ...,
+    located: bool = False,
+) -> ParserElement:
+    subdict = Forward()
+
+    entry = keyword + (
+        (Literal("{").suppress() + subdict + Literal("}").suppress())
+        | (value + Literal(";").suppress())
+    )
+
+    if located:
+        entry = Located(entry)
+
+    subdict <<= Dict(Group(entry)[...], asdict=not located)
+
+    return Dict(Group(entry)[len], asdict=not located)
+
+
 _TENSOR = _list_of(common.number) | common.number
 _IDENTIFIER = Word(identbodychars + "$", printables.replace(";", ""))
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
@@ -66,25 +93,19 @@ _FIELD = (Keyword("uniform").suppress() + _TENSOR) | (
 )
 _TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
 _ITEM = Forward()
-_LIST = _list_of(_ITEM)
+_ENTRY = _dictionary_of(_IDENTIFIER, _ITEM, len=1)
+_LIST = _list_of(_ENTRY | _ITEM)
 _ITEM <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _SWITCH | _TOKEN
+
 _TOKENS = (
     QuotedString('"', unquote_results=False) | Word(printables.replace(";", ""))
 )[2, ...].set_parse_action(lambda tks: " ".join(tks))
 
 _VALUE = _ITEM ^ _TOKENS
 
-_ENTRY = Forward()
-_DICTIONARY = Dict(Group(_ENTRY)[...])
-_ENTRY <<= Located(
-    _TOKEN
-    + (
-        (Literal("{").suppress() + _DICTIONARY + Literal("}").suppress())
-        | (Opt(_VALUE, default="") + Literal(";").suppress())
-    )
-)
 _FILE = (
-    _DICTIONARY.ignore(c_style_comment)
+    _dictionary_of(_TOKEN, Opt(_VALUE, default=""), located=True)
+    .ignore(c_style_comment)
     .ignore(cpp_style_comment)
     .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]
 )
