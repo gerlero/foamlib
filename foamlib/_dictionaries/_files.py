@@ -1,4 +1,5 @@
 import sys
+from copy import deepcopy
 from pathlib import Path
 from types import TracebackType
 from typing import (
@@ -72,9 +73,12 @@ class _FoamFileBase:
         assert self.__contents is not None
 
         if self.__parsed is None:
-            self.__parsed = parse(self.__contents)
+            parsed = parse(self.__contents)
+            self.__parsed = parsed
+        else:
+            parsed = deepcopy(self.__parsed)
 
-        return self.__contents, self.__parsed
+        return self.__contents, parsed
 
     def _write(self, contents: str) -> None:
         self.__contents = contents

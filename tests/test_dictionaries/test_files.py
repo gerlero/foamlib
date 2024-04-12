@@ -69,6 +69,13 @@ def test_write_read(tmp_path: Path) -> None:
         value=[0, 0, -9.81],
     )
 
+    with d:
+        lst = d["subdict", "list"]
+        assert isinstance(lst, list)
+        lst[0] = 0
+        assert lst == [0, 2, 3]
+        assert d["subdict", "list"] == [1, 2, 3]
+
 
 PITZ = FoamCase(
     Path(os.environ["FOAM_TUTORIALS"]) / "incompressible" / "simpleFoam" / "pitzDaily"
