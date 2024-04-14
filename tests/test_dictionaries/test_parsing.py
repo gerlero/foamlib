@@ -1,5 +1,5 @@
 from foamlib import FoamFile
-from foamlib._dictionaries._parsing import _VALUE
+from foamlib._files._parsing import _VALUE
 
 
 def test_parse_value() -> None:

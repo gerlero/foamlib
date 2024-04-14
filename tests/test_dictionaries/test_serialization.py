@@ -1,5 +1,5 @@
 from foamlib import FoamFile
-from foamlib._dictionaries._serialization import _serialize_value
+from foamlib._files._serialization import _serialize_value
 
 
 def test_serialize_value() -> None:

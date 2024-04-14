@@ -27,7 +27,7 @@ else:
 
 import aioshutil
 
-from ._dictionaries import FoamFieldFile, FoamFile
+from ._files import FoamFieldFile, FoamFile
 from ._util import CalledProcessError, is_sequence, run_process, run_process_async
 
 
