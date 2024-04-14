@@ -1,10 +1,10 @@
 import sys
-from typing import Optional, Tuple, Union
+from typing import Tuple, Union
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Mapping, MutableMapping, Sequence
+    from collections.abc import Iterator, Mapping, MutableMapping, Sequence
 else:
-    from typing import Mapping, MutableMapping, Sequence
+    from typing import Iterator, Mapping, MutableMapping, Sequence
 
 if sys.version_info >= (3, 10):
     from types import EllipsisType
@@ -32,15 +32,6 @@ from pyparsing import (
 )
 
 from ._base import FoamDictionaryBase
-
-_SWITCH = (
-    Keyword("yes") | Keyword("true") | Keyword("on") | Keyword("y") | Keyword("t")
-).set_parse_action(lambda: True) | (
-    Keyword("no") | Keyword("false") | Keyword("off") | Keyword("n") | Keyword("f")
-).set_parse_action(lambda: False)
-_DIMENSIONS = (
-    Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
-).set_parse_action(lambda tks: FoamDictionaryBase.DimensionSet(*tks))
 
 
 def _list_of(elem: ParserElement) -> ParserElement:
@@ -83,6 +74,15 @@ def _dictionary_of(
     return Dict(Group(entry)[len], asdict=not located)
 
 
+_SWITCH = (
+    Keyword("yes") | Keyword("true") | Keyword("on") | Keyword("y") | Keyword("t")
+).set_parse_action(lambda: True) | (
+    Keyword("no") | Keyword("false") | Keyword("off") | Keyword("n") | Keyword("f")
+).set_parse_action(lambda: False)
+_DIMENSIONS = (
+    Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
+).set_parse_action(lambda tks: FoamDictionaryBase.DimensionSet(*tks))
+
 _TENSOR = _list_of(common.number) | common.number
 _IDENTIFIER = Word(identbodychars + "$", printables.replace(";", ""))
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
@@ -110,89 +110,87 @@ _FILE = (
     .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]
 )
 
-Parsed = Mapping[Sequence[str], Tuple[int, Optional[FoamDictionaryBase.Value], int]]
 
+class Parsed(Mapping[Tuple[str, ...], Union[FoamDictionaryBase.Value, EllipsisType]]):
+    def __init__(self, contents: str) -> None:
+        self._parsed: MutableMapping[
+            Tuple[str, ...],
+            Tuple[int, Union[FoamDictionaryBase.Value, EllipsisType], int],
+        ] = {}
+        for parse_result in _FILE.parse_string(contents, parse_all=True):
+            self._parsed.update(self._flatten_result(parse_result))
 
-def _flatten_result(
-    parse_result: ParseResults, *, _keywords: Sequence[str] = ()
-) -> Parsed:
-    ret: MutableMapping[
-        Sequence[str], Tuple[int, Optional[FoamDictionaryBase.Value], int]
-    ] = {}
-    start = parse_result.locn_start
-    assert isinstance(start, int)
-    item = parse_result.value
-    assert isinstance(item, Sequence)
-    end = parse_result.locn_end
-    assert isinstance(end, int)
-    key, *values = item
-    assert isinstance(key, str)
-    ret[(*_keywords, key)] = (start, None, end)
-    for value in values:
-        if isinstance(value, ParseResults):
-            ret.update(_flatten_result(value, _keywords=(*_keywords, key)))
-        else:
-            ret[(*_keywords, key)] = (start, value, end)
-    return ret
-
-
-def parse(
-    contents: str,
-) -> Parsed:
-    parse_results = _FILE.parse_string(contents, parse_all=True)
-    ret: MutableMapping[
-        Sequence[str], Tuple[int, Optional[FoamDictionaryBase.Value], int]
-    ] = {}
-    for parse_result in parse_results:
-        ret.update(_flatten_result(parse_result))
-    return ret
-
-
-def get_value(
-    parsed: Parsed,
-    keywords: Tuple[str, ...],
-) -> Optional[FoamDictionaryBase.Value]:
-    """Value of an entry."""
-    _, value, _ = parsed[keywords]
-    return value
-
-
-def get_entry_locn(
-    parsed: Parsed,
-    keywords: Tuple[str, ...],
-    *,
-    missing_ok: bool = False,
-) -> Tuple[int, int]:
-    """Location of an entry or where it should be inserted."""
-    try:
-        start, _, end = parsed[keywords]
-    except KeyError:
-        if missing_ok:
-            if len(keywords) > 1:
-                _, _, end = parsed[keywords[:-1]]
-                end -= 1
+    @staticmethod
+    def _flatten_result(
+        parse_result: ParseResults, *, _keywords: Tuple[str, ...] = ()
+    ) -> Mapping[
+        Tuple[str, ...], Tuple[int, Union[FoamDictionaryBase.Value, EllipsisType], int]
+    ]:
+        ret: MutableMapping[
+            Tuple[str, ...],
+            Tuple[int, Union[FoamDictionaryBase.Value, EllipsisType], int],
+        ] = {}
+        start = parse_result.locn_start
+        assert isinstance(start, int)
+        item = parse_result.value
+        assert isinstance(item, Sequence)
+        end = parse_result.locn_end
+        assert isinstance(end, int)
+        key, *values = item
+        assert isinstance(key, str)
+        ret[(*_keywords, key)] = (start, ..., end)
+        for value in values:
+            if isinstance(value, ParseResults):
+                ret.update(Parsed._flatten_result(value, _keywords=(*_keywords, key)))
             else:
-                end = -1
+                ret[(*_keywords, key)] = (start, value, end)
+        return ret
 
-            start = end
-        else:
-            raise
+    def __getitem__(
+        self, keywords: Tuple[str, ...]
+    ) -> Union[FoamDictionaryBase.Value, EllipsisType]:
+        _, value, _ = self._parsed[keywords]
+        return value
 
-    return start, end
+    def __contains__(self, keywords: object) -> bool:
+        return keywords in self._parsed
 
+    def __iter__(self) -> Iterator[Tuple[str, ...]]:
+        return iter(self._parsed)
 
-def as_dict(parsed: Parsed) -> FoamDictionaryBase._Dict:
-    """Return a nested dict representation of the file."""
-    ret: FoamDictionaryBase._Dict = {}
-    for keywords, (_, value, _) in parsed.items():
-        r = ret
-        for k in keywords[:-1]:
+    def __len__(self) -> int:
+        return len(self._parsed)
+
+    def entry_location(
+        self, keywords: Tuple[str, ...], *, missing_ok: bool = False
+    ) -> Tuple[int, int]:
+        try:
+            start, _, end = self._parsed[keywords]
+        except KeyError:
+            if missing_ok:
+                if len(keywords) > 1:
+                    _, _, end = self._parsed[keywords[:-1]]
+                    end -= 1
+                else:
+                    end = -1
+
+                start = end
+            else:
+                raise
+
+        return start, end
+
+    def as_dict(self) -> FoamDictionaryBase._Dict:
+        ret: FoamDictionaryBase._Dict = {}
+        for keywords, (_, value, _) in self._parsed.items():
+            r = ret
+            for k in keywords[:-1]:
+                assert isinstance(r, dict)
+                v = r[k]
+                assert isinstance(v, dict)
+                r = v
+
             assert isinstance(r, dict)
-            v = r[k]
-            assert isinstance(v, dict)
-            r = v
+            r[keywords[-1]] = {} if value is ... else value  # type: ignore [assignment]
 
-        assert isinstance(r, dict)
-        r[keywords[-1]] = {} if value is None else value
-
-    return ret
+        return ret
