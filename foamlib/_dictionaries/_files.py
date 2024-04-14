@@ -28,7 +28,7 @@ except ModuleNotFoundError:
     pass
 
 from ._base import FoamDictionaryBase
-from ._parsing import Parsed, as_dict, get_entry_locn, get_value, parse
+from ._parsing import Parsed
 from ._serialization import serialize_entry
 
 
@@ -73,7 +73,7 @@ class _FoamFileBase:
         assert self.__contents is not None
 
         if self.__parsed is None:
-            parsed = parse(self.__contents)
+            parsed = Parsed(self.__contents)
             self.__parsed = parsed
 
         return self.__contents, deepcopy(self.__parsed)
@@ -109,7 +109,7 @@ class FoamFile(
     ):
         """An OpenFOAM dictionary within a file as a mutable mapping."""
 
-        def __init__(self, _file: "FoamFile", _keywords: Sequence[str]) -> None:
+        def __init__(self, _file: "FoamFile", _keywords: Tuple[str, ...]) -> None:
             self._file = _file
             self._keywords = _keywords
 
@@ -140,7 +140,7 @@ class FoamFile(
             del self._file[(*self._keywords, keyword)]
 
         def __iter__(self) -> Iterator[str]:
-            return self._file._iter(tuple(self._keywords))
+            return self._file._iter(self._keywords)
 
         def __contains__(self, keyword: object) -> bool:
             return (*self._keywords, keyword) in self._file
@@ -179,12 +179,12 @@ class FoamFile(
 
         _, parsed = self._read()
 
-        value = get_value(parsed, keywords)
+        value = parsed[keywords]
 
-        if value is None:
+        if value is ...:
             return FoamFile.Dictionary(self, keywords)
         else:
-            return value
+            return value  # type: ignore [return-value]
 
     def _setitem(
         self,
@@ -204,7 +204,7 @@ class FoamFile(
                 if isinstance(value, FoamDictionaryBase):
                     value = value.as_dict()
 
-                start, end = get_entry_locn(parsed, keywords, missing_ok=True)
+                start, end = parsed.entry_location(keywords, missing_ok=True)
 
                 self._write(
                     f"{contents[:start]}\n{serialize_entry(keywords[-1], {})}\n{contents[end:]}"
@@ -213,7 +213,7 @@ class FoamFile(
                 for k, v in value.items():
                     self[(*keywords, k)] = v
         else:
-            start, end = get_entry_locn(parsed, keywords, missing_ok=True)
+            start, end = parsed.entry_location(keywords, missing_ok=True)
 
             self._write(
                 f"{contents[:start]}\n{serialize_entry(keywords[-1], value, assume_field=assume_field, assume_dimensions=assume_dimensions)}\n{contents[end:]}"
@@ -232,7 +232,7 @@ class FoamFile(
 
         contents, parsed = self._read()
 
-        start, end = get_entry_locn(parsed, keywords)
+        start, end = parsed.entry_location(keywords)
 
         self._write(contents[:start] + contents[end:])
 
@@ -240,8 +240,7 @@ class FoamFile(
         if not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        contents = self.path.read_text()
-        parsed = parse(contents)
+        _, parsed = self._read()
 
         yield from (k[-1] for k in parsed if k[:-1] == keywords)
 
@@ -274,7 +273,7 @@ class FoamFile(
     def as_dict(self) -> FoamDictionaryBase._Dict:
         """Return a nested dict representation of the file."""
         _, parsed = self._read()
-        return as_dict(parsed)
+        return parsed.as_dict()
 
 
 class FoamFieldFile(FoamFile):
