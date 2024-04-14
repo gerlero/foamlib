@@ -505,7 +505,7 @@ class AsyncFoamCase(FoamCaseBase):
         check: bool = True,
     ) -> None:
         """
-        Run this case.
+        Run this case, or a specified command in the context of this case.
 
         :param cmd: The command to run. If None, run the case. If a sequence, the first element is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
         :param script: If True and `cmd` is None, use an (All)run(-parallel) script if it exists for running the case. If False or no run script is found, autodetermine the command(s) needed to run the case.
