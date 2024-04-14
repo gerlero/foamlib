@@ -75,10 +75,8 @@ class _FoamFileBase:
         if self.__parsed is None:
             parsed = parse(self.__contents)
             self.__parsed = parsed
-        else:
-            parsed = deepcopy(self.__parsed)
 
-        return self.__contents, parsed
+        return self.__contents, deepcopy(self.__parsed)
 
     def _write(self, contents: str) -> None:
         self.__contents = contents
