@@ -31,7 +31,7 @@ from pyparsing import (
     printables,
 )
 
-from ._base import FoamDictionaryBase
+from ._base import FoamDict
 
 
 def _list_of(entry: ParserElement) -> ParserElement:
@@ -81,11 +81,11 @@ _SWITCH = (
 ).set_parse_action(lambda: False)
 _DIMENSIONS = (
     Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
-).set_parse_action(lambda tks: FoamDictionaryBase.DimensionSet(*tks))
+).set_parse_action(lambda tks: FoamDict.DimensionSet(*tks))
 _TENSOR = _list_of(common.number) | common.number
 _IDENTIFIER = Word(identbodychars + "$", printables.replace(";", ""))
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
-    lambda tks: FoamDictionaryBase.Dimensioned(*reversed(tks.as_list()))
+    lambda tks: FoamDict.Dimensioned(*reversed(tks.as_list()))
 )
 _FIELD = (Keyword("uniform").suppress() + _TENSOR) | (
     Keyword("nonuniform").suppress() + _list_of(_TENSOR)
@@ -112,11 +112,11 @@ _FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[FoamDictionaryBase.Data, EllipsisType]]):
+class Parsed(Mapping[Tuple[str, ...], Union[FoamDict.Data, EllipsisType]]):
     def __init__(self, contents: str) -> None:
         self._parsed: MutableMapping[
             Tuple[str, ...],
-            Tuple[int, Union[FoamDictionaryBase.Data, EllipsisType], int],
+            Tuple[int, Union[FoamDict.Data, EllipsisType], int],
         ] = {}
         for parse_result in _FILE.parse_string(contents, parse_all=True):
             self._parsed.update(self._flatten_result(parse_result))
@@ -124,12 +124,10 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamDictionaryBase.Data, EllipsisTyp
     @staticmethod
     def _flatten_result(
         parse_result: ParseResults, *, _keywords: Tuple[str, ...] = ()
-    ) -> Mapping[
-        Tuple[str, ...], Tuple[int, Union[FoamDictionaryBase.Data, EllipsisType], int]
-    ]:
+    ) -> Mapping[Tuple[str, ...], Tuple[int, Union[FoamDict.Data, EllipsisType], int]]:
         ret: MutableMapping[
             Tuple[str, ...],
-            Tuple[int, Union[FoamDictionaryBase.Data, EllipsisType], int],
+            Tuple[int, Union[FoamDict.Data, EllipsisType], int],
         ] = {}
         start = parse_result.locn_start
         assert isinstance(start, int)
@@ -149,7 +147,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamDictionaryBase.Data, EllipsisTyp
 
     def __getitem__(
         self, keywords: Tuple[str, ...]
-    ) -> Union[FoamDictionaryBase.Data, EllipsisType]:
+    ) -> Union[FoamDict.Data, EllipsisType]:
         _, data, _ = self._parsed[keywords]
         return data
 
@@ -181,8 +179,8 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamDictionaryBase.Data, EllipsisTyp
 
         return start, end
 
-    def as_dict(self) -> FoamDictionaryBase._Dict:
-        ret: FoamDictionaryBase._Dict = {}
+    def as_dict(self) -> FoamDict._Dict:
+        ret: FoamDict._Dict = {}
         for keywords, (_, data, _) in self._parsed.items():
             r = ret
             for k in keywords[:-1]:

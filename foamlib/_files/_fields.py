@@ -18,15 +18,15 @@ except ModuleNotFoundError:
 class FoamFieldFile(FoamFile):
     """An OpenFOAM dictionary file representing a field as a mutable mapping."""
 
-    class BoundariesDictionary(FoamFile.Dictionary):
-        def __getitem__(self, keyword: str) -> "FoamFieldFile.BoundaryDictionary":
+    class BoundariesSubDict(FoamFile.SubDict):
+        def __getitem__(self, keyword: str) -> "FoamFieldFile.BoundarySubDict":
             value = super().__getitem__(keyword)
-            if not isinstance(value, FoamFieldFile.BoundaryDictionary):
-                assert not isinstance(value, FoamFile.Dictionary)
+            if not isinstance(value, FoamFieldFile.BoundarySubDict):
+                assert not isinstance(value, FoamFile.SubDict)
                 raise TypeError(f"boundary {keyword} is not a dictionary")
             return value
 
-    class BoundaryDictionary(FoamFile.Dictionary):
+    class BoundarySubDict(FoamFile.SubDict):
         """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""
 
         def __setitem__(
@@ -84,16 +84,16 @@ class FoamFieldFile(FoamFile):
 
     def __getitem__(
         self, keywords: Union[str, Tuple[str, ...]]
-    ) -> Union[FoamFile.Data, FoamFile.Dictionary]:
+    ) -> Union[FoamFile.Data, FoamFile.SubDict]:
         if not isinstance(keywords, tuple):
             keywords = (keywords,)
 
         ret = super().__getitem__(keywords)
-        if keywords[0] == "boundaryField" and isinstance(ret, FoamFile.Dictionary):
+        if keywords[0] == "boundaryField" and isinstance(ret, FoamFile.SubDict):
             if len(keywords) == 1:
-                ret = FoamFieldFile.BoundariesDictionary(self, keywords)
+                ret = FoamFieldFile.BoundariesSubDict(self, keywords)
             elif len(keywords) == 2:
-                ret = FoamFieldFile.BoundaryDictionary(self, keywords)
+                ret = FoamFieldFile.BoundarySubDict(self, keywords)
         return ret
 
     def __setitem__(self, keywords: Union[str, Tuple[str, ...]], value: Any) -> None:
@@ -149,10 +149,10 @@ class FoamFieldFile(FoamFile):
         self["internalField"] = value
 
     @property
-    def boundary_field(self) -> "FoamFieldFile.BoundariesDictionary":
+    def boundary_field(self) -> "FoamFieldFile.BoundariesSubDict":
         """Alias of `self["boundaryField"]`."""
         ret = self["boundaryField"]
-        if not isinstance(ret, FoamFieldFile.BoundariesDictionary):
-            assert not isinstance(ret, FoamFile.Dictionary)
+        if not isinstance(ret, FoamFieldFile.BoundariesSubDict):
+            assert not isinstance(ret, FoamFile.SubDict)
             raise TypeError("boundaryField is not a dictionary")
         return ret
