@@ -15,7 +15,7 @@ except ModuleNotFoundError:
     pass
 
 
-class FoamDictionaryBase:
+class FoamDict:
     class DimensionSet(NamedTuple):
         mass: Union[int, float] = 0
         length: Union[int, float] = 0
@@ -31,14 +31,12 @@ class FoamDictionaryBase:
     @dataclass
     class Dimensioned:
         value: Union[int, float, Sequence[Union[int, float]]] = 0
-        dimensions: Union[
-            "FoamDictionaryBase.DimensionSet", Sequence[Union[int, float]]
-        ] = ()
+        dimensions: Union["FoamDict.DimensionSet", Sequence[Union[int, float]]] = ()
         name: Optional[str] = None
 
         def __post_init__(self) -> None:
-            if not isinstance(self.dimensions, FoamDictionaryBase.DimensionSet):
-                self.dimensions = FoamDictionaryBase.DimensionSet(*self.dimensions)
+            if not isinstance(self.dimensions, FoamDict.DimensionSet):
+                self.dimensions = FoamDict.DimensionSet(*self.dimensions)
 
     Data = Union[
         str,

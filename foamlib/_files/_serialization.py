@@ -7,10 +7,10 @@ else:
     from typing import Mapping
 
 from .._util import is_sequence
-from ._base import FoamDictionaryBase
+from ._base import FoamDict
 
 
-def _serialize_switch(data: FoamDictionaryBase._SetData) -> str:
+def _serialize_switch(data: FoamDict._SetData) -> str:
     if data is True:
         return "yes"
     elif data is False:
@@ -20,7 +20,7 @@ def _serialize_switch(data: FoamDictionaryBase._SetData) -> str:
 
 
 def _serialize_list(
-    data: FoamDictionaryBase._SetData,
+    data: FoamDict._SetData,
 ) -> str:
     if is_sequence(data):
         return f"({' '.join(_serialize_data_entry(v) for v in data)})"
@@ -29,7 +29,7 @@ def _serialize_list(
 
 
 def _serialize_field(
-    data: FoamDictionaryBase._SetData,
+    data: FoamDict._SetData,
 ) -> str:
     if is_sequence(data):
         try:
@@ -58,7 +58,7 @@ def _serialize_field(
 
 
 def _serialize_dimensions(
-    data: FoamDictionaryBase._SetData,
+    data: FoamDict._SetData,
 ) -> str:
     if is_sequence(data) and len(data) == 7:
         return f"[{' '.join(str(v) for v in data)}]"
@@ -67,9 +67,9 @@ def _serialize_dimensions(
 
 
 def _serialize_dimensioned(
-    data: FoamDictionaryBase._SetData,
+    data: FoamDict._SetData,
 ) -> str:
-    if isinstance(data, FoamDictionaryBase.Dimensioned):
+    if isinstance(data, FoamDict.Dimensioned):
         if data.name is not None:
             return f"{data.name} {_serialize_dimensions(data.dimensions)} {_serialize_data_entry(data.value)}"
         else:
@@ -79,14 +79,12 @@ def _serialize_dimensioned(
 
 
 def _serialize_data_entry(
-    data: FoamDictionaryBase._SetData,
+    data: FoamDict._SetData,
     *,
     assume_field: bool = False,
     assume_dimensions: bool = False,
 ) -> str:
-    assert data is not None
-
-    if isinstance(data, FoamDictionaryBase.DimensionSet) or assume_dimensions:
+    if isinstance(data, FoamDict.DimensionSet) or assume_dimensions:
         with suppress(TypeError):
             return _serialize_dimensions(data)
 
@@ -110,12 +108,12 @@ def _serialize_data_entry(
 
 
 def _serialize_data_entries(
-    data: FoamDictionaryBase._SetData,
+    data: FoamDict._SetData,
     *,
     assume_field: bool = False,
     assume_dimensions: bool = False,
 ) -> str:
-    if isinstance(data, FoamDictionaryBase.DimensionSet) or assume_dimensions:
+    if isinstance(data, FoamDict.DimensionSet) or assume_dimensions:
         with suppress(TypeError):
             return _serialize_dimensions(data)
 
@@ -130,7 +128,7 @@ def _serialize_data_entries(
 
 
 def _serialize_dictionary(
-    data: FoamDictionaryBase._SetData,
+    data: FoamDict._SetData,
 ) -> str:
     if isinstance(data, Mapping):
         return "\n".join(serialize_keyword_entry(k, v) for k, v in data.items())
@@ -140,7 +138,7 @@ def _serialize_dictionary(
 
 def serialize_keyword_entry(
     keyword: str,
-    data: FoamDictionaryBase._SetData,
+    data: FoamDict._SetData,
     *,
     assume_field: bool = False,
     assume_dimensions: bool = False,

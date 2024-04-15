@@ -37,21 +37,21 @@ def test_write_read(tmp_path: Path) -> None:
 
     d["subdict"] = {"key": "value"}
     sd = d["subdict"]
-    assert isinstance(sd, FoamFile.Dictionary)
+    assert isinstance(sd, FoamFile.SubDict)
     assert sd["key"] == "value"
     assert len(sd) == 1
     assert list(sd) == ["key"]
 
     d["subdict2"] = d["subdict"]
     sd2 = d["subdict2"]
-    assert isinstance(sd2, FoamFile.Dictionary)
+    assert isinstance(sd2, FoamFile.SubDict)
     assert sd2["key"] == "value"
     assert len(sd) == 1
     assert list(sd) == ["key"]
 
     sd["subsubdict"] = d["subdict"]
     ssd = sd["subsubdict"]
-    assert isinstance(ssd, FoamFile.Dictionary)
+    assert isinstance(ssd, FoamFile.SubDict)
     assert ssd["key"] == "value"
 
     sd["list"] = [1, 2, 3]
@@ -98,7 +98,7 @@ def test_dimensions(pitz: FoamCase) -> None:
 
 def test_boundary_field(pitz: FoamCase) -> None:
     outlet = pitz[0]["p"].boundary_field["outlet"]
-    assert isinstance(outlet, FoamFieldFile.BoundaryDictionary)
+    assert isinstance(outlet, FoamFieldFile.BoundarySubDict)
     assert outlet.type == "fixedValue"
     assert outlet.value == 0
 
@@ -156,7 +156,7 @@ def test_internal_field(pitz: FoamCase) -> None:
 
 def test_fv_schemes(pitz: FoamCase) -> None:
     div_schemes = pitz.fv_schemes["divSchemes"]
-    assert isinstance(div_schemes, FoamFile.Dictionary)
+    assert isinstance(div_schemes, FoamFile.SubDict)
     scheme = div_schemes["div(phi,U)"]
     assert isinstance(scheme, tuple)
     assert scheme == ("bounded", "Gauss", "linearUpwind", "grad(U)")

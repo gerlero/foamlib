@@ -10,15 +10,15 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Iterator, Mapping, MutableMapping
 
-from ._base import FoamDictionaryBase
+from ._base import FoamDict
 from ._io import FoamFileIO
 from ._serialization import serialize_keyword_entry
 
 
 class FoamFile(
-    FoamDictionaryBase,
+    FoamDict,
     MutableMapping[
-        Union[str, Tuple[str, ...]], Union["FoamFile.Data", "FoamFile.Dictionary"]
+        Union[str, Tuple[str, ...]], Union["FoamFile.Data", "FoamFile.SubDict"]
     ],
     FoamFileIO,
 ):
@@ -30,9 +30,9 @@ class FoamFile(
     Use as a context manager to make multiple changes to the file while saving all changes only once at the end.
     """
 
-    class Dictionary(
-        FoamDictionaryBase,
-        MutableMapping[str, Union["FoamFile.Data", "FoamFile.Dictionary"]],
+    class SubDict(
+        FoamDict,
+        MutableMapping[str, Union["FoamFile.Data", "FoamFile.SubDict"]],
     ):
         """An OpenFOAM dictionary within a file as a mutable mapping."""
 
@@ -42,7 +42,7 @@ class FoamFile(
 
         def __getitem__(
             self, keyword: str
-        ) -> Union["FoamFile.Data", "FoamFile.Dictionary"]:
+        ) -> Union["FoamFile.Data", "FoamFile.SubDict"]:
             return self._file[(*self._keywords, keyword)]
 
         def _setitem(
@@ -86,7 +86,7 @@ class FoamFile(
         def __repr__(self) -> str:
             return f"{type(self).__qualname__}({self._file}, {self._keywords})"
 
-        def as_dict(self) -> FoamDictionaryBase._Dict:
+        def as_dict(self) -> FoamDict._Dict:
             """Return a nested dict representation of the dictionary."""
             ret = self._file.as_dict()
 
@@ -100,7 +100,7 @@ class FoamFile(
 
     def __getitem__(
         self, keywords: Union[str, Tuple[str, ...]]
-    ) -> Union["FoamFile.Data", "FoamFile.Dictionary"]:
+    ) -> Union["FoamFile.Data", "FoamFile.SubDict"]:
         if not isinstance(keywords, tuple):
             keywords = (keywords,)
 
@@ -109,7 +109,7 @@ class FoamFile(
         value = parsed[keywords]
 
         if value is ...:
-            return FoamFile.Dictionary(self, keywords)
+            return FoamFile.SubDict(self, keywords)
         else:
             return value  # type: ignore [return-value]
 
@@ -128,7 +128,7 @@ class FoamFile(
 
         if isinstance(data, Mapping):
             with self:
-                if isinstance(data, FoamDictionaryBase):
+                if isinstance(data, FoamDict):
                     data = data.as_dict()
 
                 start, end = parsed.entry_location(keywords, missing_ok=True)
@@ -197,7 +197,7 @@ class FoamFile(
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.path})"
 
-    def as_dict(self) -> FoamDictionaryBase._Dict:
+    def as_dict(self) -> FoamDict._Dict:
         """Return a nested dict representation of the file."""
         _, parsed = self._read()
         return parsed.as_dict()
