@@ -40,25 +40,25 @@ class FoamDictionaryBase:
             if not isinstance(self.dimensions, FoamDictionaryBase.DimensionSet):
                 self.dimensions = FoamDictionaryBase.DimensionSet(*self.dimensions)
 
-    Value = Union[
+    Data = Union[
         str,
         int,
         float,
         bool,
         Dimensioned,
         DimensionSet,
-        Sequence["Value"],
-        Mapping[str, "Value"],
+        Sequence["Data"],
+        Mapping[str, "Data"],
     ]
     """
     A value that can be stored in an OpenFOAM dictionary.
     """
 
-    _Dict = Dict[str, Union["Value", "_Dict"]]
+    _Dict = Dict[str, Union["Data", "_Dict"]]
 
     @abstractmethod
     def as_dict(self) -> _Dict:
         """Return a nested dict representation of the dictionary."""
         raise NotImplementedError
 
-    _SetValue = Union[Value, "NDArray[np.generic]"]
+    _SetData = Union[Data, "NDArray[np.generic]"]
