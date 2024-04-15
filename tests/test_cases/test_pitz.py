@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Sequence
 
 import pytest
-from foamlib import FoamCase
+from foamlib import CalledProcessError, FoamCase
 
 PITZ = FoamCase(
     Path(os.environ["FOAM_TUTORIALS"]) / "incompressible" / "simpleFoam" / "pitzDaily"
@@ -32,5 +32,5 @@ def test_double_clean(pitz: FoamCase) -> None:
 
 
 def test_run_parallel(pitz: FoamCase) -> None:
-    with pytest.raises(RuntimeError):
+    with pytest.raises(CalledProcessError):
         pitz.run(parallel=True)
