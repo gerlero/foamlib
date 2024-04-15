@@ -31,13 +31,13 @@ class FoamFieldFile(FoamFile):
 
         def __setitem__(
             self,
-            key: str,
-            value: FoamFile._SetValue,
+            keyword: str,
+            data: FoamFile._SetData,
         ) -> None:
-            if key == "value":
-                self._setitem(key, value, assume_field=True)
+            if keyword == "value":
+                self._setitem(keyword, data, assume_field=True)
             else:
-                self._setitem(key, value)
+                self._setitem(keyword, data)
 
         @property
         def type(self) -> str:
@@ -48,8 +48,8 @@ class FoamFieldFile(FoamFile):
             return ret
 
         @type.setter
-        def type(self, value: str) -> None:
-            self["type"] = value
+        def type(self, data: str) -> None:
+            self["type"] = data
 
         @property
         def value(
@@ -84,7 +84,7 @@ class FoamFieldFile(FoamFile):
 
     def __getitem__(
         self, keywords: Union[str, Tuple[str, ...]]
-    ) -> Union[FoamFile.Value, FoamFile.Dictionary]:
+    ) -> Union[FoamFile.Data, FoamFile.Dictionary]:
         if not isinstance(keywords, tuple):
             keywords = (keywords,)
 

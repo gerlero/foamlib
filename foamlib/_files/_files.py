@@ -12,13 +12,13 @@ else:
 
 from ._base import FoamDictionaryBase
 from ._io import FoamFileIO
-from ._serialization import serialize_entry
+from ._serialization import serialize_keyword_entry
 
 
 class FoamFile(
     FoamDictionaryBase,
     MutableMapping[
-        Union[str, Tuple[str, ...]], Union["FoamFile.Value", "FoamFile.Dictionary"]
+        Union[str, Tuple[str, ...]], Union["FoamFile.Data", "FoamFile.Dictionary"]
     ],
     FoamFileIO,
 ):
@@ -32,7 +32,7 @@ class FoamFile(
 
     class Dictionary(
         FoamDictionaryBase,
-        MutableMapping[str, Union["FoamFile.Value", "FoamFile.Dictionary"]],
+        MutableMapping[str, Union["FoamFile.Data", "FoamFile.Dictionary"]],
     ):
         """An OpenFOAM dictionary within a file as a mutable mapping."""
 
@@ -42,25 +42,25 @@ class FoamFile(
 
         def __getitem__(
             self, keyword: str
-        ) -> Union["FoamFile.Value", "FoamFile.Dictionary"]:
+        ) -> Union["FoamFile.Data", "FoamFile.Dictionary"]:
             return self._file[(*self._keywords, keyword)]
 
         def _setitem(
             self,
             keyword: str,
-            value: Any,
+            data: Any,
             *,
             assume_field: bool = False,
             assume_dimensions: bool = False,
         ) -> None:
             self._file._setitem(
                 (*self._keywords, keyword),
-                value,
+                data,
                 assume_field=assume_field,
                 assume_dimensions=assume_dimensions,
             )
 
-        def __setitem__(self, keyword: str, value: "FoamFile._SetValue") -> None:
+        def __setitem__(self, keyword: str, value: "FoamFile._SetData") -> None:
             self._setitem(keyword, value)
 
         def __delitem__(self, keyword: str) -> None:
@@ -100,7 +100,7 @@ class FoamFile(
 
     def __getitem__(
         self, keywords: Union[str, Tuple[str, ...]]
-    ) -> Union["FoamFile.Value", "FoamFile.Dictionary"]:
+    ) -> Union["FoamFile.Data", "FoamFile.Dictionary"]:
         if not isinstance(keywords, tuple):
             keywords = (keywords,)
 
@@ -116,7 +116,7 @@ class FoamFile(
     def _setitem(
         self,
         keywords: Union[str, Tuple[str, ...]],
-        value: "FoamFile._SetValue",
+        data: "FoamFile._SetData",
         *,
         assume_field: bool = False,
         assume_dimensions: bool = False,
@@ -126,32 +126,32 @@ class FoamFile(
 
         contents, parsed = self._read()
 
-        if isinstance(value, Mapping):
+        if isinstance(data, Mapping):
             with self:
-                if isinstance(value, FoamDictionaryBase):
-                    value = value.as_dict()
+                if isinstance(data, FoamDictionaryBase):
+                    data = data.as_dict()
 
                 start, end = parsed.entry_location(keywords, missing_ok=True)
 
                 self._write(
-                    f"{contents[:start]}\n{serialize_entry(keywords[-1], {})}\n{contents[end:]}"
+                    f"{contents[:start]}\n{serialize_keyword_entry(keywords[-1], {})}\n{contents[end:]}"
                 )
 
-                for k, v in value.items():
+                for k, v in data.items():
                     self[(*keywords, k)] = v
         else:
             start, end = parsed.entry_location(keywords, missing_ok=True)
 
             self._write(
-                f"{contents[:start]}\n{serialize_entry(keywords[-1], value, assume_field=assume_field, assume_dimensions=assume_dimensions)}\n{contents[end:]}"
+                f"{contents[:start]}\n{serialize_keyword_entry(keywords[-1], data, assume_field=assume_field, assume_dimensions=assume_dimensions)}\n{contents[end:]}"
             )
 
     def __setitem__(
         self,
         keywords: Union[str, Tuple[str, ...]],
-        value: "FoamFile._SetValue",
+        data: "FoamFile._SetData",
     ) -> None:
-        self._setitem(keywords, value)
+        self._setitem(keywords, data)
 
     def __delitem__(self, keywords: Union[str, Tuple[str, ...]]) -> None:
         if not isinstance(keywords, tuple):

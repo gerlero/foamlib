@@ -10,120 +10,149 @@ from .._util import is_sequence
 from ._base import FoamDictionaryBase
 
 
-def _serialize_switch(value: FoamDictionaryBase._SetValue) -> str:
-    if value is True:
+def _serialize_switch(data: FoamDictionaryBase._SetData) -> str:
+    if data is True:
         return "yes"
-    elif value is False:
+    elif data is False:
         return "no"
     else:
-        raise TypeError(f"Not a bool: {type(value)}")
+        raise TypeError(f"Not a bool: {type(data)}")
 
 
 def _serialize_list(
-    value: FoamDictionaryBase._SetValue,
+    data: FoamDictionaryBase._SetData,
 ) -> str:
-    if is_sequence(value):
-        return f"({' '.join(_serialize_value(v) for v in value)})"
+    if is_sequence(data):
+        return f"({' '.join(_serialize_data_entry(v) for v in data)})"
     else:
-        raise TypeError(f"Not a valid sequence: {type(value)}")
+        raise TypeError(f"Not a valid sequence: {type(data)}")
 
 
 def _serialize_field(
-    value: FoamDictionaryBase._SetValue,
+    data: FoamDictionaryBase._SetData,
 ) -> str:
-    if is_sequence(value):
+    if is_sequence(data):
         try:
-            s = _serialize_list(value)
+            s = _serialize_list(data)
         except TypeError:
-            raise TypeError(f"Not a valid field: {type(value)}") from None
+            raise TypeError(f"Not a valid field: {type(data)}") from None
         else:
-            if not is_sequence(value[0]) and len(value) < 10:
+            if not is_sequence(data[0]) and len(data) < 10:
                 return f"uniform {s}"
             else:
-                if not is_sequence(value[0]):
+                if not is_sequence(data[0]):
                     kind = "scalar"
-                elif len(value[0]) == 3:
+                elif len(data[0]) == 3:
                     kind = "vector"
-                elif len(value[0]) == 6:
+                elif len(data[0]) == 6:
                     kind = "symmTensor"
-                elif len(value[0]) == 9:
+                elif len(data[0]) == 9:
                     kind = "tensor"
                 else:
                     raise TypeError(
-                        f"Unsupported sequence length for field: {len(value[0])}"
+                        f"Unsupported sequence length for field: {len(data[0])}"
                     )
-                return f"nonuniform List<{kind}> {len(value)}{s}"
+                return f"nonuniform List<{kind}> {len(data)}{s}"
     else:
-        return f"uniform {value}"
+        return f"uniform {data}"
 
 
 def _serialize_dimensions(
-    value: FoamDictionaryBase._SetValue,
+    data: FoamDictionaryBase._SetData,
 ) -> str:
-    if is_sequence(value) and len(value) == 7:
-        return f"[{' '.join(str(v) for v in value)}]"
+    if is_sequence(data) and len(data) == 7:
+        return f"[{' '.join(str(v) for v in data)}]"
     else:
-        raise TypeError(f"Not a valid dimension set: {type(value)}")
+        raise TypeError(f"Not a valid dimension set: {type(data)}")
 
 
 def _serialize_dimensioned(
-    value: FoamDictionaryBase._SetValue,
+    data: FoamDictionaryBase._SetData,
 ) -> str:
-    if isinstance(value, FoamDictionaryBase.Dimensioned):
-        if value.name is not None:
-            return f"{value.name} {_serialize_dimensions(value.dimensions)} {_serialize_value(value.value)}"
+    if isinstance(data, FoamDictionaryBase.Dimensioned):
+        if data.name is not None:
+            return f"{data.name} {_serialize_dimensions(data.dimensions)} {_serialize_data_entry(data.value)}"
         else:
-            return f"{_serialize_dimensions(value.dimensions)} {_serialize_value(value.value)}"
+            return f"{_serialize_dimensions(data.dimensions)} {_serialize_data_entry(data.value)}"
     else:
-        raise TypeError(f"Not a valid dimensioned value: {type(value)}")
+        raise TypeError(f"Not a valid dimensioned value: {type(data)}")
 
 
-def _serialize_value(
-    value: FoamDictionaryBase._SetValue,
+def _serialize_data_entry(
+    data: FoamDictionaryBase._SetData,
     *,
     assume_field: bool = False,
     assume_dimensions: bool = False,
 ) -> str:
-    if isinstance(value, FoamDictionaryBase.DimensionSet) or assume_dimensions:
+    assert data is not None
+
+    if isinstance(data, FoamDictionaryBase.DimensionSet) or assume_dimensions:
         with suppress(TypeError):
-            return _serialize_dimensions(value)
+            return _serialize_dimensions(data)
 
     if assume_field:
         with suppress(TypeError):
-            return _serialize_field(value)
+            return _serialize_field(data)
 
     with suppress(TypeError):
-        return _serialize_dimensioned(value)
+        return _serialize_dimensioned(data)
 
     with suppress(TypeError):
-        return _serialize_list(value)
+        return _serialize_list(data)
 
     with suppress(TypeError):
-        return _serialize_switch(value)
+        return _serialize_switch(data)
 
     with suppress(TypeError):
-        return _serialize_dictionary(value)
+        return _serialize_dictionary(data)
 
-    return str(value)
-
-
-def _serialize_dictionary(
-    value: FoamDictionaryBase._SetValue,
-) -> str:
-    if isinstance(value, Mapping):
-        return "\n".join(serialize_entry(k, v) for k, v in value.items())
-    else:
-        raise TypeError(f"Not a valid dictionary: {type(value)}")
+    return str(data)
 
 
-def serialize_entry(
-    keyword: str,
-    value: FoamDictionaryBase._SetValue,
+def _serialize_data_entries(
+    data: FoamDictionaryBase._SetData,
     *,
     assume_field: bool = False,
     assume_dimensions: bool = False,
 ) -> str:
-    try:
-        return f"{keyword}\n{{\n{_serialize_dictionary(value)}\n}}"
-    except TypeError:
-        return f"{keyword} {_serialize_value(value, assume_field=assume_field, assume_dimensions=assume_dimensions)};"
+    if isinstance(data, FoamDictionaryBase.DimensionSet) or assume_dimensions:
+        with suppress(TypeError):
+            return _serialize_dimensions(data)
+
+    if assume_field:
+        with suppress(TypeError):
+            return _serialize_field(data)
+
+    if isinstance(data, tuple):
+        return " ".join(_serialize_data_entry(v) for v in data)
+
+    return _serialize_data_entry(data)
+
+
+def _serialize_dictionary(
+    data: FoamDictionaryBase._SetData,
+) -> str:
+    if isinstance(data, Mapping):
+        return "\n".join(serialize_keyword_entry(k, v) for k, v in data.items())
+    else:
+        raise TypeError(f"Not a valid dictionary: {type(data)}")
+
+
+def serialize_keyword_entry(
+    keyword: str,
+    data: FoamDictionaryBase._SetData,
+    *,
+    assume_field: bool = False,
+    assume_dimensions: bool = False,
+) -> str:
+    with suppress(TypeError):
+        return f"{keyword}\n{{\n{_serialize_dictionary(data)}\n}}"
+
+    data = _serialize_data_entries(
+        data, assume_field=assume_field, assume_dimensions=assume_dimensions
+    )
+
+    if not data:
+        return f"{keyword};"
+    else:
+        return f"{keyword} {data};"

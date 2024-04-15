@@ -1,35 +1,35 @@
 from foamlib import FoamFile
-from foamlib._files._serialization import _serialize_value
+from foamlib._files._serialization import _serialize_data_entries
 
 
-def test_serialize_value() -> None:
-    assert _serialize_value(1) == "1"
-    assert _serialize_value(1.0) == "1.0"
-    assert _serialize_value(1.0e-3) == "0.001"
-    assert _serialize_value(True) == "yes"
-    assert _serialize_value(False) == "no"
-    assert _serialize_value("word") == "word"
-    assert _serialize_value("word word") == "word word"
-    assert _serialize_value('"a string"') == '"a string"'
-    assert _serialize_value(1, assume_field=True) == "uniform 1"
-    assert _serialize_value(1.0, assume_field=True) == "uniform 1.0"
-    assert _serialize_value(1.0e-3, assume_field=True) == "uniform 0.001"
-    assert _serialize_value([1.0, 2.0, 3.0]) == "(1.0 2.0 3.0)"
-    assert _serialize_value([1, 2, 3], assume_field=True) == "uniform (1 2 3)"
+def test_serialize_data() -> None:
+    assert _serialize_data_entries(1) == "1"
+    assert _serialize_data_entries(1.0) == "1.0"
+    assert _serialize_data_entries(1.0e-3) == "0.001"
+    assert _serialize_data_entries(True) == "yes"
+    assert _serialize_data_entries(False) == "no"
+    assert _serialize_data_entries("word") == "word"
+    assert _serialize_data_entries("word word") == "word word"
+    assert _serialize_data_entries('"a string"') == '"a string"'
+    assert _serialize_data_entries(1, assume_field=True) == "uniform 1"
+    assert _serialize_data_entries(1.0, assume_field=True) == "uniform 1.0"
+    assert _serialize_data_entries(1.0e-3, assume_field=True) == "uniform 0.001"
+    assert _serialize_data_entries([1.0, 2.0, 3.0]) == "(1.0 2.0 3.0)"
+    assert _serialize_data_entries([1, 2, 3], assume_field=True) == "uniform (1 2 3)"
     assert (
-        _serialize_value([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], assume_field=True)
+        _serialize_data_entries([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], assume_field=True)
         == "nonuniform List<scalar> 10(1 2 3 4 5 6 7 8 9 10)"
     )
     assert (
-        _serialize_value([[1, 2, 3], [4, 5, 6]], assume_field=True)
+        _serialize_data_entries([[1, 2, 3], [4, 5, 6]], assume_field=True)
         == "nonuniform List<vector> 2((1 2 3) (4 5 6))"
     )
     assert (
-        _serialize_value(FoamFile.DimensionSet(mass=1, length=1, time=-2))
+        _serialize_data_entries(FoamFile.DimensionSet(mass=1, length=1, time=-2))
         == "[1 1 -2 0 0 0 0]"
     )
     assert (
-        _serialize_value(
+        _serialize_data_entries(
             FoamFile.Dimensioned(
                 name="g",
                 dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2),
@@ -39,7 +39,7 @@ def test_serialize_value() -> None:
         == "g [1 1 -2 0 0 0 0] 9.81"
     )
     assert (
-        _serialize_value(
+        _serialize_data_entries(
             FoamFile.Dimensioned(
                 dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2), value=9.81
             )
@@ -47,12 +47,17 @@ def test_serialize_value() -> None:
         == "[1 1 -2 0 0 0 0] 9.81"
     )
     assert (
-        _serialize_value("hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")
+        _serialize_data_entries(
+            ("hex", [0, 1, 2, 3, 4, 5, 6, 7], [1, 1, 1], "simpleGrading", [1, 1, 1])
+        )
         == "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
-    assert _serialize_value([{"a": "b"}, {"c": "d"}]) == "(a b; c d;)"
+    assert _serialize_data_entries([{"a": "b"}, {"c": "d"}]) == "(a b; c d;)"
     assert (
-        _serialize_value([{"a": {"b": "c"}}, {"d": {"e": "g"}}])
+        _serialize_data_entries([{"a": {"b": "c"}}, {"d": {"e": "g"}}])
         == "(a\n{\nb c;\n} d\n{\ne g;\n})"
     )
-    assert _serialize_value(({"a": [0, 1, 2]}, {"b": {}})) == "(a (0 1 2); b\n{\n\n})"
+    assert (
+        _serialize_data_entries([{"a": [0, 1, 2]}, {"b": {}}])
+        == "(a (0 1 2); b\n{\n\n})"
+    )
