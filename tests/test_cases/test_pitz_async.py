@@ -4,7 +4,7 @@ from typing import Sequence
 
 import pytest
 import pytest_asyncio
-from foamlib import AsyncFoamCase
+from foamlib import AsyncFoamCase, CalledProcessError
 
 PITZ = AsyncFoamCase(
     Path(os.environ["FOAM_TUTORIALS"]) / "incompressible" / "simpleFoam" / "pitzDaily"
@@ -37,5 +37,5 @@ async def test_double_clean(pitz: AsyncFoamCase) -> None:
 
 @pytest.mark.asyncio
 async def test_run_parallel(pitz: AsyncFoamCase) -> None:
-    with pytest.raises(RuntimeError):
+    with pytest.raises(CalledProcessError):
         await pitz.run(parallel=True)

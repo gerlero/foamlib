@@ -4,6 +4,7 @@ __version__ = "0.2.10"
 
 from ._cases import AsyncFoamCase, FoamCase, FoamCaseBase
 from ._files import FoamDict, FoamFieldFile, FoamFile
+from ._util import CalledProcessError
 
 __all__ = [
     "FoamCase",
@@ -12,4 +13,5 @@ __all__ = [
     "FoamFile",
     "FoamFieldFile",
     "FoamDict",
+    "CalledProcessError",
 ]

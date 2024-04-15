@@ -28,7 +28,7 @@ else:
 import aioshutil
 
 from ._files import FoamFieldFile, FoamFile
-from ._util import CalledProcessError, is_sequence, run_process, run_process_async
+from ._util import is_sequence, run_process, run_process_async
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
@@ -325,7 +325,7 @@ class FoamCase(FoamCaseBase):
         Clean this case.
 
         :param script: If True, use an (All)clean script if it exists. If False, ignore any clean scripts.
-        :param check: If True, raise a RuntimeError if the clean script returns a non-zero exit code.
+        :param check: If True, raise a CalledProcessError if the clean script returns a non-zero exit code.
         """
         script_path = self._clean_script() if script else None
 
@@ -349,24 +349,18 @@ class FoamCase(FoamCaseBase):
         :param cmd: The command to run. If None, run the case. If a sequence, the first element is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
         :param script: If True and `cmd` is None, use an (All)run(-parallel) script if it exists for running the case. If False or no run script is found, autodetermine the command(s) needed to run the case.
         :param parallel: If True, run in parallel using MPI. If None, autodetect whether to run in parallel.
-        :param check: If True, raise a RuntimeError if any command returns a non-zero exit code.
+        :param check: If True, raise a CalledProcessError if any command returns a non-zero exit code.
         """
         if cmd is not None:
             if parallel:
                 cmd = self._parallel_cmd(cmd)
 
-            try:
-                run_process(
-                    cmd,
-                    check=check,
-                    cwd=self.path,
-                    env=self._env(),
-                )
-            except CalledProcessError as e:
-                raise RuntimeError(
-                    f"{e.cmd} failed with return code {e.returncode}\n{e.stderr}"
-                ) from None
-
+            run_process(
+                cmd,
+                check=check,
+                cwd=self.path,
+                env=self._env(),
+            )
         else:
             script_path = self._run_script(parallel=parallel) if script else None
 
@@ -485,7 +479,7 @@ class AsyncFoamCase(FoamCaseBase):
         Clean this case.
 
         :param script: If True, use an (All)clean script if it exists. If False, ignore any clean scripts.
-        :param check: If True, raise a RuntimeError if the clean script returns a non-zero exit code.
+        :param check: If True, raise a CalledProcessError if the clean script returns a non-zero exit code.
         """
         script_path = self._clean_script() if script else None
 
@@ -511,7 +505,7 @@ class AsyncFoamCase(FoamCaseBase):
         :param script: If True and `cmd` is None, use an (All)run(-parallel) script if it exists for running the case. If False or no run script is found, autodetermine the command(s) needed to run the case.
         :param parallel: If True, run in parallel using MPI. If None, autodetect whether to run in parallel.
         :param cpus: The number of CPUs to reserve for the run. The run will wait until the requested number of CPUs is available. If None, autodetect the number of CPUs to reserve.
-        :param check: If True, raise a RuntimeError if a command returns a non-zero exit code.
+        :param check: If True, raise a CalledProcessError if a command returns a non-zero exit code.
         """
         if cmd is not None:
             if cpus is None:
@@ -523,19 +517,13 @@ class AsyncFoamCase(FoamCaseBase):
             if parallel:
                 cmd = self._parallel_cmd(cmd)
 
-            try:
-                async with self._cpus(cpus):
-                    await run_process_async(
-                        cmd,
-                        check=check,
-                        cwd=self.path,
-                        env=self._env(),
-                    )
-            except CalledProcessError as e:
-                raise RuntimeError(
-                    f"{e.cmd} failed with return code {e.returncode}\n{e.stderr}"
-                ) from None
-
+            async with self._cpus(cpus):
+                await run_process_async(
+                    cmd,
+                    check=check,
+                    cwd=self.path,
+                    env=self._env(),
+                )
         else:
             script_path = self._run_script(parallel=parallel) if script else None
 
