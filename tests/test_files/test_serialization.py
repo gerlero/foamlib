@@ -9,7 +9,7 @@ def test_serialize_data() -> None:
     assert _serialize_data_entries(True) == "yes"
     assert _serialize_data_entries(False) == "no"
     assert _serialize_data_entries("word") == "word"
-    assert _serialize_data_entries("word word") == "word word"
+    assert _serialize_data_entries(("word", "word")) == "word word"
     assert _serialize_data_entries('"a string"') == '"a string"'
     assert _serialize_data_entries(1, assume_field=True) == "uniform 1"
     assert _serialize_data_entries(1.0, assume_field=True) == "uniform 1.0"
