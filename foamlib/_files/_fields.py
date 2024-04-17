@@ -10,7 +10,6 @@ from ._files import FoamFile
 
 try:
     import numpy as np
-    from numpy.typing import NDArray
 except ModuleNotFoundError:
     pass
 
@@ -58,7 +57,9 @@ class FoamFieldFile(FoamFile):
             int,
             float,
             Sequence[Union[int, float, Sequence[Union[int, float]]]],
-            "NDArray[np.generic]",
+            "np.ndarray[Tuple[()], np.dtype[np.generic]]",
+            "np.ndarray[Tuple[int], np.dtype[np.generic]]",
+            "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
         ]:
             """Alias of `self["value"]`."""
             ret = self["value"]
@@ -73,7 +74,9 @@ class FoamFieldFile(FoamFile):
                 int,
                 float,
                 Sequence[Union[int, float, Sequence[Union[int, float]]]],
-                "NDArray[np.generic]",
+                "np.ndarray[Tuple[()], np.dtype[np.generic]]",
+                "np.ndarray[Tuple[int], np.dtype[np.generic]]",
+                "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
             ],
         ) -> None:
             self["value"] = value
@@ -128,7 +131,9 @@ class FoamFieldFile(FoamFile):
         int,
         float,
         Sequence[Union[int, float, Sequence[Union[int, float]]]],
-        "NDArray[np.generic]",
+        "np.ndarray[Tuple[()], np.dtype[np.generic]]",
+        "np.ndarray[Tuple[int], np.dtype[np.generic]]",
+        "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
     ]:
         """Alias of `self["internalField"]`."""
         ret = self["internalField"]
@@ -143,7 +148,9 @@ class FoamFieldFile(FoamFile):
             int,
             float,
             Sequence[Union[int, float, Sequence[Union[int, float]]]],
-            "NDArray[np.generic]",
+            "np.ndarray[Tuple[()], np.dtype[np.generic]]",
+            "np.ndarray[Tuple[int], np.dtype[np.generic]]",
+            "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
         ],
     ) -> None:
         self["internalField"] = value

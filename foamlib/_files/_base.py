@@ -1,7 +1,7 @@
 import sys
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Dict, NamedTuple, Optional, Union
+from typing import Dict, NamedTuple, Optional, Tuple, Union
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
@@ -10,7 +10,6 @@ else:
 
 try:
     import numpy as np
-    from numpy.typing import NDArray
 except ModuleNotFoundError:
     pass
 
@@ -68,5 +67,7 @@ class FoamDict:
         DimensionSet,
         Sequence["_SetData"],
         Mapping[str, "_SetData"],
-        "NDArray[np.generic]",
+        "np.ndarray[Tuple[()], np.dtype[np.generic]]",
+        "np.ndarray[Tuple[int], np.dtype[np.generic]]",
+        "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
     ]
