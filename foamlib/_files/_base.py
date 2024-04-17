@@ -59,4 +59,14 @@ class FoamDict:
         """Return a nested dict representation of the dictionary."""
         raise NotImplementedError
 
-    _SetData = Union[Data, "NDArray[np.generic]"]
+    _SetData = Union[
+        str,
+        int,
+        float,
+        bool,
+        Dimensioned,
+        DimensionSet,
+        Sequence["_SetData"],
+        Mapping[str, "_SetData"],
+        "NDArray[np.generic]",
+    ]
