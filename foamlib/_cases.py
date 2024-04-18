@@ -32,7 +32,7 @@ from ._util import is_sequence, run_process, run_process_async
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
-    def __init__(self, path: Union[Path, str]):
+    def __init__(self, path: Union[Path, str] = Path()):
         self.path = Path(path).absolute()
         if not self.path.is_dir():
             raise NotADirectoryError(f"{self.path} is not a directory")
