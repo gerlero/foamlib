@@ -27,7 +27,7 @@ from pyparsing import (
     c_style_comment,
     common,
     cpp_style_comment,
-    identbodychars,
+    identchars,
     printables,
 )
 
@@ -83,7 +83,7 @@ _DIMENSIONS = (
     Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
 ).set_parse_action(lambda tks: FoamDict.DimensionSet(*tks))
 _TENSOR = _list_of(common.number) | common.number
-_IDENTIFIER = Word(identbodychars + "$", printables.replace(";", ""))
+_IDENTIFIER = Word(identchars + "$", printables, exclude_chars=";")
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: FoamDict.Dimensioned(*reversed(tks.as_list()))
 )
