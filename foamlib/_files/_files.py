@@ -12,7 +12,7 @@ else:
 
 from ._base import FoamDict
 from ._io import FoamFileIO
-from ._serialization import serialize
+from ._serialization import dumps
 
 
 class FoamFile(
@@ -134,7 +134,7 @@ class FoamFile(
                 start, end = parsed.entry_location(keywords, missing_ok=True)
 
                 self._write(
-                    f"{contents[:start]}\n{serialize({keywords[-1]: {}})}\n{contents[end:]}"
+                    f"{contents[:start]}\n{dumps({keywords[-1]: {}})}\n{contents[end:]}"
                 )
 
                 for k, v in data.items():
@@ -143,7 +143,7 @@ class FoamFile(
             start, end = parsed.entry_location(keywords, missing_ok=True)
 
             self._write(
-                f"{contents[:start]}\n{serialize({keywords[-1]: data}, assume_field=assume_field, assume_dimensions=assume_dimensions)}\n{contents[end:]}"
+                f"{contents[:start]}\n{dumps({keywords[-1]: data}, assume_field=assume_field, assume_dimensions=assume_dimensions)}\n{contents[end:]}"
             )
 
     def __setitem__(
