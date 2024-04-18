@@ -2,7 +2,8 @@ import asyncio
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Optional, Union
+from warnings import warn
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
@@ -21,12 +22,29 @@ def is_sequence(
     return isinstance(value, Sequence) and not isinstance(value, str)
 
 
-CalledProcessError = subprocess.CalledProcessError
+class CalledProcessError(subprocess.CalledProcessError):
+    """Exception raised when a process fails and `check=True`."""
 
-if sys.version_info >= (3, 9):
-    CompletedProcess = subprocess.CompletedProcess[str]
-else:
-    CompletedProcess = subprocess.CompletedProcess
+    def __str__(self) -> str:
+        msg = super().__str__()
+        if self.stderr:
+            msg += f"\n{self.stderr}"
+        return msg
+
+
+class CalledProcessWarning(Warning):
+    """Warning raised when a process prints to stderr and `check=True`."""
+
+
+def _check(
+    retcode: int,
+    cmd: Union[Sequence[Union[str, Path]], str, Path],
+    stderr: Optional[str],
+) -> None:
+    if retcode != 0:
+        raise CalledProcessError(retcode, cmd, None, stderr)
+    elif stderr:
+        warn(f"Command {cmd} printed to stderr.\n{stderr}", CalledProcessWarning)
 
 
 def run_process(
@@ -35,7 +53,7 @@ def run_process(
     check: bool = True,
     cwd: Union[None, str, Path] = None,
     env: Union[None, Mapping[str, str]] = None,
-) -> CompletedProcess:
+) -> None:
     shell = not is_sequence(cmd)
 
     if sys.version_info < (3, 8):
@@ -48,14 +66,14 @@ def run_process(
         cmd,
         cwd=cwd,
         env=env,
-        stdout=asyncio.subprocess.DEVNULL,
-        stderr=asyncio.subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE if check else subprocess.DEVNULL,
         text=True,
         shell=shell,
-        check=check,
     )
 
-    return proc
+    if check:
+        _check(proc.returncode, cmd, proc.stderr)
 
 
 async def run_process_async(
@@ -64,14 +82,14 @@ async def run_process_async(
     check: bool = True,
     cwd: Union[None, str, Path] = None,
     env: Union[None, Mapping[str, str]] = None,
-) -> CompletedProcess:
+) -> None:
     if not is_sequence(cmd):
         proc = await asyncio.create_subprocess_shell(
             str(cmd),
             cwd=cwd,
             env=env,
             stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE if check else asyncio.subprocess.DEVNULL,
         )
 
     else:
@@ -82,7 +100,7 @@ async def run_process_async(
             cwd=cwd,
             env=env,
             stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE if check else asyncio.subprocess.DEVNULL,
         )
 
     stdout, stderr = await proc.communicate()
@@ -90,9 +108,5 @@ async def run_process_async(
     assert stdout is None
     assert proc.returncode is not None
 
-    ret = CompletedProcess(cmd, proc.returncode, None, stderr.decode())
-
     if check:
-        ret.check_returncode()
-
-    return ret
+        _check(proc.returncode, cmd, stderr.decode())
