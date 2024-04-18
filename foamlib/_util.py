@@ -14,23 +14,11 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeGuard
 
-try:
-    import numpy as np
-except ModuleNotFoundError:
-    numpy = False
-else:
-    numpy = True
-
 
 def is_sequence(
     value: Any,
-) -> TypeGuard[Union["Sequence[Any]", "np.ndarray[Any, Any]"]]:
-    return (
-        isinstance(value, Sequence)
-        and not isinstance(value, str)
-        or numpy
-        and isinstance(value, np.ndarray)
-    )
+) -> TypeGuard[Sequence[Any]]:
+    return isinstance(value, Sequence) and not isinstance(value, str)
 
 
 CalledProcessError = subprocess.CalledProcessError
