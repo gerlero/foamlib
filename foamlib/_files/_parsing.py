@@ -1,3 +1,4 @@
+import array
 import sys
 from typing import Tuple, Union
 
@@ -12,6 +13,7 @@ else:
     from typing import Any as EllipsisType
 
 from pyparsing import (
+    CharsNotIn,
     Dict,
     Forward,
     Group,
@@ -74,6 +76,56 @@ def _dictionary_of(
     return Dict(Group(keyword_entry)[len], asdict=not located)
 
 
+_binary_contents = Forward()
+
+
+def _binary_field_parse_action(tks: ParseResults) -> None:
+    global _binary_contents
+
+    kind, count = tks
+    if kind == "scalar":
+        elsize = 1
+    elif kind == "vector":
+        elsize = 3
+    elif kind == "symmTensor":
+        elsize = 6
+    elif kind == "tensor":
+        elsize = 9
+
+    def unpack(
+        tks: ParseResults,
+    ) -> Sequence[Union[Sequence[float], Sequence[Sequence[float]]]]:
+        bytes_ = tks[0].encode("latin-1")
+
+        arr = array.array("d", bytes_)
+
+        if elsize != 1:
+            all = [arr[i : i + elsize].tolist() for i in range(0, len(arr), elsize)]
+        else:
+            all = arr.tolist()
+
+        return [all]
+
+    _binary_contents <<= CharsNotIn(exact=count * elsize * 8).set_parse_action(unpack)
+
+    tks.clear()  # type: ignore [no-untyped-call]
+
+
+_BINARY_FIELD = (
+    (
+        Keyword("nonuniform").suppress()
+        + Literal("List").suppress()
+        + Literal("<").suppress()
+        + common.identifier
+        + Literal(">").suppress()
+        + common.integer
+        + Literal("(").suppress()
+    ).set_parse_action(_binary_field_parse_action, call_during_try=True)
+    + _binary_contents
+    + Literal(")").suppress()
+)
+
+
 _SWITCH = (
     Keyword("yes") | Keyword("true") | Keyword("on") | Keyword("y") | Keyword("t")
 ).set_parse_action(lambda: True) | (
@@ -87,8 +139,10 @@ _IDENTIFIER = Word(identchars + "$", printables, exclude_chars=";")
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: FoamDict.Dimensioned(*reversed(tks.as_list()))
 )
-_FIELD = (Keyword("uniform").suppress() + _TENSOR) | (
-    Keyword("nonuniform").suppress() + _list_of(_TENSOR)
+_FIELD = (
+    (Keyword("uniform").suppress() + _TENSOR)
+    | (Keyword("nonuniform").suppress() + _list_of(_TENSOR))
+    | _BINARY_FIELD
 )
 _TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
 _DATA = Forward()
@@ -109,16 +163,19 @@ _FILE = (
     .ignore(c_style_comment)
     .ignore(cpp_style_comment)
     .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]
+    .parse_with_tabs()
 )
 
 
 class Parsed(Mapping[Tuple[str, ...], Union[FoamDict.Data, EllipsisType]]):
-    def __init__(self, contents: str) -> None:
+    def __init__(self, contents: bytes) -> None:
         self._parsed: MutableMapping[
             Tuple[str, ...],
             Tuple[int, Union[FoamDict.Data, EllipsisType], int],
         ] = {}
-        for parse_result in _FILE.parse_string(contents, parse_all=True):
+        for parse_result in _FILE.parse_string(
+            contents.decode("latin-1"), parse_all=True
+        ):
             self._parsed.update(self._flatten_result(parse_result))
 
     @staticmethod

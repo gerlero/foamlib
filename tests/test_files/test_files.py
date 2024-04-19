@@ -160,3 +160,17 @@ def test_fv_schemes(pitz: FoamCase) -> None:
     scheme = div_schemes["div(phi,U)"]
     assert isinstance(scheme, tuple)
     assert scheme == ("bounded", "Gauss", "linearUpwind", "grad(U)")
+
+
+def test_binary(pitz: FoamCase) -> None:
+    pitz.control_dict["writeFormat"] = "binary"
+
+    pitz.run()
+
+    p_bin = pitz[-1]["p"].internal_field
+    assert isinstance(p_bin, Sequence)
+    U_bin = pitz[-1]["U"].internal_field
+    assert isinstance(U_bin, Sequence)
+    assert isinstance(U_bin[0], Sequence)
+    assert len(U_bin[0]) == 3
+    assert len(U_bin) == len(p_bin)
