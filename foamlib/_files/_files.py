@@ -12,7 +12,7 @@ else:
 
 from ._base import FoamDict
 from ._io import FoamFileIO
-from ._serialization import dumps
+from ._serialization import dumpb
 
 
 class FoamFile(
@@ -140,7 +140,7 @@ class FoamFile(
                 self._write(
                     contents[:start]
                     + b"\n"
-                    + dumps({keywords[-1]: {}}).encode("latin-1")
+                    + dumpb({keywords[-1]: {}})
                     + b"\n"
                     + contents[end:]
                 )
@@ -153,12 +153,12 @@ class FoamFile(
             self._write(
                 contents[:start]
                 + b"\n"
-                + dumps(
+                + dumpb(
                     {keywords[-1]: data},
                     assume_field=assume_field,
                     assume_dimensions=assume_dimensions,
                     binary=self._binary,
-                ).encode("latin-1")
+                )
                 + b"\n"
                 + contents[end:]
             )
