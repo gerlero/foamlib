@@ -113,6 +113,10 @@ class FoamFile(
         else:
             return value  # type: ignore [return-value]
 
+    @property
+    def _binary(self) -> bool:
+        return self.get(("FoamFile", "format"), None) == "binary"
+
     def _setitem(
         self,
         keywords: Union[str, Tuple[str, ...]],
@@ -153,6 +157,7 @@ class FoamFile(
                     {keywords[-1]: data},
                     assume_field=assume_field,
                     assume_dimensions=assume_dimensions,
+                    binary=self._binary,
                 ).encode("latin-1")
                 + b"\n"
                 + contents[end:]
