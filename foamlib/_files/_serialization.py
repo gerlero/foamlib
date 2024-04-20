@@ -1,3 +1,5 @@
+import array
+import itertools
 import sys
 
 if sys.version_info >= (3, 9):
@@ -22,6 +24,7 @@ def dumps(
     assume_field: bool = False,
     assume_dimensions: bool = False,
     assume_data_entries: bool = False,
+    binary: bool = False,
 ) -> str:
     if numpy and isinstance(data, np.ndarray):
         return dumps(
@@ -58,20 +61,32 @@ def dumps(
     elif assume_field and is_sequence(data):
         if isinstance(data[0], (int, float)) and len(data) in (3, 6, 9):
             return f"uniform {dumps(data)}"
-        elif isinstance(data[0], (int, float)):
-            return f"nonuniform List<scalar> {len(data)}{dumps(data)}"
-        elif len(data[0]) == 3:
-            return f"nonuniform List<vector> {len(data)}{dumps(data)}"
-        elif len(data[0]) == 6:
-            return f"nonuniform List<symmTensor> {len(data)}{dumps(data)}"
-        elif len(data[0]) == 9:
-            return f"nonuniform List<tensor> {len(data)}{dumps(data)}"
         else:
-            return dumps(
-                data,
-                assume_dimensions=assume_dimensions,
-                assume_data_entries=assume_data_entries,
-            )
+            if isinstance(data[0], (int, float)):
+                kind = "scalar"
+            elif len(data[0]) == 3:
+                kind = "vector"
+            elif len(data[0]) == 6:
+                kind = "symmTensor"
+            elif len(data[0]) == 9:
+                kind = "tensor"
+            else:
+                return dumps(
+                    data,
+                    assume_dimensions=assume_dimensions,
+                    assume_data_entries=assume_data_entries,
+                    binary=binary,
+                )
+
+            if binary:
+                if kind == "scalar":
+                    contents = f"({array.array('d', data).tobytes().decode('latin-1')})"
+                else:
+                    contents = f"({array.array('d', itertools.chain.from_iterable(data)).tobytes().decode('latin-1')})"
+            else:
+                contents = dumps(data)
+
+            return f"nonuniform List<{kind}> {len(data)}{contents}"
 
     elif assume_data_entries and isinstance(data, tuple):
         return " ".join(

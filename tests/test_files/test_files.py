@@ -173,4 +173,17 @@ def test_binary(pitz: FoamCase) -> None:
     assert isinstance(U_bin, Sequence)
     assert isinstance(U_bin[0], Sequence)
     assert len(U_bin[0]) == 3
-    assert len(U_bin) == len(p_bin)
+    size = len(p_bin)
+    assert len(U_bin) == size
+
+    p_arr = np.arange(size) * 1e-6
+    U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
+
+    pitz[0]["p"].internal_field = p_arr
+    pitz[0]["U"].internal_field = U_arr
+
+    assert pitz[0]["p"].internal_field == pytest.approx(p_arr)
+    U = pitz[0]["U"].internal_field
+    assert isinstance(U, Sequence)
+    for u, u_arr in zip(U, U_arr):
+        assert u == pytest.approx(u_arr)
