@@ -25,7 +25,7 @@ class FoamFileIO:
         elif not self.path.is_file():
             raise FileNotFoundError(self.path)
 
-        self.__contents: Optional[str] = None
+        self.__contents: Optional[bytes] = None
         self.__parsed: Optional[Parsed] = None
         self.__defer_io = 0
         self.__dirty = False
@@ -48,9 +48,9 @@ class FoamFileIO:
             self._write(self.__contents)
         assert not self.__dirty
 
-    def _read(self) -> Tuple[str, Parsed]:
+    def _read(self) -> Tuple[bytes, Parsed]:
         if not self.__defer_io:
-            contents = self.path.read_text()
+            contents = self.path.read_bytes()
             if contents != self.__contents:
                 self.__contents = contents
                 self.__parsed = None
@@ -63,11 +63,11 @@ class FoamFileIO:
 
         return self.__contents, deepcopy(self.__parsed)
 
-    def _write(self, contents: str) -> None:
+    def _write(self, contents: bytes) -> None:
         self.__contents = contents
         self.__parsed = None
         if not self.__defer_io:
-            self.path.write_text(contents)
+            self.path.write_bytes(contents)
             self.__dirty = False
         else:
             self.__dirty = True

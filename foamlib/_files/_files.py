@@ -134,7 +134,11 @@ class FoamFile(
                 start, end = parsed.entry_location(keywords, missing_ok=True)
 
                 self._write(
-                    f"{contents[:start]}\n{dumps({keywords[-1]: {}})}\n{contents[end:]}"
+                    contents[:start]
+                    + b"\n"
+                    + dumps({keywords[-1]: {}}).encode("latin-1")
+                    + b"\n"
+                    + contents[end:]
                 )
 
                 for k, v in data.items():
@@ -143,7 +147,15 @@ class FoamFile(
             start, end = parsed.entry_location(keywords, missing_ok=True)
 
             self._write(
-                f"{contents[:start]}\n{dumps({keywords[-1]: data}, assume_field=assume_field, assume_dimensions=assume_dimensions)}\n{contents[end:]}"
+                contents[:start]
+                + b"\n"
+                + dumps(
+                    {keywords[-1]: data},
+                    assume_field=assume_field,
+                    assume_dimensions=assume_dimensions,
+                ).encode("latin-1")
+                + b"\n"
+                + contents[end:]
             )
 
     def __setitem__(
