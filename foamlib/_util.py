@@ -1,4 +1,5 @@
 import asyncio
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -47,12 +48,20 @@ def _check(
         warn(f"Command {cmd} printed to stderr.\n{stderr}", CalledProcessWarning)
 
 
+def _env(cwd: Optional[Union[str, Path]] = None) -> Optional[Mapping[str, str]]:
+    if cwd is not None:
+        env = os.environ.copy()
+        env["PWD"] = str(cwd)
+        return env
+    else:
+        return None
+
+
 def run_process(
     cmd: Union[Sequence[Union[str, Path]], str, Path],
     *,
     check: bool = True,
     cwd: Union[None, str, Path] = None,
-    env: Union[None, Mapping[str, str]] = None,
 ) -> None:
     shell = not is_sequence(cmd)
 
@@ -65,8 +74,8 @@ def run_process(
     proc = subprocess.run(
         cmd,
         cwd=cwd,
-        env=env,
-        stdout=subprocess.DEVNULL,
+        env=_env(cwd),
+        stdout=None,
         stderr=subprocess.PIPE if check else subprocess.DEVNULL,
         text=True,
         shell=shell,
@@ -81,13 +90,12 @@ async def run_process_async(
     *,
     check: bool = True,
     cwd: Union[None, str, Path] = None,
-    env: Union[None, Mapping[str, str]] = None,
 ) -> None:
     if not is_sequence(cmd):
         proc = await asyncio.create_subprocess_shell(
             str(cmd),
             cwd=cwd,
-            env=env,
+            env=_env(cwd),
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE if check else asyncio.subprocess.DEVNULL,
         )
@@ -98,7 +106,7 @@ async def run_process_async(
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             cwd=cwd,
-            env=env,
+            env=_env(cwd),
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE if check else asyncio.subprocess.DEVNULL,
         )
