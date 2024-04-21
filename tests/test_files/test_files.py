@@ -176,6 +176,8 @@ def test_binary_field(pitz: FoamCase) -> None:
     size = len(p_bin)
     assert len(U_bin) == size
 
+    pitz.clean()
+
     p_arr = np.arange(size) * 1e-6
     U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
 
