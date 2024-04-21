@@ -1,6 +1,5 @@
 from ._base import FoamDict
-from ._fields import FoamFieldFile
-from ._files import FoamFile
+from ._files import FoamFieldFile, FoamFile
 
 __all__ = [
     "FoamFile",
