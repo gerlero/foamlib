@@ -35,6 +35,12 @@ def test_parse_value() -> None:
         [1, 2, 3],
         [1, 2, 3],
     ]
+    assert _DATA.parse_string(
+        "nonuniform List<scalar> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@)"
+    )[0] == [1, 2]
+    assert _DATA.parse_string(
+        "nonuniform List<vector> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@)"
+    )[0] == [[1, 2, 3], [4, 5, 6]]
     assert _DATA.parse_string("[1 1 -2 0 0 0 0]")[0] == FoamFile.DimensionSet(
         mass=1, length=1, time=-2
     )
