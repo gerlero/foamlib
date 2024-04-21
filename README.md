@@ -11,11 +11,11 @@
 
 **foamlib** provides a simple, modern and ergonomic Python interface for interacting with [OpenFOAM](https://www.openfoam.com).
 
-It offers the following classes (among a few others):
+It offers the following classes:
 
+* [`FoamFile`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamFile) (and [`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamFieldFile)): read-write access to OpenFOAM configuration and field files as if they were Python `dict`s, using `foamlib`'s own parser. Supports both ASCII and binary field formats.
 * [`FoamCase`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamCase): a class for manipulating, executing and accessing the results of OpenFOAM cases.
 * [`AsyncFoamCase`](https://foamlib.readthedocs.io/en/stable/#foamlib.AsyncFoamCase): variant of `FoamCase` with asynchronous methods for running multiple cases at once.
-* [`FoamFile`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamFile): read-write access to OpenFOAM configuration and field files as if they were Python `dict`s.
 
 ## Get started
 
@@ -81,6 +81,16 @@ async def run_case():
     await my_pitz_async.run()
 
 asyncio.run(run_case())
+```
+
+### Parse a field using the [`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamFieldFile) class directly
+
+```python
+from foamlib import FoamFieldFile
+
+U = FoamFieldFile(Path(my_pitz) / "0/U")
+
+print(U.internal_field)
 ```
 
 ## Documentation
