@@ -1,6 +1,7 @@
 import array
 import itertools
 import sys
+from enum import Enum, auto
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping
@@ -18,33 +19,26 @@ except ModuleNotFoundError:
     numpy = False
 
 
+class Kind(Enum):
+    DEFAULT = auto()
+    LIST_ENTRY = auto()
+    FIELD = auto()
+    BINARY_FIELD = auto()
+    DIMENSIONS = auto()
+
+
 def dumpb(
     data: FoamDict._SetData,
     *,
-    assume_field: bool = False,
-    assume_dimensions: bool = False,
-    assume_data_entries: bool = False,
-    binary_fields: bool = False,
+    kind: Kind = Kind.DEFAULT,
 ) -> bytes:
     if numpy and isinstance(data, np.ndarray):
-        return dumpb(
-            data.tolist(),
-            assume_field=assume_field,
-            assume_dimensions=assume_dimensions,
-            assume_data_entries=assume_data_entries,
-            binary_fields=binary_fields,
-        )
+        return dumpb(data.tolist(), kind=kind)
 
     elif isinstance(data, Mapping):
         entries = []
         for k, v in data.items():
-            b = dumpb(
-                v,
-                assume_field=assume_field,
-                assume_dimensions=assume_dimensions,
-                assume_data_entries=True,
-                binary_fields=binary_fields,
-            )
+            b = dumpb(v, kind=kind)
             if isinstance(v, Mapping):
                 entries.append(dumpb(k) + b"\n" + b"{\n" + b + b"\n}")
             elif b:
@@ -55,11 +49,11 @@ def dumpb(
         return b"\n".join(entries)
 
     elif isinstance(data, FoamDict.DimensionSet) or (
-        assume_dimensions and is_sequence(data) and len(data) == 7
+        kind == Kind.DIMENSIONS and is_sequence(data) and len(data) == 7
     ):
         return b"[" + b" ".join(dumpb(v) for v in data) + b"]"
 
-    elif assume_field and (
+    elif (kind == Kind.FIELD or kind == Kind.BINARY_FIELD) and (
         isinstance(data, (int, float))
         or is_sequence(data)
         and data
@@ -68,25 +62,20 @@ def dumpb(
     ):
         return b"uniform " + dumpb(data)
 
-    elif assume_field and is_sequence(data):
+    elif (kind == Kind.FIELD or kind == Kind.BINARY_FIELD) and is_sequence(data):
         if isinstance(data[0], (int, float)):
-            kind = b"scalar"
+            tensor_kind = b"scalar"
         elif len(data[0]) == 3:
-            kind = b"vector"
+            tensor_kind = b"vector"
         elif len(data[0]) == 6:
-            kind = b"symmTensor"
+            tensor_kind = b"symmTensor"
         elif len(data[0]) == 9:
-            kind = b"tensor"
+            tensor_kind = b"tensor"
         else:
-            return dumpb(
-                data,
-                assume_dimensions=assume_dimensions,
-                assume_data_entries=assume_data_entries,
-                binary_fields=binary_fields,
-            )
+            return dumpb(data)
 
-        if binary_fields:
-            if kind == b"scalar":
+        if kind == Kind.BINARY_FIELD:
+            if tensor_kind == b"scalar":
                 contents = b"(" + array.array("d", data).tobytes() + b")"
             else:
                 contents = (
@@ -97,37 +86,27 @@ def dumpb(
         else:
             contents = dumpb(data)
 
-        return b"nonuniform List<" + kind + b"> " + dumpb(len(data)) + contents
+        return b"nonuniform List<" + tensor_kind + b"> " + dumpb(len(data)) + contents
 
-    elif assume_data_entries and isinstance(data, tuple):
-        return b" ".join(
-            dumpb(
-                v,
-                assume_field=assume_field,
-                assume_dimensions=assume_dimensions,
-                binary_fields=binary_fields,
-            )
-            for v in data
-        )
+    elif kind != Kind.LIST_ENTRY and isinstance(data, tuple):
+        return b" ".join(dumpb(v) for v in data)
 
     elif isinstance(data, FoamDict.Dimensioned):
         if data.name is not None:
             return (
                 dumpb(data.name)
                 + b" "
-                + dumpb(data.dimensions, assume_dimensions=True)
+                + dumpb(data.dimensions, kind=Kind.DIMENSIONS)
                 + b" "
                 + dumpb(data.value)
             )
         else:
             return (
-                dumpb(data.dimensions, assume_dimensions=True)
-                + b" "
-                + dumpb(data.value)
+                dumpb(data.dimensions, kind=Kind.DIMENSIONS) + b" " + dumpb(data.value)
             )
 
     elif is_sequence(data):
-        return b"(" + b" ".join(dumpb(v) for v in data) + b")"
+        return b"(" + b" ".join(dumpb(v, kind=Kind.LIST_ENTRY) for v in data) + b")"
 
     elif data is True:
         return b"yes"

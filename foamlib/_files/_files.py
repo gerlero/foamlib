@@ -8,7 +8,7 @@ else:
 
 from ._base import FoamDict
 from ._io import FoamFileIO
-from ._serialization import dumpb
+from ._serialization import Kind, dumpb
 
 try:
     import numpy as np
@@ -118,12 +118,15 @@ class FoamFile(
         if not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        assume_field = keywords == ("internalField",) or (
+        kind = Kind.DEFAULT
+        if keywords == ("internalField",) or (
             len(keywords) == 3
             and keywords[0] == "boundaryField"
             and keywords[2] == "value"
-        )
-        assume_dimensions = keywords == ("dimensions",)
+        ):
+            kind = Kind.BINARY_FIELD if self._binary else Kind.FIELD
+        elif keywords == ("dimensions",):
+            kind = Kind.DIMENSIONS
 
         contents, parsed = self._read()
 
@@ -150,12 +153,7 @@ class FoamFile(
             self._write(
                 contents[:start]
                 + b"\n"
-                + dumpb(
-                    {keywords[-1]: data},
-                    assume_field=assume_field,
-                    assume_dimensions=assume_dimensions,
-                    binary_fields=self._binary,
-                )
+                + dumpb({keywords[-1]: data}, kind=kind)
                 + b"\n"
                 + contents[end:]
             )
