@@ -1,6 +1,5 @@
 import asyncio
 import multiprocessing
-import os
 import shutil
 import sys
 from contextlib import asynccontextmanager
@@ -17,13 +16,12 @@ if sys.version_info >= (3, 9):
         Callable,
         Collection,
         Iterator,
-        Mapping,
         Sequence,
         Set,
     )
 else:
     from typing import AbstractSet as Set
-    from typing import AsyncGenerator, Callable, Collection, Iterator, Mapping, Sequence
+    from typing import AsyncGenerator, Callable, Collection, Iterator, Sequence
 
 import aioshutil
 
@@ -203,12 +201,6 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         else:
             return None
 
-    def _env(self) -> Mapping[str, str]:
-        """Return the environment variables for this case."""
-        env = os.environ.copy()
-        env["PWD"] = str(self.path)
-        return env
-
     def _parallel_cmd(
         self, cmd: Union[Sequence[Union[str, Path]], str, Path]
     ) -> Union[Sequence[Union[str, Path]], str]:
@@ -359,7 +351,6 @@ class FoamCase(FoamCaseBase):
                 cmd,
                 check=check,
                 cwd=self.path,
-                env=self._env(),
             )
         else:
             script_path = self._run_script(parallel=parallel) if script else None
@@ -522,7 +513,6 @@ class AsyncFoamCase(FoamCaseBase):
                     cmd,
                     check=check,
                     cwd=self.path,
-                    env=self._env(),
                 )
         else:
             script_path = self._run_script(parallel=parallel) if script else None
