@@ -21,7 +21,7 @@ except ModuleNotFoundError:
 
 class Kind(Enum):
     DEFAULT = auto()
-    LIST_ENTRY = auto()
+    SINGLE_ENTRY = auto()
     FIELD = auto()
     BINARY_FIELD = auto()
     DIMENSIONS = auto()
@@ -60,7 +60,7 @@ def dumpb(
         and isinstance(data[0], (int, float))
         and len(data) in (3, 6, 9)
     ):
-        return b"uniform " + dumpb(data)
+        return b"uniform " + dumpb(data, kind=Kind.SINGLE_ENTRY)
 
     elif (kind == Kind.FIELD or kind == Kind.BINARY_FIELD) and is_sequence(data):
         if isinstance(data[0], (int, float)):
@@ -84,11 +84,11 @@ def dumpb(
                     + b")"
                 )
         else:
-            contents = dumpb(data)
+            contents = dumpb(data, kind=Kind.SINGLE_ENTRY)
 
         return b"nonuniform List<" + tensor_kind + b"> " + dumpb(len(data)) + contents
 
-    elif kind != Kind.LIST_ENTRY and isinstance(data, tuple):
+    elif kind != Kind.SINGLE_ENTRY and isinstance(data, tuple):
         return b" ".join(dumpb(v) for v in data)
 
     elif isinstance(data, FoamDict.Dimensioned):
@@ -98,15 +98,17 @@ def dumpb(
                 + b" "
                 + dumpb(data.dimensions, kind=Kind.DIMENSIONS)
                 + b" "
-                + dumpb(data.value)
+                + dumpb(data.value, kind=Kind.SINGLE_ENTRY)
             )
         else:
             return (
-                dumpb(data.dimensions, kind=Kind.DIMENSIONS) + b" " + dumpb(data.value)
+                dumpb(data.dimensions, kind=Kind.DIMENSIONS)
+                + b" "
+                + dumpb(data.value, kind=Kind.SINGLE_ENTRY)
             )
 
     elif is_sequence(data):
-        return b"(" + b" ".join(dumpb(v, kind=Kind.LIST_ENTRY) for v in data) + b")"
+        return b"(" + b" ".join(dumpb(v, kind=Kind.SINGLE_ENTRY) for v in data) + b")"
 
     elif data is True:
         return b"yes"
