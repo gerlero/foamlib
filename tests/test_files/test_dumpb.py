@@ -1,5 +1,5 @@
 from foamlib import FoamFile
-from foamlib._files._serialization import dumpb
+from foamlib._files._serialization import Kind, dumpb
 
 
 def test_serialize_data() -> None:
@@ -9,27 +9,30 @@ def test_serialize_data() -> None:
     assert dumpb(True) == b"yes"
     assert dumpb(False) == b"no"
     assert dumpb("word") == b"word"
-    assert dumpb(("word", "word"), assume_data_entries=True) == b"word word"
+    assert dumpb(("word", "word")) == b"word word"
     assert dumpb('"a string"') == b'"a string"'
-    assert dumpb(1, assume_field=True) == b"uniform 1"
-    assert dumpb(1.0, assume_field=True) == b"uniform 1.0"
-    assert dumpb(1.0e-3, assume_field=True) == b"uniform 0.001"
+    assert dumpb(1, kind=Kind.FIELD) == b"uniform 1"
+    assert dumpb(1.0, kind=Kind.FIELD) == b"uniform 1.0"
+    assert dumpb(1.0e-3, kind=Kind.FIELD) == b"uniform 0.001"
     assert dumpb([1.0, 2.0, 3.0]) == b"(1.0 2.0 3.0)"
-    assert dumpb([1, 2, 3], assume_field=True) == b"uniform (1 2 3)"
+    assert dumpb([1, 2, 3], kind=Kind.FIELD) == b"uniform (1 2 3)"
     assert (
-        dumpb([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], assume_field=True)
+        dumpb([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], kind=Kind.FIELD)
         == b"nonuniform List<scalar> 10(1 2 3 4 5 6 7 8 9 10)"
     )
     assert (
-        dumpb([[1, 2, 3], [4, 5, 6]], assume_field=True)
+        dumpb([[1, 2, 3], [4, 5, 6]], kind=Kind.FIELD)
         == b"nonuniform List<vector> 2((1 2 3) (4 5 6))"
     )
+    assert dumpb(1, kind=Kind.BINARY_FIELD) == b"uniform 1"
+    assert dumpb(1.0, kind=Kind.BINARY_FIELD) == b"uniform 1.0"
+    assert dumpb([1, 2, 3], kind=Kind.BINARY_FIELD) == b"uniform (1 2 3)"
     assert (
-        dumpb([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], assume_field=True, binary_fields=True)
+        dumpb([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], kind=Kind.BINARY_FIELD)
         == b'nonuniform List<scalar> 10(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@\x00\x00\x00\x00\x00\x00\x1c@\x00\x00\x00\x00\x00\x00 @\x00\x00\x00\x00\x00\x00"@\x00\x00\x00\x00\x00\x00$@)'
     )
     assert (
-        dumpb([[1, 2, 3], [4, 5, 6]], assume_field=True, binary_fields=True)
+        dumpb([[1, 2, 3], [4, 5, 6]], kind=Kind.BINARY_FIELD)
         == b"nonuniform List<vector> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@)"
     )
     assert (
@@ -54,10 +57,7 @@ def test_serialize_data() -> None:
         == b"[1 1 -2 0 0 0 0] 9.81"
     )
     assert (
-        dumpb(
-            ("hex", [0, 1, 2, 3, 4, 5, 6, 7], [1, 1, 1], "simpleGrading", [1, 1, 1]),
-            assume_data_entries=True,
-        )
+        dumpb(("hex", [0, 1, 2, 3, 4, 5, 6, 7], [1, 1, 1], "simpleGrading", [1, 1, 1]))
         == b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
     assert dumpb([{"a": "b"}, {"c": "d"}]) == b"(a b; c d;)"
