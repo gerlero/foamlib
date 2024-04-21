@@ -65,7 +65,12 @@ class FoamFieldFile(FoamFile):
             ret = self["value"]
             if not isinstance(ret, (int, float, Sequence)):
                 raise TypeError("value is not a field")
-            return cast(Union[int, float, Sequence[Union[int, float]]], ret)
+            return cast(
+                Union[
+                    int, float, Sequence[Union[int, float, Sequence[Union[int, float]]]]
+                ],
+                ret,
+            )
 
         @value.setter
         def value(
@@ -111,7 +116,7 @@ class FoamFieldFile(FoamFile):
             self._setitem(keywords, value)
 
     @property
-    def dimensions(self) -> FoamFile.DimensionSet:
+    def dimensions(self) -> Union[FoamFile.DimensionSet, Sequence[Union[int, float]]]:
         """Alias of `self["dimensions"]`."""
         ret = self["dimensions"]
         if not isinstance(ret, FoamFile.DimensionSet):
