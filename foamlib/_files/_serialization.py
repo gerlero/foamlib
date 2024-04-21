@@ -24,13 +24,15 @@ def dumpb(
     assume_field: bool = False,
     assume_dimensions: bool = False,
     assume_data_entries: bool = False,
-    binary: bool = False,
+    binary_fields: bool = False,
 ) -> bytes:
     if numpy and isinstance(data, np.ndarray):
         return dumpb(
             data.tolist(),
             assume_field=assume_field,
             assume_dimensions=assume_dimensions,
+            assume_data_entries=assume_data_entries,
+            binary_fields=binary_fields,
         )
 
     elif isinstance(data, Mapping):
@@ -41,13 +43,15 @@ def dumpb(
                 assume_field=assume_field,
                 assume_dimensions=assume_dimensions,
                 assume_data_entries=True,
+                binary_fields=binary_fields,
             )
             if isinstance(v, Mapping):
-                entries.append(k.encode("latin-1") + b"\n" + b"{\n" + b + b"\n}")
+                entries.append(dumpb(k) + b"\n" + b"{\n" + b + b"\n}")
             elif b:
-                entries.append(k.encode("latin-1") + b" " + b + b";")
+                entries.append(dumpb(k) + b" " + b + b";")
             else:
-                entries.append(k.encode("latin-1") + b";")
+                entries.append(dumpb(k) + b";")
+
         return b"\n".join(entries)
 
     elif isinstance(data, FoamDict.DimensionSet) or (
@@ -58,6 +62,7 @@ def dumpb(
     elif assume_field and (
         isinstance(data, (int, float))
         or is_sequence(data)
+        and data
         and isinstance(data[0], (int, float))
         and len(data) in (3, 6, 9)
     ):
@@ -77,10 +82,10 @@ def dumpb(
                 data,
                 assume_dimensions=assume_dimensions,
                 assume_data_entries=assume_data_entries,
-                binary=binary,
+                binary_fields=binary_fields,
             )
 
-        if binary:
+        if binary_fields:
             if kind == b"scalar":
                 contents = b"(" + array.array("d", data).tobytes() + b")"
             else:
@@ -92,24 +97,23 @@ def dumpb(
         else:
             contents = dumpb(data)
 
-        return (
-            b"nonuniform List<"
-            + kind
-            + b"> "
-            + str(len(data)).encode("latin-1")
-            + contents
-        )
+        return b"nonuniform List<" + kind + b"> " + dumpb(len(data)) + contents
 
     elif assume_data_entries and isinstance(data, tuple):
         return b" ".join(
-            dumpb(v, assume_field=assume_field, assume_dimensions=assume_dimensions)
+            dumpb(
+                v,
+                assume_field=assume_field,
+                assume_dimensions=assume_dimensions,
+                binary_fields=binary_fields,
+            )
             for v in data
         )
 
     elif isinstance(data, FoamDict.Dimensioned):
         if data.name is not None:
             return (
-                data.name.encode("latin-1")
+                dumpb(data.name)
                 + b" "
                 + dumpb(data.dimensions, assume_dimensions=True)
                 + b" "

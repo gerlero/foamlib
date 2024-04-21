@@ -162,7 +162,7 @@ def test_fv_schemes(pitz: FoamCase) -> None:
     assert scheme == ("bounded", "Gauss", "linearUpwind", "grad(U)")
 
 
-def test_binary(pitz: FoamCase) -> None:
+def test_binary_field(pitz: FoamCase) -> None:
     pitz.control_dict["writeFormat"] = "binary"
 
     pitz.run()
@@ -187,3 +187,5 @@ def test_binary(pitz: FoamCase) -> None:
     assert isinstance(U, Sequence)
     for u, u_arr in zip(U, U_arr):
         assert u == pytest.approx(u_arr)
+
+    pitz.run()
