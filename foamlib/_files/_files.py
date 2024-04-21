@@ -84,7 +84,7 @@ class FoamFile(
                 super().clear()
 
         def __repr__(self) -> str:
-            return f"{type(self).__qualname__}({self._file}, {self._keywords})"
+            return f"{type(self).__qualname__}('{self._file}', {self._keywords})"
 
         def as_dict(self) -> FoamDict._Dict:
             """Return a nested dict representation of the dictionary."""
@@ -210,9 +210,6 @@ class FoamFile(
 
     def __fspath__(self) -> str:
         return str(self.path)
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.path})"
 
     def as_dict(self) -> FoamDict._Dict:
         """Return a nested dict representation of the file."""

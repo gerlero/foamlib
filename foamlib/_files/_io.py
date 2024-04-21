@@ -71,3 +71,6 @@ class FoamFileIO:
             self.__dirty = False
         else:
             self.__dirty = True
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}('{self.path}')"

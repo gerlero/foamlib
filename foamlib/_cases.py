@@ -87,7 +87,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             return str(self.path)
 
         def __repr__(self) -> str:
-            return f"{type(self).__name__}({self.path})"
+            return f"{type(self).__name__}('{self.path}')"
 
         def __str__(self) -> str:
             return str(self.path)
@@ -298,7 +298,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         return str(self.path)
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.path})"
+        return f"{type(self).__name__}('{self.path}')"
 
     def __str__(self) -> str:
         return str(self.path)
