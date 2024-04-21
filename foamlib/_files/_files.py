@@ -157,7 +157,7 @@ class FoamFile(
                     {keywords[-1]: data},
                     assume_field=assume_field,
                     assume_dimensions=assume_dimensions,
-                    binary=self._binary,
+                    binary_fields=self._binary,
                 )
                 + b"\n"
                 + contents[end:]
