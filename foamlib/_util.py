@@ -74,8 +74,8 @@ def run_process(
     proc = subprocess.run(
         cmd,
         cwd=cwd,
-        env=_env(cwd),
-        stdout=None,
+        env=_env(cwd) if not shell else None,
+        stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE if check else subprocess.DEVNULL,
         text=True,
         shell=shell,
@@ -95,7 +95,6 @@ async def run_process_async(
         proc = await asyncio.create_subprocess_shell(
             str(cmd),
             cwd=cwd,
-            env=_env(cwd),
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE if check else asyncio.subprocess.DEVNULL,
         )
