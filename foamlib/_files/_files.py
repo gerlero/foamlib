@@ -101,7 +101,7 @@ class FoamFile(
         if value is ...:
             return FoamFile.SubDict(self, keywords)
         else:
-            return value  # type: ignore [return-value]
+            return value
 
     @property
     def _binary(self) -> bool:

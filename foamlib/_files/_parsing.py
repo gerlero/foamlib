@@ -247,6 +247,6 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamDict.Data, EllipsisType]]):
                 r = v
 
             assert isinstance(r, dict)
-            r[keywords[-1]] = {} if data is ... else data  # type: ignore [assignment]
+            r[keywords[-1]] = {} if data is ... else data
 
         return ret
