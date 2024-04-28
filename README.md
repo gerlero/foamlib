@@ -1,4 +1,4 @@
-[<img alt="foamlib" src="logo.png" height="50">](https://github.com/gerlero/foamlib)
+[<img alt="foamlib" src="https://github.com/gerlero/foamlib/raw/main/logo.png" height="50">](https://github.com/gerlero/foamlib)
 
 [![Documentation](https://img.shields.io/readthedocs/foamlib)](https://foamlib.readthedocs.io/)
 [![CI](https://github.com/gerlero/foamlib/actions/workflows/ci.yml/badge.svg)](https://github.com/gerlero/foamlib/actions/workflows/ci.yml)
