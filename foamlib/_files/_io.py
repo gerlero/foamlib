@@ -20,10 +20,6 @@ from ._parsing import Parsed
 class FoamFileIO:
     def __init__(self, path: Union[str, Path]) -> None:
         self.path = Path(path).absolute()
-        if self.path.is_dir():
-            raise IsADirectoryError(self.path)
-        elif not self.path.is_file():
-            raise FileNotFoundError(self.path)
 
         self.__contents: Optional[bytes] = None
         self.__parsed: Optional[Parsed] = None
