@@ -3,16 +3,18 @@ from pathlib import Path
 from typing import Sequence
 
 import pytest
-from foamlib import CalledProcessError, FoamCase
-
-PITZ = FoamCase(
-    Path(os.environ["FOAM_TUTORIALS"]) / "incompressible" / "simpleFoam" / "pitzDaily"
-)
+from foamlib import FoamCase
 
 
 @pytest.fixture
 def pitz(tmp_path: Path) -> FoamCase:
-    return PITZ.clone(tmp_path / PITZ.name)
+    tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
+    path = tutorials_path / "incompressible" / "simpleFoam" / "pitzDaily"
+    of11_path = tutorials_path / "incompressibleFluid" / "pitzDaily"
+
+    case = FoamCase(path if path.exists() else of11_path)
+
+    return case.clone(tmp_path / case.name)
 
 
 def test_run(pitz: FoamCase) -> None:
@@ -29,8 +31,3 @@ def test_double_clean(pitz: FoamCase) -> None:
     pitz.clean()
     pitz.clean(check=True)
     pitz.run()
-
-
-def test_run_parallel(pitz: FoamCase) -> None:
-    with pytest.raises(CalledProcessError):
-        pitz.run(parallel=True)

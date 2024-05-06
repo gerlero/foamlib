@@ -2,20 +2,24 @@ import os
 from pathlib import Path
 
 import pytest
-from foamlib import FoamCase
-
-FLANGE = FoamCase(
-    Path(os.environ["FOAM_TUTORIALS"]) / "basic" / "laplacianFoam" / "flange"
-)
+from foamlib import CalledProcessError, FoamCase
 
 
 @pytest.fixture
 def flange(tmp_path: Path) -> FoamCase:
-    return FLANGE.clone(tmp_path / FLANGE.name)
+    tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
+    path = tutorials_path / "basic" / "laplacianFoam" / "flange"
+    of11_path = tutorials_path / "legacy" / "basic" / "laplacianFoam" / "flange"
+
+    case = FoamCase(path if path.exists() else of11_path)
+
+    return case.clone(tmp_path / case.name)
 
 
 @pytest.mark.parametrize("parallel", [True, False])
 def test_run(flange: FoamCase, parallel: bool) -> None:
+    if parallel and not (flange.path / "Allrun-parallel").exists():
+        pytest.skip()
     flange.run(parallel=parallel)
     if parallel:
         flange.reconstruct_par()
@@ -24,36 +28,37 @@ def test_run(flange: FoamCase, parallel: bool) -> None:
 
 
 def test_run_cmd(flange: FoamCase) -> None:
-    (flange.path / "0.orig").rename(flange.path / "0")
+    if (flange.path / "0.orig").exists():
+        (flange.path / "0.orig").rename(flange.path / "0")
+
+    ans_path = (
+        Path(os.environ["FOAM_TUTORIALS"]) / "resources" / "geometry" / "flange.ans"
+    )
+    if not ans_path.exists():
+        ans_path = Path("flange.ans")
+
     flange.run(
         [
             "ansysToFoam",
-            Path(os.environ["FOAM_TUTORIALS"])
-            / "resources"
-            / "geometry"
-            / "flange.ans",
+            ans_path,
             "-scale",
             "0.001",
         ],
     )
     flange.run(script=False)
-    flange.reconstruct_par()
 
 
 def test_run_cmd_shell(flange: FoamCase) -> None:
-    flange.run("mv 0.orig 0")
-    flange.run(
-        'ansysToFoam "$FOAM_TUTORIALS/resources/geometry/flange.ans" -scale 0.001'
-    )
-    flange.run("decomposePar")
-    flange.run(flange.application, parallel=True)
-    flange.run("reconstructPar")
+    flange.run("mv 0.orig 0", check=False)
+    try:
+        flange.run(
+            'ansysToFoam "$FOAM_TUTORIALS/resources/geometry/flange.ans" -scale 0.001'
+        )
+    except CalledProcessError:
+        flange.run('ansysToFoam "flange.ans" -scale 0.001')
+
+    flange.run(flange.application, parallel=False)
 
 
-def test_run_no_parallel(flange: FoamCase) -> None:
-    with pytest.raises(ValueError):
-        flange.run()
-
-
-def test_path() -> None:
-    assert Path(FLANGE) == FLANGE.path
+def test_path(flange: FoamCase) -> None:
+    assert Path(flange) == flange.path

@@ -147,6 +147,9 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         if has_block_mesh_dict and (self.path / "constant" / "polyMesh").exists():
             paths.add(self.path / "constant" / "polyMesh")
 
+        if self._run_script() is not None:
+            paths.update(self.path.glob("log.*"))
+
         return paths
 
     def _clone_ignore(
@@ -172,7 +175,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         else:
             return None
 
-    def _run_script(self, *, parallel: Optional[bool]) -> Optional[Path]:
+    def _run_script(self, *, parallel: Optional[bool] = None) -> Optional[Path]:
         """Return the path to the (All)run script, or None if no run script is found."""
         run = self.path / "run"
         run_parallel = self.path / "run-parallel"
@@ -321,7 +324,10 @@ class FoamCase(FoamCaseBase):
             self.run([script_path], check=check)
         else:
             for p in self._clean_paths():
-                shutil.rmtree(p)
+                if p.is_dir():
+                    shutil.rmtree(p)
+                else:
+                    p.unlink()
 
     def run(
         self,
@@ -474,7 +480,10 @@ class AsyncFoamCase(FoamCaseBase):
             await self.run([script_path], check=check)
         else:
             for p in self._clean_paths():
-                await aioshutil.rmtree(p)
+                if p.is_dir():
+                    await aioshutil.rmtree(p)
+                else:
+                    p.unlink()
 
     async def run(
         self,

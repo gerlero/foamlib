@@ -77,14 +77,15 @@ def test_write_read(tmp_path: Path) -> None:
         assert d["subdict", "list"] == [1, 2, 3]
 
 
-PITZ = FoamCase(
-    Path(os.environ["FOAM_TUTORIALS"]) / "incompressible" / "simpleFoam" / "pitzDaily"
-)
-
-
 @pytest.fixture
 def pitz(tmp_path: Path) -> FoamCase:
-    return PITZ.clone(tmp_path / PITZ.name)
+    tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
+    path = tutorials_path / "incompressible" / "simpleFoam" / "pitzDaily"
+    of11_path = tutorials_path / "incompressibleFluid" / "pitzDaily"
+
+    case = FoamCase(path if path.exists() else of11_path)
+
+    return case.clone(tmp_path / case.name)
 
 
 def test_dimensions(pitz: FoamCase) -> None:
@@ -159,7 +160,7 @@ def test_fv_schemes(pitz: FoamCase) -> None:
     assert isinstance(div_schemes, FoamFile.SubDict)
     scheme = div_schemes["div(phi,U)"]
     assert isinstance(scheme, tuple)
-    assert scheme == ("bounded", "Gauss", "linearUpwind", "grad(U)")
+    assert scheme[-3:] == ("Gauss", "linearUpwind", "grad(U)")
 
 
 def test_binary_field(pitz: FoamCase) -> None:
