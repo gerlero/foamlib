@@ -28,8 +28,8 @@ def test_run(flange: FoamCase, parallel: bool) -> None:
 
 
 def test_run_cmd(flange: FoamCase) -> None:
-    if (flange.path / "0.orig").exists():
-        (flange.path / "0.orig").rename(flange.path / "0")
+    if not flange:
+        flange.restore_0_dir()
 
     ans_path = (
         Path(os.environ["FOAM_TUTORIALS"]) / "resources" / "geometry" / "flange.ans"
@@ -49,7 +49,9 @@ def test_run_cmd(flange: FoamCase) -> None:
 
 
 def test_run_cmd_shell(flange: FoamCase) -> None:
-    flange.run("mv 0.orig 0", check=False)
+    if not flange:
+        flange.restore_0_dir()
+
     try:
         flange.run(
             'ansysToFoam "$FOAM_TUTORIALS/resources/geometry/flange.ans" -scale 0.001'
