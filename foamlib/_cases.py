@@ -144,6 +144,9 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
                 if has_decompose_par_dict and p.name.startswith("processor"):
                     paths.add(p)
 
+        if (self.path / "0.orig").is_dir() and (self.path / "0").is_dir():
+            paths.add(self.path / "0")
+
         if has_block_mesh_dict and (self.path / "constant" / "polyMesh").exists():
             paths.add(self.path / "constant" / "polyMesh")
 
@@ -361,6 +364,9 @@ class FoamCase(FoamCaseBase):
                 return self.run([script_path], check=check)
 
             else:
+                if not self and (self.path / "0.orig").is_dir():
+                    self.restore_0_dir()
+
                 if (self.path / "system" / "blockMeshDict").is_file():
                     self.block_mesh()
 
@@ -394,6 +400,11 @@ class FoamCase(FoamCaseBase):
     def reconstruct_par(self, *, check: bool = True) -> None:
         """Reconstruct this case after parallel running."""
         self.run(["reconstructPar"], check=check)
+
+    def restore_0_dir(self) -> None:
+        """Restore the 0 directory from the 0.orig directory."""
+        shutil.rmtree(self.path / "0", ignore_errors=True)
+        shutil.copytree(self.path / "0.orig", self.path / "0")
 
     def copy(self, dest: Union[Path, str]) -> "FoamCase":
         """
@@ -536,6 +547,9 @@ class AsyncFoamCase(FoamCaseBase):
                 await self.run([script_path], check=check, cpus=cpus)
 
             else:
+                if not self and (self.path / "0.orig").is_dir():
+                    await self.restore_0_dir()
+
                 if (self.path / "system" / "blockMeshDict").is_file():
                     await self.block_mesh()
 
@@ -576,6 +590,11 @@ class AsyncFoamCase(FoamCaseBase):
     async def reconstruct_par(self, *, check: bool = True) -> None:
         """Reconstruct this case after parallel running."""
         await self.run(["reconstructPar"], check=check)
+
+    async def restore_0_dir(self) -> None:
+        """Restore the 0 directory from the 0.orig directory."""
+        await aioshutil.rmtree(self.path / "0", ignore_errors=True)
+        await aioshutil.copytree(self.path / "0.orig", self.path / "0")
 
     async def copy(self, dest: Union[Path, str]) -> "AsyncFoamCase":
         """

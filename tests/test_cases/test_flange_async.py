@@ -31,8 +31,8 @@ async def test_run(flange: AsyncFoamCase, parallel: bool) -> None:
 
 @pytest.mark.asyncio
 async def test_run_cmd(flange: AsyncFoamCase) -> None:
-    if (flange.path / "0.orig").exists():
-        (flange.path / "0.orig").rename(flange.path / "0")
+    if not flange:
+        await flange.restore_0_dir()
 
     ans_path = (
         Path(os.environ["FOAM_TUTORIALS"]) / "resources" / "geometry" / "flange.ans"
@@ -53,7 +53,9 @@ async def test_run_cmd(flange: AsyncFoamCase) -> None:
 
 @pytest.mark.asyncio
 async def test_run_cmd_shell(flange: AsyncFoamCase) -> None:
-    await flange.run("mv 0.orig 0", check=False)
+    if not flange:
+        await flange.restore_0_dir()
+
     try:
         await flange.run(
             'ansysToFoam "$FOAM_TUTORIALS/resources/geometry/flange.ans" -scale 0.001'
