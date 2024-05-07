@@ -38,13 +38,13 @@ jobs:
       run: |
         mypy
 
-  test:
+  test-com:
     runs-on: ubuntu-latest
     container: opencfd/openfoam-default:${{ matrix.openfoam-version }}
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
         openfoam-version: ['2112', '2312']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
       fail-fast: false
     steps:
     - name: Checkout
@@ -59,6 +59,38 @@ jobs:
     - name: Test with pytest
       run: |
         openfoam pytest --cov=foamlib
+      env:
+        OMPI_MCA_rmaps_base_oversubscribe: 1
+        OMPI_ALLOW_RUN_AS_ROOT: 1
+        OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
+    - name: Upload code coverage results to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  test-org:
+    runs-on: ubuntu-latest
+    container:
+      image: openfoam/openfoam${{ matrix.openfoam-version }}-graphical-apps
+      options: --user root
+    strategy:
+      matrix:
+        openfoam-version: ['8', '11']
+      fail-fast: false
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Set up Python
+      run: | 
+        apt-get update
+        apt-get install -y python3-pip
+        python3 -m pip install --upgrade pip
+    - name: Install test dependencies
+      run: |
+        python3 -m pip install .[test]
+    - name: Test with pytest
+      run: |
+        bash -c ". /opt/openfoam*/etc/bashrc && pytest --cov=foamlib"
       env:
         OMPI_MCA_rmaps_base_oversubscribe: 1
         OMPI_ALLOW_RUN_AS_ROOT: 1
