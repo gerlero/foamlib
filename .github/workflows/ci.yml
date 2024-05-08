@@ -53,6 +53,10 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Set up Git
+      run: |
+        apt-get update
+        apt-get install -y git
     - name: Install test dependencies
       run: |
         python -m pip install .[test]
@@ -64,7 +68,7 @@ jobs:
         OMPI_ALLOW_RUN_AS_ROOT: 1
         OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
     - name: Upload code coverage results to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -85,6 +89,9 @@ jobs:
         apt-get update
         apt-get install -y python3-pip
         python3 -m pip install --upgrade pip
+    - name: Set up Git
+      run: |
+        apt-get install -y git
     - name: Install test dependencies
       run: |
         python3 -m pip install .[test]
@@ -96,7 +103,7 @@ jobs:
         OMPI_ALLOW_RUN_AS_ROOT: 1
         OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
     - name: Upload code coverage results to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
 
