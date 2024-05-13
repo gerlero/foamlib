@@ -1,3 +1,4 @@
+import gzip
 import sys
 from copy import deepcopy
 from pathlib import Path
@@ -47,6 +48,10 @@ class FoamFileIO:
     def _read(self) -> Tuple[bytes, Parsed]:
         if not self.__defer_io:
             contents = self.path.read_bytes()
+
+            if self.path.suffix == ".gz":
+                contents = gzip.decompress(contents)
+
             if contents != self.__contents:
                 self.__contents = contents
                 self.__parsed = None
@@ -63,6 +68,9 @@ class FoamFileIO:
         self.__contents = contents
         self.__parsed = None
         if not self.__defer_io:
+            if self.path.suffix == ".gz":
+                contents = gzip.compress(contents)
+
             self.path.write_bytes(contents)
             self.__dirty = False
         else:
