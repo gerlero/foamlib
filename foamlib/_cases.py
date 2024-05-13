@@ -56,10 +56,10 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             return self.path.name
 
         def __getitem__(self, key: str) -> FoamFieldFile:
-            try:
+            if (self.path / key).is_file():
                 return FoamFieldFile(self.path / key)
-            except FileNotFoundError as e:
-                raise KeyError(key) from e
+            else:
+                raise KeyError(key)
 
         def __contains__(self, obj: object) -> bool:
             if isinstance(obj, FoamFieldFile):
@@ -114,7 +114,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         self, index: Union[int, slice, float, str]
     ) -> Union["FoamCaseBase.TimeDirectory", Sequence["FoamCaseBase.TimeDirectory"]]:
         if isinstance(index, str):
-            return FoamCaseBase.TimeDirectory(self.path / str(index))
+            return FoamCaseBase.TimeDirectory(self.path / index)
         elif isinstance(index, float):
             for time in self._times:
                 if time.time == index:
