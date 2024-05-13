@@ -66,8 +66,8 @@ jobs:
         with:
           images: ${{ env.IMAGES }}
           tags: |
-            type=ref,event=branch,pattern={{branch}}-openfoam${{ matrix.openfoam-version }}
-            type=ref,event=pr,pattern=pr-${{ github.event.number }}-openfoam${{ matrix.openfoam-version }}
+            type=ref,event=branch,suffix=-openfoam${{ matrix.openfoam-version }}
+            type=ref,event=pr,suffix=-openfoam${{ matrix.openfoam-version }}
             type=pep440,pattern=openfoam${{ matrix.openfoam-version }}
             type=pep440,pattern={{version}}-openfoam${{ matrix.openfoam-version }}
             type=pep440,pattern={{major}}.{{minor}}-openfoam${{ matrix.openfoam-version }}
@@ -106,8 +106,8 @@ jobs:
         with:
           images: ${{ env.IMAGES }}
           tags: |
-            type=ref,event=branch,pattern={{branch}}-openfoam${{ matrix.openfoam-version }}
-            type=ref,event=pr,pattern=pr-${{ github.event.number }}-openfoam${{ matrix.openfoam-version }}
+            type=ref,event=branch,suffix=-openfoam${{ matrix.openfoam-version }}
+            type=ref,event=pr,suffix=-openfoam${{ matrix.openfoam-version }}
             type=pep440,pattern=openfoam${{ matrix.openfoam-version }}
             type=pep440,pattern={{version}}-openfoam${{ matrix.openfoam-version }}
             type=pep440,pattern={{major}}.{{minor}}-openfoam${{ matrix.openfoam-version }}
