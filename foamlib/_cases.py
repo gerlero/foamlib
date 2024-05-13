@@ -58,6 +58,8 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         def __getitem__(self, key: str) -> FoamFieldFile:
             if (self.path / key).is_file():
                 return FoamFieldFile(self.path / key)
+            elif (self.path / f"{key}.gz").is_file():
+                return FoamFieldFile(self.path / f"{key}.gz")
             else:
                 raise KeyError(key)
 
@@ -65,14 +67,18 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             if isinstance(obj, FoamFieldFile):
                 return obj.path.parent == self.path
             elif isinstance(obj, str):
-                return (self.path / obj).is_file()
+                return (self.path / obj).is_file() or (
+                    self.path / f"{obj}.gz"
+                ).is_file()
             else:
                 return False
 
         def __iter__(self) -> Iterator[FoamFieldFile]:
             for p in self.path.iterdir():
-                if p.is_file():
-                    yield FoamFieldFile(p.name)
+                if p.is_file() and (
+                    p.suffix != ".gz" or not p.with_suffix("").is_file()
+                ):
+                    yield FoamFieldFile(p)
 
         def __len__(self) -> int:
             return len(list(iter(self)))
