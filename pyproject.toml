@@ -36,23 +36,29 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+numpy = ["numpy>=1,<2"]
 lint = ["ruff"]
-typing = [
-    "mypy>=1,<2",
-    "pytest>=7,<9",
-    "pytest-asyncio>=0.21,<0.24",
-    "numpy>=1,<2",
-]
 test = [
+    "foamlib[numpy]",
     "pytest>=7,<9",
     "pytest-asyncio>=0.21,<0.24",
     "pytest-cov",
-    "numpy>=1,<2",
+]
+typing = [
+    "foamlib[test]",
+    "mypy>=1,<2",
 ]
 docs = [
+    "foamlib[numpy]",
     "sphinx>=7,<8",
     "sphinx_rtd_theme",
-    "numpy>=1,<2",
+]
+dev = [
+    "foamlib[numpy]",
+    "foamlib[lint]",
+    "foamlib[test]",
+    "foamlib[typing]",
+    "foamlib[docs]",
 ]
 
 [project.urls]
