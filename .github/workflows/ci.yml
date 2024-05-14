@@ -38,7 +38,7 @@ jobs:
       run: |
         mypy
 
-  test-com:
+  com:
     runs-on: ubuntu-latest
     container: opencfd/openfoam-default:${{ matrix.openfoam-version }}
     strategy:
@@ -72,7 +72,7 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
 
-  test-org:
+  org:
     runs-on: ubuntu-latest
     container:
       image: openfoam/openfoam${{ matrix.openfoam-version }}-graphical-apps
