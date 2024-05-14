@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir /src \
 # smoke test
  && python3 -c 'import foamlib'
 
+ENTRYPOINT []
 CMD ["python3"]
 
 
