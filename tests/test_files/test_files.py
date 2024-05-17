@@ -110,6 +110,16 @@ def test_boundary_field(pitz: FoamCase) -> None:
     assert "value" not in outlet
 
 
+def test_mesh(pitz: FoamCase) -> None:
+    pitz.run()
+
+    points = pitz.file("constant/polyMesh/points")[""]
+
+    assert isinstance(points, Sequence)
+    assert isinstance(points[0], Sequence)
+    assert len(points[0]) == 3
+
+
 def test_internal_field(pitz: FoamCase) -> None:
     pitz[0]["p"].internal_field = 0.5
     pitz[0]["U"].internal_field = [1.5, 2.0, 3]

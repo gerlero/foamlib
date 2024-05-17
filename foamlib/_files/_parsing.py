@@ -54,11 +54,10 @@ def _list_of(entry: ParserElement) -> ParserElement:
     )
 
 
-def _dictionary_of(
+def _keyword_entry_of(
     keyword: ParserElement,
     data_entries: ParserElement,
     *,
-    len: Union[int, EllipsisType] = ...,
     located: bool = False,
 ) -> ParserElement:
     subdict = Forward()
@@ -73,7 +72,7 @@ def _dictionary_of(
 
     subdict <<= Dict(Group(keyword_entry)[...], asdict=not located)
 
-    return Dict(Group(keyword_entry)[len], asdict=not located)
+    return keyword_entry
 
 
 _binary_contents = Forward()
@@ -146,7 +145,7 @@ _FIELD = (
 )
 _TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
 _DATA = Forward()
-_KEYWORD_ENTRY = _dictionary_of(_TOKEN, _DATA, len=1)
+_KEYWORD_ENTRY = Dict(Group(_keyword_entry_of(_TOKEN, _DATA)), asdict=True)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = _list_of(_LIST_ENTRY)
@@ -159,7 +158,15 @@ _DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
 )
 
 _FILE = (
-    _dictionary_of(_TOKEN, Opt(_DATA, default=""), located=True)
+    Dict(
+        Group(_keyword_entry_of(_TOKEN, Opt(_DATA, default=""), located=True))[...]
+        + Opt(
+            Group(
+                Located(_DATA_ENTRY[1, ...].set_parse_action(lambda tks: ["", tks[0]]))
+            )
+        )
+        + Group(_keyword_entry_of(_TOKEN, Opt(_DATA, default=""), located=True))[...]
+    )
     .ignore(c_style_comment)
     .ignore(cpp_style_comment)
     .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]

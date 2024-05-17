@@ -39,12 +39,14 @@ def dumpb(
         entries = []
         for k, v in data.items():
             b = dumpb(v, kind=kind)
-            if isinstance(v, Mapping):
+            if not k:
+                entries.append(b)
+            elif isinstance(v, Mapping):
                 entries.append(dumpb(k) + b"\n" + b"{\n" + b + b"\n}")
-            elif b:
-                entries.append(dumpb(k) + b" " + b + b";")
-            else:
+            elif not b:
                 entries.append(dumpb(k) + b";")
+            else:
+                entries.append(dumpb(k) + b" " + b + b";")
 
         return b"\n".join(entries)
 
