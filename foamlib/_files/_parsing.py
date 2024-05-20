@@ -162,7 +162,11 @@ _FILE = (
         Group(_keyword_entry_of(_TOKEN, Opt(_DATA, default=""), located=True))[...]
         + Opt(
             Group(
-                Located(_DATA_ENTRY[1, ...].set_parse_action(lambda tks: ["", tks[0]]))
+                Located(
+                    _DATA_ENTRY[1, ...].set_parse_action(
+                        lambda tks: ["", tuple(tks) if len(tks) > 1 else tks[0]]
+                    )
+                )
             )
         )
         + Group(_keyword_entry_of(_TOKEN, Opt(_DATA, default=""), located=True))[...]
@@ -210,8 +214,11 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamDict.Data, EllipsisType]]):
         return ret
 
     def __getitem__(
-        self, keywords: Tuple[str, ...]
+        self, keywords: Union[str, Tuple[str, ...]]
     ) -> Union[FoamDict.Data, EllipsisType]:
+        if isinstance(keywords, str):
+            keywords = (keywords,)
+
         _, data, _ = self._parsed[keywords]
         return data
 
