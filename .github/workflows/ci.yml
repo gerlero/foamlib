@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        openfoam-version: [2406, 2112, 12, 8]
+        openfoam-version: [2406, 2006, 12, 7]
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
       fail-fast: false
     steps:
