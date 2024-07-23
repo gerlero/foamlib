@@ -498,7 +498,7 @@ class AsyncFoamCase(FoamCaseBase):
         else:
             for p in self._clean_paths():
                 if p.is_dir():
-                    await aioshutil.rmtree(p)
+                    await aioshutil.rmtree(p)  # type: ignore [call-arg]
                 else:
                     p.unlink()
 
@@ -599,7 +599,7 @@ class AsyncFoamCase(FoamCaseBase):
 
     async def restore_0_dir(self) -> None:
         """Restore the 0 directory from the 0.orig directory."""
-        await aioshutil.rmtree(self.path / "0", ignore_errors=True)
+        await aioshutil.rmtree(self.path / "0", ignore_errors=True)  # type: ignore [call-arg]
         await aioshutil.copytree(self.path / "0.orig", self.path / "0")
 
     async def copy(self, dest: Union[Path, str]) -> "AsyncFoamCase":
