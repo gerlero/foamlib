@@ -50,7 +50,7 @@ typing = [
 ]
 docs = [
     "foamlib[numpy]",
-    "sphinx>=7,<8",
+    "sphinx>=7,<9",
     "sphinx_rtd_theme",
 ]
 dev = [
