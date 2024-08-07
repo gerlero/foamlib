@@ -54,15 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - openfoam-distro: openfoam-com
-            openfoam-version: 2406
-          - openfoam-distro: openfoam-com
-            openfoam-version: 2312
-          - openfoam-distro: openfoam-org
-            openfoam-version: 12
-          - openfoam-distro: openfoam-org
-            openfoam-version: 11
+        openfoam-version: [2406, 2312, 12, 11]
       fail-fast: false
     steps:
       - name: Set up QEMU
@@ -99,5 +91,5 @@ jobs:
           cache-to: type=gha,mode=max
           push: ${{ github.event_name == 'push' }}
           build-args: |
-            BASE=${{ matrix.openfoam-distro }}
+            BASE=openfoam
             OPENFOAM_VERSION=${{ matrix.openfoam-version }}
