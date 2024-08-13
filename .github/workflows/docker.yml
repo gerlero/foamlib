@@ -56,23 +56,23 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
-            type=registry,ref=${{ github.repository }}:buildcache-amd64
-            type=registry,ref=${{ github.repository }}:buildcache-arm64
+            type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-amd64
+            type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-arm64
           push: ${{ github.event_name == 'push' }}
       - name: Push build cache (amd64)
         if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64
-          cache-from: type=registry,ref=${{ github.repository }}:buildcache-amd64
-          cache-to: type=registry,ref=${{ github.repository }}:buildcache-amd64,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-amd64
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-amd64,mode=max
       - name: Push build cache (arm64)
         if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
           platforms: linux/arm64
-          cache-from: type=registry,ref=${{ github.repository }}:buildcache-arm64
-          cache-to: type=registry,ref=${{ github.repository }}:buildcache-arm64,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-arm64
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-arm64,mode=max
 
   openfoam:
     runs-on: ubuntu-latest
@@ -121,8 +121,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
-            type=registry,ref=${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-amd64
-            type=registry,ref=${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-arm64
+            type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-amd64
+            type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-arm64
           push: ${{ github.event_name == 'push' }}
           build-args: |
             BASE=openfoam
@@ -132,8 +132,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64
-          cache-from: type=registry,ref=${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-amd64
-          cache-to: type=registry,ref=${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-amd64,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-amd64
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-amd64,mode=max
           build-args: |
             BASE=openfoam
             OPENFOAM_VERSION=${{ matrix.openfoam-version }}
@@ -142,8 +142,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           platforms: linux/arm64
-          cache-from: type=registry,ref=${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-arm64
-          cache-to: type=registry,ref=${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-arm64,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-arm64
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-arm64,mode=max
           build-args: |
             BASE=openfoam
             OPENFOAM_VERSION=${{ matrix.openfoam-version }}
