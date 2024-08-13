@@ -4,20 +4,25 @@ ARG BASE=python:3.12-slim
 ARG OPENFOAM_VERSION=2406
 FROM microfluidica/openfoam:${OPENFOAM_VERSION} AS openfoam
 
+ARG VIRTUAL_ENV=/opt/venv
+
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
-    python3-pip \
- && (python3 -m pip install --upgrade --no-cache-dir pip || true) \
- && rm -rf /var/lib/apt/lists/*
+    python3-venv \
+ && rm -rf /var/lib/apt/lists/* \
+ && python3 -m venv ${VIRTUAL_ENV}
+
+ENV PATH="${VIRTUAL_ENV}/bin:$PATH"
+
+CMD ["python3"]
 
 
 FROM ${BASE}
 
 COPY . /src/
 
-RUN (python3 -m pip install --no-cache-dir --break-system-packages /src || python3 -m pip install --no-cache-dir /src) \
- && rm -rf /src \
-# smoke test
- && python3 -c 'import foamlib'
+RUN pip install --no-cache-dir /src
 
-CMD ["python3"]
+RUN rm -rf /src \
+# smoke test
+ && python -c 'import foamlib'
