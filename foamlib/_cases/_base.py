@@ -183,11 +183,13 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         all_clean = self.path / "Allclean"
 
         if clean.is_file():
-            return clean
+            file = clean
         elif all_clean.is_file():
-            return all_clean
+            file = all_clean
         else:
             return None
+
+        return file if Path(__file__).absolute() != file.absolute() else None
 
     def _run_script(self, *, parallel: Optional[bool] = None) -> Optional[Path]:
         """Return the path to the (All)run script, or None if no run script is found."""
@@ -199,20 +201,23 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         if run.is_file() or all_run.is_file():
             if run_parallel.is_file() or all_run_parallel.is_file():
                 if parallel:
-                    return run_parallel if run_parallel.is_file() else all_run_parallel
+                    file = run_parallel if run_parallel.is_file() else all_run_parallel
                 elif parallel is False:
-                    return run if run.is_file() else all_run
+                    file = run if run.is_file() else all_run
                 else:
                     raise ValueError(
                         "Both (All)run and (All)run-parallel scripts are present. Please specify parallel argument."
                     )
-            return run if run.is_file() else all_run
+            else:
+                file = run if run.is_file() else all_run
         elif parallel is not False and (
             run_parallel.is_file() or all_run_parallel.is_file()
         ):
-            return run_parallel if run_parallel.is_file() else all_run_parallel
+            file = run_parallel if run_parallel.is_file() else all_run_parallel
         else:
             return None
+
+        return file if Path(__file__).absolute() != file.absolute() else None
 
     def _run_cmds(
         self,
