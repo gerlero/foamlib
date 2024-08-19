@@ -183,13 +183,16 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         all_clean = self.path / "Allclean"
 
         if clean.is_file():
-            file = clean
+            script = clean
         elif all_clean.is_file():
-            file = all_clean
+            script = all_clean
         else:
             return None
 
-        return file if Path(__file__).absolute() != file.absolute() else None
+        if sys.argv and Path(sys.argv[0]).absolute() == script.absolute():
+            return None
+
+        return script if Path(sys.argv[0]).absolute() != script.absolute() else None
 
     def _run_script(self, *, parallel: Optional[bool] = None) -> Optional[Path]:
         """Return the path to the (All)run script, or None if no run script is found."""
@@ -201,23 +204,28 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         if run.is_file() or all_run.is_file():
             if run_parallel.is_file() or all_run_parallel.is_file():
                 if parallel:
-                    file = run_parallel if run_parallel.is_file() else all_run_parallel
+                    script = (
+                        run_parallel if run_parallel.is_file() else all_run_parallel
+                    )
                 elif parallel is False:
-                    file = run if run.is_file() else all_run
+                    script = run if run.is_file() else all_run
                 else:
                     raise ValueError(
                         "Both (All)run and (All)run-parallel scripts are present. Please specify parallel argument."
                     )
             else:
-                file = run if run.is_file() else all_run
+                script = run if run.is_file() else all_run
         elif parallel is not False and (
             run_parallel.is_file() or all_run_parallel.is_file()
         ):
-            file = run_parallel if run_parallel.is_file() else all_run_parallel
+            script = run_parallel if run_parallel.is_file() else all_run_parallel
         else:
             return None
 
-        return file if Path(__file__).absolute() != file.absolute() else None
+        if sys.argv and Path(sys.argv[0]).absolute() == script.absolute():
+            return None
+
+        return script
 
     def _run_cmds(
         self,
