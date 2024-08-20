@@ -43,7 +43,6 @@ class FoamFileIO:
         if self.__defer_io == 0 and self.__dirty:
             assert self.__contents is not None
             self._write(self.__contents)
-        assert not self.__dirty
 
     def _read(self) -> Tuple[bytes, Parsed]:
         if not self.__defer_io:
