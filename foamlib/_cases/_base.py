@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 from typing import (
@@ -226,6 +227,24 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             return None
 
         return script
+
+    def _env(self, *, shell: bool) -> Optional[Mapping[str, str]]:
+        sip_workaround = os.environ.get(
+            "FOAM_LD_LIBRARY_PATH", ""
+        ) and not os.environ.get("DYLD_LIBRARY_PATH", "")
+
+        if not shell or sip_workaround:
+            env = os.environ.copy()
+
+            if not shell:
+                env["PWD"] = str(self.path)
+
+            if sip_workaround:
+                env["DYLD_LIBRARY_PATH"] = env["FOAM_LD_LIBRARY_PATH"]
+
+            return env
+        else:
+            return None
 
     def _run_cmds(
         self,

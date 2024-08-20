@@ -15,8 +15,9 @@ else:
 
 import aioshutil
 
-from .._util import run_process_async
+from .._util import is_sequence
 from ._base import FoamCaseBase
+from ._util import check_returncode
 
 
 class AsyncFoamCase(FoamCaseBase):
@@ -89,7 +90,33 @@ class AsyncFoamCase(FoamCaseBase):
         *,
         check: bool = True,
     ) -> None:
-        await run_process_async(cmd, cwd=self.path, check=check)
+        if not is_sequence(cmd):
+            proc = await asyncio.create_subprocess_shell(
+                str(cmd),
+                cwd=self.path,
+                env=self._env(shell=True),
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE if check else asyncio.subprocess.DEVNULL,
+            )
+
+        else:
+            if sys.version_info < (3, 8):
+                cmd = (str(arg) for arg in cmd)
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                cwd=self.path,
+                env=self._env(shell=False),
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE if check else asyncio.subprocess.DEVNULL,
+            )
+
+        stdout, stderr = await proc.communicate()
+
+        assert stdout is None
+        assert proc.returncode is not None
+
+        if check:
+            check_returncode(proc.returncode, cmd, stderr.decode())
 
     async def run(
         self,
