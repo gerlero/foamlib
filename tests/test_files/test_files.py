@@ -26,14 +26,21 @@ def test_write_read(tmp_path: Path) -> None:
 
     d["key"] = "value"
     assert d["key"] == "value"
-    assert len(d) == 1
+    assert len(d) == 2
     assert "key" in d
-    assert list(d) == ["key"]
+    assert list(d) == ["FoamFile", "key"]
     del d["key"]
-    assert not d
+    assert len(d) == 1
     assert "key" not in d
     with pytest.raises(KeyError):
         del d["key"]
+
+    assert isinstance(d.header, FoamFile.Header)
+    assert d.header.version == 2.0
+    assert d.header.format == "ascii"
+    assert d.header.class_ == "dictionary"
+    assert d.header.location == f'"{d.path.parent.name}"'
+    assert d.header.object == d.path.name
 
     d["subdict"] = {"key": "value"}
     sd = d["subdict"]
@@ -75,6 +82,14 @@ def test_write_read(tmp_path: Path) -> None:
         lst[0] = 0
         assert lst == [0, 2, 3]
         assert d["subdict", "list"] == [1, 2, 3]
+
+
+def test_new_field(tmp_path: Path) -> None:
+    Path(tmp_path / "testField").touch()
+    f = FoamFieldFile(tmp_path / "testField")
+    f.internal_field = [1, 2, 3]
+    assert f.internal_field == [1, 2, 3]
+    assert f.header.class_ == "volVectorField"
 
 
 @pytest.fixture
