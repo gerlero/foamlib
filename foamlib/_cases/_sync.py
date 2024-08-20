@@ -1,4 +1,5 @@
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import (
@@ -11,8 +12,9 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Sequence
 
-from .._util import run_process
+from .._util import is_sequence
 from ._base import FoamCaseBase
+from ._util import check_returncode
 
 
 class FoamCase(FoamCaseBase):
@@ -55,7 +57,26 @@ class FoamCase(FoamCaseBase):
         *,
         check: bool = True,
     ) -> None:
-        run_process(cmd, cwd=self.path, check=check)
+        shell = not is_sequence(cmd)
+
+        if sys.version_info < (3, 8):
+            if shell:
+                cmd = str(cmd)
+            else:
+                cmd = (str(arg) for arg in cmd)
+
+        proc = subprocess.run(
+            cmd,
+            cwd=self.path,
+            env=self._env(shell=shell),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE if check else subprocess.DEVNULL,
+            text=True,
+            shell=shell,
+        )
+
+        if check:
+            check_returncode(proc.returncode, cmd, proc.stderr)
 
     def run(
         self,
