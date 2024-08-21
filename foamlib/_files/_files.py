@@ -179,10 +179,6 @@ class FoamFile(
         else:
             return value
 
-    @property
-    def _binary(self) -> bool:
-        return self.get(("FoamFile", "format"), None) == "binary"
-
     def __setitem__(
         self, keywords: Union[str, Tuple[str, ...]], data: "FoamFile._SetData"
     ) -> None:
