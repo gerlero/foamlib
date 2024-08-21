@@ -6,6 +6,7 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Iterator, Mapping, MutableMapping, Sequence
 
+from .._util import is_sequence
 from ._base import FoamDict
 from ._io import FoamFileIO
 from ._serialization import Kind, dumpb
@@ -24,7 +25,7 @@ class FoamFile(
     FoamFileIO,
 ):
     """
-    An OpenFOAM dictionary file.
+    An OpenFOAM data file.
 
     Use as a mutable mapping (i.e., like a dict) to access and modify entries.
 
@@ -88,6 +89,74 @@ class FoamFile(
 
             return ret
 
+    class Header(SubDict):
+        """The header of an OpenFOAM file."""
+
+        @property
+        def version(self) -> float:
+            """Alias of `self["version"]`."""
+            ret = self["version"]
+            if not isinstance(ret, float):
+                raise TypeError("version is not a float")
+            return ret
+
+        @version.setter
+        def version(self, data: float) -> None:
+            self["version"] = data
+
+        @property
+        def format(self) -> str:
+            """Alias of `self["format"]`."""
+            ret = self["format"]
+            if not isinstance(ret, str):
+                raise TypeError("format is not a string")
+            return ret
+
+        @format.setter
+        def format(self, data: str) -> None:
+            self["format"] = data
+
+        @property
+        def class_(self) -> str:
+            """Alias of `self["class"]`."""
+            ret = self["class"]
+            if not isinstance(ret, str):
+                raise TypeError("class is not a string")
+            return ret
+
+        @class_.setter
+        def class_(self, data: str) -> None:
+            self["class"] = data
+
+        @property
+        def location(self) -> str:
+            """Alias of `self["location"]`."""
+            ret = self["location"]
+            if not isinstance(ret, str):
+                raise TypeError("location is not a string")
+            return ret
+
+        @location.setter
+        def location(self, data: str) -> None:
+            self["location"] = data
+
+        @property
+        def object(self) -> str:
+            """Alias of `self["object"]`."""
+            ret = self["object"]
+            if not isinstance(ret, str):
+                raise TypeError("object is not a string")
+            return ret
+
+    @property
+    def header(self) -> "FoamFile.Header":
+        """Alias of `self["FoamFile"]`."""
+        ret = self["FoamFile"]
+        if not isinstance(ret, FoamFile.Header):
+            assert not isinstance(ret, FoamFile.SubDict)
+            raise TypeError("FoamFile is not a dictionary")
+        return ret
+
     def __getitem__(
         self, keywords: Union[str, Tuple[str, ...]]
     ) -> Union["FoamFile.Data", "FoamFile.SubDict"]:
@@ -99,7 +168,10 @@ class FoamFile(
         value = parsed[keywords]
 
         if value is ...:
-            return FoamFile.SubDict(self, keywords)
+            if keywords == ("FoamFile",):
+                return FoamFile.Header(self, keywords)
+            else:
+                return FoamFile.SubDict(self, keywords)
         else:
             return value
 
@@ -115,23 +187,23 @@ class FoamFile(
         assume_field: bool = False,
         assume_dimensions: bool = False,
     ) -> None:
-        if not isinstance(keywords, tuple):
-            keywords = (keywords,)
+        with self:
+            if not isinstance(keywords, tuple):
+                keywords = (keywords,)
 
-        kind = Kind.DEFAULT
-        if keywords == ("internalField",) or (
-            len(keywords) == 3
-            and keywords[0] == "boundaryField"
-            and keywords[2] == "value"
-        ):
-            kind = Kind.BINARY_FIELD if self._binary else Kind.FIELD
-        elif keywords == ("dimensions",):
-            kind = Kind.DIMENSIONS
+            kind = Kind.DEFAULT
+            if keywords == ("internalField",) or (
+                len(keywords) == 3
+                and keywords[0] == "boundaryField"
+                and keywords[2] == "value"
+            ):
+                kind = Kind.BINARY_FIELD if self._binary else Kind.FIELD
+            elif keywords == ("dimensions",):
+                kind = Kind.DIMENSIONS
 
-        contents, parsed = self._read()
+            contents, parsed = self._read()
 
-        if isinstance(data, Mapping):
-            with self:
+            if isinstance(data, Mapping):
                 if isinstance(data, FoamDict):
                     data = data.as_dict()
 
@@ -147,16 +219,44 @@ class FoamFile(
 
                 for k, v in data.items():
                     self[(*keywords, k)] = v
-        else:
-            start, end = parsed.entry_location(keywords, missing_ok=True)
 
-            self._write(
-                contents[:start]
-                + b"\n"
-                + dumpb({keywords[-1]: data}, kind=kind)
-                + b"\n"
-                + contents[end:]
-            )
+            elif not self and keywords[0] != "FoamFile":
+                self["FoamFile"] = {
+                    "version": 2.0,
+                    "format": "ascii",
+                    "class": "dictionary",
+                    "location": f'"{self.path.parent.name}"',
+                    "object": self.path.name,
+                }
+                self[keywords] = data
+
+            elif (
+                kind == Kind.FIELD or kind == Kind.BINARY_FIELD
+            ) and self.header.class_ == "dictionary":
+                if not is_sequence(data):
+                    class_ = "volScalarField"
+                elif (len(data) == 3 and not is_sequence(data[0])) or len(data[0]) == 3:
+                    class_ = "volVectorField"
+                elif (len(data) == 6 and not is_sequence(data[0])) or len(data[0]) == 6:
+                    class_ = "volSymmTensorField"
+                elif (len(data) == 9 and not is_sequence(data[0])) or len(data[0]) == 9:
+                    class_ = "volTensorField"
+                else:
+                    class_ = "volScalarField"
+
+                self.header.class_ = class_
+                self[keywords] = data
+
+            else:
+                start, end = parsed.entry_location(keywords, missing_ok=True)
+
+                self._write(
+                    contents[:start]
+                    + b"\n"
+                    + dumpb({keywords[-1]: data}, kind=kind)
+                    + b"\n"
+                    + contents[end:]
+                )
 
     def __delitem__(self, keywords: Union[str, Tuple[str, ...]]) -> None:
         if not isinstance(keywords, tuple):
