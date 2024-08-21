@@ -149,13 +149,17 @@ class FoamFile(
             return ret
 
     @property
-    def header(self) -> "FoamFile.Header":
+    def header(self) -> Header:
         """Alias of `self["FoamFile"]`."""
         ret = self["FoamFile"]
         if not isinstance(ret, FoamFile.Header):
             assert not isinstance(ret, FoamFile.SubDict)
             raise TypeError("FoamFile is not a dictionary")
         return ret
+
+    @header.setter
+    def header(self, data: FoamDict._Dict) -> None:
+        self["FoamFile"] = data
 
     def __getitem__(
         self, keywords: Union[str, Tuple[str, ...]]
@@ -191,13 +195,24 @@ class FoamFile(
             if not isinstance(keywords, tuple):
                 keywords = (keywords,)
 
+            if not self and keywords[0] != "FoamFile":
+                self.header = {
+                    "version": 2.0,
+                    "format": "ascii",
+                    "class": "dictionary",
+                    "location": f'"{self.path.parent.name}"',
+                    "object": self.path.name,
+                }  # type: ignore [assignment]
+
             kind = Kind.DEFAULT
             if keywords == ("internalField",) or (
                 len(keywords) == 3
                 and keywords[0] == "boundaryField"
                 and keywords[2] == "value"
             ):
-                kind = Kind.BINARY_FIELD if self._binary else Kind.FIELD
+                kind = (
+                    Kind.BINARY_FIELD if self.header.format == "binary" else Kind.FIELD
+                )
             elif keywords == ("dimensions",):
                 kind = Kind.DIMENSIONS
 
@@ -219,16 +234,6 @@ class FoamFile(
 
                 for k, v in data.items():
                     self[(*keywords, k)] = v
-
-            elif not self and keywords[0] != "FoamFile":
-                self["FoamFile"] = {
-                    "version": 2.0,
-                    "format": "ascii",
-                    "class": "dictionary",
-                    "location": f'"{self.path.parent.name}"',
-                    "object": self.path.name,
-                }
-                self[keywords] = data
 
             elif (
                 kind == Kind.FIELD or kind == Kind.BINARY_FIELD
