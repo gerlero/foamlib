@@ -184,12 +184,7 @@ class FoamFile(
         return self.get(("FoamFile", "format"), None) == "binary"
 
     def __setitem__(
-        self,
-        keywords: Union[str, Tuple[str, ...]],
-        data: "FoamFile._SetData",
-        *,
-        assume_field: bool = False,
-        assume_dimensions: bool = False,
+        self, keywords: Union[str, Tuple[str, ...]], data: "FoamFile._SetData"
     ) -> None:
         with self:
             if not isinstance(keywords, tuple):
