@@ -92,6 +92,9 @@ class FoamFile(
     class Header(SubDict):
         """The header of an OpenFOAM file."""
 
+        def __init__(self, _file: "FoamFile") -> None:
+            super().__init__(_file, ("FoamFile",))
+
         @property
         def version(self) -> float:
             """Alias of `self["version"]`."""
@@ -173,7 +176,7 @@ class FoamFile(
 
         if value is ...:
             if keywords == ("FoamFile",):
-                return FoamFile.Header(self, keywords)
+                return FoamFile.Header(self)
             else:
                 return FoamFile.SubDict(self, keywords)
         else:
