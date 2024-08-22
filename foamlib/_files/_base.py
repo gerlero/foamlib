@@ -1,5 +1,4 @@
 import sys
-from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Dict, NamedTuple, Optional, Tuple, Union
 
@@ -14,7 +13,7 @@ except ModuleNotFoundError:
     pass
 
 
-class FoamDict:
+class FoamFileBase:
     class DimensionSet(NamedTuple):
         mass: Union[int, float] = 0
         length: Union[int, float] = 0
@@ -30,12 +29,12 @@ class FoamDict:
     @dataclass
     class Dimensioned:
         value: Union[int, float, Sequence[Union[int, float]]] = 0
-        dimensions: Union["FoamDict.DimensionSet", Sequence[Union[int, float]]] = ()
+        dimensions: Union["FoamFileBase.DimensionSet", Sequence[Union[int, float]]] = ()
         name: Optional[str] = None
 
         def __post_init__(self) -> None:
-            if not isinstance(self.dimensions, FoamDict.DimensionSet):
-                self.dimensions = FoamDict.DimensionSet(*self.dimensions)
+            if not isinstance(self.dimensions, FoamFileBase.DimensionSet):
+                self.dimensions = FoamFileBase.DimensionSet(*self.dimensions)
 
     Data = Union[
         str,
@@ -48,15 +47,10 @@ class FoamDict:
         Mapping[str, "Data"],
     ]
     """
-    A value that can be stored in an OpenFOAM dictionary.
+    A value that can be stored in an OpenFOAM file.
     """
 
     _Dict = Dict[str, Union["Data", "_Dict"]]
-
-    @abstractmethod
-    def as_dict(self) -> _Dict:
-        """Return a nested dict representation of the dictionary."""
-        raise NotImplementedError
 
     _SetData = Union[
         str,

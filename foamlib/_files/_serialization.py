@@ -9,7 +9,7 @@ else:
     from typing import Mapping
 
 from .._util import is_sequence
-from ._base import FoamDict
+from ._base import FoamFileBase
 
 try:
     import numpy as np
@@ -28,7 +28,7 @@ class Kind(Enum):
 
 
 def dumpb(
-    data: FoamDict._SetData,
+    data: FoamFileBase._SetData,
     *,
     kind: Kind = Kind.DEFAULT,
 ) -> bytes:
@@ -50,7 +50,7 @@ def dumpb(
 
         return b"\n".join(entries)
 
-    elif isinstance(data, FoamDict.DimensionSet) or (
+    elif isinstance(data, FoamFileBase.DimensionSet) or (
         kind == Kind.DIMENSIONS and is_sequence(data) and len(data) == 7
     ):
         return b"[" + b" ".join(dumpb(v) for v in data) + b"]"
@@ -93,7 +93,7 @@ def dumpb(
     elif kind != Kind.SINGLE_ENTRY and isinstance(data, tuple):
         return b" ".join(dumpb(v) for v in data)
 
-    elif isinstance(data, FoamDict.Dimensioned):
+    elif isinstance(data, FoamFileBase.Dimensioned):
         if data.name is not None:
             return (
                 dumpb(data.name)
