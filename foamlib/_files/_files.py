@@ -8,7 +8,7 @@ else:
 
 from .._util import is_sequence
 from ._base import FoamFileBase
-from ._io import FoamFileIO
+from ._io import _FoamFileIO
 from ._serialization import Kind, dumpb
 
 try:
@@ -23,7 +23,7 @@ class FoamFile(
         Optional[Union[str, Tuple[str, ...]]],
         Union["FoamFile.Data", "FoamFile.SubDict"],
     ],
-    FoamFileIO,
+    _FoamFileIO,
 ):
     """
     An OpenFOAM data file.
