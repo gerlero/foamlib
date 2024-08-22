@@ -128,7 +128,12 @@ def test_boundary_field(pitz: FoamCase) -> None:
 def test_mesh(pitz: FoamCase) -> None:
     pitz.run()
 
-    points = pitz.file("constant/polyMesh/points")[""]
+    file = pitz.file("constant/polyMesh/points")
+
+    assert None in file
+    assert None in list(file)
+
+    points = file[None]
 
     assert isinstance(points, Sequence)
     assert isinstance(points[0], Sequence)

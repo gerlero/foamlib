@@ -1,5 +1,5 @@
 import sys
-from typing import Any, Tuple, Union, cast
+from typing import Any, Optional, Tuple, Union, cast
 
 if sys.version_info >= (3, 9):
     from collections.abc import Iterator, Mapping, MutableMapping, Sequence
@@ -20,7 +20,8 @@ except ModuleNotFoundError:
 class FoamFile(
     FoamDict,
     MutableMapping[
-        Union[str, Tuple[str, ...]], Union["FoamFile.Data", "FoamFile.SubDict"]
+        Optional[Union[str, Tuple[str, ...]]],
+        Union["FoamFile.Data", "FoamFile.SubDict"],
     ],
     FoamFileIO,
 ):
@@ -58,7 +59,9 @@ class FoamFile(
             del self._file[(*self._keywords, keyword)]
 
         def __iter__(self) -> Iterator[str]:
-            return self._file._iter(self._keywords)
+            for k in self._file._iter(self._keywords):
+                assert k is not None
+                yield k
 
         def __contains__(self, keyword: object) -> bool:
             return (*self._keywords, keyword) in self._file
@@ -165,9 +168,11 @@ class FoamFile(
         self["FoamFile"] = data
 
     def __getitem__(
-        self, keywords: Union[str, Tuple[str, ...]]
+        self, keywords: Optional[Union[str, Tuple[str, ...]]]
     ) -> Union["FoamFile.Data", "FoamFile.SubDict"]:
-        if not isinstance(keywords, tuple):
+        if not keywords:
+            keywords = ()
+        elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
         _, parsed = self._read()
@@ -183,10 +188,12 @@ class FoamFile(
             return value
 
     def __setitem__(
-        self, keywords: Union[str, Tuple[str, ...]], data: "FoamFile._SetData"
+        self, keywords: Optional[Union[str, Tuple[str, ...]]], data: "FoamFile._SetData"
     ) -> None:
         with self:
-            if not isinstance(keywords, tuple):
+            if not keywords:
+                keywords = ()
+            elif not isinstance(keywords, tuple):
                 keywords = (keywords,)
 
             if not self and keywords[0] != "FoamFile":
@@ -257,8 +264,10 @@ class FoamFile(
                     + contents[end:]
                 )
 
-    def __delitem__(self, keywords: Union[str, Tuple[str, ...]]) -> None:
-        if not isinstance(keywords, tuple):
+    def __delitem__(self, keywords: Optional[Union[str, Tuple[str, ...]]]) -> None:
+        if not keywords:
+            keywords = ()
+        elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
         contents, parsed = self._read()
@@ -267,21 +276,22 @@ class FoamFile(
 
         self._write(contents[:start] + contents[end:])
 
-    def _iter(self, keywords: Union[str, Tuple[str, ...]] = ()) -> Iterator[str]:
-        if not isinstance(keywords, tuple):
-            keywords = (keywords,)
-
+    def _iter(self, keywords: Tuple[str, ...] = ()) -> Iterator[Optional[str]]:
         _, parsed = self._read()
 
-        yield from (k[-1] for k in parsed if k[:-1] == keywords)
+        yield from (k[-1] if k else None for k in parsed if k[:-1] == keywords)
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self) -> Iterator[Optional[str]]:
         return self._iter()
 
     def __contains__(self, keywords: object) -> bool:
-        if not isinstance(keywords, tuple):
+        if not keywords:
+            keywords = ()
+        elif not isinstance(keywords, tuple):
             keywords = (keywords,)
+
         _, parsed = self._read()
+
         return keywords in parsed
 
     def __len__(self) -> int:
@@ -371,9 +381,11 @@ class FoamFieldFile(FoamFile):
             del self["value"]
 
     def __getitem__(
-        self, keywords: Union[str, Tuple[str, ...]]
+        self, keywords: Optional[Union[str, Tuple[str, ...]]]
     ) -> Union[FoamFile.Data, FoamFile.SubDict]:
-        if not isinstance(keywords, tuple):
+        if not keywords:
+            keywords = ()
+        elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
         ret = super().__getitem__(keywords)

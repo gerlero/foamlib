@@ -164,7 +164,7 @@ _FILE = (
             Group(
                 Located(
                     _DATA_ENTRY[1, ...].set_parse_action(
-                        lambda tks: ["", tuple(tks) if len(tks) > 1 else tks[0]]
+                        lambda tks: [None, tuple(tks) if len(tks) > 1 else tks[0]]
                     )
                 )
             )
@@ -204,13 +204,21 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamDict.Data, EllipsisType]]):
         end = parse_result.locn_end
         assert isinstance(end, int)
         keyword, *data = item
-        assert isinstance(keyword, str)
-        ret[(*_keywords, keyword)] = (start, ..., end)
-        for d in data:
-            if isinstance(d, ParseResults):
-                ret.update(Parsed._flatten_result(d, _keywords=(*_keywords, keyword)))
-            else:
-                ret[(*_keywords, keyword)] = (start, d, end)
+        if keyword is None:
+            assert not _keywords
+            assert len(data) == 1
+            assert not isinstance(data[0], ParseResults)
+            ret[()] = (start, data[0], end)
+        else:
+            assert isinstance(keyword, str)
+            ret[(*_keywords, keyword)] = (start, ..., end)
+            for d in data:
+                if isinstance(d, ParseResults):
+                    ret.update(
+                        Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
+                    )
+                else:
+                    ret[(*_keywords, keyword)] = (start, d, end)
         return ret
 
     def __getitem__(
