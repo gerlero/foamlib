@@ -26,11 +26,12 @@ def test_write_read(tmp_path: Path) -> None:
 
     d["key"] = "value"
     assert d["key"] == "value"
-    assert len(d) == 2
-    assert "key" in d
-    assert list(d) == ["FoamFile", "key"]
-    del d["key"]
     assert len(d) == 1
+    assert "key" in d
+    assert list(d) == ["key"]
+    assert "FoamFile" in d
+    del d["key"]
+    assert not d
     assert "key" not in d
     with pytest.raises(KeyError):
         del d["key"]

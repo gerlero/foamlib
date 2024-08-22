@@ -195,7 +195,7 @@ class FoamFile(
             elif not isinstance(keywords, tuple):
                 keywords = (keywords,)
 
-            if not self and keywords[0] != "FoamFile":
+            if not self and "FoamFile" not in self and keywords[0] != "FoamFile":
                 self.header = {
                     "version": 2.0,
                     "format": "ascii",
@@ -278,7 +278,11 @@ class FoamFile(
     def _iter(self, keywords: Tuple[str, ...] = ()) -> Iterator[Optional[str]]:
         _, parsed = self._read()
 
-        yield from (k[-1] if k else None for k in parsed if k[:-1] == keywords)
+        yield from (
+            k[-1] if k else None
+            for k in parsed
+            if k != ("FoamFile",) and k[:-1] == keywords
+        )
 
     def __iter__(self) -> Iterator[Optional[str]]:
         return self._iter()
@@ -310,7 +314,9 @@ class FoamFile(
     def as_dict(self) -> FoamFileBase._Dict:
         """Return a nested dict representation of the file."""
         _, parsed = self._read()
-        return parsed.as_dict()
+        d = parsed.as_dict()
+        del d["FoamFile"]
+        return d
 
 
 class FoamFieldFile(FoamFile):
