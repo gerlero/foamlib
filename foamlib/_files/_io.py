@@ -18,7 +18,7 @@ else:
 from ._parsing import Parsed
 
 
-class FoamFileIO:
+class _FoamFileIO:
     def __init__(self, path: Union[str, Path]) -> None:
         self.path = Path(path).absolute()
 

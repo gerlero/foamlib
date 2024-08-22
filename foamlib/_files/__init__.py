@@ -1,8 +1,8 @@
-from ._base import FoamDict
+from ._base import FoamFileBase
 from ._files import FoamFieldFile, FoamFile
 
 __all__ = [
     "FoamFile",
     "FoamFieldFile",
-    "FoamDict",
+    "FoamFileBase",
 ]

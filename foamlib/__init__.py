@@ -9,7 +9,7 @@ from ._cases import (
     FoamCase,
     FoamCaseBase,
 )
-from ._files import FoamDict, FoamFieldFile, FoamFile
+from ._files import FoamFieldFile, FoamFile, FoamFileBase
 
 __all__ = [
     "FoamCase",
@@ -17,7 +17,7 @@ __all__ = [
     "FoamCaseBase",
     "FoamFile",
     "FoamFieldFile",
-    "FoamDict",
+    "FoamFileBase",
     "CalledProcessError",
     "CalledProcessWarning",
 ]

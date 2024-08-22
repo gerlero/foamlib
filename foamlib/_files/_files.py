@@ -7,8 +7,8 @@ else:
     from typing import Iterator, Mapping, MutableMapping, Sequence
 
 from .._util import is_sequence
-from ._base import FoamDict
-from ._io import FoamFileIO
+from ._base import FoamFileBase
+from ._io import _FoamFileIO
 from ._serialization import Kind, dumpb
 
 try:
@@ -18,12 +18,12 @@ except ModuleNotFoundError:
 
 
 class FoamFile(
-    FoamDict,
+    FoamFileBase,
     MutableMapping[
         Optional[Union[str, Tuple[str, ...]]],
         Union["FoamFile.Data", "FoamFile.SubDict"],
     ],
-    FoamFileIO,
+    _FoamFileIO,
 ):
     """
     An OpenFOAM data file.
@@ -34,7 +34,6 @@ class FoamFile(
     """
 
     class SubDict(
-        FoamDict,
         MutableMapping[str, Union["FoamFile.Data", "FoamFile.SubDict"]],
     ):
         """An OpenFOAM dictionary within a file as a mutable mapping."""
@@ -80,7 +79,7 @@ class FoamFile(
         def __repr__(self) -> str:
             return f"{type(self).__qualname__}('{self._file}', {self._keywords})"
 
-        def as_dict(self) -> FoamDict._Dict:
+        def as_dict(self) -> FoamFileBase._Dict:
             """Return a nested dict representation of the dictionary."""
             ret = self._file.as_dict()
 
@@ -164,7 +163,7 @@ class FoamFile(
         return ret
 
     @header.setter
-    def header(self, data: FoamDict._Dict) -> None:
+    def header(self, data: FoamFileBase._Dict) -> None:
         self["FoamFile"] = data
 
     def __getitem__(
@@ -220,7 +219,7 @@ class FoamFile(
             contents, parsed = self._read()
 
             if isinstance(data, Mapping):
-                if isinstance(data, FoamDict):
+                if isinstance(data, (FoamFile, FoamFile.SubDict)):
                     data = data.as_dict()
 
                 start, end = parsed.entry_location(keywords, missing_ok=True)
@@ -308,7 +307,7 @@ class FoamFile(
     def __fspath__(self) -> str:
         return str(self.path)
 
-    def as_dict(self) -> FoamDict._Dict:
+    def as_dict(self) -> FoamFileBase._Dict:
         """Return a nested dict representation of the file."""
         _, parsed = self._read()
         return parsed.as_dict()
