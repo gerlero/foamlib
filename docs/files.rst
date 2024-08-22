@@ -1,7 +1,7 @@
 OpenFOAM file manipulation
 ==========================
 
-.. autoclass:: foamlib.FoamDict
+.. autoclass:: foamlib.FoamFileBase
    :members:
    :undoc-members:
    :show-inheritance:
