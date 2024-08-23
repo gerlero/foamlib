@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import (
@@ -87,6 +88,12 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         def __len__(self) -> int:
             return len(list(iter(self)))
 
+        def __delitem__(self, key: str) -> None:
+            if (self.path / f"{key}.gz").is_file() and not (self.path / key).is_file():
+                (self.path / f"{key}.gz").unlink()
+            else:
+                (self.path / key).unlink()
+
         def __fspath__(self) -> str:
             return str(self.path)
 
@@ -164,6 +171,9 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             paths.update(self.path.glob("log.*"))
 
         return paths
+
+    def __delitem__(self, key: Union[int, float, str]) -> None:
+        shutil.rmtree(self[key].path)
 
     def _clone_ignore(
         self,
