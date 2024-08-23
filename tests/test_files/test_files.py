@@ -36,12 +36,11 @@ def test_write_read(tmp_path: Path) -> None:
     with pytest.raises(KeyError):
         del d["key"]
 
-    assert isinstance(d.header, FoamFile.Header)
-    assert d.header.version == 2.0
-    assert d.header.format == "ascii"
-    assert d.header.class_ == "dictionary"
-    assert d.header.location == f'"{d.path.parent.name}"'
-    assert d.header.object == d.path.name
+    assert d.version == 2.0
+    assert d.format == "ascii"
+    assert d.class_ == "dictionary"
+    assert d.location == f'"{d.path.parent.name}"'
+    assert d.object_ == d.path.name
 
     d["subdict"] = {"key": "value"}
     sd = d["subdict"]
@@ -90,7 +89,7 @@ def test_new_field(tmp_path: Path) -> None:
     f = FoamFieldFile(tmp_path / "testField")
     f.internal_field = [1, 2, 3]
     assert f.internal_field == [1, 2, 3]
-    assert f.header.class_ == "volVectorField"
+    assert f.class_ == "volVectorField"
 
 
 @pytest.fixture

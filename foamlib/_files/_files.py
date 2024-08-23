@@ -1,6 +1,11 @@
 import sys
 from typing import Any, Optional, Tuple, Union, cast
 
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 if sys.version_info >= (3, 9):
     from collections.abc import Iterator, Mapping, MutableMapping, Sequence
 else:
@@ -91,80 +96,77 @@ class FoamFile(
 
             return ret
 
-    class Header(SubDict):
-        """The header of an OpenFOAM file."""
-
-        def __init__(self, _file: "FoamFile") -> None:
-            super().__init__(_file, ("FoamFile",))
-
-        @property
-        def version(self) -> float:
-            """Alias of `self["version"]`."""
-            ret = self["version"]
-            if not isinstance(ret, float):
-                raise TypeError("version is not a float")
-            return ret
-
-        @version.setter
-        def version(self, data: float) -> None:
-            self["version"] = data
-
-        @property
-        def format(self) -> str:
-            """Alias of `self["format"]`."""
-            ret = self["format"]
-            if not isinstance(ret, str):
-                raise TypeError("format is not a string")
-            return ret
-
-        @format.setter
-        def format(self, data: str) -> None:
-            self["format"] = data
-
-        @property
-        def class_(self) -> str:
-            """Alias of `self["class"]`."""
-            ret = self["class"]
-            if not isinstance(ret, str):
-                raise TypeError("class is not a string")
-            return ret
-
-        @class_.setter
-        def class_(self, data: str) -> None:
-            self["class"] = data
-
-        @property
-        def location(self) -> str:
-            """Alias of `self["location"]`."""
-            ret = self["location"]
-            if not isinstance(ret, str):
-                raise TypeError("location is not a string")
-            return ret
-
-        @location.setter
-        def location(self, data: str) -> None:
-            self["location"] = data
-
-        @property
-        def object(self) -> str:
-            """Alias of `self["object"]`."""
-            ret = self["object"]
-            if not isinstance(ret, str):
-                raise TypeError("object is not a string")
-            return ret
-
     @property
-    def header(self) -> Header:
-        """Alias of `self["FoamFile"]`."""
-        ret = self["FoamFile"]
-        if not isinstance(ret, FoamFile.Header):
-            assert not isinstance(ret, FoamFile.SubDict)
-            raise TypeError("FoamFile is not a dictionary")
+    def version(self) -> float:
+        """Alias of `self["FoamFile", "version"]`."""
+        ret = self["FoamFile", "version"]
+        if not isinstance(ret, float):
+            raise TypeError("version is not a float")
         return ret
 
-    @header.setter
-    def header(self, data: FoamFileBase._Dict) -> None:
-        self["FoamFile"] = data
+    @version.setter
+    def version(self, value: float) -> None:
+        self["FoamFile", "version"] = value
+
+    @property
+    def format(self) -> Literal["ascii", "binary"]:
+        """Alias of `self["FoamFile", "format"]`."""
+        ret = self["FoamFile", "format"]
+        if not isinstance(ret, str):
+            raise TypeError("format is not a string")
+        if ret not in ("ascii", "binary"):
+            raise ValueError("format is not 'ascii' or 'binary'")
+        return cast(Literal["ascii", "binary"], ret)
+
+    @format.setter
+    def format(self, value: Literal["ascii", "binary"]) -> None:
+        self["FoamFile", "format"] = value
+
+    @property
+    def class_(self) -> str:
+        """Alias of `self["FoamFile", "class"]`."""
+        ret = self["FoamFile", "class"]
+        if not isinstance(ret, str):
+            raise TypeError("class is not a string")
+        return ret
+
+    @class_.setter
+    def class_(self, value: str) -> None:
+        self["FoamFile", "class"] = value
+
+    @property
+    def location(self) -> str:
+        """Alias of `self["FoamFile", "location"]`."""
+        ret = self["FoamFile", "location"]
+        if not isinstance(ret, str):
+            raise TypeError("location is not a string")
+        return ret
+
+    @location.setter
+    def location(self, value: str) -> None:
+        self["FoamFile", "location"] = value
+
+    @property
+    def object_(self) -> str:
+        """Alias of `self["FoamFile", "object"]`."""
+        ret = self["FoamFile", "object"]
+        if not isinstance(ret, str):
+            raise TypeError("object is not a string")
+        return ret
+
+    @object_.setter
+    def object_(self, value: str) -> None:
+        self["FoamFile", "object"] = value
+
+    def _write_header(self) -> None:
+        assert "FoamFile" not in self
+
+        self["FoamFile"] = {}
+        self.version = 2.0
+        self.format = "ascii"
+        self.class_ = "dictionary"
+        self.location = f'"{self.path.parent.name}"'
+        self.object_ = self.path.name
 
     def __getitem__(
         self, keywords: Optional[Union[str, Tuple[str, ...]]]
@@ -179,10 +181,7 @@ class FoamFile(
         value = parsed[keywords]
 
         if value is ...:
-            if keywords == ("FoamFile",):
-                return FoamFile.Header(self)
-            else:
-                return FoamFile.SubDict(self, keywords)
+            return FoamFile.SubDict(self, keywords)
         else:
             return value
 
@@ -196,13 +195,7 @@ class FoamFile(
                 keywords = (keywords,)
 
             if not self and "FoamFile" not in self and keywords[0] != "FoamFile":
-                self.header = {
-                    "version": 2.0,
-                    "format": "ascii",
-                    "class": "dictionary",
-                    "location": f'"{self.path.parent.name}"',
-                    "object": self.path.name,
-                }  # type: ignore [assignment]
+                self._write_header()
 
             kind = Kind.DEFAULT
             if keywords == ("internalField",) or (
@@ -210,9 +203,7 @@ class FoamFile(
                 and keywords[0] == "boundaryField"
                 and keywords[2] == "value"
             ):
-                kind = (
-                    Kind.BINARY_FIELD if self.header.format == "binary" else Kind.FIELD
-                )
+                kind = Kind.BINARY_FIELD if self.format == "binary" else Kind.FIELD
             elif keywords == ("dimensions",):
                 kind = Kind.DIMENSIONS
 
@@ -237,7 +228,7 @@ class FoamFile(
 
             elif (
                 kind == Kind.FIELD or kind == Kind.BINARY_FIELD
-            ) and self.header.class_ == "dictionary":
+            ) and self.class_ == "dictionary":
                 if not is_sequence(data):
                     class_ = "volScalarField"
                 elif (len(data) == 3 and not is_sequence(data[0])) or len(data[0]) == 3:
@@ -249,7 +240,7 @@ class FoamFile(
                 else:
                     class_ = "volScalarField"
 
-                self.header.class_ = class_
+                self.class_ = class_
                 self[keywords] = data
 
             else:
