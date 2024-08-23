@@ -62,12 +62,10 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             return self.path.name
 
         def __getitem__(self, key: str) -> FoamFieldFile:
-            if (self.path / key).is_file():
-                return FoamFieldFile(self.path / key)
-            elif (self.path / f"{key}.gz").is_file():
+            if (self.path / f"{key}.gz").is_file() and not (self.path / key).is_file():
                 return FoamFieldFile(self.path / f"{key}.gz")
             else:
-                raise KeyError(key)
+                return FoamFieldFile(self.path / key)
 
         def __contains__(self, obj: object) -> bool:
             if isinstance(obj, FoamFieldFile):
