@@ -131,10 +131,13 @@ class AsyncFoamCase(FoamCaseBase):
             cmd=cmd, script=script, parallel=parallel, check=check
         ):
             if cpus is None:
-                cpus = 1
-
-                if name == "run" and kwargs.get("parallel", False):
-                    cpus = min(self._nprocessors, cpus)
+                if name == "run":
+                    if kwargs.get("parallel", False):
+                        cpus = max(self._nprocessors, 1)
+                    else:
+                        cpus = 1
+                else:
+                    cpus = 0
 
             async with self._cpus(cpus):
                 await getattr(self, name)(*args, **kwargs)
