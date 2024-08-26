@@ -41,7 +41,7 @@ lint = ["ruff"]
 test = [
     "foamlib[numpy]",
     "pytest>=7,<9",
-    "pytest-asyncio>=0.21,<0.24",
+    "pytest-asyncio>=0.21,<0.25",
     "pytest-cov",
 ]
 typing = [
