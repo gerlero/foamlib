@@ -220,7 +220,8 @@ class FoamFile(
 
                 self._write(
                     contents[:start]
-                    + b"\n"
+                    + (b"\n" if contents[start - 1 : start] != b"\n" else b"")
+                    + (b"  " * (len(keywords) - 1) if keywords else b"")
                     + dumpb({keywords[-1]: {}})
                     + b"\n"
                     + contents[end:]
@@ -251,7 +252,12 @@ class FoamFile(
 
                 self._write(
                     contents[:start]
-                    + b"\n"
+                    + (
+                        b"\n"
+                        if start > 0 and contents[start - 1 : start] != b"\n"
+                        else b""
+                    )
+                    + (b"    " * (len(keywords) - 1) if keywords else b"")
                     + dumpb({keywords[-1]: data}, kind=kind)
                     + b"\n"
                     + contents[end:]
