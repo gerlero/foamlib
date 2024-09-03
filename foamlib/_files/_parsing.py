@@ -184,6 +184,8 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
             Tuple[str, ...],
             Tuple[int, Union[FoamFileBase.Data, EllipsisType], int],
         ] = {}
+        self._end = len(contents)
+
         for parse_result in _FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
         ):
@@ -252,7 +254,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
                     _, _, end = self._parsed[keywords[:-1]]
                     end -= 1
                 else:
-                    end = -1
+                    end = self._end
 
                 start = end
             else:
