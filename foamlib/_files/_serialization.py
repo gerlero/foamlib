@@ -39,16 +39,14 @@ def dumpb(
         entries = []
         for k, v in data.items():
             b = dumpb(v, kind=kind)
-            if not k:
-                entries.append(b)
-            elif isinstance(v, Mapping):
-                entries.append(dumpb(k) + b"\n" + b"{\n" + b + b"\n}")
+            if isinstance(v, Mapping):
+                entries.append(dumpb(k) + b" {" + b + b"}")
             elif not b:
                 entries.append(dumpb(k) + b";")
             else:
                 entries.append(dumpb(k) + b" " + b + b";")
 
-        return b"\n".join(entries)
+        return b" ".join(entries)
 
     elif isinstance(data, FoamFileBase.DimensionSet) or (
         kind == Kind.DIMENSIONS and is_sequence(data) and len(data) == 7

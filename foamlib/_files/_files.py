@@ -239,27 +239,7 @@ class FoamFile(
             elif keywords == ("dimensions",):
                 kind = Kind.DIMENSIONS
 
-            contents, parsed = self._read()
-
-            if isinstance(data, Mapping):
-                if isinstance(data, (FoamFile, FoamFile.SubDict)):
-                    data = data.as_dict()
-
-                start, end = parsed.entry_location(keywords, missing_ok=True)
-
-                self._write(
-                    contents[:start]
-                    + (b"\n" if contents[start - 1 : start] != b"\n" else b"")
-                    + (b"  " * (len(keywords) - 1) if keywords else b"")
-                    + dumpb({keywords[-1]: {}})
-                    + b"\n"
-                    + contents[end:]
-                )
-
-                for k, v in data.items():
-                    self[(*keywords, k)] = v
-
-            elif (
+            if (
                 kind == Kind.FIELD or kind == Kind.BINARY_FIELD
             ) and self.class_ == "dictionary":
                 if not is_sequence(data):
@@ -277,20 +257,54 @@ class FoamFile(
                 self[keywords] = data
 
             else:
+                contents, parsed = self._read()
+
                 start, end = parsed.entry_location(keywords, missing_ok=True)
 
-                self._write(
-                    contents[:start]
-                    + (
-                        b"\n"
-                        if start > 0 and contents[start - 1 : start] != b"\n"
-                        else b""
+                before = contents[:start].rstrip() + b"\n"
+                if len(keywords) <= 1:
+                    before += b"\n"
+
+                after = contents[end:]
+                if not after or after[:1] != b"\n":
+                    after = b"\n" + after
+                if len(keywords) <= 1 and len(after) > 1 and after[:2] != b"\n\n":
+                    after = b"\n" + after
+
+                indentation = b"    " * (len(keywords) - 1)
+
+                if isinstance(data, Mapping):
+                    if isinstance(data, (FoamFile, FoamFile.SubDict)):
+                        data = data.as_dict()
+
+                    self._write(
+                        before
+                        + indentation
+                        + dumpb(keywords[-1])
+                        + b"\n"
+                        + indentation
+                        + b"{\n"
+                        + indentation
+                        + b"}"
+                        + after
                     )
-                    + (b"    " * (len(keywords) - 1) if keywords else b"")
-                    + dumpb({keywords[-1]: data}, kind=kind)
-                    + b"\n"
-                    + contents[end:]
-                )
+
+                    for k, v in data.items():
+                        self[(*keywords, k)] = v
+
+                elif keywords:
+                    self._write(
+                        before
+                        + indentation
+                        + dumpb(keywords[-1])
+                        + b" "
+                        + dumpb(data, kind=kind)
+                        + b";"
+                        + after
+                    )
+
+                else:
+                    self._write(before + dumpb(data, kind=kind) + after)
 
     def __delitem__(self, keywords: Optional[Union[str, Tuple[str, ...]]]) -> None:
         if not keywords:
