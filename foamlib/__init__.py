@@ -1,6 +1,6 @@
 """A Python interface for interacting with OpenFOAM."""
 
-__version__ = "0.3.21"
+__version__ = "0.4.0"
 
 from ._cases import (
     AsyncFoamCase,
