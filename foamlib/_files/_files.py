@@ -266,6 +266,8 @@ class FoamFile(
                     before += b"\n"
 
                 after = contents[end:]
+                if after.startswith(b"}"):
+                    after = b"    " * (len(keywords) - 2) + after
                 if not after or after[:1] != b"\n":
                     after = b"\n" + after
                 if len(keywords) <= 1 and len(after) > 1 and after[:2] != b"\n\n":
