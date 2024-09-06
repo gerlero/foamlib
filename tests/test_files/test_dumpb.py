@@ -63,3 +63,5 @@ def test_serialize_data() -> None:
     assert dumpb([{"a": "b"}, {"c": "d"}]) == b"(a b; c d;)"
     assert dumpb([{"a": {"b": "c"}}, {"d": {"e": "g"}}]) == b"(a {b c;} d {e g;})"
     assert dumpb([{"a": [0, 1, 2]}, {"b": {}}]) == b"(a (0 1 2); b {})"
+    assert dumpb(["water", "oil", "mercury", "air"]) == b"(water oil mercury air)"
+    assert dumpb("div(phi,U)") == b"div(phi,U)"

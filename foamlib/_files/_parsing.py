@@ -14,6 +14,7 @@ else:
 
 from pyparsing import (
     CharsNotIn,
+    Combine,
     Dict,
     Forward,
     Group,
@@ -134,7 +135,10 @@ _DIMENSIONS = (
     Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
 ).set_parse_action(lambda tks: FoamFileBase.DimensionSet(*tks))
 _TENSOR = _list_of(common.number) | common.number
-_IDENTIFIER = Word(identchars + "$", printables, exclude_chars="{;}")
+_IDENTIFIER = Combine(
+    Word(identchars + "$", printables, exclude_chars="{(;)}")
+    + Opt(Literal("(") + Word(printables, exclude_chars="{(;)}") + Literal(")"))
+)
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: FoamFileBase.Dimensioned(*reversed(tks.as_list()))
 )
