@@ -67,3 +67,6 @@ def test_parse_value() -> None:
     assert Parsed(b"(a (0 1 2); b {})")[()] == [{"a": [0, 1, 2]}, {"b": {}}]
     assert Parsed(b"(water oil mercury air)")[()] == ["water", "oil", "mercury", "air"]
     assert Parsed(b"div(phi,U)")[()] == "div(phi,U)"
+    assert Parsed(b"((air and water) { type constant; sigma 0.07; })")[()] == [
+        {"(air and water)": {"type": "constant", "sigma": 0.07}}
+    ]
