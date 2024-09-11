@@ -1,6 +1,6 @@
 import array
 import sys
-from typing import Tuple, Union
+from typing import Tuple, Union, cast
 
 if sys.version_info >= (3, 9):
     from collections.abc import Iterator, Mapping, MutableMapping, Sequence
@@ -266,17 +266,20 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
 
         return start, end
 
-    def as_dict(self) -> FoamFileBase._Dict:
-        ret: FoamFileBase._Dict = {}
+    def as_dict(self) -> FoamFileBase._File:
+        ret: FoamFileBase._File = {}
         for keywords, (_, data, _) in self._parsed.items():
             r = ret
             for k in keywords[:-1]:
-                assert isinstance(r, dict)
                 v = r[k]
                 assert isinstance(v, dict)
-                r = v
+                r = cast(FoamFileBase._File, v)
 
             assert isinstance(r, dict)
-            r[keywords[-1]] = {} if data is ... else data
+            if keywords:
+                r[keywords[-1]] = {} if data is ... else data
+            else:
+                assert data is not ...
+                r[None] = data
 
         return ret

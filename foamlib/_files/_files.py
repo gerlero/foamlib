@@ -97,9 +97,9 @@ class FoamFile(
                 assert isinstance(ret, dict)
                 v = ret[k]
                 assert isinstance(v, dict)
-                ret = v
+                ret = cast(FoamFileBase._File, v)
 
-            return ret
+            return cast(FoamFileBase._Dict, ret)
 
     def create(self, *, exist_ok: bool = False, parents: bool = False) -> Self:
         """
@@ -356,7 +356,7 @@ class FoamFile(
     def __fspath__(self) -> str:
         return str(self.path)
 
-    def as_dict(self) -> FoamFileBase._Dict:
+    def as_dict(self) -> FoamFileBase._File:
         """Return a nested dict representation of the file."""
         _, parsed = self._read()
         d = parsed.as_dict()

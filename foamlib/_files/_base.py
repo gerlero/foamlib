@@ -51,6 +51,7 @@ class FoamFileBase:
     """
 
     _Dict = Dict[str, Union["Data", "_Dict"]]
+    _File = Dict[Optional[str], Union["Data", "_Dict"]]
 
     _SetData = Union[
         str,
