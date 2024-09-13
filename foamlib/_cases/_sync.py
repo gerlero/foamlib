@@ -55,9 +55,18 @@ class FoamCase(FoamCaseBase):
         self,
         cmd: Union[Sequence[Union[str, Path]], str, Path],
         *,
+        parallel: bool = False,
+        cpus: int = 1,
         check: bool = True,
     ) -> None:
         shell = not is_sequence(cmd)
+
+        if parallel:
+            if shell:
+                cmd = f"mpiexec -np {cpus} {cmd} -parallel"
+            else:
+                assert is_sequence(cmd)
+                cmd = ["mpiexec", "-np", str(cpus), *cmd, "-parallel"]
 
         if sys.version_info < (3, 8):
             if shell:

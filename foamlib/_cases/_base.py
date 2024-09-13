@@ -33,7 +33,6 @@ else:
 
 
 from .._files import FoamFieldFile, FoamFile
-from .._util import is_sequence
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
@@ -260,18 +259,41 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         *,
         script: bool = True,
         parallel: Optional[bool] = None,
+        cpus: Optional[int] = None,
         check: bool = True,
     ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
         if cmd is not None:
             if parallel:
-                cmd = self._parallel_cmd(cmd)
+                if cpus is None:
+                    cpus = max(self._nprocessors, 1)
+            else:
+                parallel = False
+                if cpus is None:
+                    cpus = 1
 
-            yield ("_run", (cmd,), {"check": check})
+            yield ("_run", (cmd,), {"parallel": parallel, "cpus": cpus, "check": check})
+
         else:
             script_path = self._run_script(parallel=parallel) if script else None
 
             if script_path is not None:
-                yield ("_run", ([script_path],), {"check": check})
+                if parallel or parallel is None:
+                    if cpus is None:
+                        if self._nprocessors > 0:
+                            cpus = self._nprocessors
+                        elif (self.path / "system" / "decomposeParDict").is_file():
+                            cpus = self._nsubdomains
+                        else:
+                            cpus = 1
+                else:
+                    if cpus is None:
+                        cpus = 1
+
+                yield (
+                    "_run",
+                    ([script_path],),
+                    {"parallel": False, "cpus": cpus, "check": check},
+                )
 
             else:
                 if not self and (self.path / "0.orig").is_dir():
@@ -282,7 +304,8 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
                 if parallel is None:
                     parallel = (
-                        self._nprocessors > 0
+                        (cpus is not None and cpus > 1)
+                        or self._nprocessors > 0
                         or (self.path / "system" / "decomposeParDict").is_file()
                     )
 
@@ -293,26 +316,17 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
                     ):
                         yield ("decompose_par", (), {"check": check})
 
-                yield (
-                    "run",
-                    ([self.application],),
-                    {"parallel": parallel, "check": check},
-                )
+                    if cpus is None:
+                        cpus = max(self._nprocessors, 1)
+                else:
+                    if cpus is None:
+                        cpus = 1
 
-    def _parallel_cmd(
-        self, cmd: Union[Sequence[Union[str, Path]], str, Path]
-    ) -> Union[Sequence[Union[str, Path]], str]:
-        if not is_sequence(cmd):
-            return f"mpiexec -np {self._nprocessors} {cmd} -parallel"
-        else:
-            return [
-                "mpiexec",
-                "-np",
-                str(self._nprocessors),
-                cmd[0],
-                "-parallel",
-                *cmd[1:],
-            ]
+                yield (
+                    "_run",
+                    ([self.application],),
+                    {"parallel": parallel, "cpus": cpus, "check": check},
+                )
 
     @property
     def name(self) -> str:
