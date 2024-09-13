@@ -37,7 +37,7 @@ from .._util import is_sequence
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
-    def __init__(self, path: Union[Path, str] = Path()):
+    def __init__(self, path: Union[Path, str, "FoamCaseBase"] = Path()):
         self.path = Path(path).absolute()
 
     class TimeDirectory(Set[FoamFieldFile]):
