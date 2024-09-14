@@ -88,35 +88,48 @@ class AsyncFoamCase(FoamCaseBase):
         self,
         cmd: Union[Sequence[Union[str, Path]], str, Path],
         *,
+        parallel: bool = False,
+        cpus: int = 1,
         check: bool = True,
     ) -> None:
-        if not is_sequence(cmd):
-            proc = await asyncio.create_subprocess_shell(
-                str(cmd),
-                cwd=self.path,
-                env=self._env(shell=True),
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.PIPE if check else asyncio.subprocess.DEVNULL,
-            )
+        async with self._cpus(cpus):
+            if not is_sequence(cmd):
+                if parallel:
+                    cmd = f"mpiexec -np {self._nprocessors} {cmd} -parallel"
 
-        else:
-            if sys.version_info < (3, 8):
-                cmd = (str(arg) for arg in cmd)
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                cwd=self.path,
-                env=self._env(shell=False),
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.PIPE if check else asyncio.subprocess.DEVNULL,
-            )
+                proc = await asyncio.create_subprocess_shell(
+                    str(cmd),
+                    cwd=self.path,
+                    env=self._env(shell=True),
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.PIPE
+                    if check
+                    else asyncio.subprocess.DEVNULL,
+                )
 
-        stdout, stderr = await proc.communicate()
+            else:
+                if parallel:
+                    cmd = ["mpiexec", "-np", str(cpus), *cmd, "-parallel"]
 
-        assert stdout is None
-        assert proc.returncode is not None
+                if sys.version_info < (3, 8):
+                    cmd = (str(arg) for arg in cmd)
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    cwd=self.path,
+                    env=self._env(shell=False),
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.PIPE
+                    if check
+                    else asyncio.subprocess.DEVNULL,
+                )
 
-        if check:
-            check_returncode(proc.returncode, cmd, stderr.decode())
+            stdout, stderr = await proc.communicate()
+
+            assert stdout is None
+            assert proc.returncode is not None
+
+            if check:
+                check_returncode(proc.returncode, cmd, stderr.decode())
 
     async def run(
         self,
@@ -128,19 +141,9 @@ class AsyncFoamCase(FoamCaseBase):
         check: bool = True,
     ) -> None:
         for name, args, kwargs in self._run_cmds(
-            cmd=cmd, script=script, parallel=parallel, check=check
+            cmd=cmd, script=script, parallel=parallel, cpus=cpus, check=check
         ):
-            if cpus is None:
-                if name == "run":
-                    if kwargs.get("parallel", False):
-                        cpus = max(self._nprocessors, 1)
-                    else:
-                        cpus = 1
-                else:
-                    cpus = 0
-
-            async with self._cpus(cpus):
-                await getattr(self, name)(*args, **kwargs)
+            await getattr(self, name)(*args, **kwargs)
 
     async def block_mesh(self, *, check: bool = True) -> None:
         """Run blockMesh on this case."""
