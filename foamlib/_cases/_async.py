@@ -95,7 +95,7 @@ class AsyncFoamCase(FoamCaseBase):
         async with self._cpus(cpus):
             if not is_sequence(cmd):
                 if parallel:
-                    cmd = f"mpiexec -np {self._nprocessors} {cmd} -parallel"
+                    cmd = f"mpiexec -np {cpus} {cmd} -parallel"
 
                 proc = await asyncio.create_subprocess_shell(
                     str(cmd),
