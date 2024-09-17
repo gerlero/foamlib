@@ -78,54 +78,59 @@ def _keyword_entry_of(
     return keyword_entry
 
 
-_binary_contents = Forward()
+def _unpack_binary_field(
+    tks: ParseResults,
+) -> Sequence[Union[Sequence[float], Sequence[Sequence[float]]]]:
+    elsize = len(tks[0]) // 8
 
+    arr = array.array("d", "".join(tks).encode("latin-1"))
 
-def _binary_field_parse_action(tks: ParseResults) -> None:
-    global _binary_contents
+    all: Union[Sequence[float], Sequence[Sequence[float]]]
 
-    kind, count = tks
-    if kind == "scalar":
-        elsize = 1
-    elif kind == "vector":
-        elsize = 3
-    elif kind == "symmTensor":
-        elsize = 6
-    elif kind == "tensor":
-        elsize = 9
+    if elsize != 1:
+        all = [arr[i : i + elsize].tolist() for i in range(0, len(arr), elsize)]
+    else:
+        all = arr.tolist()
 
-    def unpack(
-        tks: ParseResults,
-    ) -> Sequence[Union[Sequence[float], Sequence[Sequence[float]]]]:
-        bytes_ = tks[0].encode("latin-1")
-
-        arr = array.array("d", bytes_)
-
-        if elsize != 1:
-            all = [arr[i : i + elsize].tolist() for i in range(0, len(arr), elsize)]
-        else:
-            all = arr.tolist()
-
-        return [all]
-
-    _binary_contents <<= CharsNotIn(exact=count * elsize * 8).set_parse_action(unpack)
-
-    tks.clear()  # type: ignore [no-untyped-call]
+    return [all]
 
 
 _BINARY_FIELD = (
-    (
-        Keyword("nonuniform").suppress()
-        + Literal("List").suppress()
-        + Literal("<").suppress()
-        + common.identifier
-        + Literal(">").suppress()
-        + common.integer
-        + Literal("(").suppress()
-    ).set_parse_action(_binary_field_parse_action, call_during_try=True)
-    + _binary_contents
+    Keyword("nonuniform").suppress()
+    + Literal("List").suppress()
+    + Literal("<").suppress()
+    + (
+        counted_array(
+            CharsNotIn(exact=8),
+            Literal("scalar").suppress()
+            + Literal(">").suppress()
+            + common.integer
+            + Literal("(").suppress(),
+        )
+        | counted_array(
+            CharsNotIn(exact=8 * 3),
+            Literal("vector").suppress()
+            + Literal(">").suppress()
+            + common.integer
+            + Literal("(").suppress(),
+        )
+        | counted_array(
+            CharsNotIn(exact=8 * 6),
+            Literal("symmTensor").suppress()
+            + Literal(">").suppress()
+            + common.integer
+            + Literal("(").suppress(),
+        )
+        | counted_array(
+            CharsNotIn(exact=8 * 9),
+            Literal("tensor").suppress()
+            + Literal(">").suppress()
+            + common.integer
+            + Literal("(").suppress(),
+        )
+    )
     + Literal(")").suppress()
-)
+).set_parse_action(_unpack_binary_field)
 
 
 _SWITCH = (
