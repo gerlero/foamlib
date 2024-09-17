@@ -29,6 +29,7 @@ from pyparsing import (
     Word,
     c_style_comment,
     common,
+    counted_array,
     cpp_style_comment,
     identchars,
     printables,
@@ -42,12 +43,13 @@ def _list_of(entry: ParserElement) -> ParserElement:
         Literal("List") + Literal("<") + common.identifier + Literal(">")
     ).suppress() + (
         (
-            Opt(common.integer).suppress()
-            + (
-                Literal("(").suppress()
-                + Group((entry)[...], aslist=True)
-                + Literal(")").suppress()
-            )
+            counted_array(entry, common.integer + Literal("(").suppress())
+            + Literal(")").suppress()
+        ).set_parse_action(lambda tks: [tks.as_list()])
+        | (
+            Literal("(").suppress()
+            + Group((entry)[...], aslist=True)
+            + Literal(")").suppress()
         )
         | (
             common.integer + Literal("{").suppress() + entry + Literal("}").suppress()
