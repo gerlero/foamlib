@@ -102,10 +102,20 @@ class AsyncFoamCase(FoamCaseBase):
         check: bool = True,
     ) -> None:
         async with self._cpus(cpus):
-            if not is_sequence(cmd):
-                if parallel:
-                    cmd = f"mpiexec -np {cpus} {cmd} -parallel"
+            if parallel:
+                if is_sequence(cmd):
+                    cmd = ["mpiexec", "-np", str(cpus), *cmd, "-parallel"]
+                else:
+                    cmd = [
+                        "mpiexec",
+                        "-np",
+                        str(cpus),
+                        "/bin/sh",
+                        "-c",
+                        f"{cmd} -parallel",
+                    ]
 
+            if not is_sequence(cmd):
                 proc = await asyncio.create_subprocess_shell(
                     str(cmd),
                     cwd=self.path,
@@ -117,11 +127,8 @@ class AsyncFoamCase(FoamCaseBase):
                 )
 
             else:
-                if parallel:
-                    cmd = ["mpiexec", "-np", str(cpus), *cmd, "-parallel"]
-
                 if sys.version_info < (3, 8):
-                    cmd = (str(arg) for arg in cmd)
+                    cmd = [str(arg) for arg in cmd]
                 proc = await asyncio.create_subprocess_exec(
                     *cmd,
                     cwd=self.path,
