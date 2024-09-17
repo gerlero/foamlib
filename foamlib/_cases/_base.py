@@ -253,6 +253,61 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         else:
             return None
 
+    def _copy_cmds(
+        self, dest: Union[Path, str]
+    ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
+        yield (
+            "_copytree",
+            (
+                self.path,
+                dest,
+            ),
+            {"symlinks": True},
+        )
+
+    def _clean_cmds(
+        self, *, script: bool = True, check: bool = False
+    ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
+        script_path = self._clean_script() if script else None
+
+        if script_path is not None:
+            yield ("_run", ([script_path],), {"cpus": 0, "check": check})
+        else:
+            for p in self._clean_paths():
+                if p.is_dir():
+                    yield ("_rmtree", (p,), {})
+                else:
+                    p.unlink()
+
+    def _clone_cmds(
+        self, dest: Union[Path, str]
+    ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
+        if self._clean_script() is not None:
+            yield ("copy", (dest,), {})
+            yield ("clean", (), {})
+        else:
+            yield (
+                "_copytree",
+                (
+                    self.path,
+                    dest,
+                ),
+                {"symlinks": True, "ignore": self._clone_ignore()},
+            )
+
+    def _restore_0_dir_cmds(
+        self,
+    ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
+        yield ("_rmtree", (self.path / "0",), {"ignore_errors": True})
+        yield (
+            "_copytree",
+            (
+                self.path / "0.orig",
+                self.path / "0",
+            ),
+            {"symlinks": True},
+        )
+
     def _run_cmds(
         self,
         cmd: Optional[Union[Sequence[Union[str, Path]], str, Path]] = None,

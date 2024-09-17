@@ -3,14 +3,15 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import (
+    Callable,
     Optional,
     Union,
 )
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Sequence
+    from collections.abc import Collection, Sequence
 else:
-    from typing import Sequence
+    from typing import Collection, Sequence
 
 from .._util import is_sequence
 from ._base import FoamCaseBase
@@ -28,6 +29,22 @@ class FoamCase(FoamCaseBase):
     :param path: The path to the case directory.
     """
 
+    @staticmethod
+    def _rmtree(path: Path, *, ignore_errors: bool = False) -> None:
+        shutil.rmtree(path, ignore_errors=ignore_errors)
+
+    @staticmethod
+    def _copytree(
+        src: Path,
+        dest: Path,
+        *,
+        symlinks: bool = False,
+        ignore: Optional[
+            Callable[[Union[Path, str], Collection[str]], Collection[str]]
+        ] = None,
+    ) -> None:
+        shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
+
     def clean(
         self,
         *,
@@ -40,16 +57,8 @@ class FoamCase(FoamCaseBase):
         :param script: If True, use an (All)clean script if it exists. If False, ignore any clean scripts.
         :param check: If True, raise a CalledProcessError if the clean script returns a non-zero exit code.
         """
-        script_path = self._clean_script() if script else None
-
-        if script_path is not None:
-            self.run([script_path], check=check)
-        else:
-            for p in self._clean_paths():
-                if p.is_dir():
-                    shutil.rmtree(p)
-                else:
-                    p.unlink()
+        for name, args, kwargs in self._clean_cmds(script=script, check=check):
+            getattr(self, name)(*args, **kwargs)
 
     def _run(
         self,
@@ -122,8 +131,8 @@ class FoamCase(FoamCaseBase):
 
     def restore_0_dir(self) -> None:
         """Restore the 0 directory from the 0.orig directory."""
-        shutil.rmtree(self.path / "0", ignore_errors=True)
-        shutil.copytree(self.path / "0.orig", self.path / "0")
+        for name, args, kwargs in self._restore_0_dir_cmds():
+            getattr(self, name)(*args, **kwargs)
 
     def copy(self, dest: Union[Path, str]) -> "FoamCase":
         """
@@ -131,7 +140,10 @@ class FoamCase(FoamCaseBase):
 
         :param dest: The destination path.
         """
-        return FoamCase(shutil.copytree(self.path, dest, symlinks=True))
+        for name, args, kwargs in self._copy_cmds(dest):
+            getattr(self, name)(*args, **kwargs)
+
+        return FoamCase(dest)
 
     def clone(self, dest: Union[Path, str]) -> "FoamCase":
         """
@@ -139,13 +151,7 @@ class FoamCase(FoamCaseBase):
 
         :param dest: The destination path.
         """
-        if self._clean_script() is not None:
-            copy = self.copy(dest)
-            copy.clean()
-            return copy
-
-        dest = Path(dest)
-
-        shutil.copytree(self.path, dest, symlinks=True, ignore=self._clone_ignore())
+        for name, args, kwargs in self._clone_cmds(dest):
+            getattr(self, name)(*args, **kwargs)
 
         return FoamCase(dest)

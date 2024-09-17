@@ -4,14 +4,15 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import (
+    Callable,
     Optional,
     Union,
 )
 
 if sys.version_info >= (3, 9):
-    from collections.abc import AsyncGenerator, Sequence
+    from collections.abc import AsyncGenerator, Collection, Sequence
 else:
-    from typing import AsyncGenerator, Sequence
+    from typing import AsyncGenerator, Collection, Sequence
 
 import aioshutil
 
@@ -61,6 +62,22 @@ class AsyncFoamCase(FoamCaseBase):
                     AsyncFoamCase._reserved_cpus -= cpus
                     AsyncFoamCase._cpus_cond.notify(cpus)
 
+    @staticmethod
+    async def _rmtree(path: Path, ignore_errors: bool = False) -> None:
+        await aioshutil.rmtree(path, ignore_errors=ignore_errors)  # type: ignore [call-arg]
+
+    @staticmethod
+    async def _copytree(
+        src: Path,
+        dest: Path,
+        *,
+        symlinks: bool = False,
+        ignore: Optional[
+            Callable[[Union[Path, str], Collection[str]], Collection[str]]
+        ] = None,
+    ) -> None:
+        await aioshutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
+
     async def clean(
         self,
         *,
@@ -73,16 +90,8 @@ class AsyncFoamCase(FoamCaseBase):
         :param script: If True, use an (All)clean script if it exists. If False, ignore any clean scripts.
         :param check: If True, raise a CalledProcessError if the clean script returns a non-zero exit code.
         """
-        script_path = self._clean_script() if script else None
-
-        if script_path is not None:
-            await self.run([script_path], check=check)
-        else:
-            for p in self._clean_paths():
-                if p.is_dir():
-                    await aioshutil.rmtree(p)  # type: ignore [call-arg]
-                else:
-                    p.unlink()
+        for name, args, kwargs in self._clean_cmds(script=script, check=check):
+            await getattr(self, name)(*args, **kwargs)
 
     async def _run(
         self,
@@ -159,8 +168,8 @@ class AsyncFoamCase(FoamCaseBase):
 
     async def restore_0_dir(self) -> None:
         """Restore the 0 directory from the 0.orig directory."""
-        await aioshutil.rmtree(self.path / "0", ignore_errors=True)  # type: ignore [call-arg]
-        await aioshutil.copytree(self.path / "0.orig", self.path / "0")
+        for name, args, kwargs in self._restore_0_dir_cmds():
+            await getattr(self, name)(*args, **kwargs)
 
     async def copy(self, dest: Union[Path, str]) -> "AsyncFoamCase":
         """
@@ -168,7 +177,10 @@ class AsyncFoamCase(FoamCaseBase):
 
         :param dest: The destination path.
         """
-        return AsyncFoamCase(await aioshutil.copytree(self.path, dest, symlinks=True))
+        for name, args, kwargs in self._copy_cmds(dest):
+            await getattr(self, name)(*args, **kwargs)
+
+        return AsyncFoamCase(dest)
 
     async def clone(self, dest: Union[Path, str]) -> "AsyncFoamCase":
         """
@@ -176,15 +188,7 @@ class AsyncFoamCase(FoamCaseBase):
 
         :param dest: The destination path.
         """
-        if self._clean_script() is not None:
-            copy = await self.copy(dest)
-            await copy.clean()
-            return copy
-
-        dest = Path(dest)
-
-        await aioshutil.copytree(
-            self.path, dest, symlinks=True, ignore=self._clone_ignore()
-        )
+        for name, args, kwargs in self._clone_cmds(dest):
+            await getattr(self, name)(*args, **kwargs)
 
         return AsyncFoamCase(dest)
