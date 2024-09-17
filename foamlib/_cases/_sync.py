@@ -68,29 +68,26 @@ class FoamCase(FoamCaseBase):
         cpus: int = 1,
         check: bool = True,
     ) -> None:
-        shell = not is_sequence(cmd)
-
         if parallel:
-            if shell:
-                cmd = f"mpiexec -np {cpus} {cmd} -parallel"
-            else:
-                assert is_sequence(cmd)
+            if is_sequence(cmd):
                 cmd = ["mpiexec", "-np", str(cpus), *cmd, "-parallel"]
+            else:
+                cmd = ["mpiexec", "-np", str(cpus), "/bin/sh", "-c", f"{cmd} -parallel"]
 
         if sys.version_info < (3, 8):
-            if shell:
-                cmd = str(cmd)
+            if is_sequence(cmd):
+                cmd = [str(arg) for arg in cmd]
             else:
-                cmd = (str(arg) for arg in cmd)
+                cmd = str(cmd)
 
         proc = subprocess.run(
             cmd,
             cwd=self.path,
-            env=self._env(shell=shell),
+            env=self._env(shell=not is_sequence(cmd)),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE if check else subprocess.DEVNULL,
             text=True,
-            shell=shell,
+            shell=not is_sequence(cmd),
         )
 
         if check:
