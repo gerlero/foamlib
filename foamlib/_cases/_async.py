@@ -156,6 +156,14 @@ class AsyncFoamCase(FoamCaseBase):
         cpus: Optional[int] = None,
         check: bool = True,
     ) -> None:
+        """
+        Run this case, or a specified command in the context of this case.
+
+        :param cmd: The command to run. If None, run the case. If a sequence, the first element is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
+        :param script: If True and `cmd` is None, use an (All)run(-parallel) script if it exists for running the case. If False or no run script is found, autodetermine the command(s) needed to run the case.
+        :param parallel: If True, run in parallel using MPI. If None, autodetect whether to run in parallel.
+        :param check: If True, raise a CalledProcessError if any command returns a non-zero exit code.
+        """
         for name, args, kwargs in self._run_cmds(
             cmd=cmd, script=script, parallel=parallel, cpus=cpus, check=check
         ):
