@@ -16,10 +16,10 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-from .._util import is_sequence
 from ._base import FoamFileBase
 from ._io import _FoamFileIO
 from ._serialization import Kind, dumpb
+from ._util import is_sequence
 
 try:
     import numpy as np

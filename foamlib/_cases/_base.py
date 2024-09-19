@@ -1,3 +1,4 @@
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -24,7 +25,7 @@ from .._files import FoamFieldFile, FoamFile
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
-    def __init__(self, path: Union[Path, str, "FoamCaseBase"] = Path()):
+    def __init__(self, path: Union["os.PathLike[str]", str] = Path()):
         self.path = Path(path).absolute()
 
     class TimeDirectory(Set[FoamFieldFile]):
@@ -36,7 +37,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         :param path: The path to the time directory.
         """
 
-        def __init__(self, path: Union[Path, str]):
+        def __init__(self, path: Union["os.PathLike[str]", str]):
             self.path = Path(path).absolute()
 
         @property
@@ -137,7 +138,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         """The name of the case."""
         return self.path.name
 
-    def file(self, path: Union[Path, str]) -> FoamFile:
+    def file(self, path: Union["os.PathLike[str]", str]) -> FoamFile:
         """Return a FoamFile object for the given path in the case."""
         return FoamFile(self.path / path)
 
