@@ -153,21 +153,21 @@ class _FoamCaseRecipes(FoamCaseBase):
     def _output(
         self, cmd: Union[Sequence[Union[str, Path]], str, Path], *, log: bool
     ) -> Generator[Tuple[Union[int, IO[bytes]], Union[int, IO[bytes]]], None, None]:
-        if is_sequence(cmd):
-            cmd = cmd[0]
-            assert isinstance(cmd, (str, Path))
-            if isinstance(cmd, Path):
-                name = cmd.name
-            else:
-                name = cmd
-        else:
-            if isinstance(cmd, Path):
-                name = cmd.name
-            else:
-                assert isinstance(cmd, str)
-                name = shlex.split(cmd)[0]
-
         if log:
+            if is_sequence(cmd):
+                cmd = cmd[0]
+                assert isinstance(cmd, (str, Path))
+                if isinstance(cmd, Path):
+                    name = cmd.name
+                else:
+                    name = cmd
+            else:
+                if isinstance(cmd, Path):
+                    name = cmd.name
+                else:
+                    assert isinstance(cmd, str)
+                    name = shlex.split(cmd)[0]
+
             with (self.path / f"log.{name}").open("ab") as stdout:
                 yield stdout, STDOUT
         else:

@@ -18,7 +18,7 @@ import aioshutil
 
 from .._util import is_sequence
 from ._recipes import _FoamCaseRecipes
-from ._subprocess import STDOUT, run_async
+from ._subprocess import run_async
 
 
 class AsyncFoamCase(_FoamCaseRecipes):
@@ -102,28 +102,28 @@ class AsyncFoamCase(_FoamCaseRecipes):
         check: bool = True,
         log: bool = True,
     ) -> None:
-        if parallel:
-            if is_sequence(cmd):
-                cmd = ["mpiexec", "-np", str(cpus), *cmd, "-parallel"]
-            else:
-                cmd = [
-                    "mpiexec",
-                    "-np",
-                    str(cpus),
-                    "/bin/sh",
-                    "-c",
-                    f"{cmd} -parallel",
-                ]
+        with self._output(cmd, log=log) as (stdout, stderr):
+            if parallel:
+                if is_sequence(cmd):
+                    cmd = ["mpiexec", "-n", str(cpus), *cmd, "-parallel"]
+                else:
+                    cmd = [
+                        "mpiexec",
+                        "-n",
+                        str(cpus),
+                        "/bin/sh",
+                        "-c",
+                        f"{cmd} -parallel",
+                    ]
 
-        async with self._cpus(cpus):
-            with self._output(cmd, log=log) as (stdout, stderr):
+            async with self._cpus(cpus):
                 await run_async(
                     cmd,
                     check=check,
                     cwd=self.path,
                     env=self._env(shell=not is_sequence(cmd)),
                     stdout=stdout,
-                    stderr=STDOUT,
+                    stderr=stderr,
                 )
 
     async def run(
