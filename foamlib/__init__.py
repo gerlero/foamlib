@@ -5,7 +5,6 @@ __version__ = "0.4.4"
 from ._cases import (
     AsyncFoamCase,
     CalledProcessError,
-    CalledProcessWarning,
     FoamCase,
     FoamCaseBase,
 )
@@ -19,5 +18,4 @@ __all__ = [
     "FoamFieldFile",
     "FoamFileBase",
     "CalledProcessError",
-    "CalledProcessWarning",
 ]
