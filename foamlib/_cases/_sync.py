@@ -1,5 +1,4 @@
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 from typing import (
@@ -15,7 +14,7 @@ else:
 
 from .._util import is_sequence
 from ._base import FoamCaseBase
-from ._util import check_returncode
+from ._subprocess import run_sync
 
 
 class FoamCase(FoamCaseBase):
@@ -67,6 +66,7 @@ class FoamCase(FoamCaseBase):
         parallel: bool = False,
         cpus: int = 1,
         check: bool = True,
+        log: bool = True,
     ) -> None:
         if parallel:
             if is_sequence(cmd):
@@ -74,24 +74,15 @@ class FoamCase(FoamCaseBase):
             else:
                 cmd = ["mpiexec", "-np", str(cpus), "/bin/sh", "-c", f"{cmd} -parallel"]
 
-        if sys.version_info < (3, 8):
-            if is_sequence(cmd):
-                cmd = [str(arg) for arg in cmd]
-            else:
-                cmd = str(cmd)
-
-        proc = subprocess.run(
-            cmd,
-            cwd=self.path,
-            env=self._env(shell=not is_sequence(cmd)),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE if check else subprocess.DEVNULL,
-            text=True,
-            shell=not is_sequence(cmd),
-        )
-
-        if check:
-            check_returncode(proc.returncode, cmd, proc.stderr)
+        with self._output(cmd, log=log) as (stdout, stderr):
+            run_sync(
+                cmd,
+                check=check,
+                cwd=self.path,
+                env=self._env(shell=not is_sequence(cmd)),
+                stdout=stdout,
+                stderr=stderr,
+            )
 
     def run(
         self,

@@ -1,8 +1,11 @@
 import os
+import shlex
 import shutil
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 from typing import (
+    IO,
     Any,
     Optional,
     Tuple,
@@ -31,8 +34,9 @@ else:
         Sequence,
     )
 
-
 from .._files import FoamFieldFile, FoamFile
+from .._util import is_sequence
+from ._subprocess import DEVNULL, STDOUT
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
@@ -253,6 +257,30 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         else:
             return None
 
+    @contextmanager
+    def _output(
+        self, cmd: Union[Sequence[Union[str, Path]], str, Path], *, log: bool
+    ) -> Generator[Tuple[Union[int, IO[Any]], Union[int, IO[Any]]], None, None]:
+        if is_sequence(cmd):
+            cmd = cmd[0]
+            assert isinstance(cmd, (str, Path))
+            if isinstance(cmd, Path):
+                name = cmd.name
+            else:
+                name = cmd
+        else:
+            if isinstance(cmd, Path):
+                name = cmd.name
+            else:
+                assert isinstance(cmd, str)
+                name = shlex.split(cmd)[0]
+
+        if log:
+            with (self.path / f"log.{name}").open("a") as stdout:
+                yield stdout, STDOUT
+        else:
+            yield DEVNULL, DEVNULL
+
     def _copy_cmds(
         self, dest: Union[Path, str]
     ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
@@ -271,7 +299,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         script_path = self._clean_script() if script else None
 
         if script_path is not None:
-            yield ("_run", ([script_path],), {"cpus": 0, "check": check})
+            yield ("_run", ([script_path],), {"cpus": 0, "check": check, "log": False})
         else:
             for p in self._clean_paths():
                 if p.is_dir():

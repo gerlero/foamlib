@@ -18,7 +18,7 @@ import aioshutil
 
 from .._util import is_sequence
 from ._base import FoamCaseBase
-from ._util import check_returncode
+from ._subprocess import STDOUT, run_async
 
 
 class AsyncFoamCase(FoamCaseBase):
@@ -100,52 +100,31 @@ class AsyncFoamCase(FoamCaseBase):
         parallel: bool = False,
         cpus: int = 1,
         check: bool = True,
+        log: bool = True,
     ) -> None:
-        async with self._cpus(cpus):
-            if parallel:
-                if is_sequence(cmd):
-                    cmd = ["mpiexec", "-np", str(cpus), *cmd, "-parallel"]
-                else:
-                    cmd = [
-                        "mpiexec",
-                        "-np",
-                        str(cpus),
-                        "/bin/sh",
-                        "-c",
-                        f"{cmd} -parallel",
-                    ]
-
-            if not is_sequence(cmd):
-                proc = await asyncio.create_subprocess_shell(
-                    str(cmd),
-                    cwd=self.path,
-                    env=self._env(shell=True),
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.PIPE
-                    if check
-                    else asyncio.subprocess.DEVNULL,
-                )
-
+        if parallel:
+            if is_sequence(cmd):
+                cmd = ["mpiexec", "-np", str(cpus), *cmd, "-parallel"]
             else:
-                if sys.version_info < (3, 8):
-                    cmd = [str(arg) for arg in cmd]
-                proc = await asyncio.create_subprocess_exec(
-                    *cmd,
+                cmd = [
+                    "mpiexec",
+                    "-np",
+                    str(cpus),
+                    "/bin/sh",
+                    "-c",
+                    f"{cmd} -parallel",
+                ]
+
+        async with self._cpus(cpus):
+            with self._output(cmd, log=log) as (stdout, stderr):
+                await run_async(
+                    cmd,
+                    check=check,
                     cwd=self.path,
-                    env=self._env(shell=False),
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.PIPE
-                    if check
-                    else asyncio.subprocess.DEVNULL,
+                    env=self._env(shell=not is_sequence(cmd)),
+                    stdout=stdout,
+                    stderr=STDOUT,
                 )
-
-            stdout, stderr = await proc.communicate()
-
-            assert stdout is None
-            assert proc.returncode is not None
-
-            if check:
-                check_returncode(proc.returncode, cmd, stderr.decode())
 
     async def run(
         self,
