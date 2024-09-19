@@ -68,13 +68,20 @@ class FoamCase(_FoamCaseRecipes):
         check: bool = True,
         log: bool = True,
     ) -> None:
-        if parallel:
-            if is_sequence(cmd):
-                cmd = ["mpiexec", "-np", str(cpus), *cmd, "-parallel"]
-            else:
-                cmd = ["mpiexec", "-np", str(cpus), "/bin/sh", "-c", f"{cmd} -parallel"]
-
         with self._output(cmd, log=log) as (stdout, stderr):
+            if parallel:
+                if is_sequence(cmd):
+                    cmd = ["mpiexec", "-n", str(cpus), *cmd, "-parallel"]
+                else:
+                    cmd = [
+                        "mpiexec",
+                        "-n",
+                        str(cpus),
+                        "/bin/sh",
+                        "-c",
+                        f"{cmd} -parallel",
+                    ]
+
             run_sync(
                 cmd,
                 check=check,
