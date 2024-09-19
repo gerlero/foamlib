@@ -2,7 +2,7 @@ import asyncio
 import subprocess
 import sys
 from pathlib import Path
-from typing import IO, Any, Optional, Union
+from typing import IO, Optional, Union
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
@@ -12,8 +12,10 @@ else:
 from .._util import is_sequence
 
 CalledProcessError = subprocess.CalledProcessError
+CompletedProcess = subprocess.CompletedProcess
 
 DEVNULL = subprocess.DEVNULL
+PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
 
 
@@ -23,16 +25,16 @@ def run_sync(
     check: bool = True,
     cwd: Optional[Path] = None,
     env: Optional[Mapping[str, str]] = None,
-    stdout: Optional[Union[int, IO[Any]]] = None,
-    stderr: Optional[Union[int, IO[Any]]] = None,
-) -> None:
+    stdout: Optional[Union[int, IO[bytes]]] = None,
+    stderr: Optional[Union[int, IO[bytes]]] = None,
+) -> "CompletedProcess[bytes]":
     if sys.version_info < (3, 8):
         if is_sequence(cmd):
             cmd = [str(arg) for arg in cmd]
         else:
             cmd = str(cmd)
 
-    subprocess.run(
+    return subprocess.run(
         cmd,
         cwd=cwd,
         env=env,
@@ -49,9 +51,9 @@ async def run_async(
     check: bool = True,
     cwd: Optional[Path] = None,
     env: Optional[Mapping[str, str]] = None,
-    stdout: Optional[Union[int, IO[Any]]] = None,
-    stderr: Optional[Union[int, IO[Any]]] = None,
-) -> None:
+    stdout: Optional[Union[int, IO[bytes]]] = None,
+    stderr: Optional[Union[int, IO[bytes]]] = None,
+) -> "CompletedProcess[bytes]":
     if not is_sequence(cmd):
         proc = await asyncio.create_subprocess_shell(
             str(cmd),
@@ -83,3 +85,7 @@ async def run_async(
             output=output,
             stderr=error,
         )
+
+    return CompletedProcess(
+        cmd, returncode=proc.returncode, stdout=output, stderr=error
+    )

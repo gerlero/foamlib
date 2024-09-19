@@ -152,7 +152,7 @@ class _FoamCaseRecipes(FoamCaseBase):
     @contextmanager
     def _output(
         self, cmd: Union[Sequence[Union[str, Path]], str, Path], *, log: bool
-    ) -> Generator[Tuple[Union[int, IO[Any]], Union[int, IO[Any]]], None, None]:
+    ) -> Generator[Tuple[Union[int, IO[bytes]], Union[int, IO[bytes]]], None, None]:
         if is_sequence(cmd):
             cmd = cmd[0]
             assert isinstance(cmd, (str, Path))
@@ -168,7 +168,7 @@ class _FoamCaseRecipes(FoamCaseBase):
                 name = shlex.split(cmd)[0]
 
         if log:
-            with (self.path / f"log.{name}").open("a") as stdout:
+            with (self.path / f"log.{name}").open("ab") as stdout:
                 yield stdout, STDOUT
         else:
             yield DEVNULL, DEVNULL
