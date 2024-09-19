@@ -17,11 +17,11 @@ else:
 import aioshutil
 
 from .._util import is_sequence
-from ._base import FoamCaseBase
+from ._recipes import _FoamCaseRecipes
 from ._subprocess import STDOUT, run_async
 
 
-class AsyncFoamCase(FoamCaseBase):
+class AsyncFoamCase(_FoamCaseRecipes):
     """
     An OpenFOAM case with asynchronous support.
 

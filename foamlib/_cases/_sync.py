@@ -13,11 +13,11 @@ else:
     from typing import Collection, Sequence
 
 from .._util import is_sequence
-from ._base import FoamCaseBase
+from ._recipes import _FoamCaseRecipes
 from ._subprocess import run_sync
 
 
-class FoamCase(FoamCaseBase):
+class FoamCase(_FoamCaseRecipes):
     """
     An OpenFOAM case.
 
