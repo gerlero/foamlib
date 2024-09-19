@@ -1,8 +1,8 @@
 import asyncio
 import multiprocessing
+import os
 import sys
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import (
     Callable,
     Optional,
@@ -16,7 +16,6 @@ else:
 
 import aioshutil
 
-from .._util import is_sequence
 from ._recipes import _FoamCaseRecipes
 from ._subprocess import run_async
 
@@ -63,17 +62,19 @@ class AsyncFoamCase(_FoamCaseRecipes):
                     AsyncFoamCase._cpus_cond.notify(cpus)
 
     @staticmethod
-    async def _rmtree(path: Path, ignore_errors: bool = False) -> None:
+    async def _rmtree(
+        path: Union["os.PathLike[str]", str], ignore_errors: bool = False
+    ) -> None:
         await aioshutil.rmtree(path, ignore_errors=ignore_errors)  # type: ignore [call-arg]
 
     @staticmethod
     async def _copytree(
-        src: Path,
-        dest: Path,
+        src: Union["os.PathLike[str]", str],
+        dest: Union["os.PathLike[str]", str],
         *,
         symlinks: bool = False,
         ignore: Optional[
-            Callable[[Union[Path, str], Collection[str]], Collection[str]]
+            Callable[[Union["os.PathLike[str]", str], Collection[str]], Collection[str]]
         ] = None,
     ) -> None:
         await aioshutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
@@ -95,7 +96,7 @@ class AsyncFoamCase(_FoamCaseRecipes):
 
     async def _run(
         self,
-        cmd: Union[Sequence[Union[str, Path]], str, Path],
+        cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
         *,
         parallel: bool = False,
         cpus: int = 1,
@@ -104,9 +105,7 @@ class AsyncFoamCase(_FoamCaseRecipes):
     ) -> None:
         with self._output(cmd, log=log) as (stdout, stderr):
             if parallel:
-                if is_sequence(cmd):
-                    cmd = ["mpiexec", "-n", str(cpus), *cmd, "-parallel"]
-                else:
+                if isinstance(cmd, str):
                     cmd = [
                         "mpiexec",
                         "-n",
@@ -115,20 +114,22 @@ class AsyncFoamCase(_FoamCaseRecipes):
                         "-c",
                         f"{cmd} -parallel",
                     ]
+                else:
+                    cmd = ["mpiexec", "-n", str(cpus), *cmd, "-parallel"]
 
             async with self._cpus(cpus):
                 await run_async(
                     cmd,
                     check=check,
                     cwd=self.path,
-                    env=self._env(shell=not is_sequence(cmd)),
+                    env=self._env(shell=isinstance(cmd, str)),
                     stdout=stdout,
                     stderr=stderr,
                 )
 
     async def run(
         self,
-        cmd: Optional[Union[Sequence[Union[str, Path]], str, Path]] = None,
+        cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
         *,
         script: bool = True,
         parallel: Optional[bool] = None,
@@ -165,24 +166,24 @@ class AsyncFoamCase(_FoamCaseRecipes):
         for name, args, kwargs in self._restore_0_dir_cmds():
             await getattr(self, name)(*args, **kwargs)
 
-    async def copy(self, dest: Union[Path, str]) -> "AsyncFoamCase":
+    async def copy(self, dst: Union["os.PathLike[str]", str]) -> "AsyncFoamCase":
         """
         Make a copy of this case.
 
-        :param dest: The destination path.
+        :param dst: The destination path.
         """
-        for name, args, kwargs in self._copy_cmds(dest):
+        for name, args, kwargs in self._copy_cmds(dst):
             await getattr(self, name)(*args, **kwargs)
 
-        return AsyncFoamCase(dest)
+        return AsyncFoamCase(dst)
 
-    async def clone(self, dest: Union[Path, str]) -> "AsyncFoamCase":
+    async def clone(self, dst: Union["os.PathLike[str]", str]) -> "AsyncFoamCase":
         """
         Clone this case (make a clean copy).
 
-        :param dest: The destination path.
+        :param dst: The destination path.
         """
-        for name, args, kwargs in self._clone_cmds(dest):
+        for name, args, kwargs in self._clone_cmds(dst):
             await getattr(self, name)(*args, **kwargs)
 
-        return AsyncFoamCase(dest)
+        return AsyncFoamCase(dst)

@@ -8,8 +8,8 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Mapping
 
-from .._util import is_sequence
 from ._base import FoamFileBase
+from ._util import is_sequence
 
 try:
     import numpy as np

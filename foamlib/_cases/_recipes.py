@@ -31,7 +31,6 @@ else:
         Sequence,
     )
 
-from .._util import is_sequence
 from ._base import FoamCaseBase
 from ._subprocess import DEVNULL, STDOUT
 
@@ -72,10 +71,12 @@ class _FoamCaseRecipes(FoamCaseBase):
 
     def _clone_ignore(
         self,
-    ) -> Callable[[Union[Path, str], Collection[str]], Collection[str]]:
+    ) -> Callable[[Union["os.PathLike[str]", str], Collection[str]], Collection[str]]:
         clean_paths = self._clean_paths()
 
-        def ignore(path: Union[Path, str], names: Collection[str]) -> Collection[str]:
+        def ignore(
+            path: Union["os.PathLike[str]", str], names: Collection[str]
+        ) -> Collection[str]:
             paths = {Path(path) / name for name in names}
             return {p.name for p in paths.intersection(clean_paths)}
 
@@ -151,22 +152,16 @@ class _FoamCaseRecipes(FoamCaseBase):
 
     @contextmanager
     def _output(
-        self, cmd: Union[Sequence[Union[str, Path]], str, Path], *, log: bool
+        self, cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str], *, log: bool
     ) -> Generator[Tuple[Union[int, IO[bytes]], Union[int, IO[bytes]]], None, None]:
         if log:
-            if is_sequence(cmd):
-                cmd = cmd[0]
-                assert isinstance(cmd, (str, Path))
-                if isinstance(cmd, Path):
-                    name = cmd.name
-                else:
-                    name = cmd
+            if isinstance(cmd, str):
+                name = shlex.split(cmd)[0]
             else:
-                if isinstance(cmd, Path):
-                    name = cmd.name
+                if isinstance(cmd[0], os.PathLike):
+                    name = Path(cmd[0]).name
                 else:
-                    assert isinstance(cmd, str)
-                    name = shlex.split(cmd)[0]
+                    name = cmd[0]
 
             with (self.path / f"log.{name}").open("ab") as stdout:
                 yield stdout, STDOUT
@@ -174,7 +169,7 @@ class _FoamCaseRecipes(FoamCaseBase):
             yield DEVNULL, DEVNULL
 
     def _copy_cmds(
-        self, dest: Union[Path, str]
+        self, dest: Union["os.PathLike[str]", str]
     ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
         yield (
             "_copytree",
@@ -200,7 +195,7 @@ class _FoamCaseRecipes(FoamCaseBase):
                     p.unlink()
 
     def _clone_cmds(
-        self, dest: Union[Path, str]
+        self, dest: Union["os.PathLike[str]", str]
     ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
         if self._clean_script() is not None:
             yield ("copy", (dest,), {})
@@ -230,7 +225,7 @@ class _FoamCaseRecipes(FoamCaseBase):
 
     def _run_cmds(
         self,
-        cmd: Optional[Union[Sequence[Union[str, Path]], str, Path]] = None,
+        cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
         *,
         script: bool = True,
         parallel: Optional[bool] = None,

@@ -1,6 +1,6 @@
+import os
 import shutil
 import sys
-from pathlib import Path
 from typing import (
     Callable,
     Optional,
@@ -12,7 +12,6 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Collection, Sequence
 
-from .._util import is_sequence
 from ._recipes import _FoamCaseRecipes
 from ._subprocess import run_sync
 
@@ -29,17 +28,19 @@ class FoamCase(_FoamCaseRecipes):
     """
 
     @staticmethod
-    def _rmtree(path: Path, *, ignore_errors: bool = False) -> None:
+    def _rmtree(
+        path: Union["os.PathLike[str]", str], *, ignore_errors: bool = False
+    ) -> None:
         shutil.rmtree(path, ignore_errors=ignore_errors)
 
     @staticmethod
     def _copytree(
-        src: Path,
-        dest: Path,
+        src: Union["os.PathLike[str]", str],
+        dest: Union["os.PathLike[str]", str],
         *,
         symlinks: bool = False,
         ignore: Optional[
-            Callable[[Union[Path, str], Collection[str]], Collection[str]]
+            Callable[[Union["os.PathLike[str]", str], Collection[str]], Collection[str]]
         ] = None,
     ) -> None:
         shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
@@ -61,7 +62,7 @@ class FoamCase(_FoamCaseRecipes):
 
     def _run(
         self,
-        cmd: Union[Sequence[Union[str, Path]], str, Path],
+        cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
         *,
         parallel: bool = False,
         cpus: int = 1,
@@ -70,9 +71,7 @@ class FoamCase(_FoamCaseRecipes):
     ) -> None:
         with self._output(cmd, log=log) as (stdout, stderr):
             if parallel:
-                if is_sequence(cmd):
-                    cmd = ["mpiexec", "-n", str(cpus), *cmd, "-parallel"]
-                else:
+                if isinstance(cmd, str):
                     cmd = [
                         "mpiexec",
                         "-n",
@@ -81,19 +80,21 @@ class FoamCase(_FoamCaseRecipes):
                         "-c",
                         f"{cmd} -parallel",
                     ]
+                else:
+                    cmd = ["mpiexec", "-n", str(cpus), *cmd, "-parallel"]
 
             run_sync(
                 cmd,
                 check=check,
                 cwd=self.path,
-                env=self._env(shell=not is_sequence(cmd)),
+                env=self._env(shell=isinstance(cmd, str)),
                 stdout=stdout,
                 stderr=stderr,
             )
 
     def run(
         self,
-        cmd: Optional[Union[Sequence[Union[str, Path]], str, Path]] = None,
+        cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
         *,
         script: bool = True,
         parallel: Optional[bool] = None,
@@ -129,24 +130,24 @@ class FoamCase(_FoamCaseRecipes):
         for name, args, kwargs in self._restore_0_dir_cmds():
             getattr(self, name)(*args, **kwargs)
 
-    def copy(self, dest: Union[Path, str]) -> "FoamCase":
+    def copy(self, dst: Union["os.PathLike[str]", str]) -> "FoamCase":
         """
         Make a copy of this case.
 
-        :param dest: The destination path.
+        :param dst: The destination path.
         """
-        for name, args, kwargs in self._copy_cmds(dest):
+        for name, args, kwargs in self._copy_cmds(dst):
             getattr(self, name)(*args, **kwargs)
 
-        return FoamCase(dest)
+        return FoamCase(dst)
 
-    def clone(self, dest: Union[Path, str]) -> "FoamCase":
+    def clone(self, dst: Union["os.PathLike[str]", str]) -> "FoamCase":
         """
         Clone this case (make a clean copy).
 
-        :param dest: The destination path.
+        :param dst: The destination path.
         """
-        for name, args, kwargs in self._clone_cmds(dest):
+        for name, args, kwargs in self._clone_cmds(dst):
             getattr(self, name)(*args, **kwargs)
 
-        return FoamCase(dest)
+        return FoamCase(dst)

@@ -1,15 +1,13 @@
 import asyncio
+import os
 import subprocess
 import sys
-from pathlib import Path
 from typing import IO, Optional, Union
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
 else:
     from typing import Mapping, Sequence
-
-from .._util import is_sequence
 
 CalledProcessError = subprocess.CalledProcessError
 CompletedProcess = subprocess.CompletedProcess
@@ -20,19 +18,16 @@ STDOUT = subprocess.STDOUT
 
 
 def run_sync(
-    cmd: Union[Sequence[Union[str, Path]], str, Path],
+    cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
     *,
     check: bool = True,
-    cwd: Optional[Path] = None,
+    cwd: Optional["os.PathLike[str]"] = None,
     env: Optional[Mapping[str, str]] = None,
     stdout: Optional[Union[int, IO[bytes]]] = None,
     stderr: Optional[Union[int, IO[bytes]]] = None,
 ) -> "CompletedProcess[bytes]":
-    if sys.version_info < (3, 8):
-        if is_sequence(cmd):
-            cmd = [str(arg) for arg in cmd]
-        else:
-            cmd = str(cmd)
+    if not isinstance(cmd, str) and sys.version_info < (3, 8):
+        cmd = [str(arg) for arg in cmd]
 
     return subprocess.run(
         cmd,
@@ -40,23 +35,23 @@ def run_sync(
         env=env,
         stdout=stdout,
         stderr=stderr,
-        shell=not is_sequence(cmd),
+        shell=isinstance(cmd, str),
         check=check,
     )
 
 
 async def run_async(
-    cmd: Union[Sequence[Union[str, Path]], str, Path],
+    cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
     *,
     check: bool = True,
-    cwd: Optional[Path] = None,
+    cwd: Optional["os.PathLike[str]"] = None,
     env: Optional[Mapping[str, str]] = None,
     stdout: Optional[Union[int, IO[bytes]]] = None,
     stderr: Optional[Union[int, IO[bytes]]] = None,
 ) -> "CompletedProcess[bytes]":
-    if not is_sequence(cmd):
+    if isinstance(cmd, str):
         proc = await asyncio.create_subprocess_shell(
-            str(cmd),
+            cmd,
             cwd=cwd,
             env=env,
             stdout=stdout,
