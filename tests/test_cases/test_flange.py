@@ -1,19 +1,26 @@
 import os
+import sys
 from pathlib import Path
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Generator
+else:
+    from typing import Generator
 
 import pytest
 from foamlib import CalledProcessError, FoamCase
 
 
 @pytest.fixture
-def flange(tmp_path: Path) -> FoamCase:
+def flange() -> "Generator[FoamCase]":
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
     path = tutorials_path / "basic" / "laplacianFoam" / "flange"
     of11_path = tutorials_path / "legacy" / "basic" / "laplacianFoam" / "flange"
 
     case = FoamCase(path if path.exists() else of11_path)
 
-    return case.clone(tmp_path / case.name)
+    with case.clone() as clone:
+        yield clone
 
 
 @pytest.mark.parametrize("parallel", [True, False])
