@@ -1,9 +1,13 @@
 import os
 import shutil
 import sys
+import tempfile
+from pathlib import Path
+from types import TracebackType
 from typing import (
     Callable,
     Optional,
+    Type,
     Union,
 )
 
@@ -11,6 +15,11 @@ if sys.version_info >= (3, 9):
     from collections.abc import Collection, Sequence
 else:
     from typing import Collection, Sequence
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 from ._recipes import _FoamCaseRecipes
 from ._subprocess import run_sync
@@ -44,6 +53,17 @@ class FoamCase(_FoamCaseRecipes):
         ] = None,
     ) -> None:
         shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
+
+    def __enter__(self) -> "FoamCase":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        self._rmtree(self.path)
 
     def clean(
         self,
@@ -130,24 +150,34 @@ class FoamCase(_FoamCaseRecipes):
         for name, args, kwargs in self._restore_0_dir_cmds():
             getattr(self, name)(*args, **kwargs)
 
-    def copy(self, dst: Union["os.PathLike[str]", str]) -> "FoamCase":
+    def copy(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> "Self":
         """
         Make a copy of this case.
 
-        :param dst: The destination path.
+        Use as a context manager to automatically delete the copy when done.
+
+        :param dst: The destination path. If None, copy to a temporary directory.
         """
+        if dst is None:
+            dst = Path(tempfile.mkdtemp(), self.name)
+
         for name, args, kwargs in self._copy_cmds(dst):
             getattr(self, name)(*args, **kwargs)
 
-        return FoamCase(dst)
+        return type(self)(dst)
 
-    def clone(self, dst: Union["os.PathLike[str]", str]) -> "FoamCase":
+    def clone(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> "Self":
         """
         Clone this case (make a clean copy).
 
-        :param dst: The destination path.
+        Use as a context manager to automatically delete the clone when done.
+
+        :param dst: The destination path. If None, clone to a temporary directory.
         """
+        if dst is None:
+            dst = Path(tempfile.mkdtemp(), self.name)
+
         for name, args, kwargs in self._clone_cmds(dst):
             getattr(self, name)(*args, **kwargs)
 
-        return FoamCase(dst)
+        return type(self)(dst)

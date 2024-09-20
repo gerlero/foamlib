@@ -3,9 +3,9 @@ import sys
 from pathlib import Path
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Sequence
+    from collections.abc import Generator, Sequence
 else:
-    from typing import Sequence
+    from typing import Generator, Sequence
 
 import numpy as np
 import pytest
@@ -93,14 +93,15 @@ def test_new_field(tmp_path: Path) -> None:
 
 
 @pytest.fixture
-def pitz(tmp_path: Path) -> FoamCase:
+def pitz() -> "Generator[FoamCase]":
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
     path = tutorials_path / "incompressible" / "simpleFoam" / "pitzDaily"
     of11_path = tutorials_path / "incompressibleFluid" / "pitzDaily"
 
     case = FoamCase(path if path.exists() else of11_path)
 
-    return case.clone(tmp_path / case.name)
+    with case.clone() as clone:
+        yield clone
 
 
 def test_dimensions(pitz: FoamCase) -> None:

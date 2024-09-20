@@ -2,7 +2,9 @@ import asyncio
 import multiprocessing
 import os
 import sys
+import tempfile
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import (
     Callable,
     Optional,
@@ -14,10 +16,16 @@ if sys.version_info >= (3, 9):
 else:
     from typing import AsyncGenerator, Collection, Sequence
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 import aioshutil
 
 from ._recipes import _FoamCaseRecipes
 from ._subprocess import run_async
+from ._util import awaitableasynccontextmanager
 
 
 class AsyncFoamCase(_FoamCaseRecipes):
@@ -166,24 +174,60 @@ class AsyncFoamCase(_FoamCaseRecipes):
         for name, args, kwargs in self._restore_0_dir_cmds():
             await getattr(self, name)(*args, **kwargs)
 
-    async def copy(self, dst: Union["os.PathLike[str]", str]) -> "AsyncFoamCase":
+    @awaitableasynccontextmanager
+    @asynccontextmanager
+    async def copy(
+        self, dst: Optional[Union["os.PathLike[str]", str]] = None
+    ) -> "AsyncGenerator[Self]":
         """
         Make a copy of this case.
 
-        :param dst: The destination path.
+        Use as an async context manager to automatically delete the copy when done.
+
+        :param dst: The destination path. If None, copy to a temporary directory.
         """
+        if dst is None:
+            dst = Path(tempfile.mkdtemp(), self.name)
+            tmp = True
+        else:
+            tmp = False
+
         for name, args, kwargs in self._copy_cmds(dst):
             await getattr(self, name)(*args, **kwargs)
 
-        return AsyncFoamCase(dst)
+        yield type(self)(dst)
 
-    async def clone(self, dst: Union["os.PathLike[str]", str]) -> "AsyncFoamCase":
+        if tmp:
+            assert isinstance(dst, Path)
+            await self._rmtree(dst.parent)
+        else:
+            await self._rmtree(dst)
+
+    @awaitableasynccontextmanager
+    @asynccontextmanager
+    async def clone(
+        self, dst: Optional[Union["os.PathLike[str]", str]] = None
+    ) -> "AsyncGenerator[Self]":
         """
         Clone this case (make a clean copy).
 
-        :param dst: The destination path.
+        Use as an async context manager to automatically delete the clone when done.
+
+        :param dst: The destination path. If None, clone to a temporary directory.
         """
+        if dst is None:
+            dst = Path(tempfile.mkdtemp(), self.name)
+            tmp = True
+        else:
+            tmp = False
+
         for name, args, kwargs in self._clone_cmds(dst):
             await getattr(self, name)(*args, **kwargs)
 
-        return AsyncFoamCase(dst)
+        yield type(self)(dst)
+
+        if tmp:
+            assert isinstance(dst, Path)
+            await self._rmtree(dst.parent)
+        else:
+            await self._rmtree(dst)

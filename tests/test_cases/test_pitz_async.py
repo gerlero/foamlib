@@ -1,6 +1,12 @@
 import os
+import sys
 from pathlib import Path
 from typing import Sequence
+
+if sys.version_info >= (3, 9):
+    from collections.abc import AsyncGenerator
+else:
+    from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -8,14 +14,15 @@ from foamlib import AsyncFoamCase
 
 
 @pytest_asyncio.fixture
-async def pitz(tmp_path: Path) -> AsyncFoamCase:
+async def pitz() -> "AsyncGenerator[AsyncFoamCase]":
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
     path = tutorials_path / "incompressible" / "simpleFoam" / "pitzDaily"
     of11_path = tutorials_path / "incompressibleFluid" / "pitzDaily"
 
     case = AsyncFoamCase(path if path.exists() else of11_path)
 
-    return await case.clone(tmp_path / case.name)
+    async with case.clone() as clone:
+        yield clone
 
 
 @pytest.mark.asyncio
