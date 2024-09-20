@@ -70,6 +70,14 @@ my_pitz.clean()
 my_pitz.control_dict["writeInterval"] = 10
 ```
 
+### Make multiple file reads and writes in a single go
+
+```python
+with my_pitz.fv_schemes as f:
+    f["gradSchemes"]["default"] = f["divSchemes"]["default"]
+    f["snGradSchemes"]["default"] = "uncorrected"
+```
+
 ### Run a case asynchronously
 
 ```python
