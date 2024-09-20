@@ -43,7 +43,7 @@ jobs:
     strategy:
       matrix:
         openfoam-version: [2406, 2006, 12, 7]
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
       fail-fast: false
     steps:
     - name: Checkout
@@ -52,6 +52,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+        allow-prereleases: true
     - name: Set up OpenFOAM
       uses: gerlero/setup-openfoam@v1
       with:
