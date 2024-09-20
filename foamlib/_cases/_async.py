@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import multiprocessing
 import os
 import sys
@@ -6,15 +7,16 @@ import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import (
+    Any,
     Callable,
     Optional,
     Union,
 )
 
 if sys.version_info >= (3, 9):
-    from collections.abc import AsyncGenerator, Collection, Sequence
+    from collections.abc import AsyncGenerator, Awaitable, Collection, Sequence
 else:
-    from typing import AsyncGenerator, Collection, Sequence
+    from typing import AsyncGenerator, Awaitable, Collection, Sequence
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -231,3 +233,20 @@ class AsyncFoamCase(_FoamCaseRecipes):
             await self._rmtree(dst.parent)
         else:
             await self._rmtree(dst)
+
+    @staticmethod
+    def vectorize(
+        coro: Callable[[Any], Awaitable[Any]],
+    ) -> Callable[[Sequence[Any]], Sequence[Any]]:
+        """Decorate an async objective function so that it can be called as a regular function with a sequence of arguments, and will run the async function on each argument concurrently."""
+        if not asyncio.iscoroutinefunction(coro):
+            raise TypeError(f"{coro} must be an async function (coroutine)")
+
+        async def gather(xs: Sequence[Any]) -> Sequence[Any]:
+            return await asyncio.gather(*(coro(x) for x in xs))
+
+        @functools.wraps(coro)
+        def f(xs: Sequence[Any]) -> Sequence[Any]:
+            return asyncio.run(gather(xs))
+
+        return f
