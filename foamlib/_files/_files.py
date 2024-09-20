@@ -105,13 +105,9 @@ class FoamFile(
         """
         Create the file.
 
-        Parameters
-        ----------
-        exist_ok : bool, optional
-            If False (the default), raise a FileExistsError if the file already exists.
-            If True, do nothing if the file already exists.
-        parents : bool, optional
-            If True, also create parent directories as needed.
+        :param exist_ok: If False, raise a FileExistsError if the file already exists.
+
+        :param parents: If True, also create parent directories as needed.
         """
         if self.path.exists():
             if not exist_ok:
