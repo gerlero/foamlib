@@ -1,3 +1,4 @@
+import functools
 from types import TracebackType
 from typing import Any, AsyncContextManager, Callable, Optional, Type
 
@@ -24,4 +25,8 @@ class _AwaitableAsyncContextManager:
 def awaitableasynccontextmanager(
     cm: Callable[..., "AsyncContextManager[Any]"],
 ) -> Callable[..., _AwaitableAsyncContextManager]:
-    return lambda *args, **kwargs: _AwaitableAsyncContextManager(cm(*args, **kwargs))
+    @functools.wraps(cm)
+    def f(*args: Any, **kwargs: Any) -> _AwaitableAsyncContextManager:
+        return _AwaitableAsyncContextManager(cm(*args, **kwargs))
+
+    return f
