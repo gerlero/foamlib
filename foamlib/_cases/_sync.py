@@ -36,6 +36,10 @@ class FoamCase(_FoamCaseRecipes):
     :param path: The path to the case directory.
     """
 
+    def __init__(self, path: Union["os.PathLike[str]", str] = Path()):
+        super().__init__(path)
+        self._tmp: Optional[bool] = None
+
     @staticmethod
     def _rmtree(
         path: Union["os.PathLike[str]", str], *, ignore_errors: bool = False
@@ -55,6 +59,10 @@ class FoamCase(_FoamCaseRecipes):
         shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
 
     def __enter__(self) -> "FoamCase":
+        if self._tmp is None:
+            raise RuntimeError(
+                "Cannot use a non-copied/cloned case as a context manager"
+            )
         return self
 
     def __exit__(
@@ -63,7 +71,15 @@ class FoamCase(_FoamCaseRecipes):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
-        self._rmtree(self.path)
+        if self._tmp is not None:
+            if self._tmp:
+                self._rmtree(self.path.parent)
+            else:
+                self._rmtree(self.path)
+        else:
+            raise RuntimeError(
+                "Cannot use a non-copied/cloned case as a context manager"
+            )
 
     def clean(
         self,
@@ -160,11 +176,17 @@ class FoamCase(_FoamCaseRecipes):
         """
         if dst is None:
             dst = Path(tempfile.mkdtemp(), self.name)
+            tmp = True
+        else:
+            tmp = False
 
         for name, args, kwargs in self._copy_cmds(dst):
             getattr(self, name)(*args, **kwargs)
 
-        return type(self)(dst)
+        ret = type(self)(dst)
+        ret._tmp = tmp
+
+        return ret
 
     def clone(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> "Self":
         """
@@ -176,8 +198,14 @@ class FoamCase(_FoamCaseRecipes):
         """
         if dst is None:
             dst = Path(tempfile.mkdtemp(), self.name)
+            tmp = True
+        else:
+            tmp = False
 
         for name, args, kwargs in self._clone_cmds(dst):
             getattr(self, name)(*args, **kwargs)
 
-        return type(self)(dst)
+        ret = type(self)(dst)
+        ret._tmp = tmp
+
+        return ret
