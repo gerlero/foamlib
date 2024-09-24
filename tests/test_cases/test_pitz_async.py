@@ -45,12 +45,13 @@ async def test_double_clean(pitz: AsyncFoamCase) -> None:
 
 def test_vectorize(pitz: AsyncFoamCase) -> None:
     @AsyncFoamCase.vectorize
-    async def f(x: float) -> float:
+    async def f(x: Sequence[float]) -> float:
         async with pitz.clone() as clone:
-            clone[0]["U"].boundary_field["inlet"].value = [x, 0, 0]
+            clone[0]["U"].boundary_field["inlet"].value = [x[0], 0, 0]
             await clone.run()
             ret = clone[-1]["U"].boundary_field["inlet"].value[0]
             assert isinstance(ret, (int, float))
             return ret
 
-    assert f([1, 2]) == [1, 2]
+    assert f([[1, 2]]) == [1, 2]
+    assert f([3]) == 3
