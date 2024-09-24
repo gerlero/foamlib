@@ -5,7 +5,7 @@ import sys
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Callable, Optional, Union
+from typing import Callable, Optional, TypeVar, Union
 
 if sys.version_info >= (3, 9):
     from collections.abc import (
@@ -28,6 +28,9 @@ import aioshutil
 from ._recipes import _FoamCaseRecipes
 from ._subprocess import run_async
 from ._util import awaitableasynccontextmanager
+
+X = TypeVar("X")
+Y = TypeVar("Y")
 
 
 class AsyncFoamCase(_FoamCaseRecipes):
@@ -235,9 +238,7 @@ class AsyncFoamCase(_FoamCaseRecipes):
             await self._rmtree(dst)
 
     @staticmethod
-    def map(
-        coro: Callable[[Any], Awaitable[Any]], iterable: Iterable[Any]
-    ) -> Sequence[Any]:
+    def map(coro: Callable[[X], Awaitable[Y]], iterable: Iterable[X]) -> Iterable[Y]:
         """Run an async function on each element of an iterable concurrently."""
         return asyncio.get_event_loop().run_until_complete(
             asyncio.gather(*(coro(arg) for arg in iterable))
