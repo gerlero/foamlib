@@ -1,17 +1,22 @@
 import asyncio
-import functools
 import multiprocessing
 import os
 import sys
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Callable, Optional, Union, cast
+from typing import Any, Callable, Optional, Union
 
 if sys.version_info >= (3, 9):
-    from collections.abc import AsyncGenerator, Awaitable, Collection, Sequence
+    from collections.abc import (
+        AsyncGenerator,
+        Awaitable,
+        Collection,
+        Iterable,
+        Sequence,
+    )
 else:
-    from typing import AsyncGenerator, Awaitable, Collection, Sequence
+    from typing import AsyncGenerator, Awaitable, Collection, Iterable, Sequence
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -230,26 +235,10 @@ class AsyncFoamCase(_FoamCaseRecipes):
             await self._rmtree(dst)
 
     @staticmethod
-    def vectorize(
-        coro: Callable[[Sequence[float]], Awaitable[float]],
-    ) -> Callable[
-        [Union[Sequence[Sequence[float]], Sequence[float]]],
-        Union[Sequence[float], float],
-    ]:
-        """Decorate an async objective function so that it can be called as a regular function with a sequence of arguments, and will run the async function on each argument concurrently."""
-        if not asyncio.iscoroutinefunction(coro):
-            raise TypeError(f"{coro} must be an async function (coroutine)")
-
-        @functools.wraps(coro)
-        def wrapper(
-            xs: Union[Sequence[Sequence[float]], Sequence[float]],
-        ) -> Union[Sequence[float], float]:
-            fut: Awaitable[Union[Sequence[float], float]]
-            if not isinstance(xs[0], (int, float)):
-                fut = coro(cast(Sequence[float], xs))
-            else:
-                fut = asyncio.gather(*(coro(x) for x in map(list, zip(*xs))))
-
-            return asyncio.get_event_loop().run_until_complete(fut)
-
-        return wrapper
+    def map(
+        coro: Callable[[Any], Awaitable[Any]], iterable: Iterable[Any]
+    ) -> Sequence[Any]:
+        """Run an async function on each element of an iterable concurrently."""
+        return asyncio.get_event_loop().run_until_complete(
+            asyncio.gather(*(coro(arg) for arg in iterable))
+        )
