@@ -101,6 +101,25 @@ U = FoamFieldFile(Path(my_pitz) / "0/U")
 print(U.internal_field)
 ```
 
+### Run an optimization loop in parallel
+
+```python
+import os
+from pathlib import Path
+from foamlib import AsyncFoamCase
+from scipy.optimize import differential_evolution
+
+base = AsyncFoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily")
+
+async def cost(x):
+    async with base.clone() as clone:
+        clone[0]["U"].boundary_field["inlet"].value = [x[0], 0, 0]
+        await clone.run()
+        return abs(clone[-1]["U"].internal_field[0][0])
+
+result = differential_evolution(cost, bounds=[(-1, 1)], workers=AsyncFoamCase.map, polish=False)
+```
+
 ## Documentation
 
 For more information, check out the [documentation](https://foamlib.readthedocs.io/).
