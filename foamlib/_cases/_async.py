@@ -50,14 +50,11 @@ class AsyncFoamCase(_FoamCaseRecipes):
     """
 
     _reserved_cpus = 0
-    _cpus_cond = None  # Cannot be initialized here yet
+    _cpus_cond = asyncio.Condition()
 
     @staticmethod
     @asynccontextmanager
     async def _cpus(cpus: int) -> AsyncGenerator[None, None]:
-        if AsyncFoamCase._cpus_cond is None:
-            AsyncFoamCase._cpus_cond = asyncio.Condition()
-
         cpus = min(cpus, AsyncFoamCase.max_cpus)
         if cpus > 0:
             async with AsyncFoamCase._cpus_cond:
