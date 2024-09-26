@@ -53,3 +53,4 @@ def test_map(pitz: AsyncFoamCase) -> None:
             return ret
 
     assert AsyncFoamCase.map(f, [[1], [2]]) == [1, 2]
+    assert AsyncFoamCase.map(f, [[3]]) == [3]
