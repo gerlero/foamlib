@@ -1,7 +1,6 @@
 import os
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 from types import TracebackType
 from typing import (
@@ -23,6 +22,7 @@ else:
 
 from ._recipes import _FoamCaseRecipes
 from ._subprocess import run_sync
+from ._util import ValuedGenerator
 
 
 class FoamCase(_FoamCaseRecipes):
@@ -38,7 +38,6 @@ class FoamCase(_FoamCaseRecipes):
 
     def __init__(self, path: Union["os.PathLike[str]", str] = Path()):
         super().__init__(path)
-        self._tmp: Optional[bool] = None
 
     @staticmethod
     def _rmtree(
@@ -59,10 +58,6 @@ class FoamCase(_FoamCaseRecipes):
         shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
 
     def __enter__(self) -> "FoamCase":
-        if self._tmp is None:
-            raise RuntimeError(
-                "Cannot use a non-copied/cloned case as a context manager"
-            )
         return self
 
     def __exit__(
@@ -71,15 +66,7 @@ class FoamCase(_FoamCaseRecipes):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
-        if self._tmp is not None:
-            if self._tmp:
-                self._rmtree(self.path.parent)
-            else:
-                self._rmtree(self.path)
-        else:
-            raise RuntimeError(
-                "Cannot use a non-copied/cloned case as a context manager"
-            )
+        self._rmtree(self.path)
 
     def clean(
         self,
@@ -166,46 +153,32 @@ class FoamCase(_FoamCaseRecipes):
         for name, args, kwargs in self._restore_0_dir_cmds():
             getattr(self, name)(*args, **kwargs)
 
-    def copy(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> "Self":
+    def copy(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> Self:
         """
         Make a copy of this case.
 
         Use as a context manager to automatically delete the copy when done.
 
-        :param dst: The destination path. If None, copy to a temporary directory.
+        :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
         """
-        if dst is None:
-            dst = Path(tempfile.mkdtemp(), self.name)
-            tmp = True
-        else:
-            tmp = False
+        cmds = ValuedGenerator(self._copy_cmds(dst))
 
-        for name, args, kwargs in self._copy_cmds(dst):
+        for name, args, kwargs in cmds:
             getattr(self, name)(*args, **kwargs)
 
-        ret = type(self)(dst)
-        ret._tmp = tmp
+        return cmds.value
 
-        return ret
-
-    def clone(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> "Self":
+    def clone(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> Self:
         """
         Clone this case (make a clean copy).
 
         Use as a context manager to automatically delete the clone when done.
 
-        :param dst: The destination path. If None, clone to a temporary directory.
+        :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
         """
-        if dst is None:
-            dst = Path(tempfile.mkdtemp(), self.name)
-            tmp = True
-        else:
-            tmp = False
+        cmds = ValuedGenerator(self._clone_cmds(dst))
 
-        for name, args, kwargs in self._clone_cmds(dst):
+        for name, args, kwargs in cmds:
             getattr(self, name)(*args, **kwargs)
 
-        ret = type(self)(dst)
-        ret._tmp = tmp
-
-        return ret
+        return cmds.value

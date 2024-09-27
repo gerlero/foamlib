@@ -2,6 +2,7 @@ import os
 import shlex
 import shutil
 import sys
+import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from typing import (
@@ -30,6 +31,11 @@ else:
         Mapping,
         Sequence,
     )
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 from ._base import FoamCaseBase
 from ._subprocess import DEVNULL, STDOUT
@@ -168,17 +174,29 @@ class _FoamCaseRecipes(FoamCaseBase):
         else:
             yield DEVNULL, DEVNULL
 
+    def __mkrundir(self) -> Path:
+        d = Path(os.environ["FOAM_RUN"], "foamlib")
+        d.mkdir(parents=True, exist_ok=True)
+        ret = Path(tempfile.mkdtemp(prefix=f"{self.name}-", dir=d))
+        ret.rmdir()
+        return ret
+
     def _copy_cmds(
-        self, dest: Union["os.PathLike[str]", str]
-    ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
+        self, dst: Optional[Union["os.PathLike[str]", str]]
+    ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, Self]:
+        if dst is None:
+            dst = self.__mkrundir()
+
         yield (
             "_copytree",
             (
                 self.path,
-                dest,
+                dst,
             ),
             {"symlinks": True},
         )
+
+        return type(self)(dst)
 
     def _clean_cmds(
         self, *, script: bool = True, check: bool = False
@@ -195,20 +213,25 @@ class _FoamCaseRecipes(FoamCaseBase):
                     p.unlink()
 
     def _clone_cmds(
-        self, dest: Union["os.PathLike[str]", str]
-    ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
+        self, dst: Optional[Union["os.PathLike[str]", str]]
+    ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, Self]:
+        if dst is None:
+            dst = self.__mkrundir()
+
         if self._clean_script() is not None:
-            yield ("copy", (dest,), {})
+            yield ("copy", (dst,), {})
             yield ("clean", (), {})
         else:
             yield (
                 "_copytree",
                 (
                     self.path,
-                    dest,
+                    dst,
                 ),
                 {"symlinks": True, "ignore": self._clone_ignore()},
             )
+
+        return type(self)(dst)
 
     def _restore_0_dir_cmds(
         self,
