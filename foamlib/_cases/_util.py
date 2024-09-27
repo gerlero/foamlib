@@ -17,7 +17,18 @@ else:
     from typing import Generator
 
 
+Y = TypeVar("Y")
+S = TypeVar("S")
 R = TypeVar("R")
+
+
+class ValuedGenerator(Generic[Y, S, R]):
+    def __init__(self, generator: Generator[Y, S, R]):
+        self._generator = generator
+
+    def __iter__(self) -> Generator[Y, S, R]:
+        self.value = yield from self._generator
+        return self.value
 
 
 class _AwaitableAsyncContextManager(Generic[R]):

@@ -2,9 +2,7 @@ import asyncio
 import multiprocessing
 import os
 import sys
-import tempfile
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Callable, Optional, TypeVar, Union
 
 if sys.version_info >= (3, 9):
@@ -27,7 +25,7 @@ import aioshutil
 
 from ._recipes import _FoamCaseRecipes
 from ._subprocess import run_async
-from ._util import awaitableasynccontextmanager
+from ._util import ValuedGenerator, awaitableasynccontextmanager
 
 X = TypeVar("X")
 Y = TypeVar("Y")
@@ -186,24 +184,16 @@ class AsyncFoamCase(_FoamCaseRecipes):
 
         Use as an async context manager to automatically delete the copy when done.
 
-        :param dst: The destination path. If None, copy to a temporary directory.
+        :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
         """
-        if dst is None:
-            dst = Path(tempfile.mkdtemp(), self.name)
-            tmp = True
-        else:
-            tmp = False
+        cmds = ValuedGenerator(self._copy_cmds(dst))
 
-        for name, args, kwargs in self._copy_cmds(dst):
+        for name, args, kwargs in cmds:
             await getattr(self, name)(*args, **kwargs)
 
-        yield type(self)(dst)
+        yield cmds.value
 
-        if tmp:
-            assert isinstance(dst, Path)
-            await self._rmtree(dst.parent)
-        else:
-            await self._rmtree(dst)
+        await self._rmtree(cmds.value.path)
 
     @awaitableasynccontextmanager
     @asynccontextmanager
@@ -215,24 +205,16 @@ class AsyncFoamCase(_FoamCaseRecipes):
 
         Use as an async context manager to automatically delete the clone when done.
 
-        :param dst: The destination path. If None, clone to a temporary directory.
+        :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
         """
-        if dst is None:
-            dst = Path(tempfile.mkdtemp(), self.name)
-            tmp = True
-        else:
-            tmp = False
+        cmds = ValuedGenerator(self._clone_cmds(dst))
 
-        for name, args, kwargs in self._clone_cmds(dst):
+        for name, args, kwargs in cmds:
             await getattr(self, name)(*args, **kwargs)
 
-        yield type(self)(dst)
+        yield cmds.value
 
-        if tmp:
-            assert isinstance(dst, Path)
-            await self._rmtree(dst.parent)
-        else:
-            await self._rmtree(dst)
+        await self._rmtree(cmds.value.path)
 
     @staticmethod
     def map(coro: Callable[[X], Awaitable[Y]], iterable: Iterable[X]) -> Iterable[Y]:
