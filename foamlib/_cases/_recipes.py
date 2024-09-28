@@ -199,9 +199,9 @@ class _FoamCaseRecipes(FoamCaseBase):
         return type(self)(dst)
 
     def _clean_cmds(
-        self, *, script: bool = True, check: bool = False
+        self, *, check: bool = False
     ) -> Generator[Tuple[str, Sequence[Any], Mapping[str, Any]], None, None]:
-        script_path = self._clean_script() if script else None
+        script_path = self._clean_script()
 
         if script_path is not None:
             yield ("_run", ([script_path],), {"cpus": 0, "check": check, "log": False})
@@ -250,7 +250,6 @@ class _FoamCaseRecipes(FoamCaseBase):
         self,
         cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
         *,
-        script: bool = True,
         parallel: Optional[bool] = None,
         cpus: Optional[int] = None,
         check: bool = True,
@@ -267,7 +266,7 @@ class _FoamCaseRecipes(FoamCaseBase):
             yield ("_run", (cmd,), {"parallel": parallel, "cpus": cpus, "check": check})
 
         else:
-            script_path = self._run_script(parallel=parallel) if script else None
+            script_path = self._run_script(parallel=parallel)
 
             if script_path is not None:
                 if parallel or parallel is None:

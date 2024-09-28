@@ -55,7 +55,7 @@ async def test_run_cmd(flange: AsyncFoamCase) -> None:
             "0.001",
         ],
     )
-    await flange.run(script=False)
+    await flange.run([flange.application])
 
 
 @pytest.mark.asyncio

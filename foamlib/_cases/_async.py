@@ -90,16 +90,14 @@ class AsyncFoamCase(_FoamCaseRecipes):
     async def clean(
         self,
         *,
-        script: bool = True,
         check: bool = False,
     ) -> None:
         """
         Clean this case.
 
-        :param script: If True, use an (All)clean script if it exists. If False, ignore any clean scripts.
         :param check: If True, raise a CalledProcessError if the clean script returns a non-zero exit code.
         """
-        for name, args, kwargs in self._clean_cmds(script=script, check=check):
+        for name, args, kwargs in self._clean_cmds(check=check):
             await getattr(self, name)(*args, **kwargs)
 
     async def _run(
@@ -139,7 +137,6 @@ class AsyncFoamCase(_FoamCaseRecipes):
         self,
         cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
         *,
-        script: bool = True,
         parallel: Optional[bool] = None,
         cpus: Optional[int] = None,
         check: bool = True,
@@ -148,12 +145,11 @@ class AsyncFoamCase(_FoamCaseRecipes):
         Run this case, or a specified command in the context of this case.
 
         :param cmd: The command to run. If None, run the case. If a sequence, the first element is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
-        :param script: If True and `cmd` is None, use an (All)run(-parallel) script if it exists for running the case. If False or no run script is found, autodetermine the command(s) needed to run the case.
         :param parallel: If True, run in parallel using MPI. If None, autodetect whether to run in parallel.
         :param check: If True, raise a CalledProcessError if any command returns a non-zero exit code.
         """
         for name, args, kwargs in self._run_cmds(
-            cmd=cmd, script=script, parallel=parallel, cpus=cpus, check=check
+            cmd=cmd, parallel=parallel, cpus=cpus, check=check
         ):
             await getattr(self, name)(*args, **kwargs)
 
