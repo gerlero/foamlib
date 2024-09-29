@@ -29,7 +29,7 @@ class _FoamFileIO:
 
     def __enter__(self) -> Self:
         if self.__defer_io == 0:
-            self._read()
+            self._read(missing_ok=True)
         self.__defer_io += 1
         return self
 
@@ -44,9 +44,15 @@ class _FoamFileIO:
             assert self.__contents is not None
             self._write(self.__contents)
 
-    def _read(self) -> Tuple[bytes, Parsed]:
+    def _read(self, *, missing_ok: bool = False) -> Tuple[bytes, Parsed]:
         if not self.__defer_io:
-            contents = self.path.read_bytes()
+            try:
+                contents = self.path.read_bytes()
+            except FileNotFoundError:
+                if missing_ok:
+                    contents = b""
+                else:
+                    raise
 
             if self.path.suffix == ".gz":
                 contents = gzip.decompress(contents)

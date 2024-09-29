@@ -14,10 +14,17 @@ from foamlib import FoamCase, FoamFieldFile, FoamFile
 
 def test_write_read(tmp_path: Path) -> None:
     path = tmp_path / "testDict"
-    path.touch()
-
     d = FoamFile(path)
     assert d.path == path
+    with pytest.raises(FileNotFoundError):
+        d["key"]
+
+    d[None] = "touch"
+    assert len(d) == 1
+    assert d[None] == "touch"
+    assert list(d) == [None]
+    del d[None]
+
     assert not d
     assert len(d) == 0
     assert list(d) == []

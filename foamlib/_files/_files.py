@@ -11,11 +11,6 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Iterator, Mapping, MutableMapping, Sequence
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
 from ._base import FoamFileBase
 from ._io import _FoamFileIO
 from ._serialization import Kind, dumpb
@@ -101,28 +96,6 @@ class FoamFile(
 
             return cast(FoamFileBase._Dict, ret)
 
-    def create(self, *, exist_ok: bool = False, parents: bool = False) -> Self:
-        """
-        Create the file.
-
-        :param exist_ok: If False, raise a FileExistsError if the file already exists.
-
-        :param parents: If True, also create parent directories as needed.
-        """
-        if self.path.exists():
-            if not exist_ok:
-                raise FileExistsError(self.path)
-            else:
-                return self
-
-        if parents:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-
-        self.path.touch()
-        self._write_header()
-
-        return self
-
     @property
     def version(self) -> float:
         """Alias of `self["FoamFile", "version"]`."""
@@ -185,17 +158,6 @@ class FoamFile(
     def object_(self, value: str) -> None:
         self["FoamFile", "object"] = value
 
-    def _write_header(self) -> None:
-        assert "FoamFile" not in self
-        assert not self
-
-        self["FoamFile"] = {}
-        self.version = 2.0
-        self.format = "ascii"
-        self.class_ = "dictionary"
-        self.location = f'"{self.path.parent.name}"'
-        self.object_ = self.path.name
-
     def __getitem__(
         self, keywords: Optional[Union[str, Tuple[str, ...]]]
     ) -> Union["FoamFile.Data", "FoamFile.SubDict"]:
@@ -222,8 +184,17 @@ class FoamFile(
             elif not isinstance(keywords, tuple):
                 keywords = (keywords,)
 
-            if not self and "FoamFile" not in self and keywords[0] != "FoamFile":
-                self._write_header()
+            if (
+                not self
+                and "FoamFile" not in self
+                and (not keywords or keywords[0] != "FoamFile")
+            ):
+                self["FoamFile"] = {}
+                self.version = 2.0
+                self.format = "ascii"
+                self.class_ = "dictionary"
+                self.location = f'"{self.path.parent.name}"'
+                self.object_ = self.path.name
 
             kind = Kind.DEFAULT
             if keywords == ("internalField",) or (
@@ -253,7 +224,7 @@ class FoamFile(
                 self[keywords] = data
 
             else:
-                contents, parsed = self._read()
+                contents, parsed = self._read(missing_ok=True)
 
                 start, end = parsed.entry_location(keywords, missing_ok=True)
 
