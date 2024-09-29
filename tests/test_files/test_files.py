@@ -19,6 +19,10 @@ def test_write_read(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         d["key"]
 
+    with d:
+        with pytest.raises(FileNotFoundError):
+            d["key"]
+
     d[None] = "touch"
     assert len(d) == 1
     assert d[None] == "touch"

@@ -184,17 +184,24 @@ class FoamFile(
             elif not isinstance(keywords, tuple):
                 keywords = (keywords,)
 
-            if (
-                not self
-                and "FoamFile" not in self
-                and (not keywords or keywords[0] != "FoamFile")
-            ):
+            try:
+                write_header = (
+                    not self
+                    and "FoamFile" not in self
+                    and (not keywords or keywords[0] != "FoamFile")
+                )
+            except FileNotFoundError:
+                write_header = not keywords or keywords[0] != "FoamFile"
+
+            if write_header:
                 self["FoamFile"] = {}
                 self.version = 2.0
                 self.format = "ascii"
                 self.class_ = "dictionary"
                 self.location = f'"{self.path.parent.name}"'
-                self.object_ = self.path.name
+                self.object_ = (
+                    self.path.stem if self.path.suffix == ".gz" else self.path.name
+                )
 
             kind = Kind.DEFAULT
             if keywords == ("internalField",) or (

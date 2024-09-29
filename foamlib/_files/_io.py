@@ -49,19 +49,21 @@ class _FoamFileIO:
             try:
                 contents = self.path.read_bytes()
             except FileNotFoundError:
-                if missing_ok:
-                    contents = b""
-                else:
-                    raise
-
-            if self.path.suffix == ".gz":
-                contents = gzip.decompress(contents)
+                contents = None
+            else:
+                assert isinstance(contents, bytes)
+                if self.path.suffix == ".gz":
+                    contents = gzip.decompress(contents)
 
             if contents != self.__contents:
                 self.__contents = contents
                 self.__parsed = None
 
-        assert self.__contents is not None
+        if self.__contents is None:
+            if missing_ok:
+                return b"", Parsed(b"")
+            else:
+                raise FileNotFoundError(self.path)
 
         if self.__parsed is None:
             parsed = Parsed(self.__contents)
