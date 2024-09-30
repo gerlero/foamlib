@@ -70,3 +70,4 @@ def test_parse_value() -> None:
     assert Parsed(b"((air and water) { type constant; sigma 0.07; })")[()] == [
         {"(air and water)": {"type": "constant", "sigma": 0.07}}
     ]
+    assert Parsed(b"[]")[()] == FoamFile.DimensionSet()
