@@ -73,6 +73,9 @@ version = {attr = "foamlib.__version__"}
 [tool.setuptools.package-data]
 "foamlib" = ["py.typed"]
 
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "session"
+
 [tool.mypy]
 packages = [
     "foamlib",
