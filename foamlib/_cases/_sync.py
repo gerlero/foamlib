@@ -21,12 +21,12 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-from ._recipes import _FoamCaseRecipes
+from ._run import FoamCaseRunBase
 from ._subprocess import run_sync
 from ._util import ValuedGenerator
 
 
-class FoamCase(_FoamCaseRecipes):
+class FoamCase(FoamCaseRunBase):
     """
     An OpenFOAM case.
 

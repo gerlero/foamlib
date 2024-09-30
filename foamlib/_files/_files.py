@@ -12,7 +12,7 @@ else:
     from typing import Iterator, Mapping, MutableMapping, Sequence
 
 from ._base import FoamFileBase
-from ._io import _FoamFileIO
+from ._io import FoamFileIO
 from ._serialization import Kind, dumpb
 from ._util import is_sequence
 
@@ -28,7 +28,7 @@ class FoamFile(
         Optional[Union[str, Tuple[str, ...]]],
         Union["FoamFile.Data", "FoamFile.SubDict"],
     ],
-    _FoamFileIO,
+    FoamFileIO,
 ):
     """
     An OpenFOAM data file.
