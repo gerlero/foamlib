@@ -23,7 +23,7 @@ else:
 
 import aioshutil
 
-from ._recipes import _FoamCaseRecipes
+from ._run import FoamCaseRunBase
 from ._subprocess import run_async
 from ._util import ValuedGenerator, awaitableasynccontextmanager
 
@@ -31,7 +31,7 @@ X = TypeVar("X")
 Y = TypeVar("Y")
 
 
-class AsyncFoamCase(_FoamCaseRecipes):
+class AsyncFoamCase(FoamCaseRunBase):
     """
     An OpenFOAM case with asynchronous support.
 

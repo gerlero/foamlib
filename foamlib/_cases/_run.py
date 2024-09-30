@@ -44,7 +44,7 @@ from ._base import FoamCaseBase
 from ._subprocess import DEVNULL, STDOUT
 
 
-class _FoamCaseRecipes(FoamCaseBase):
+class FoamCaseRunBase(FoamCaseBase):
     def __delitem__(self, key: Union[int, float, str]) -> None:
         shutil.rmtree(self[key].path)
 
