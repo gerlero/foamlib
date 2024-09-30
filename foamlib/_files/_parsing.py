@@ -95,68 +95,68 @@ def _unpack_binary_field(
     return [all]
 
 
-_BINARY_FIELD = (
-    Keyword("nonuniform").suppress()
-    + Literal("List").suppress()
-    + Literal("<").suppress()
-    + (
-        counted_array(
-            CharsNotIn(exact=8),
-            Literal("scalar").suppress()
-            + Literal(">").suppress()
-            + common.integer
-            + Literal("(").suppress(),
-        )
-        | counted_array(
-            CharsNotIn(exact=8 * 3),
-            Literal("vector").suppress()
-            + Literal(">").suppress()
-            + common.integer
-            + Literal("(").suppress(),
-        )
-        | counted_array(
-            CharsNotIn(exact=8 * 6),
-            Literal("symmTensor").suppress()
-            + Literal(">").suppress()
-            + common.integer
-            + Literal("(").suppress(),
-        )
-        | counted_array(
-            CharsNotIn(exact=8 * 9),
-            Literal("tensor").suppress()
-            + Literal(">").suppress()
-            + common.integer
-            + Literal("(").suppress(),
-        )
-    )
-    + Literal(")").suppress()
-).set_parse_action(_unpack_binary_field)
-
-
 _SWITCH = (
     Keyword("yes") | Keyword("true") | Keyword("on") | Keyword("y") | Keyword("t")
 ).set_parse_action(lambda: True) | (
     Keyword("no") | Keyword("false") | Keyword("off") | Keyword("n") | Keyword("f")
 ).set_parse_action(lambda: False)
 _DIMENSIONS = (
-    Literal("[").suppress() + common.number * 7 + Literal("]").suppress()
+    Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: FoamFileBase.DimensionSet(*tks))
 _TENSOR = _list_of(common.number) | common.number
 _IDENTIFIER = Combine(
-    Word(identchars + "$", printables, exclude_chars="{(;)}")
-    + Opt(Literal("(") + Word(printables, exclude_chars="{(;)}") + Literal(")"))
+    Word(identchars + "$", printables, exclude_chars="[{(;)}]")
+    + Opt(Literal("(") + Word(printables, exclude_chars="[{(;)}]") + Literal(")"))
 )
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: FoamFileBase.Dimensioned(*reversed(tks.as_list()))
 )
-_FIELD = (
-    (Keyword("uniform").suppress() + _TENSOR)
-    | (Keyword("nonuniform").suppress() + _list_of(_TENSOR))
-    | _BINARY_FIELD
+_FIELD = (Keyword("uniform").suppress() + _TENSOR) | (
+    Keyword("nonuniform").suppress()
+    + (
+        _list_of(_TENSOR)
+        | (
+            Literal("List").suppress()
+            + Literal("<").suppress()
+            + (
+                counted_array(
+                    CharsNotIn(exact=8),
+                    Literal("scalar").suppress()
+                    + Literal(">").suppress()
+                    + common.integer
+                    + Literal("(").suppress(),
+                )
+                | counted_array(
+                    CharsNotIn(exact=8 * 3),
+                    Literal("vector").suppress()
+                    + Literal(">").suppress()
+                    + common.integer
+                    + Literal("(").suppress(),
+                )
+                | counted_array(
+                    CharsNotIn(exact=8 * 6),
+                    Literal("symmTensor").suppress()
+                    + Literal(">").suppress()
+                    + common.integer
+                    + Literal("(").suppress(),
+                )
+                | counted_array(
+                    CharsNotIn(exact=8 * 9),
+                    Literal("tensor").suppress()
+                    + Literal(">").suppress()
+                    + common.integer
+                    + Literal("(").suppress(),
+                )
+            )
+            + Literal(")").suppress()
+        ).set_parse_action(_unpack_binary_field)
+    )
 )
 _TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
 _DATA = Forward()
-_KEYWORD = Combine(Literal("(") + Word(identchars + " ") + Literal(")")) | _TOKEN
+_KEYWORD = _TOKEN | _list_of(_IDENTIFIER).set_parse_action(
+    lambda tks: "(" + " ".join(tks[0]) + ")"
+)
 _KEYWORD_ENTRY = Dict(Group(_keyword_entry_of(_KEYWORD, _DATA)), asdict=True)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _KEYWORD_ENTRY | _DATA_ENTRY
