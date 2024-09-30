@@ -3,7 +3,7 @@ import multiprocessing
 import os
 import sys
 from contextlib import asynccontextmanager
-from typing import Callable, Optional, TypeVar, Union
+from typing import Any, Callable, Optional, TypeVar, Union
 
 if sys.version_info >= (3, 9):
     from collections.abc import (
@@ -70,6 +70,16 @@ class AsyncFoamCase(_FoamCaseRecipes):
                     AsyncFoamCase._cpus_cond.notify(cpus)
 
     @staticmethod
+    async def _run(
+        cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
+        *,
+        cpus: int,
+        **kwargs: Any,
+    ) -> None:
+        async with AsyncFoamCase._cpus(cpus):
+            await run_async(cmd, **kwargs)
+
+    @staticmethod
     async def _rmtree(
         path: Union["os.PathLike[str]", str], ignore_errors: bool = False
     ) -> None:
@@ -87,51 +97,14 @@ class AsyncFoamCase(_FoamCaseRecipes):
     ) -> None:
         await aioshutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
 
-    async def clean(
-        self,
-        *,
-        check: bool = False,
-    ) -> None:
+    async def clean(self, *, check: bool = False) -> None:
         """
         Clean this case.
 
         :param check: If True, raise a CalledProcessError if the clean script returns a non-zero exit code.
         """
-        for name, args, kwargs in self._clean_cmds(check=check):
-            await getattr(self, name)(*args, **kwargs)
-
-    async def _run(
-        self,
-        cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
-        *,
-        parallel: bool = False,
-        cpus: int = 1,
-        check: bool = True,
-        log: bool = True,
-    ) -> None:
-        with self._output(cmd, log=log) as (stdout, stderr):
-            if parallel:
-                if isinstance(cmd, str):
-                    cmd = [
-                        "mpiexec",
-                        "-n",
-                        str(cpus),
-                        "/bin/sh",
-                        "-c",
-                        f"{cmd} -parallel",
-                    ]
-                else:
-                    cmd = ["mpiexec", "-n", str(cpus), *cmd, "-parallel"]
-
-            async with self._cpus(cpus):
-                await run_async(
-                    cmd,
-                    check=check,
-                    cwd=self.path,
-                    env=self._env(shell=isinstance(cmd, str)),
-                    stdout=stdout,
-                    stderr=stderr,
-                )
+        for coro in self._clean_calls(check=check):
+            await coro
 
     async def run(
         self,
@@ -140,18 +113,21 @@ class AsyncFoamCase(_FoamCaseRecipes):
         parallel: Optional[bool] = None,
         cpus: Optional[int] = None,
         check: bool = True,
+        log: bool = True,
     ) -> None:
         """
         Run this case, or a specified command in the context of this case.
 
         :param cmd: The command to run. If None, run the case. If a sequence, the first element is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
         :param parallel: If True, run in parallel using MPI. If None, autodetect whether to run in parallel.
+        :param cpus: The number of CPUs to use. If None, autodetect according to the case.
         :param check: If True, raise a CalledProcessError if any command returns a non-zero exit code.
+        :param log: If True, log the command output to a file.
         """
-        for name, args, kwargs in self._run_cmds(
-            cmd=cmd, parallel=parallel, cpus=cpus, check=check
+        for coro in self._run_calls(
+            cmd=cmd, parallel=parallel, cpus=cpus, check=check, log=log
         ):
-            await getattr(self, name)(*args, **kwargs)
+            await coro
 
     async def block_mesh(self, *, check: bool = True) -> None:
         """Run blockMesh on this case."""
@@ -167,8 +143,8 @@ class AsyncFoamCase(_FoamCaseRecipes):
 
     async def restore_0_dir(self) -> None:
         """Restore the 0 directory from the 0.orig directory."""
-        for name, args, kwargs in self._restore_0_dir_cmds():
-            await getattr(self, name)(*args, **kwargs)
+        for coro in self._restore_0_dir_calls():
+            await coro
 
     @awaitableasynccontextmanager
     @asynccontextmanager
@@ -182,14 +158,14 @@ class AsyncFoamCase(_FoamCaseRecipes):
 
         :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
         """
-        cmds = ValuedGenerator(self._copy_cmds(dst))
+        calls = ValuedGenerator(self._copy_calls(dst))
 
-        for name, args, kwargs in cmds:
-            await getattr(self, name)(*args, **kwargs)
+        for coro in calls:
+            await coro
 
-        yield cmds.value
+        yield calls.value
 
-        await self._rmtree(cmds.value.path)
+        await self._rmtree(calls.value.path)
 
     @awaitableasynccontextmanager
     @asynccontextmanager
@@ -203,14 +179,14 @@ class AsyncFoamCase(_FoamCaseRecipes):
 
         :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
         """
-        cmds = ValuedGenerator(self._clone_cmds(dst))
+        calls = ValuedGenerator(self._clone_calls(dst))
 
-        for name, args, kwargs in cmds:
-            await getattr(self, name)(*args, **kwargs)
+        for coro in calls:
+            await coro
 
-        yield cmds.value
+        yield calls.value
 
-        await self._rmtree(cmds.value.path)
+        await self._rmtree(calls.value.path)
 
     @staticmethod
     def map(coro: Callable[[X], Awaitable[Y]], iterable: Iterable[X]) -> Iterable[Y]:
