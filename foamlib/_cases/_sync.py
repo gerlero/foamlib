@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from types import TracebackType
 from typing import (
+    Any,
     Callable,
     Optional,
     Type,
@@ -40,6 +41,15 @@ class FoamCase(_FoamCaseRecipes):
         super().__init__(path)
 
     @staticmethod
+    def _run(
+        cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
+        *,
+        cpus: int,
+        **kwargs: Any,
+    ) -> None:
+        run_sync(cmd, **kwargs)
+
+    @staticmethod
     def _rmtree(
         path: Union["os.PathLike[str]", str], *, ignore_errors: bool = False
     ) -> None:
@@ -68,69 +78,35 @@ class FoamCase(_FoamCaseRecipes):
     ) -> None:
         self._rmtree(self.path)
 
-    def clean(
-        self,
-        *,
-        check: bool = False,
-    ) -> None:
+    def clean(self, *, check: bool = False) -> None:
         """
         Clean this case.
 
         :param check: If True, raise a CalledProcessError if the clean script returns a non-zero exit code.
         """
-        for name, args, kwargs in self._clean_cmds(check=check):
-            getattr(self, name)(*args, **kwargs)
-
-    def _run(
-        self,
-        cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
-        *,
-        parallel: bool = False,
-        cpus: int = 1,
-        check: bool = True,
-        log: bool = True,
-    ) -> None:
-        with self._output(cmd, log=log) as (stdout, stderr):
-            if parallel:
-                if isinstance(cmd, str):
-                    cmd = [
-                        "mpiexec",
-                        "-n",
-                        str(cpus),
-                        "/bin/sh",
-                        "-c",
-                        f"{cmd} -parallel",
-                    ]
-                else:
-                    cmd = ["mpiexec", "-n", str(cpus), *cmd, "-parallel"]
-
-            run_sync(
-                cmd,
-                check=check,
-                cwd=self.path,
-                env=self._env(shell=isinstance(cmd, str)),
-                stdout=stdout,
-                stderr=stderr,
-            )
+        for _ in self._clean_calls(check=check):
+            pass
 
     def run(
         self,
         cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
         *,
         parallel: Optional[bool] = None,
+        cpus: Optional[int] = None,
         check: bool = True,
+        log: bool = True,
     ) -> None:
         """
         Run this case, or a specified command in the context of this case.
 
         :param cmd: The command to run. If None, run the case. If a sequence, the first element is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
         :param parallel: If True, run in parallel using MPI. If None, autodetect whether to run in parallel.
+        :param cpus: The number of CPUs to use. If None, autodetect according to the case.
         :param check: If True, raise a CalledProcessError if any command returns a non-zero exit code.
+        :param log: If True, log the command output to a file.
         """
-        for name, args, kwargs in self._run_cmds(
-            cmd=cmd, parallel=parallel, check=check
-        ):
-            getattr(self, name)(*args, **kwargs)
+        for _ in self._run_calls(cmd=cmd, parallel=parallel, check=check):
+            pass
 
     def block_mesh(self, *, check: bool = True) -> None:
         """Run blockMesh on this case."""
@@ -146,8 +122,8 @@ class FoamCase(_FoamCaseRecipes):
 
     def restore_0_dir(self) -> None:
         """Restore the 0 directory from the 0.orig directory."""
-        for name, args, kwargs in self._restore_0_dir_cmds():
-            getattr(self, name)(*args, **kwargs)
+        for _ in self._restore_0_dir_calls():
+            pass
 
     def copy(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> Self:
         """
@@ -157,10 +133,10 @@ class FoamCase(_FoamCaseRecipes):
 
         :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
         """
-        cmds = ValuedGenerator(self._copy_cmds(dst))
+        cmds = ValuedGenerator(self._copy_calls(dst))
 
-        for name, args, kwargs in cmds:
-            getattr(self, name)(*args, **kwargs)
+        for _ in cmds:
+            pass
 
         return cmds.value
 
@@ -172,9 +148,9 @@ class FoamCase(_FoamCaseRecipes):
 
         :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
         """
-        cmds = ValuedGenerator(self._clone_cmds(dst))
+        cmds = ValuedGenerator(self._clone_calls(dst))
 
-        for name, args, kwargs in cmds:
-            getattr(self, name)(*args, **kwargs)
+        for _ in cmds:
+            pass
 
         return cmds.value
