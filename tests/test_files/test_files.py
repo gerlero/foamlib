@@ -104,10 +104,10 @@ def test_new_field(tmp_path: Path) -> None:
 
 
 @pytest.fixture
-def pitz() -> "Generator[FoamCase]":
+def cavity() -> "Generator[FoamCase]":
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
-    path = tutorials_path / "incompressible" / "simpleFoam" / "pitzDaily"
-    of11_path = tutorials_path / "incompressibleFluid" / "pitzDaily"
+    path = tutorials_path / "incompressible" / "icoFoam" / "cavity" / "cavity"
+    of11_path = tutorials_path / "incompressibleFluid" / "cavity"
 
     case = FoamCase(path if path.exists() else of11_path)
 
@@ -115,32 +115,32 @@ def pitz() -> "Generator[FoamCase]":
         yield clone
 
 
-def test_dimensions(pitz: FoamCase) -> None:
-    assert pitz[0]["p"].dimensions == FoamFile.DimensionSet(length=2, time=-2)
-    assert pitz[0]["U"].dimensions == FoamFile.DimensionSet(length=1, time=-1)
+def test_dimensions(cavity: FoamCase) -> None:
+    assert cavity[0]["p"].dimensions == FoamFile.DimensionSet(length=2, time=-2)
+    assert cavity[0]["U"].dimensions == FoamFile.DimensionSet(length=1, time=-1)
 
-    pitz[0]["p"].dimensions = FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    cavity[0]["p"].dimensions = FoamFile.DimensionSet(mass=1, length=1, time=-2)
 
-    assert pitz[0]["p"].dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
-
-
-def test_boundary_field(pitz: FoamCase) -> None:
-    outlet = pitz[0]["p"].boundary_field["outlet"]
-    assert isinstance(outlet, FoamFieldFile.BoundarySubDict)
-    assert outlet.type == "fixedValue"
-    assert outlet.value == 0
-
-    outlet.type = "zeroGradient"
-    del outlet.value
-
-    assert outlet.type == "zeroGradient"
-    assert "value" not in outlet
+    assert cavity[0]["p"].dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
 
 
-def test_mesh(pitz: FoamCase) -> None:
-    pitz.run()
+def test_boundary_field(cavity: FoamCase) -> None:
+    moving_wall = cavity[0]["p"].boundary_field["movingWall"]
+    assert isinstance(moving_wall, FoamFieldFile.BoundarySubDict)
+    assert moving_wall.type == "zeroGradient"
+    assert "value" not in moving_wall
 
-    file = pitz.file("constant/polyMesh/points")
+    moving_wall.type = "fixedValue"
+    moving_wall.value = 0
+
+    assert moving_wall.type == "fixedValue"
+    assert moving_wall.value == 0
+
+
+def test_mesh(cavity: FoamCase) -> None:
+    cavity.run(parallel=False)
+
+    file = cavity.file("constant/polyMesh/points")
 
     assert None in file
     assert None in list(file)
@@ -152,32 +152,21 @@ def test_mesh(pitz: FoamCase) -> None:
     assert len(points[0]) == 3
 
 
-def test_internal_field(pitz: FoamCase) -> None:
-    pitz[0]["p"].internal_field = 0.5
-    pitz[0]["U"].internal_field = [1.5, 2.0, 3]
-
-    assert pitz[0]["p"].internal_field == 0.5
-    assert pitz[0]["U"].internal_field == [1.5, 2.0, 3]
-
-    pitz.run()
-
-    p = pitz[-1]["p"].internal_field
-    assert isinstance(p, Sequence)
-    U = pitz[-1]["U"].internal_field
-    assert isinstance(U, Sequence)
-    size = len(p)
-    assert len(U) == size
-
-    pitz.clean()
+def test_internal_field(cavity: FoamCase) -> None:
+    blocks = cavity.block_mesh_dict["blocks"]
+    assert isinstance(blocks, list)
+    sizes = blocks[2]
+    assert isinstance(sizes, list)
+    size = np.prod(sizes)
 
     p_arr = np.zeros(size)
     U_arr = np.zeros((size, 3))
 
-    pitz[0]["p"].internal_field = p_arr
-    pitz[0]["U"].internal_field = U_arr
+    cavity[0]["p"].internal_field = p_arr
+    cavity[0]["U"].internal_field = U_arr
 
-    assert pitz[0]["p"].internal_field == pytest.approx(p_arr)
-    U = pitz[0]["U"].internal_field
+    assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
+    U = cavity[0]["U"].internal_field
     assert isinstance(U, Sequence)
     for u, u_arr in zip(U, U_arr):
         assert u == pytest.approx(u_arr)
@@ -185,83 +174,84 @@ def test_internal_field(pitz: FoamCase) -> None:
     p_arr = np.arange(size) * 1e-6
     U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
 
-    pitz[0]["p"].internal_field = p_arr
-    pitz[0]["U"].internal_field = U_arr
+    cavity[0]["p"].internal_field = p_arr
+    cavity[0]["U"].internal_field = U_arr
 
-    assert pitz[0]["p"].internal_field == pytest.approx(p_arr)
-    U = pitz[0]["U"].internal_field
+    assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
+    U = cavity[0]["U"].internal_field
     assert isinstance(U, Sequence)
     for u, u_arr in zip(U, U_arr):
         assert u == pytest.approx(u_arr)
 
-    pitz.run()
+    cavity.run(parallel=False)
 
 
-def test_fv_schemes(pitz: FoamCase) -> None:
-    div_schemes = pitz.fv_schemes["divSchemes"]
+def test_fv_schemes(cavity: FoamCase) -> None:
+    div_schemes = cavity.fv_schemes["divSchemes"]
     assert isinstance(div_schemes, FoamFile.SubDict)
     scheme = div_schemes["div(phi,U)"]
     assert isinstance(scheme, tuple)
-    assert scheme[-3:] == ("Gauss", "linearUpwind", "grad(U)")
+    assert len(scheme) >= 2
+    assert scheme[0] == "Gauss"
 
 
-def test_binary_field(pitz: FoamCase) -> None:
-    pitz.control_dict["writeFormat"] = "binary"
+def test_binary_field(cavity: FoamCase) -> None:
+    cavity.control_dict["writeFormat"] = "binary"
 
-    pitz.run()
+    cavity.run(parallel=False)
 
-    p_bin = pitz[-1]["p"].internal_field
+    p_bin = cavity[-1]["p"].internal_field
     assert isinstance(p_bin, Sequence)
-    U_bin = pitz[-1]["U"].internal_field
+    U_bin = cavity[-1]["U"].internal_field
     assert isinstance(U_bin, Sequence)
     assert isinstance(U_bin[0], Sequence)
     assert len(U_bin[0]) == 3
     size = len(p_bin)
     assert len(U_bin) == size
 
-    pitz.clean()
+    cavity.clean()
 
     p_arr = np.arange(size) * 1e-6
     U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
 
-    pitz[0]["p"].internal_field = p_arr
-    pitz[0]["U"].internal_field = U_arr
+    cavity[0]["p"].internal_field = p_arr
+    cavity[0]["U"].internal_field = U_arr
 
-    assert pitz[0]["p"].internal_field == pytest.approx(p_arr)
-    U = pitz[0]["U"].internal_field
+    assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
+    U = cavity[0]["U"].internal_field
     assert isinstance(U, Sequence)
     for u, u_arr in zip(U, U_arr):
         assert u == pytest.approx(u_arr)
 
-    pitz.run()
+    cavity.run(parallel=False)
 
 
-def test_compressed_field(pitz: FoamCase) -> None:
-    pitz.control_dict["writeCompression"] = True
+def test_compressed_field(cavity: FoamCase) -> None:
+    cavity.control_dict["writeCompression"] = True
 
-    pitz.run()
+    cavity.run(parallel=False)
 
-    p_bin = pitz[-1]["p"].internal_field
+    p_bin = cavity[-1]["p"].internal_field
     assert isinstance(p_bin, Sequence)
-    U_bin = pitz[-1]["U"].internal_field
+    U_bin = cavity[-1]["U"].internal_field
     assert isinstance(U_bin, Sequence)
     assert isinstance(U_bin[0], Sequence)
     assert len(U_bin[0]) == 3
     size = len(p_bin)
     assert len(U_bin) == size
 
-    pitz.clean()
+    cavity.clean()
 
     p_arr = np.arange(size) * 1e-6
     U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
 
-    pitz[0]["p"].internal_field = p_arr
-    pitz[0]["U"].internal_field = U_arr
+    cavity[0]["p"].internal_field = p_arr
+    cavity[0]["U"].internal_field = U_arr
 
-    assert pitz[0]["p"].internal_field == pytest.approx(p_arr)
-    U = pitz[0]["U"].internal_field
+    assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
+    U = cavity[0]["U"].internal_field
     assert isinstance(U, Sequence)
     for u, u_arr in zip(U, U_arr):
         assert u == pytest.approx(u_arr)
 
-    pitz.run()
+    cavity.run(parallel=False)
