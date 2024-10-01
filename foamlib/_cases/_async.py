@@ -3,7 +3,7 @@ import multiprocessing
 import os
 import sys
 from contextlib import asynccontextmanager
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, Callable, Optional, TypeVar, Union, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import (
@@ -23,6 +23,8 @@ else:
 
 import aioshutil
 
+from .._files import FoamFieldFile
+from ._base import FoamCaseBase
 from ._run import FoamCaseRunBase
 from ._subprocess import run_async
 from ._util import ValuedGenerator, awaitableasynccontextmanager
@@ -41,6 +43,20 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     :param path: The path to the case directory.
     """
+
+    class TimeDirectory(FoamCaseRunBase.TimeDirectory):
+        @property
+        def _case(self) -> "AsyncFoamCase":
+            return AsyncFoamCase(self.path.parent)
+
+        async def cell_centers(self) -> FoamFieldFile:
+            """Write and return the cell centers."""
+            calls = ValuedGenerator(self._cell_centers_calls())
+
+            for coro in calls:
+                await coro
+
+            return calls.value
 
     max_cpus = multiprocessing.cpu_count()
     """
@@ -105,6 +121,23 @@ class AsyncFoamCase(FoamCaseRunBase):
         """
         for coro in self._clean_calls(check=check):
             await coro
+
+    @overload
+    def __getitem__(
+        self, index: Union[int, float, str]
+    ) -> "AsyncFoamCase.TimeDirectory": ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Sequence["AsyncFoamCase.TimeDirectory"]: ...
+
+    def __getitem__(
+        self, index: Union[int, slice, float, str]
+    ) -> Union["AsyncFoamCase.TimeDirectory", Sequence["AsyncFoamCase.TimeDirectory"]]:
+        ret = super().__getitem__(index)
+        if isinstance(ret, FoamCaseBase.TimeDirectory):
+            return AsyncFoamCase.TimeDirectory(ret)
+        else:
+            return [AsyncFoamCase.TimeDirectory(r) for r in ret]
 
     async def run(
         self,

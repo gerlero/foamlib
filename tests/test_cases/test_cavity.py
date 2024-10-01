@@ -56,3 +56,10 @@ def test_double_clean(cavity: FoamCase) -> None:
     cavity.clean()
     cavity.clean(check=True)
     cavity.run(parallel=False)
+
+
+def test_cell_centers(cavity: FoamCase) -> None:
+    cavity.block_mesh()
+    C = cavity[0].cell_centers()
+    assert isinstance(C.internal_field, list)
+    assert len(C.internal_field) == 400

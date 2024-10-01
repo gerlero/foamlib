@@ -40,11 +40,34 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+from .._files import FoamFieldFile
 from ._base import FoamCaseBase
 from ._subprocess import DEVNULL, STDOUT
 
 
 class FoamCaseRunBase(FoamCaseBase):
+    class TimeDirectory(FoamCaseBase.TimeDirectory):
+        @abstractmethod
+        def cell_centers(
+            self,
+        ) -> Union[FoamFieldFile, Coroutine[None, None, FoamFieldFile]]:
+            raise NotImplementedError
+
+        @property
+        @abstractmethod
+        def _case(self) -> "FoamCaseRunBase":
+            raise NotImplementedError
+
+        def _cell_centers_calls(self) -> Generator[Any, None, FoamFieldFile]:
+            ret = self["C"]
+
+            if ret not in self:
+                yield self._case.run(
+                    ["postProcess", "-func", "writeCellCentres", "-time", self.name]
+                )
+
+            return ret
+
     def __delitem__(self, key: Union[int, float, str]) -> None:
         shutil.rmtree(self[key].path)
 

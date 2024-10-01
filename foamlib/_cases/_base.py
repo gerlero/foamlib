@@ -41,6 +41,10 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             self.path = Path(path).absolute()
 
         @property
+        def _case(self) -> "FoamCaseBase":
+            return FoamCaseBase(self.path.parent)
+
+        @property
         def time(self) -> float:
             """The time that corresponds to this directory."""
             return float(self.path.name)
@@ -58,7 +62,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
         def __contains__(self, obj: object) -> bool:
             if isinstance(obj, FoamFieldFile):
-                return obj.path.parent == self.path
+                return obj.path.parent == self.path and obj.path.is_file()
             elif isinstance(obj, str):
                 return (self.path / obj).is_file() or (
                     self.path / f"{obj}.gz"
