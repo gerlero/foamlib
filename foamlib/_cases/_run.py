@@ -177,7 +177,7 @@ class FoamCaseRunBase(FoamCaseBase):
 
         return script
 
-    def __run_script(self, *, parallel: Optional[bool] = None) -> Optional[Path]:
+    def __run_script(self, *, parallel: Optional[bool]) -> Optional[Path]:
         """Return the path to the (All)run script, or None if no run script is found."""
         run = self.path / "run"
         run_parallel = self.path / "run-parallel"
@@ -263,7 +263,7 @@ class FoamCaseRunBase(FoamCaseBase):
 
         return type(self)(dst)
 
-    def _clean_calls(self, *, check: bool = False) -> Generator[Any, None, None]:
+    def _clean_calls(self, *, check: bool) -> Generator[Any, None, None]:
         script_path = self.__clean_script()
 
         if script_path is not None:
@@ -299,10 +299,10 @@ class FoamCaseRunBase(FoamCaseBase):
         self,
         cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
         *,
-        parallel: Optional[bool] = None,
-        cpus: Optional[int] = None,
-        check: bool = True,
-        log: bool = True,
+        parallel: Optional[bool],
+        cpus: Optional[int],
+        check: bool,
+        log: bool,
     ) -> Generator[Any, None, None]:
         if cmd is not None:
             if parallel:
