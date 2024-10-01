@@ -105,7 +105,9 @@ class FoamCase(FoamCaseRunBase):
         :param check: If True, raise a CalledProcessError if any command returns a non-zero exit code.
         :param log: If True, log the command output to a file.
         """
-        for _ in self._run_calls(cmd=cmd, parallel=parallel, check=check):
+        for _ in self._run_calls(
+            cmd=cmd, parallel=parallel, cpus=cpus, check=check, log=log
+        ):
             pass
 
     def block_mesh(self, *, check: bool = True) -> None:
