@@ -67,7 +67,7 @@ class FoamCase(FoamCaseRunBase):
     ) -> None:
         shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
 
-    def __enter__(self) -> "FoamCase":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
