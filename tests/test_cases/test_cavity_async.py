@@ -61,6 +61,14 @@ async def test_double_clean(cavity: AsyncFoamCase) -> None:
     await cavity.run(parallel=False)
 
 
+@pytest.mark.asyncio
+async def test_cell_centers(cavity: AsyncFoamCase) -> None:
+    await cavity.block_mesh()
+    C = await cavity[0].cell_centers()
+    assert isinstance(C.internal_field, list)
+    assert len(C.internal_field) == 400
+
+
 def test_map(cavity: AsyncFoamCase) -> None:
     async def f(x: Sequence[float]) -> float:
         async with cavity.clone() as clone:

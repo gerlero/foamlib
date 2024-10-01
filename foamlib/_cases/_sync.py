@@ -3,13 +3,7 @@ import shutil
 import sys
 from pathlib import Path
 from types import TracebackType
-from typing import (
-    Any,
-    Callable,
-    Optional,
-    Type,
-    Union,
-)
+from typing import Any, Callable, Optional, Type, Union, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Collection, Sequence
@@ -21,6 +15,8 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+from .._files import FoamFieldFile
+from ._base import FoamCaseBase
 from ._run import FoamCaseRunBase
 from ._subprocess import run_sync
 from ._util import ValuedGenerator
@@ -36,6 +32,22 @@ class FoamCase(FoamCaseRunBase):
 
     :param path: The path to the case directory.
     """
+
+    class TimeDirectory(FoamCaseRunBase.TimeDirectory):
+        @property
+        def _case(self) -> "FoamCase":
+            return FoamCase(self.path.parent)
+
+        def cell_centers(self) -> FoamFieldFile:
+            """Write and return the cell centers."""
+            calls = ValuedGenerator(self._cell_centers_calls())
+
+            for _ in calls:
+                pass
+
+            print(calls.value)
+
+            return calls.value
 
     def __init__(self, path: Union["os.PathLike[str]", str] = Path()):
         super().__init__(path)
@@ -66,6 +78,23 @@ class FoamCase(FoamCaseRunBase):
         ] = None,
     ) -> None:
         shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
+
+    @overload
+    def __getitem__(
+        self, index: Union[int, float, str]
+    ) -> "FoamCase.TimeDirectory": ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Sequence["FoamCase.TimeDirectory"]: ...
+
+    def __getitem__(
+        self, index: Union[int, slice, float, str]
+    ) -> Union["FoamCase.TimeDirectory", Sequence["FoamCase.TimeDirectory"]]:
+        ret = super().__getitem__(index)
+        if isinstance(ret, FoamCaseBase.TimeDirectory):
+            return FoamCase.TimeDirectory(ret)
+        else:
+            return [FoamCase.TimeDirectory(r) for r in ret]
 
     def __enter__(self) -> Self:
         return self
