@@ -139,17 +139,20 @@ class FoamCase(FoamCaseRunBase):
         ):
             pass
 
-    def block_mesh(self, *, check: bool = True) -> None:
+    def block_mesh(self, *, check: bool = True, log: bool = True) -> None:
         """Run blockMesh on this case."""
-        self.run(["blockMesh"], check=check)
+        for _ in self._block_mesh_calls(check=check, log=log):
+            pass
 
-    def decompose_par(self, *, check: bool = True) -> None:
+    def decompose_par(self, *, check: bool = True, log: bool = True) -> None:
         """Decompose this case for parallel running."""
-        self.run(["decomposePar"], check=check)
+        for _ in self._decompose_par_calls(check=check, log=log):
+            pass
 
-    def reconstruct_par(self, *, check: bool = True) -> None:
+    def reconstruct_par(self, *, check: bool = True, log: bool = True) -> None:
         """Reconstruct this case after parallel running."""
-        self.run(["reconstructPar"], check=check)
+        for _ in self._reconstruct_par_calls(check=check, log=log):
+            pass
 
     def restore_0_dir(self) -> None:
         """Restore the 0 directory from the 0.orig directory."""
@@ -164,12 +167,12 @@ class FoamCase(FoamCaseRunBase):
 
         :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
         """
-        cmds = ValuedGenerator(self._copy_calls(dst))
+        calls = ValuedGenerator(self._copy_calls(dst))
 
-        for _ in cmds:
+        for _ in calls:
             pass
 
-        return cmds.value
+        return calls.value
 
     def clone(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> Self:
         """
@@ -179,9 +182,9 @@ class FoamCase(FoamCaseRunBase):
 
         :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
         """
-        cmds = ValuedGenerator(self._clone_calls(dst))
+        calls = ValuedGenerator(self._clone_calls(dst))
 
-        for _ in cmds:
+        for _ in calls:
             pass
 
-        return cmds.value
+        return calls.value

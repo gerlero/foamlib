@@ -164,17 +164,20 @@ class AsyncFoamCase(FoamCaseRunBase):
         ):
             await coro
 
-    async def block_mesh(self, *, check: bool = True) -> None:
+    async def block_mesh(self, *, check: bool = True, log: bool = True) -> None:
         """Run blockMesh on this case."""
-        await self.run(["blockMesh"], check=check)
+        for coro in self._block_mesh_calls(check=check, log=log):
+            await coro
 
-    async def decompose_par(self, *, check: bool = True) -> None:
+    async def decompose_par(self, *, check: bool = True, log: bool = True) -> None:
         """Decompose this case for parallel running."""
-        await self.run(["decomposePar"], check=check)
+        for coro in self._decompose_par_calls(check=check, log=log):
+            await coro
 
-    async def reconstruct_par(self, *, check: bool = True) -> None:
+    async def reconstruct_par(self, *, check: bool = True, log: bool = True) -> None:
         """Reconstruct this case after parallel running."""
-        await self.run(["reconstructPar"], check=check)
+        for coro in self._reconstruct_par_calls(check=check, log=log):
+            await coro
 
     async def restore_0_dir(self) -> None:
         """Restore the 0 directory from the 0.orig directory."""
