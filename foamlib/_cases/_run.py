@@ -63,7 +63,9 @@ class FoamCaseRunBase(FoamCaseBase):
 
             if ret not in self:
                 yield self._case.run(
-                    ["postProcess", "-func", "writeCellCentres", "-time", self.name]
+                    ["postProcess", "-func", "writeCellCentres", "-time", self.name],
+                    cpus=0,
+                    log=False,
                 )
 
             return ret
@@ -127,13 +129,19 @@ class FoamCaseRunBase(FoamCaseBase):
 
     @abstractmethod
     def block_mesh(
-        self, *, check: bool = True
+        self, *, check: bool = True, log: bool = True
     ) -> Union[None, Coroutine[None, None, None]]:
         raise NotImplementedError
 
     @abstractmethod
     def decompose_par(
-        self, *, check: bool = True
+        self, *, check: bool = True, log: bool = True
+    ) -> Union[None, Coroutine[None, None, None]]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def reconstruct_par(
+        self, *, check: bool = True, log: bool = True
     ) -> Union[None, Coroutine[None, None, None]]:
         raise NotImplementedError
 
@@ -317,6 +325,21 @@ class FoamCaseRunBase(FoamCaseBase):
     def _restore_0_dir_calls(self) -> Generator[Any, None, None]:
         yield self._rmtree(self.path / "0", ignore_errors=True)
         yield self._copytree(self.path / "0.orig", self.path / "0", symlinks=True)
+
+    def _block_mesh_calls(
+        self, *, check: bool, log: bool
+    ) -> Generator[Any, None, None]:
+        yield self.run(["blockMesh"], cpus=0, check=check, log=log)
+
+    def _decompose_par_calls(
+        self, *, check: bool, log: bool
+    ) -> Generator[Any, None, None]:
+        yield self.run(["decomposePar"], cpus=0, check=check, log=log)
+
+    def _reconstruct_par_calls(
+        self, *, check: bool, log: bool
+    ) -> Generator[Any, None, None]:
+        yield self.run(["reconstructPar"], cpus=0, check=check, log=log)
 
     def _run_calls(
         self,
