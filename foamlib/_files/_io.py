@@ -1,4 +1,5 @@
 import gzip
+import os
 import sys
 from copy import deepcopy
 from pathlib import Path
@@ -19,7 +20,7 @@ from ._parsing import Parsed
 
 
 class FoamFileIO:
-    def __init__(self, path: Union[str, Path]) -> None:
+    def __init__(self, path: Union["os.PathLike[str]", str]) -> None:
         self.path = Path(path).absolute()
 
         self.__contents: Optional[bytes] = None
