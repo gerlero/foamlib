@@ -60,7 +60,9 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     max_cpus = multiprocessing.cpu_count()
     """
-    Maximum number of CPUs to use for running `AsyncFoamCase`s concurrently. Defaults to the number of CPUs on the system.
+    Maximum number of CPUs to use for running instances of `AsyncFoamCase` concurrently. 
+    
+    Defaults to the number of CPUs on the system.
     """
 
     _reserved_cpus = 0

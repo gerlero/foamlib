@@ -7,15 +7,17 @@ from ._cases import (
     CalledProcessError,
     FoamCase,
     FoamCaseBase,
+    FoamCaseRunBase,
 )
 from ._files import FoamFieldFile, FoamFile, FoamFileBase
 
 __all__ = [
-    "FoamCase",
     "AsyncFoamCase",
-    "FoamCaseBase",
-    "FoamFile",
-    "FoamFieldFile",
-    "FoamFileBase",
     "CalledProcessError",
+    "FoamFile",
+    "FoamCase",
+    "FoamCaseRunBase",
+    "FoamFieldFile",
+    "FoamCaseBase",
+    "FoamFileBase",
 ]
