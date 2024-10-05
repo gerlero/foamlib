@@ -25,8 +25,13 @@ def flange() -> "Generator[FoamCase]":
 
 @pytest.mark.parametrize("parallel", [True, False])
 def test_run(flange: FoamCase, parallel: bool) -> None:
-    if parallel and not (flange.path / "Allrun-parallel").exists():
-        pytest.skip()
+    if parallel:
+        if not (flange.path / "Allrun-parallel").exists():
+            pytest.skip()
+        with flange.decompose_par_dict as d:
+            assert d["method"] == "scotch"
+            d["numberOfSubdomains"] = 2
+
     flange.run(parallel=parallel)
     if parallel:
         flange.reconstruct_par()

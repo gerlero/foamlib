@@ -16,3 +16,7 @@ Case manipulation
 .. autoclass:: foamlib.AsyncFoamCase
    :members:
    :show-inheritance:
+
+.. autoclass:: foamlib.AsyncSlurmFoamCase
+   :members:
+   :show-inheritance:

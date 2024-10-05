@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -9,16 +10,20 @@ else:
 
 import pytest
 import pytest_asyncio
-from foamlib import AsyncFoamCase, CalledProcessError
+from foamlib import AsyncFoamCase, AsyncSlurmFoamCase, CalledProcessError
 
 
-@pytest_asyncio.fixture
-async def flange() -> "AsyncGenerator[AsyncFoamCase]":
+@pytest_asyncio.fixture(params=[AsyncFoamCase, AsyncSlurmFoamCase])
+async def flange(request: pytest.FixtureRequest) -> "AsyncGenerator[AsyncFoamCase]":
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
     path = tutorials_path / "basic" / "laplacianFoam" / "flange"
     of11_path = tutorials_path / "legacy" / "basic" / "laplacianFoam" / "flange"
 
-    case = AsyncFoamCase(path if path.exists() else of11_path)
+    case = request.param(path if path.exists() else of11_path)
+    assert isinstance(case, AsyncFoamCase)
+
+    if isinstance(case, AsyncSlurmFoamCase) and shutil.which("salloc") is None:
+        pytest.skip("Slurm not available")
 
     async with case.clone() as clone:
         yield clone
@@ -27,8 +32,13 @@ async def flange() -> "AsyncGenerator[AsyncFoamCase]":
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parallel", [True, False])
 async def test_run(flange: AsyncFoamCase, parallel: bool) -> None:
-    if parallel and not (flange.path / "Allrun-parallel").exists():
-        pytest.skip()
+    if parallel:
+        if not (flange.path / "Allrun-parallel").exists():
+            pytest.skip()
+        with flange.decompose_par_dict as d:
+            assert d["method"] == "scotch"
+            d["numberOfSubdomains"] = 2
+
     await flange.run(parallel=parallel)
     if parallel:
         await flange.reconstruct_par()
