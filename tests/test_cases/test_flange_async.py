@@ -1,5 +1,4 @@
 import os
-import shutil
 import sys
 from pathlib import Path
 
@@ -22,9 +21,6 @@ async def flange(request: pytest.FixtureRequest) -> "AsyncGenerator[AsyncFoamCas
     case = request.param(path if path.exists() else of11_path)
     assert isinstance(case, AsyncFoamCase)
 
-    if isinstance(case, AsyncSlurmFoamCase) and shutil.which("salloc") is None:
-        pytest.skip("Slurm not available")
-
     async with case.clone() as clone:
         yield clone
 
@@ -39,11 +35,20 @@ async def test_run(flange: AsyncFoamCase, parallel: bool) -> None:
             assert d["method"] == "scotch"
             d["numberOfSubdomains"] = 2
 
-    await flange.run(parallel=parallel)
+    if isinstance(flange, AsyncSlurmFoamCase):
+        await flange.run(parallel=parallel, fallback=True)
+    else:
+        await flange.run(parallel=parallel)
+
     if parallel:
         await flange.reconstruct_par()
+
     await flange.clean()
-    await flange.run(parallel=parallel)
+
+    if isinstance(flange, AsyncSlurmFoamCase):
+        await flange.run(parallel=parallel, fallback=True)
+    else:
+        await flange.run(parallel=parallel)
 
 
 @pytest.mark.asyncio
@@ -64,8 +69,13 @@ async def test_run_cmd(flange: AsyncFoamCase) -> None:
             "-scale",
             "0.001",
         ],
+        cpus=0,
     )
-    await flange.run([flange.application])
+
+    if isinstance(flange, AsyncSlurmFoamCase):
+        await flange.run([flange.application], fallback=True)
+    else:
+        await flange.run([flange.application])
 
 
 @pytest.mark.asyncio
@@ -75,11 +85,16 @@ async def test_run_cmd_shell(flange: AsyncFoamCase) -> None:
 
     try:
         await flange.run(
-            'ansysToFoam "$FOAM_TUTORIALS/resources/geometry/flange.ans" -scale 0.001'
+            'ansysToFoam "$FOAM_TUTORIALS/resources/geometry/flange.ans" -scale 0.001',
+            cpus=0,
         )
     except CalledProcessError:
-        await flange.run('ansysToFoam "flange.ans" -scale 0.001')
-    await flange.run(flange.application)
+        await flange.run('ansysToFoam "flange.ans" -scale 0.001', cpus=0)
+
+    if isinstance(flange, AsyncSlurmFoamCase):
+        await flange.run(flange.application, fallback=True)
+    else:
+        await flange.run(flange.application)
 
 
 def test_path(flange: AsyncFoamCase) -> None:
