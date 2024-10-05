@@ -15,7 +15,7 @@
 It offers the following classes:
 
 * [`FoamFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFile) (and [`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFieldFile)): read-write access to OpenFOAM configuration and field files as if they were Python `dict`s, using `foamlib`'s own parser. Supports both ASCII and binary field formats.
-* [`FoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.FoamCase): a class for manipulating, executing and accessing the results of OpenFOAM cases.
+* [`FoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.FoamCase): a class for configuring, running, and accessing the results of OpenFOAM cases.
 * [`AsyncFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncFoamCase): variant of `FoamCase` with asynchronous methods for running multiple cases at once.
 
 ## Get started
@@ -118,6 +118,18 @@ async def cost(x):
         return abs(clone[-1]["U"].internal_field[0][0])
 
 result = differential_evolution(cost, bounds=[(-1, 1)], workers=AsyncFoamCase.map, polish=False)
+```
+
+### Use it to create a `run` (or `clean`) script
+    
+```python
+#!/usr/bin/env python3
+from pathlib import Path
+from foamlib import FoamCase
+
+case = FoamCase(Path(__file__).parent)
+# Any additional configuration here
+case.run()
 ```
 
 ## Documentation
