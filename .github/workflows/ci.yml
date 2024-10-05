@@ -39,11 +39,33 @@ jobs:
         mypy
 
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - "8888:3306"
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     strategy:
       matrix:
-        openfoam-version: [2406, 2006, 12, 7]
+        openfoam-version: [2406, 2006, 12, 9]
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        slurm: [false]
+        include:
+          - openfoam-version: 2406
+            python-version: '3.13'
+            slurm: true
+          - openfoam-version: 12
+            python-version: '3.13'
+            slurm: true
+          - openfoam-version: 2006
+            python-version: '3.7'
+            slurm: true
+          - openfoam-version: 9
+            python-version: '3.7'
+            slurm: true
       fail-fast: false
     steps:
     - name: Checkout
@@ -57,6 +79,9 @@ jobs:
       uses: gerlero/setup-openfoam@v1
       with:
         openfoam-version: ${{ matrix.openfoam-version }}
+    - name: Set up Slurm
+      if: matrix.slurm
+      uses: koesterlab/setup-slurm-action@v1
     - name: Install test dependencies
       run: |
         python -m pip install .[test]
