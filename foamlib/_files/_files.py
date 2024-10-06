@@ -186,12 +186,10 @@ class FoamFile(
 
             try:
                 write_header = (
-                    not self
-                    and "FoamFile" not in self
-                    and (not keywords or keywords[0] != "FoamFile")
+                    not self and "FoamFile" not in self and keywords != ("FoamFile",)
                 )
             except FileNotFoundError:
-                write_header = not keywords or keywords[0] != "FoamFile"
+                write_header = keywords != ("FoamFile",)
 
             if write_header:
                 self["FoamFile"] = {}
