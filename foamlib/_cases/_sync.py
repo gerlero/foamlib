@@ -1,7 +1,6 @@
 import os
 import shutil
 import sys
-from pathlib import Path
 from types import TracebackType
 from typing import Any, Callable, Optional, Type, Union, overload
 
@@ -48,9 +47,6 @@ class FoamCase(FoamCaseRunBase):
             print(calls.value)
 
             return calls.value
-
-    def __init__(self, path: Union["os.PathLike[str]", str] = Path()):
-        super().__init__(path)
 
     @staticmethod
     def _run(
