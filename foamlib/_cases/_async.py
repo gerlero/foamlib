@@ -41,7 +41,7 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     Access the time directories of the case as a sequence, e.g. `case[0]` or `case[-1]`.
 
-    :param path: The path to the case directory.
+    :param path: The path to the case directory. If None, use the current script's directory (if applicable), or the current working directory.
     """
 
     class TimeDirectory(FoamCaseRunBase.TimeDirectory):
