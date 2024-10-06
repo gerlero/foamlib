@@ -25,9 +25,6 @@ from .._files import FoamFieldFile, FoamFile
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
-    def __init__(self, path: Union["os.PathLike[str]", str] = Path()):
-        self.path = Path(path).absolute()
-
     class TimeDirectory(Set[FoamFieldFile]):
         """
         An OpenFOAM time directory in a case.
@@ -94,6 +91,15 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
         def __str__(self) -> str:
             return str(self.path)
+
+    def __init__(self, path: Optional[Union["os.PathLike[str]", str]] = None):
+        if path is None:
+            if sys.argv[0]:
+                self.path = Path(sys.argv[0]).absolute().parent
+            else:
+                self.path = Path.cwd()
+        else:
+            self.path = Path(path).absolute()
 
     @property
     def _times(self) -> Sequence["FoamCaseBase.TimeDirectory"]:
