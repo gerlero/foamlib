@@ -2,6 +2,7 @@ import asyncio
 import os
 import subprocess
 import sys
+from io import BytesIO
 from typing import IO, Optional, Union
 
 if sys.version_info >= (3, 9):
@@ -48,22 +49,26 @@ def run_sync(
         shell=isinstance(cmd, str),
     )
 
-    error = b""
-
     if stderr == STDOUT:
         stderr = stdout
     if stderr not in (PIPE, DEVNULL):
+        stderr_copy = BytesIO()
+
         assert not isinstance(stderr, int)
         if stderr is None:
             stderr = sys.stderr.buffer
 
         assert proc.stderr is not None
         for line in proc.stderr:
-            error += line
             stderr.write(line)
+            stderr_copy.write(line)
 
-    output, _ = proc.communicate()
-    assert not _
+        output, _ = proc.communicate()
+        assert not _
+        error = stderr_copy.getvalue()
+    else:
+        output, error = proc.communicate()
+
     assert proc.returncode is not None
 
     if check and proc.returncode != 0:
@@ -108,22 +113,26 @@ async def run_async(
             stderr=PIPE,
         )
 
-    error = b""
-
     if stderr == STDOUT:
         stderr = stdout
     if stderr not in (PIPE, DEVNULL):
+        stderr_copy = BytesIO()
+
         assert not isinstance(stderr, int)
         if stderr is None:
             stderr = sys.stderr.buffer
 
         assert proc.stderr is not None
         async for line in proc.stderr:
-            error += line
             stderr.write(line)
+            stderr_copy.write(line)
 
-    output, _ = await proc.communicate()
-    assert not _
+        output, _ = await proc.communicate()
+        assert not _
+        error = stderr_copy.getvalue()
+    else:
+        output, error = await proc.communicate()
+
     assert proc.returncode is not None
 
     if check and proc.returncode != 0:
