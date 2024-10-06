@@ -349,6 +349,7 @@ class FoamCaseRunBase(FoamCaseBase):
         cpus: Optional[int],
         check: bool,
         log: bool,
+        **kwargs: Any,
     ) -> Generator[Any, None, None]:
         if cmd is not None:
             if parallel:
@@ -381,6 +382,7 @@ class FoamCaseRunBase(FoamCaseBase):
                     env=self.__env(shell=isinstance(cmd, str)),
                     stdout=stdout,
                     stderr=stderr,
+                    **kwargs,
                 )
 
         else:
@@ -399,7 +401,9 @@ class FoamCaseRunBase(FoamCaseBase):
                     if cpus is None:
                         cpus = 1
 
-                yield self.run([script_path], parallel=False, cpus=cpus, check=check)
+                yield self.run(
+                    [script_path], parallel=False, cpus=cpus, check=check, **kwargs
+                )
 
             else:
                 if not self and (self.path / "0.orig").is_dir():
@@ -429,5 +433,9 @@ class FoamCaseRunBase(FoamCaseBase):
                         cpus = 1
 
                 yield self.run(
-                    [self.application], parallel=parallel, cpus=cpus, check=check
+                    [self.application],
+                    parallel=parallel,
+                    cpus=cpus,
+                    check=check,
+                    **kwargs,
                 )
