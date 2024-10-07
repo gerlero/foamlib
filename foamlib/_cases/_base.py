@@ -93,8 +93,9 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             return str(self.path)
 
     def __init__(self, path: Optional[Union["os.PathLike[str]", str]] = None):
+        self.path: Path
         if path is None:
-            if sys.argv[0]:
+            if __package__ is None:  # If running as a script
                 self.path = Path(sys.argv[0]).absolute().parent
             else:
                 self.path = Path.cwd()

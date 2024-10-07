@@ -203,7 +203,7 @@ class FoamCaseRunBase(FoamCaseBase):
         else:
             return None
 
-        if sys.argv and Path(sys.argv[0]).absolute() == script.absolute():
+        if __package__ is None and Path(sys.argv[0]).absolute() == script.absolute():
             return None
 
         return script
@@ -236,7 +236,7 @@ class FoamCaseRunBase(FoamCaseBase):
         else:
             return None
 
-        if sys.argv and Path(sys.argv[0]).absolute() == script.absolute():
+        if __package__ is None and Path(sys.argv[0]).absolute() == script.absolute():
             return None
 
         return script
