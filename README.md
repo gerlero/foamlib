@@ -126,11 +126,12 @@ result = differential_evolution(cost, bounds=[(-1, 1)], workers=AsyncFoamCase.ma
     
 ```python
 #!/usr/bin/env python3
+from pathlib import Path
 from foamlib import FoamCase
 
-this_case = FoamCase()
+case = FoamCase(Path(__file__).parent)
 # Any additional configuration here
-this_case.run()
+case.run()
 ```
 
 ## Documentation
