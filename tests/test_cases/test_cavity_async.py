@@ -28,7 +28,7 @@ async def cavity(request: pytest.FixtureRequest) -> "AsyncGenerator[AsyncFoamCas
             assert not run.exists()
             assert not (clone.path / "Allrun").exists()
             run.write_text(
-                "#!/usr/bin/env python3\nfrom foamlib import FoamCase\nFoamCase().run(parallel=False)"
+                "#!/usr/bin/env python3\nfrom pathlib import Path\nfrom foamlib import FoamCase\nFoamCase(Path(__file__).parent).run(parallel=False)"
             )
             run.chmod(run.stat().st_mode | stat.S_IEXEC)
 
@@ -36,7 +36,7 @@ async def cavity(request: pytest.FixtureRequest) -> "AsyncGenerator[AsyncFoamCas
             assert not clean.exists()
             assert not (clone.path / "Allclean").exists()
             clean.write_text(
-                "#!/usr/bin/env python3\nfrom foamlib import FoamCase\nFoamCase().clean()"
+                "#!/usr/bin/env python3\nfrom pathlib import Path\nfrom foamlib import FoamCase\nFoamCase(Path(__file__).parent).clean()"
             )
             clean.chmod(clean.stat().st_mode | stat.S_IEXEC)
 
