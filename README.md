@@ -6,6 +6,7 @@
 [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![PyPI](https://img.shields.io/pypi/v/foamlib)](https://pypi.org/project/foamlib/)
+[![Conda Version](https://img.shields.io/conda/vn/conda-forge/foamlib)](https://anaconda.org/conda-forge/foamlib)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/foamlib)](https://pypi.org/project/foamlib/)
 ![OpenFOAM](https://img.shields.io/badge/openfoam-.com%20|%20.org-informational)
 [![Docker image](https://img.shields.io/badge/docker%20image-microfluidica%2Ffoamlib-0085a0)](https://hub.docker.com/r/microfluidica/foamlib/)
@@ -23,11 +24,17 @@ It offers the following classes:
 
 ### Install
 
-Install with [pip](https://pypi.org/project/pip/):
+* With [pip](https://pypi.org/project/pip/):
 
-```bash
-pip install foamlib
-```
+    ```bash
+    pip install foamlib
+    ```
+
+* With [conda](https://docs.conda.io/en/latest/):
+
+    ```bash
+    conda install -c conda-forge foamlib
+    ```
 
 ### Clone a case
 
