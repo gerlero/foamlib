@@ -47,7 +47,7 @@ test = [
 ]
 typing = [
     "foamlib[test]",
-    "mypy>=1,<2",
+    "mypy>=1.12,<2",
 ]
 docs = [
     "foamlib[numpy]",
