@@ -16,24 +16,9 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
-    - name: Install needed packages
-      run: |
-        pip install --upgrade setuptools build
-    - name: Check version number
-      run: |
-        TAG="${GITHUB_REF#refs/tags/}"
-        VERSION_FROM_TAG="${TAG#v}"
-        PACKAGE_VERSION=$(python -c 'import setuptools; setuptools.setup()' --version)
-        if [ "$PACKAGE_VERSION" != "$VERSION_FROM_TAG" ]; then
-          echo "::error title=Version mismatch::$PACKAGE_VERSION (package version) != $VERSION_FROM_TAG (version from tag)"
-          exit
-        fi
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
     - name: Build
-      run: |
-        python -m build
+      run: uv build
     - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      run: uv publish

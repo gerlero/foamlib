@@ -137,6 +137,9 @@
 # Cython debug symbols
 **/cython_debug/
 
+# uv
+**/uv.lock
+
 # macOS
 **/.DS_Store
 
