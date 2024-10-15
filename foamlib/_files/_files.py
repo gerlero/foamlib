@@ -86,7 +86,7 @@ class FoamFile(
 
         def as_dict(self) -> FoamFileBase._Dict:
             """Return a nested dict representation of the dictionary."""
-            ret = self._file.as_dict()
+            ret = self._file.as_dict(include_header=True)
 
             for k in self._keywords:
                 assert isinstance(ret, dict)
@@ -294,15 +294,10 @@ class FoamFile(
 
     def _iter(self, keywords: Tuple[str, ...] = ()) -> Iterator[Optional[str]]:
         _, parsed = self._read()
-
-        yield from (
-            k[-1] if k else None
-            for k in parsed
-            if k != ("FoamFile",) and k[:-1] == keywords
-        )
+        yield from (k[-1] if k else None for k in parsed if k[:-1] == keywords)
 
     def __iter__(self) -> Iterator[Optional[str]]:
-        return self._iter()
+        yield from (k for k in self._iter() if k != "FoamFile")
 
     def __contains__(self, keywords: object) -> bool:
         if not keywords:
@@ -328,11 +323,16 @@ class FoamFile(
     def __fspath__(self) -> str:
         return str(self.path)
 
-    def as_dict(self) -> FoamFileBase._File:
-        """Return a nested dict representation of the file."""
+    def as_dict(self, *, include_header: bool = False) -> FoamFileBase._File:
+        """
+        Return a nested dict representation of the file.
+
+        :param include_header: Whether to include the "FoamFile" header in the output.
+        """
         _, parsed = self._read()
         d = parsed.as_dict()
-        del d["FoamFile"]
+        if not include_header:
+            d.pop("FoamFile", None)
         return d
 
 
