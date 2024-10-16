@@ -104,7 +104,7 @@ def test_new_field(tmp_path: Path) -> None:
 
 
 @pytest.fixture
-def cavity() -> "Generator[FoamCase]":
+def cavity() -> Generator[FoamCase, None, None]:
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
     path = tutorials_path / "incompressible" / "icoFoam" / "cavity" / "cavity"
     of11_path = tutorials_path / "incompressibleFluid" / "cavity"

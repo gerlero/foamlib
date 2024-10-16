@@ -101,7 +101,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     async def _rmtree(
         path: Union["os.PathLike[str]", str], ignore_errors: bool = False
     ) -> None:
-        await aioshutil.rmtree(path, ignore_errors=ignore_errors)  # type: ignore [call-arg]
+        await aioshutil.rmtree(path, ignore_errors=ignore_errors)
 
     @staticmethod
     async def _copytree(
@@ -188,7 +188,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     @asynccontextmanager
     async def copy(
         self, dst: Optional[Union["os.PathLike[str]", str]] = None
-    ) -> "AsyncGenerator[Self]":
+    ) -> AsyncGenerator[Self, None]:
         """
         Make a copy of this case.
 
@@ -209,7 +209,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     @asynccontextmanager
     async def clone(
         self, dst: Optional[Union["os.PathLike[str]", str]] = None
-    ) -> "AsyncGenerator[Self]":
+    ) -> AsyncGenerator[Self, None]:
         """
         Clone this case (make a clean copy).
 

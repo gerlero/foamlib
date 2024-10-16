@@ -14,7 +14,7 @@ from foamlib import FoamCase
 
 
 @pytest.fixture(params=[False, True])
-def cavity(request: pytest.FixtureRequest) -> "Generator[FoamCase]":
+def cavity(request: pytest.FixtureRequest) -> Generator[FoamCase, None, None]:
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
     path = tutorials_path / "incompressible" / "icoFoam" / "cavity" / "cavity"
     of11_path = tutorials_path / "incompressibleFluid" / "cavity"

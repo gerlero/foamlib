@@ -12,7 +12,7 @@ from foamlib import CalledProcessError, FoamCase
 
 
 @pytest.fixture
-def flange() -> "Generator[FoamCase]":
+def flange() -> Generator[FoamCase, None, None]:
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
     path = tutorials_path / "basic" / "laplacianFoam" / "flange"
     of11_path = tutorials_path / "legacy" / "basic" / "laplacianFoam" / "flange"
