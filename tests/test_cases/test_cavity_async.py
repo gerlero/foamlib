@@ -15,7 +15,7 @@ from foamlib import AsyncFoamCase
 
 
 @pytest_asyncio.fixture(params=[False, True])
-async def cavity(request: pytest.FixtureRequest) -> "AsyncGenerator[AsyncFoamCase]":
+async def cavity(request: pytest.FixtureRequest) -> AsyncGenerator[AsyncFoamCase, None]:
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
     path = tutorials_path / "incompressible" / "icoFoam" / "cavity" / "cavity"
     of11_path = tutorials_path / "incompressibleFluid" / "cavity"
@@ -74,7 +74,10 @@ def test_map(cavity: AsyncFoamCase) -> None:
         async with cavity.clone() as clone:
             clone[0]["U"].boundary_field["movingWall"].value = [x[0], 0, 0]
             await clone.run(parallel=False)
-            ret = clone[-1]["U"].boundary_field["movingWall"].value[0]
+            U = clone[-1]["U"].boundary_field["movingWall"].value
+            assert not isinstance(U, (int, float))
+            assert len(U) == 3
+            ret = U[0]
             assert isinstance(ret, (int, float))
             return ret
 

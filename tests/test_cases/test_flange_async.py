@@ -13,7 +13,7 @@ from foamlib import AsyncFoamCase, AsyncSlurmFoamCase, CalledProcessError
 
 
 @pytest_asyncio.fixture(params=[AsyncFoamCase, AsyncSlurmFoamCase])
-async def flange(request: pytest.FixtureRequest) -> "AsyncGenerator[AsyncFoamCase]":
+async def flange(request: pytest.FixtureRequest) -> AsyncGenerator[AsyncFoamCase, None]:
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
     path = tutorials_path / "basic" / "laplacianFoam" / "flange"
     of11_path = tutorials_path / "legacy" / "basic" / "laplacianFoam" / "flange"
