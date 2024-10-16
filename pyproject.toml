@@ -37,7 +37,10 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-numpy = ["numpy>=1,<3"]
+numpy = [
+    "numpy>=1.25.0,<3; python_version>='3.10'",
+    "numpy>=1,<3"
+]
 lint = ["ruff"]
 test = [
     "foamlib[numpy]",
@@ -51,7 +54,7 @@ typing = [
 ]
 docs = [
     "foamlib[numpy]",
-    "sphinx>=7,<9",
+    "sphinx>=5,<9",
     "sphinx_rtd_theme",
 ]
 dev = [
