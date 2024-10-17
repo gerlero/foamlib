@@ -1,9 +1,11 @@
 import asyncio
-import os
 import subprocess
 import sys
 from io import BytesIO
-from typing import IO, Optional, Union
+from typing import IO, TYPE_CHECKING, Optional, Union
+
+if TYPE_CHECKING:
+    import os
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
@@ -18,7 +20,7 @@ class CalledProcessError(subprocess.CalledProcessError):
         if self.stderr:
             if isinstance(self.stderr, bytes):
                 return super().__str__() + "\n" + self.stderr.decode()
-            elif isinstance(self.stderr, str):
+            if isinstance(self.stderr, str):
                 return super().__str__() + "\n" + self.stderr
         return super().__str__()
 

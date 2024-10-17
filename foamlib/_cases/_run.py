@@ -256,8 +256,7 @@ class FoamCaseRunBase(FoamCaseBase):
                 env["DYLD_LIBRARY_PATH"] = env["FOAM_LD_LIBRARY_PATH"]
 
             return env
-        else:
-            return None
+        return None
 
     @contextmanager
     def __output(
@@ -267,10 +266,7 @@ class FoamCaseRunBase(FoamCaseBase):
             if isinstance(cmd, str):
                 name = shlex.split(cmd)[0]
             else:
-                if isinstance(cmd[0], os.PathLike):
-                    name = Path(cmd[0]).name
-                else:
-                    name = cmd[0]
+                name = Path(cmd[0]).name if isinstance(cmd[0], os.PathLike) else cmd[0]
 
             with (self.path / f"log.{name}").open("ab") as stdout:
                 yield stdout, STDOUT

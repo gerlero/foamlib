@@ -1,10 +1,10 @@
 import gzip
-import os
 import sys
 from copy import deepcopy
 from pathlib import Path
 from types import TracebackType
 from typing import (
+    TYPE_CHECKING,
     Optional,
     Tuple,
     Type,
@@ -17,6 +17,9 @@ else:
     from typing_extensions import Self
 
 from ._parsing import Parsed
+
+if TYPE_CHECKING:
+    import os
 
 
 class FoamFileIO:
@@ -63,8 +66,7 @@ class FoamFileIO:
         if self.__contents is None:
             if missing_ok:
                 return b"", Parsed(b"")
-            else:
-                raise FileNotFoundError(self.path)
+            raise FileNotFoundError(self.path)
 
         if self.__parsed is None:
             parsed = Parsed(self.__contents)

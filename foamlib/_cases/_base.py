@@ -1,8 +1,8 @@
-import os
 import shutil
 import sys
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Optional,
     Union,
     overload,
@@ -22,6 +22,9 @@ else:
     )
 
 from .._files import FoamFieldFile, FoamFile
+
+if TYPE_CHECKING:
+    import os
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
@@ -57,18 +60,16 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         def __getitem__(self, key: str) -> FoamFieldFile:
             if (self.path / f"{key}.gz").is_file() and not (self.path / key).is_file():
                 return FoamFieldFile(self.path / f"{key}.gz")
-            else:
-                return FoamFieldFile(self.path / key)
+            return FoamFieldFile(self.path / key)
 
         def __contains__(self, obj: object) -> bool:
             if isinstance(obj, FoamFieldFile):
                 return obj.path.parent == self.path and obj.path.is_file()
-            elif isinstance(obj, str):
+            if isinstance(obj, str):
                 return (self.path / obj).is_file() or (
                     self.path / f"{obj}.gz"
                 ).is_file()
-            else:
-                return False
+            return False
 
         def __iter__(self) -> Iterator[FoamFieldFile]:
             for p in self.path.iterdir():
@@ -124,7 +125,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
     ) -> Union["FoamCaseBase.TimeDirectory", Sequence["FoamCaseBase.TimeDirectory"]]:
         if isinstance(index, str):
             return FoamCaseBase.TimeDirectory(self.path / index)
-        elif isinstance(index, float):
+        if isinstance(index, float):
             for time in self._times:
                 if time.time == index:
                     return time

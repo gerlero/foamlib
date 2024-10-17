@@ -1,8 +1,7 @@
-import os
 import shutil
 import sys
 from types import TracebackType
-from typing import Any, Callable, Optional, Type, Union, overload
+from typing import TYPE_CHECKING, Any, Callable, Optional, Type, Union, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Collection, Sequence
@@ -19,6 +18,9 @@ from ._base import FoamCaseBase
 from ._run import FoamCaseRunBase
 from ._subprocess import run_sync
 from ._util import ValuedGenerator
+
+if TYPE_CHECKING:
+    import os
 
 
 class FoamCase(FoamCaseRunBase):
@@ -43,8 +45,6 @@ class FoamCase(FoamCaseRunBase):
 
             for _ in calls:
                 pass
-
-            print(calls.value)
 
             return calls.value
 
@@ -89,8 +89,7 @@ class FoamCase(FoamCaseRunBase):
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):
             return FoamCase.TimeDirectory(ret)
-        else:
-            return [FoamCase.TimeDirectory(r) for r in ret]
+        return [FoamCase.TimeDirectory(r) for r in ret]
 
     def __enter__(self) -> Self:
         return self

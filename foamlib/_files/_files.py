@@ -1,5 +1,5 @@
 import sys
-from typing import Any, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -16,10 +16,8 @@ from ._io import FoamFileIO
 from ._serialization import Kind, dumpb
 from ._util import is_sequence
 
-try:
+if TYPE_CHECKING:
     import numpy as np
-except ModuleNotFoundError:
-    pass
 
 
 class FoamFile(
@@ -172,8 +170,7 @@ class FoamFile(
 
         if value is ...:
             return FoamFile.SubDict(self, keywords)
-        else:
-            return value
+        return value
 
     def __setitem__(
         self, keywords: Optional[Union[str, Tuple[str, ...]]], data: "FoamFile._SetData"

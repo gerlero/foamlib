@@ -1,9 +1,8 @@
 import asyncio
 import multiprocessing
-import os
 import sys
 from contextlib import asynccontextmanager
-from typing import Any, Callable, Optional, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import (
@@ -28,6 +27,9 @@ from ._base import FoamCaseBase
 from ._run import FoamCaseRunBase
 from ._subprocess import run_async
 from ._util import ValuedGenerator, awaitableasynccontextmanager
+
+if TYPE_CHECKING:
+    import os
 
 X = TypeVar("X")
 Y = TypeVar("Y")
@@ -138,8 +140,7 @@ class AsyncFoamCase(FoamCaseRunBase):
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):
             return AsyncFoamCase.TimeDirectory(ret)
-        else:
-            return [AsyncFoamCase.TimeDirectory(r) for r in ret]
+        return [AsyncFoamCase.TimeDirectory(r) for r in ret]
 
     async def run(
         self,

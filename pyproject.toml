@@ -87,7 +87,36 @@ packages = [
 strict = true
 
 [tool.ruff.lint]
-extend-select = ["D", "I", "RUF", "UP"]
+extend-select = [
+    "ASYNC",
+    "B",
+    "C4",
+    "D",
+    "ERA",
+    "F",
+    "FLY",
+    "FURB",
+    "I",
+    "ICN",
+    "INT",
+    "NPY",
+    "PERF",
+    "PIE",
+    "PLC",
+    "PLE",
+    "PLW",
+    "PT",
+    "PTH",
+    "Q",
+    "RET",
+    "RSE",
+    "RUF",
+    "SIM",
+    "T20",
+    "TCH",
+    "UP",
+    "YTT",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
