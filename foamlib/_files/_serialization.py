@@ -35,7 +35,7 @@ def dumpb(
     if numpy and isinstance(data, np.ndarray):
         return dumpb(data.tolist(), kind=kind)
 
-    elif isinstance(data, Mapping):
+    if isinstance(data, Mapping):
         entries = []
         for k, v in data.items():
             b = dumpb(v, kind=kind)
@@ -48,12 +48,12 @@ def dumpb(
 
         return b" ".join(entries)
 
-    elif isinstance(data, FoamFileBase.DimensionSet) or (
+    if isinstance(data, FoamFileBase.DimensionSet) or (
         kind == Kind.DIMENSIONS and is_sequence(data) and len(data) == 7
     ):
         return b"[" + b" ".join(dumpb(v) for v in data) + b"]"
 
-    elif (kind == Kind.FIELD or kind == Kind.BINARY_FIELD) and (
+    if (kind == Kind.FIELD or kind == Kind.BINARY_FIELD) and (
         isinstance(data, (int, float))
         or is_sequence(data)
         and data
@@ -62,7 +62,7 @@ def dumpb(
     ):
         return b"uniform " + dumpb(data, kind=Kind.SINGLE_ENTRY)
 
-    elif (kind == Kind.FIELD or kind == Kind.BINARY_FIELD) and is_sequence(data):
+    if (kind == Kind.FIELD or kind == Kind.BINARY_FIELD) and is_sequence(data):
         if isinstance(data[0], (int, float)):
             tensor_kind = b"scalar"
         elif len(data[0]) == 3:
@@ -88,10 +88,10 @@ def dumpb(
 
         return b"nonuniform List<" + tensor_kind + b"> " + dumpb(len(data)) + contents
 
-    elif kind != Kind.SINGLE_ENTRY and isinstance(data, tuple):
+    if kind != Kind.SINGLE_ENTRY and isinstance(data, tuple):
         return b" ".join(dumpb(v) for v in data)
 
-    elif isinstance(data, FoamFileBase.Dimensioned):
+    if isinstance(data, FoamFileBase.Dimensioned):
         if data.name is not None:
             return (
                 dumpb(data.name)
@@ -100,20 +100,18 @@ def dumpb(
                 + b" "
                 + dumpb(data.value, kind=Kind.SINGLE_ENTRY)
             )
-        else:
-            return (
-                dumpb(data.dimensions, kind=Kind.DIMENSIONS)
-                + b" "
-                + dumpb(data.value, kind=Kind.SINGLE_ENTRY)
-            )
+        return (
+            dumpb(data.dimensions, kind=Kind.DIMENSIONS)
+            + b" "
+            + dumpb(data.value, kind=Kind.SINGLE_ENTRY)
+        )
 
-    elif is_sequence(data):
+    if is_sequence(data):
         return b"(" + b" ".join(dumpb(v, kind=Kind.SINGLE_ENTRY) for v in data) + b")"
 
-    elif data is True:
+    if data is True:
         return b"yes"
-    elif data is False:
+    if data is False:
         return b"no"
 
-    else:
-        return str(data).encode("latin-1")
+    return str(data).encode("latin-1")

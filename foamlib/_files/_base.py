@@ -1,16 +1,14 @@
 import sys
 from dataclasses import dataclass
-from typing import Dict, NamedTuple, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    import numpy as np
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
 else:
     from typing import Mapping, Sequence
-
-try:
-    import numpy as np
-except ModuleNotFoundError:
-    pass
 
 
 class FoamFileBase:

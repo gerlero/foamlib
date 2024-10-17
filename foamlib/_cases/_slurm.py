@@ -1,7 +1,6 @@
-import os
 import shutil
 import sys
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 if sys.version_info >= (3, 9):
     from collections.abc import Sequence
@@ -10,6 +9,9 @@ else:
 
 from ._async import AsyncFoamCase
 from ._subprocess import run_async
+
+if TYPE_CHECKING:
+    import os
 
 
 class AsyncSlurmFoamCase(AsyncFoamCase):
