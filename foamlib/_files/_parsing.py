@@ -95,18 +95,35 @@ def _unpack_binary_field(
     return [all]
 
 
+_IDENTCHARS = identchars + "$"
+_IDENTBODYCHARS = (
+    printables.replace(";", "")
+    .replace("{", "")
+    .replace("}", "")
+    .replace("[", "")
+    .replace("]", "")
+)
+
 _SWITCH = (
-    Keyword("yes") | Keyword("true") | Keyword("on") | Keyword("y") | Keyword("t")
+    Keyword("yes", _IDENTBODYCHARS)
+    | Keyword("true", _IDENTBODYCHARS)
+    | Keyword("on", _IDENTBODYCHARS)
+    | Keyword("y", _IDENTBODYCHARS)
+    | Keyword("t", _IDENTBODYCHARS)
 ).set_parse_action(lambda: True) | (
-    Keyword("no") | Keyword("false") | Keyword("off") | Keyword("n") | Keyword("f")
+    Keyword("no", _IDENTBODYCHARS)
+    | Keyword("false", _IDENTBODYCHARS)
+    | Keyword("off", _IDENTBODYCHARS)
+    | Keyword("n", _IDENTBODYCHARS)
+    | Keyword("f", _IDENTBODYCHARS)
 ).set_parse_action(lambda: False)
 _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: FoamFileBase.DimensionSet(*tks))
 _TENSOR = _list_of(common.number) | common.number
 _IDENTIFIER = Combine(
-    Word(identchars + "$", printables, exclude_chars="[{(;)}]")
-    + Opt(Literal("(") + Word(printables, exclude_chars="[{(;)}]") + Literal(")"))
+    Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()")
+    + Opt(Literal("(") + Word(_IDENTBODYCHARS, exclude_chars="()") + Literal(")"))
 )
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: FoamFileBase.Dimensioned(*reversed(tks.as_list()))
