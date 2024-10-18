@@ -1,4 +1,4 @@
-[<img alt="foamlib" src="https://github.com/gerlero/foamlib/raw/main/logo.png" height="50">](https://github.com/gerlero/foamlib)
+[<img alt="foamlib" src="https://github.com/gerlero/foamlib/raw/main/logo.png" height="65">](https://github.com/gerlero/foamlib)
 
 [![Documentation](https://img.shields.io/readthedocs/foamlib)](https://foamlib.readthedocs.io/)
 [![CI](https://github.com/gerlero/foamlib/actions/workflows/ci.yml/badge.svg)](https://github.com/gerlero/foamlib/actions/workflows/ci.yml)
@@ -14,18 +14,20 @@
 [![Docker](https://github.com/gerlero/foamlib/actions/workflows/docker.yml/badge.svg)](https://github.com/gerlero/foamlib/actions/workflows/docker.yml)
 [![Docker image](https://img.shields.io/badge/docker%20image-microfluidica%2Ffoamlib-0085a0)](https://hub.docker.com/r/microfluidica/foamlib/)
 
+## 👋 Basics
+
 **foamlib** provides a simple, modern and ergonomic Python interface for interacting with [OpenFOAM](https://www.openfoam.com).
 
-It offers the following classes:
+It offers the following Python classes:
 
 * [`FoamFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFile) (and [`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFieldFile)): read-write access to OpenFOAM configuration and field files as if they were Python `dict`s, using `foamlib`'s own parser. Supports ASCII and binary field formats (with or without compression).
 * [`FoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.FoamCase): a class for configuring, running, and accessing the results of OpenFOAM cases.
 * [`AsyncFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncFoamCase): variant of `FoamCase` with asynchronous methods for running multiple cases at once.
 * [`AsyncSlurmFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncSlurmFoamCase): subclass of `AsyncFoamCase` used for running cases on a Slurm cluster.
 
-## Get started
+## ☑️ Get started
 
-### Install
+### 📦 Install
 
 * With [pip](https://pypi.org/project/pip/):
 
@@ -39,7 +41,7 @@ It offers the following classes:
     conda install -c conda-forge foamlib
     ```
 
-### Clone a case
+### 🐑 Clone a case
 
 ```python
 import os
@@ -51,13 +53,13 @@ pitz_tutorial = FoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/si
 my_pitz = pitz_tutorial.clone("myPitz")
 ```
 
-### Run the case
+### 🏃 Run the case
 
 ```python
 my_pitz.run()
 ```
 
-### Access the results
+### 🔎 Access the results
 
 ```python
 latest_time = my_pitz[-1]
@@ -69,19 +71,19 @@ print(p.internal_field)
 print(U.internal_field)
 ```
 
-### Clean the case
+### 🧹 Clean the case
 
 ```python
 my_pitz.clean()
 ```
 
-### Edit the `controlDict` file
+### ⚙️ Edit the `controlDict` file
 
 ```python
 my_pitz.control_dict["writeInterval"] = 10
 ```
 
-### Make multiple file reads and writes in a single go
+### 📝 Make multiple file reads and writes in a single go
 
 ```python
 with my_pitz.fv_schemes as f:
@@ -89,7 +91,7 @@ with my_pitz.fv_schemes as f:
     f["snGradSchemes"]["default"] = "uncorrected"
 ```
 
-### Run a case asynchronously
+### ⏳ Run a case asynchronously
 
 ```python
 import asyncio
@@ -102,7 +104,7 @@ async def run_case():
 asyncio.run(run_case())
 ```
 
-### Parse a field using the [`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamFieldFile) class directly
+### 🔢 Parse a field using the [`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamFieldFile) class directly
 
 ```python
 from foamlib import FoamFieldFile
@@ -112,7 +114,7 @@ U = FoamFieldFile(Path(my_pitz) / "0/U")
 print(U.internal_field)
 ```
 
-### Run an optimization loop in parallel
+### 🔁 Run an optimization loop in parallel
 
 ```python
 import os
@@ -132,7 +134,7 @@ async def cost(x):
 result = differential_evolution(cost, bounds=[(-1, 1)], workers=AsyncFoamCase.map, polish=False)
 ```
 
-### Use it to create a `run` (or `clean`) script
+### 📄 Use it to create a `run` (or `clean`) script
     
 ```python
 #!/usr/bin/env python3
@@ -144,6 +146,6 @@ case = FoamCase(Path(__file__).parent)
 case.run()
 ```
 
-## Documentation
+## 📘 Documentation
 
 For more information, check out the [documentation](https://foamlib.readthedocs.io/).
