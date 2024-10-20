@@ -84,10 +84,10 @@ jobs:
       uses: koesterlab/setup-slurm-action@v1
     - name: Install test dependencies
       run: |
-        uv sync --extra test --dev
+        uv pip install --system .[test]
     - name: Test with pytest
       run: |
-        uv run pytest --cov=foamlib
+        pytest --cov=foamlib
       env:
         OMPI_MCA_rmaps_base_oversubscribe: 1
         OMPI_ALLOW_RUN_AS_ROOT: 1
