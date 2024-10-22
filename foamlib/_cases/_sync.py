@@ -111,6 +111,10 @@ class FoamCase(FoamCaseRunBase):
         for _ in self._clean_calls(check=check):
             pass
 
+    def _prepare(self, *, check: bool = True, log: bool = True) -> None:
+        for _ in self._prepare_calls(check=check, log=log):
+            pass
+
     def run(
         self,
         cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,

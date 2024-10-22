@@ -142,6 +142,10 @@ class AsyncFoamCase(FoamCaseRunBase):
             return AsyncFoamCase.TimeDirectory(ret)
         return [AsyncFoamCase.TimeDirectory(r) for r in ret]
 
+    async def _prepare(self, *, check: bool = True, log: bool = True) -> None:
+        for coro in self._prepare_calls(check=check, log=log):
+            await coro
+
     async def run(
         self,
         cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,

@@ -116,6 +116,12 @@ class FoamCaseRunBase(FoamCaseBase):
         raise NotImplementedError
 
     @abstractmethod
+    def _prepare(
+        self, *, check: bool = True, log: bool = True
+    ) -> Union[None, Coroutine[None, None, None]]:
+        raise NotImplementedError
+
+    @abstractmethod
     def run(
         self,
         cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
@@ -201,6 +207,18 @@ class FoamCaseRunBase(FoamCaseBase):
         elif all_clean.is_file():
             script = all_clean
         else:
+            return None
+
+        if sys.argv and Path(sys.argv[0]).absolute() == script.absolute():
+            return None
+
+        return script
+
+    def __prepare_script(self) -> Optional[Path]:
+        """Return the path to the Allrun.pre script, or None if no prepare script is found."""
+        script = self.path / "Allrun.pre"
+
+        if not script.is_file():
             return None
 
         if sys.argv and Path(sys.argv[0]).absolute() == script.absolute():
@@ -337,6 +355,15 @@ class FoamCaseRunBase(FoamCaseBase):
     ) -> Generator[Any, None, None]:
         yield self.run(["reconstructPar"], cpus=0, check=check, log=log)
 
+    def _prepare_calls(self, *, check: bool, log: bool) -> Generator[Any, None, None]:
+        script_path = self.__prepare_script()
+
+        if script_path is not None:
+            yield self.run([script_path], log=log, check=check)
+
+        elif (self.path / "system" / "blockMeshDict").is_file():
+            yield self.block_mesh(check=check, log=log)
+
     def _run_calls(
         self,
         cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
@@ -402,11 +429,10 @@ class FoamCaseRunBase(FoamCaseBase):
                 )
 
             else:
+                yield self._prepare(check=check, log=log)
+
                 if not self and (self.path / "0.orig").is_dir():
                     yield self.restore_0_dir()
-
-                if (self.path / "system" / "blockMeshDict").is_file():
-                    yield self.block_mesh(check=check)
 
                 if parallel is None:
                     parallel = (
