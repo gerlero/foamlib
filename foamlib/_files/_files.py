@@ -472,3 +472,7 @@ class FoamFieldFile(FoamFile):
             assert not isinstance(ret, FoamFile.SubDict)
             raise TypeError("boundaryField is not a dictionary")
         return ret
+
+    @boundary_field.setter
+    def boundary_field(self, value: Mapping[str, FoamFile._Dict]) -> None:
+        self["boundaryField"] = value
