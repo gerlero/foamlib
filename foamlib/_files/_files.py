@@ -202,7 +202,11 @@ class FoamFile(
             if keywords == ("internalField",) or (
                 len(keywords) == 3
                 and keywords[0] == "boundaryField"
-                and keywords[2] == "value"
+                and (
+                    keywords[2] in ("value", "gradient")
+                    or keywords[2].endswith("Value")
+                    or keywords[2].endswith("Gradient")
+                )
             ):
                 kind = Kind.BINARY_FIELD if self.format == "binary" else Kind.FIELD
             elif keywords == ("dimensions",):
