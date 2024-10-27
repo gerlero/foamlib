@@ -13,7 +13,7 @@ else:
 
 from ._base import FoamFileBase
 from ._io import FoamFileIO
-from ._serialization import Kind, dumpb
+from ._serialization import Kind, dumps
 from ._util import is_sequence
 
 if TYPE_CHECKING:
@@ -255,7 +255,7 @@ class FoamFile(
                     self._write(
                         before
                         + indentation
-                        + dumpb(keywords[-1])
+                        + dumps(keywords[-1])
                         + b"\n"
                         + indentation
                         + b"{\n"
@@ -271,15 +271,15 @@ class FoamFile(
                     self._write(
                         before
                         + indentation
-                        + dumpb(keywords[-1])
+                        + dumps(keywords[-1])
                         + b" "
-                        + dumpb(data, kind=kind)
+                        + dumps(data, kind=kind)
                         + b";"
                         + after
                     )
 
                 else:
-                    self._write(before + dumpb(data, kind=kind) + after)
+                    self._write(before + dumps(data, kind=kind) + after)
 
     def __delitem__(self, keywords: Optional[Union[str, Tuple[str, ...]]]) -> None:
         if not keywords:
