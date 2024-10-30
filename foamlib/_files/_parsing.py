@@ -1,4 +1,5 @@
 import array
+import contextlib
 import sys
 from typing import Tuple, Union, cast
 
@@ -213,12 +214,13 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
             Tuple[str, ...],
             Tuple[int, Union[FoamFileBase.Data, EllipsisType], int],
         ] = {}
-        self._end = len(contents)
-
         for parse_result in _FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
         ):
             self._parsed.update(self._flatten_result(parse_result))
+
+        self.contents = contents
+        self.modified = False
 
     @staticmethod
     def _flatten_result(
@@ -263,6 +265,51 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
         _, data, _ = self._parsed[keywords]
         return data
 
+    def put(
+        self,
+        keywords: Tuple[str, ...],
+        data: Union[FoamFileBase.Data, EllipsisType],
+        content: bytes,
+    ) -> None:
+        assert not isinstance(data, Mapping)
+
+        with contextlib.suppress(KeyError):
+            del self[keywords]
+
+        start, end = self.entry_location(keywords, missing_ok=True)
+        diff = len(content) - (end - start)
+
+        self._parsed[keywords] = (start, data, end + diff)
+        for k, (s, d, e) in self._parsed.items():
+            if s > end:
+                self._parsed[k] = (s + diff, d, e + diff)
+            elif e > start:
+                self._parsed[k] = (s, d, e + diff)
+
+        self.contents = self.contents[:start] + content + self.contents[end:]
+        self.modified = True
+
+    def __delitem__(self, keywords: Union[str, Tuple[str, ...]]) -> None:
+        if isinstance(keywords, str):
+            keywords = (keywords,)
+
+        start, end = self.entry_location(keywords)
+        del self._parsed[keywords]
+
+        for k in list(self._parsed):
+            if keywords == k[: len(keywords)]:
+                del self._parsed[k]
+
+        diff = end - start
+        for k, (s, d, e) in self._parsed.items():
+            if s > end:
+                self._parsed[k] = (s - diff, d, e - diff)
+            elif e > start:
+                self._parsed[k] = (s, d, e - diff)
+
+        self.contents = self.contents[:start] + self.contents[end:]
+        self.modified = True
+
     def __contains__(self, keywords: object) -> bool:
         return keywords in self._parsed
 
@@ -283,7 +330,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
                     _, _, end = self._parsed[keywords[:-1]]
                     end -= 1
                 else:
-                    end = self._end
+                    end = len(self.contents)
 
                 start = end
             else:
