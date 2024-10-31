@@ -43,6 +43,9 @@ class FoamFileBase:
         DimensionSet,
         Sequence["Data"],
         Mapping[str, "Data"],
+        "np.ndarray[Tuple[()], np.dtype[np.generic]]",
+        "np.ndarray[Tuple[int], np.dtype[np.generic]]",
+        "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
     ]
     """
     A value that can be stored in an OpenFOAM file.
@@ -50,17 +53,3 @@ class FoamFileBase:
 
     _Dict = Dict[str, Union["Data", "_Dict"]]
     _File = Dict[Optional[str], Union["Data", "_Dict"]]
-
-    _SetData = Union[
-        str,
-        int,
-        float,
-        bool,
-        Dimensioned,
-        DimensionSet,
-        Sequence["_SetData"],
-        Mapping[str, "_SetData"],
-        "np.ndarray[Tuple[()], np.dtype[np.generic]]",
-        "np.ndarray[Tuple[int], np.dtype[np.generic]]",
-        "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
-    ]

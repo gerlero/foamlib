@@ -1,4 +1,5 @@
 import sys
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 
 if sys.version_info >= (3, 8):
@@ -53,7 +54,7 @@ class FoamFile(
         def __setitem__(
             self,
             keyword: str,
-            data: "FoamFile._SetData",
+            data: "FoamFile.Data",
         ) -> None:
             self._file[(*self._keywords, keyword)] = data
 
@@ -164,16 +165,16 @@ class FoamFile(
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        _, parsed = self._read()
+        parsed = self._get_parsed()
 
         value = parsed[keywords]
 
         if value is ...:
             return FoamFile.SubDict(self, keywords)
-        return value
+        return deepcopy(value)
 
     def __setitem__(
-        self, keywords: Optional[Union[str, Tuple[str, ...]]], data: "FoamFile._SetData"
+        self, keywords: Optional[Union[str, Tuple[str, ...]]], data: "FoamFile.Data"
     ) -> None:
         with self:
             if not keywords:
@@ -230,20 +231,28 @@ class FoamFile(
                 self[keywords] = data
 
             else:
-                contents, parsed = self._read(missing_ok=True)
+                parsed = self._get_parsed(missing_ok=True)
 
                 start, end = parsed.entry_location(keywords, missing_ok=True)
 
-                before = contents[:start].rstrip() + b"\n"
-                if len(keywords) <= 1:
-                    before += b"\n"
+                before = b""
+                if parsed.contents[:start] and not parsed.contents[:start].endswith(
+                    b"\n"
+                ):
+                    before = b"\n"
+                if (
+                    parsed.contents[:start]
+                    and len(keywords) <= 1
+                    and not parsed.contents[:start].endswith(b"\n\n")
+                ):
+                    before = b"\n\n"
 
-                after = contents[end:]
-                if after.startswith(b"}"):
-                    after = b"    " * (len(keywords) - 2) + after
-                if not after or after[:1] != b"\n":
-                    after = b"\n" + after
-                if len(keywords) <= 1 and len(after) > 1 and after[:2] != b"\n\n":
+                after = b""
+                if parsed.contents[end:].startswith(b"}"):
+                    after = b"    " * (len(keywords) - 2)
+                if not parsed.contents[end:] or not parsed.contents[end:].startswith(
+                    b"\n"
+                ):
                     after = b"\n" + after
 
                 indentation = b"    " * (len(keywords) - 1)
@@ -252,7 +261,9 @@ class FoamFile(
                     if isinstance(data, (FoamFile, FoamFile.SubDict)):
                         data = data.as_dict()
 
-                    self._write(
+                    parsed.put(
+                        keywords,
+                        ...,
                         before
                         + indentation
                         + dumps(keywords[-1])
@@ -261,25 +272,27 @@ class FoamFile(
                         + b"{\n"
                         + indentation
                         + b"}"
-                        + after
+                        + after,
                     )
 
                     for k, v in data.items():
                         self[(*keywords, k)] = v
 
                 elif keywords:
-                    self._write(
+                    parsed.put(
+                        keywords,
+                        data,
                         before
                         + indentation
                         + dumps(keywords[-1])
                         + b" "
                         + dumps(data, kind=kind)
                         + b";"
-                        + after
+                        + after,
                     )
 
                 else:
-                    self._write(before + dumps(data, kind=kind) + after)
+                    parsed.put(keywords, data, before + dumps(data, kind=kind) + after)
 
     def __delitem__(self, keywords: Optional[Union[str, Tuple[str, ...]]]) -> None:
         if not keywords:
@@ -287,15 +300,13 @@ class FoamFile(
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        contents, parsed = self._read()
-
-        start, end = parsed.entry_location(keywords)
-
-        self._write(contents[:start] + contents[end:])
+        with self:
+            del self._get_parsed()[keywords]
 
     def _iter(self, keywords: Tuple[str, ...] = ()) -> Iterator[Optional[str]]:
-        _, parsed = self._read()
-        yield from (k[-1] if k else None for k in parsed if k[:-1] == keywords)
+        yield from (
+            k[-1] if k else None for k in self._get_parsed() if k[:-1] == keywords
+        )
 
     def __iter__(self) -> Iterator[Optional[str]]:
         yield from (k for k in self._iter() if k != "FoamFile")
@@ -306,9 +317,7 @@ class FoamFile(
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        _, parsed = self._read()
-
-        return keywords in parsed
+        return keywords in self._get_parsed()
 
     def __len__(self) -> int:
         return len(list(iter(self)))
@@ -330,11 +339,10 @@ class FoamFile(
 
         :param include_header: Whether to include the "FoamFile" header in the output.
         """
-        _, parsed = self._read()
-        d = parsed.as_dict()
+        d = self._get_parsed().as_dict()
         if not include_header:
             d.pop("FoamFile", None)
-        return d
+        return deepcopy(d)
 
 
 class FoamFieldFile(FoamFile):

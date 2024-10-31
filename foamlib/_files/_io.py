@@ -1,12 +1,10 @@
 import gzip
 import sys
-from copy import deepcopy
 from pathlib import Path
 from types import TracebackType
 from typing import (
     TYPE_CHECKING,
     Optional,
-    Tuple,
     Type,
     Union,
 )
@@ -26,14 +24,13 @@ class FoamFileIO:
     def __init__(self, path: Union["os.PathLike[str]", str]) -> None:
         self.path = Path(path).absolute()
 
-        self.__contents: Optional[bytes] = None
         self.__parsed: Optional[Parsed] = None
+        self.__missing: Optional[bool] = None
         self.__defer_io = 0
-        self.__dirty = False
 
     def __enter__(self) -> Self:
         if self.__defer_io == 0:
-            self._read(missing_ok=True)
+            self._get_parsed(missing_ok=True)
         self.__defer_io += 1
         return self
 
@@ -44,47 +41,38 @@ class FoamFileIO:
         exc_tb: Optional[TracebackType],
     ) -> None:
         self.__defer_io -= 1
-        if self.__defer_io == 0 and self.__dirty:
-            assert self.__contents is not None
-            self._write(self.__contents)
+        if self.__defer_io == 0:
+            assert self.__parsed is not None
+            if self.__parsed.modified or self.__missing:
+                contents = self.__parsed.contents
 
-    def _read(self, *, missing_ok: bool = False) -> Tuple[bytes, Parsed]:
+                if self.path.suffix == ".gz":
+                    contents = gzip.compress(contents)
+
+                self.path.write_bytes(contents)
+
+    def _get_parsed(self, *, missing_ok: bool = False) -> Parsed:
         if not self.__defer_io:
             try:
                 contents = self.path.read_bytes()
             except FileNotFoundError:
-                contents = None
+                self.__missing = True
+                contents = b""
             else:
-                assert isinstance(contents, bytes)
+                self.__missing = False
                 if self.path.suffix == ".gz":
                     contents = gzip.decompress(contents)
 
-            if contents != self.__contents:
-                self.__contents = contents
-                self.__parsed = None
+            if self.__parsed is None or self.__parsed.contents != contents:
+                self.__parsed = Parsed(contents)
 
-        if self.__contents is None:
-            if missing_ok:
-                return b"", Parsed(b"")
+        assert self.__parsed is not None
+        assert self.__missing is not None
+
+        if self.__missing and not missing_ok:
             raise FileNotFoundError(self.path)
 
-        if self.__parsed is None:
-            parsed = Parsed(self.__contents)
-            self.__parsed = parsed
-
-        return self.__contents, deepcopy(self.__parsed)
-
-    def _write(self, contents: bytes) -> None:
-        self.__contents = contents
-        self.__parsed = None
-        if not self.__defer_io:
-            if self.path.suffix == ".gz":
-                contents = gzip.compress(contents)
-
-            self.path.write_bytes(contents)
-            self.__dirty = False
-        else:
-            self.__dirty = True
+        return self.__parsed
 
     def __repr__(self) -> str:
         return f"{type(self).__qualname__}('{self.path}')"

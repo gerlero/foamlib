@@ -28,7 +28,7 @@ class Kind(Enum):
 
 
 def dumps(
-    data: FoamFileBase._SetData,
+    data: FoamFileBase.Data,
     *,
     kind: Kind = Kind.DEFAULT,
 ) -> bytes:
