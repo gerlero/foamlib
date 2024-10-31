@@ -1,6 +1,6 @@
 import sys
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
+from typing import Any, Optional, Tuple, Union, cast
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -16,9 +16,6 @@ from ._base import FoamFileBase
 from ._io import FoamFileIO
 from ._serialization import Kind, dumps
 from ._util import is_sequence
-
-if TYPE_CHECKING:
-    import numpy as np
 
 
 class FoamFile(
@@ -159,7 +156,7 @@ class FoamFile(
 
     def __getitem__(
         self, keywords: Optional[Union[str, Tuple[str, ...]]]
-    ) -> Union["FoamFile.Data", "FoamFile.SubDict"]:
+    ) -> "FoamFile.Data":
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -168,6 +165,8 @@ class FoamFile(
         parsed = self._get_parsed()
 
         value = parsed[keywords]
+
+        assert not isinstance(value, Mapping)
 
         if value is ...:
             return FoamFile.SubDict(self, keywords)
@@ -374,36 +373,17 @@ class FoamFieldFile(FoamFile):
         @property
         def value(
             self,
-        ) -> Union[
-            int,
-            float,
-            Sequence[Union[int, float, Sequence[Union[int, float]]]],
-            "np.ndarray[Tuple[()], np.dtype[np.generic]]",
-            "np.ndarray[Tuple[int], np.dtype[np.generic]]",
-            "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
-        ]:
+        ) -> FoamFile._Field:
             """Alias of `self["value"]`."""
-            ret = self["value"]
-            if not isinstance(ret, (int, float, Sequence)):
-                raise TypeError("value is not a field")
             return cast(
-                Union[
-                    int, float, Sequence[Union[int, float, Sequence[Union[int, float]]]]
-                ],
-                ret,
+                FoamFile._Field,
+                self["value"],
             )
 
         @value.setter
         def value(
             self,
-            value: Union[
-                int,
-                float,
-                Sequence[Union[int, float, Sequence[Union[int, float]]]],
-                "np.ndarray[Tuple[()], np.dtype[np.generic]]",
-                "np.ndarray[Tuple[int], np.dtype[np.generic]]",
-                "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
-            ],
+            value: FoamFile._Field,
         ) -> None:
             self["value"] = value
 
@@ -413,7 +393,7 @@ class FoamFieldFile(FoamFile):
 
     def __getitem__(
         self, keywords: Optional[Union[str, Tuple[str, ...]]]
-    ) -> Union[FoamFile.Data, FoamFile.SubDict]:
+    ) -> FoamFile.Data:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -428,7 +408,7 @@ class FoamFieldFile(FoamFile):
         return ret
 
     @property
-    def dimensions(self) -> Union[FoamFile.DimensionSet, Sequence[Union[int, float]]]:
+    def dimensions(self) -> Union[FoamFile.DimensionSet, Sequence[float]]:
         """Alias of `self["dimensions"]`."""
         ret = self["dimensions"]
         if not isinstance(ret, FoamFile.DimensionSet):
@@ -436,39 +416,20 @@ class FoamFieldFile(FoamFile):
         return ret
 
     @dimensions.setter
-    def dimensions(
-        self, value: Union[FoamFile.DimensionSet, Sequence[Union[int, float]]]
-    ) -> None:
+    def dimensions(self, value: Union[FoamFile.DimensionSet, Sequence[float]]) -> None:
         self["dimensions"] = value
 
     @property
     def internal_field(
         self,
-    ) -> Union[
-        int,
-        float,
-        Sequence[Union[int, float, Sequence[Union[int, float]]]],
-        "np.ndarray[Tuple[()], np.dtype[np.generic]]",
-        "np.ndarray[Tuple[int], np.dtype[np.generic]]",
-        "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
-    ]:
+    ) -> FoamFile._Field:
         """Alias of `self["internalField"]`."""
-        ret = self["internalField"]
-        if not isinstance(ret, (int, float, Sequence)):
-            raise TypeError("internalField is not a field")
-        return cast(Union[int, float, Sequence[Union[int, float]]], ret)
+        return cast(FoamFile._Field, self["internalField"])
 
     @internal_field.setter
     def internal_field(
         self,
-        value: Union[
-            int,
-            float,
-            Sequence[Union[int, float, Sequence[Union[int, float]]]],
-            "np.ndarray[Tuple[()], np.dtype[np.generic]]",
-            "np.ndarray[Tuple[int], np.dtype[np.generic]]",
-            "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
-        ],
+        value: FoamFile._Field,
     ) -> None:
         self["internalField"] = value
 

@@ -13,26 +13,37 @@ else:
 
 class FoamFileBase:
     class DimensionSet(NamedTuple):
-        mass: Union[int, float] = 0
-        length: Union[int, float] = 0
-        time: Union[int, float] = 0
-        temperature: Union[int, float] = 0
-        moles: Union[int, float] = 0
-        current: Union[int, float] = 0
-        luminous_intensity: Union[int, float] = 0
+        mass: float = 0
+        length: float = 0
+        time: float = 0
+        temperature: float = 0
+        moles: float = 0
+        current: float = 0
+        luminous_intensity: float = 0
 
         def __repr__(self) -> str:
             return f"{type(self).__qualname__}({', '.join(f'{n}={v}' for n, v in zip(self._fields, self) if v != 0)})"
 
+    _Tensor = Union[
+        float,
+        Sequence[float],
+        "np.ndarray[Tuple[()], np.dtype[np.generic]]",
+        "np.ndarray[Tuple[int], np.dtype[np.generic]]",
+    ]
+
     @dataclass
     class Dimensioned:
-        value: Union[int, float, Sequence[Union[int, float]]] = 0
-        dimensions: Union["FoamFileBase.DimensionSet", Sequence[Union[int, float]]] = ()
+        value: "FoamFileBase._Tensor" = 0
+        dimensions: Union["FoamFileBase.DimensionSet", Sequence[float]] = ()
         name: Optional[str] = None
 
         def __post_init__(self) -> None:
             if not isinstance(self.dimensions, FoamFileBase.DimensionSet):
                 self.dimensions = FoamFileBase.DimensionSet(*self.dimensions)
+
+    _Field = Union[
+        _Tensor, Sequence[_Tensor], "np.ndarray[Tuple[int, int], np.dtype[np.generic]]"
+    ]
 
     Data = Union[
         str,
@@ -43,9 +54,8 @@ class FoamFileBase:
         DimensionSet,
         Sequence["Data"],
         Mapping[str, "Data"],
-        "np.ndarray[Tuple[()], np.dtype[np.generic]]",
-        "np.ndarray[Tuple[int], np.dtype[np.generic]]",
-        "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
+        _Tensor,
+        _Field,
     ]
     """
     A value that can be stored in an OpenFOAM file.
