@@ -1,5 +1,4 @@
 import array
-import contextlib
 import sys
 from typing import Tuple, Union, cast
 
@@ -273,21 +272,23 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
     ) -> None:
         assert not isinstance(data, Mapping)
 
-        with contextlib.suppress(KeyError):
-            del self[keywords]
-
         start, end = self.entry_location(keywords, missing_ok=True)
-        diff = len(content) - (end - start)
 
-        self._parsed[keywords] = (start, data, end + diff)
+        diff = len(content) - (end - start)
         for k, (s, d, e) in self._parsed.items():
             if s > end:
                 self._parsed[k] = (s + diff, d, e + diff)
             elif e > start:
                 self._parsed[k] = (s, d, e + diff)
 
+        self._parsed[keywords] = (start, data, end + diff)
+
         self.contents = self.contents[:start] + content + self.contents[end:]
         self.modified = True
+
+        for k in list(self._parsed):
+            if keywords != k and keywords == k[: len(keywords)]:
+                del self._parsed[k]
 
     def __delitem__(self, keywords: Union[str, Tuple[str, ...]]) -> None:
         if isinstance(keywords, str):
@@ -327,8 +328,9 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
         except KeyError:
             if missing_ok:
                 if len(keywords) > 1:
-                    _, _, end = self._parsed[keywords[:-1]]
-                    end -= 1
+                    assert self[keywords[:-1]] is ...
+                    start, end = self.entry_location(keywords[:-1])
+                    end = self.contents.rindex(b"}", start, end)
                 else:
                     end = len(self.contents)
 
