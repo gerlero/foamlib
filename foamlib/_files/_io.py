@@ -43,13 +43,15 @@ class FoamFileIO:
         self.__defer_io -= 1
         if self.__defer_io == 0:
             assert self.__parsed is not None
-            if self.__parsed.modified or self.__missing:
+            if self.__parsed.modified:
                 contents = self.__parsed.contents
 
                 if self.path.suffix == ".gz":
                     contents = gzip.compress(contents)
 
                 self.path.write_bytes(contents)
+                self.__parsed.modified = False
+                self.__missing = False
 
     def _get_parsed(self, *, missing_ok: bool = False) -> Parsed:
         if not self.__defer_io:
@@ -69,7 +71,7 @@ class FoamFileIO:
         assert self.__parsed is not None
         assert self.__missing is not None
 
-        if self.__missing and not missing_ok:
+        if self.__missing and not self.__parsed.modified and not missing_ok:
             raise FileNotFoundError(self.path)
 
         return self.__parsed
