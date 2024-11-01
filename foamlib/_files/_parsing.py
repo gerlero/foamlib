@@ -207,11 +207,11 @@ _FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
+class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisType]]):
     def __init__(self, contents: bytes) -> None:
         self._parsed: MutableMapping[
             Tuple[str, ...],
-            Tuple[int, Union[FoamFileBase.Data, EllipsisType], int],
+            Tuple[int, Union[FoamFileBase._DataEntry, EllipsisType], int],
         ] = {}
         for parse_result in _FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
@@ -225,11 +225,11 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
     def _flatten_result(
         parse_result: ParseResults, *, _keywords: Tuple[str, ...] = ()
     ) -> Mapping[
-        Tuple[str, ...], Tuple[int, Union[FoamFileBase.Data, EllipsisType], int]
+        Tuple[str, ...], Tuple[int, Union[FoamFileBase._DataEntry, EllipsisType], int]
     ]:
         ret: MutableMapping[
             Tuple[str, ...],
-            Tuple[int, Union[FoamFileBase.Data, EllipsisType], int],
+            Tuple[int, Union[FoamFileBase._DataEntry, EllipsisType], int],
         ] = {}
         start = parse_result.locn_start
         assert isinstance(start, int)
@@ -257,7 +257,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
 
     def __getitem__(
         self, keywords: Union[str, Tuple[str, ...]]
-    ) -> Union[FoamFileBase.Data, EllipsisType]:
+    ) -> Union[FoamFileBase._DataEntry, EllipsisType]:
         if isinstance(keywords, str):
             keywords = (keywords,)
 
@@ -267,11 +267,9 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase.Data, EllipsisType]]):
     def put(
         self,
         keywords: Tuple[str, ...],
-        data: Union[FoamFileBase.Data, EllipsisType],
+        data: Union[FoamFileBase._DataEntry, EllipsisType],
         content: bytes,
     ) -> None:
-        assert not isinstance(data, Mapping)
-
         start, end = self.entry_location(keywords, missing_ok=True)
 
         diff = len(content) - (end - start)
