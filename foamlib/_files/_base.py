@@ -6,9 +6,9 @@ if TYPE_CHECKING:
     import numpy as np
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Mapping, MutableMapping, Sequence
 else:
-    from typing import Mapping, Sequence
+    from typing import Mapping, MutableMapping, Sequence
 
 
 class FoamFileBase:
@@ -45,7 +45,7 @@ class FoamFileBase:
         _Tensor, Sequence[_Tensor], "np.ndarray[Tuple[int, int], np.dtype[np.generic]]"
     ]
 
-    Data = Union[
+    _DataEntry = Union[
         str,
         int,
         float,
@@ -53,13 +53,22 @@ class FoamFileBase:
         Dimensioned,
         DimensionSet,
         Sequence["Data"],
-        Mapping[str, "Data"],
         _Tensor,
         _Field,
+    ]
+
+    Data = Union[
+        _DataEntry,
+        Mapping[str, "Data"],
     ]
     """
     A value that can be stored in an OpenFOAM file.
     """
+
+    _MutableData = Union[
+        _DataEntry,
+        MutableMapping[str, "_MutableData"],
+    ]
 
     _Dict = Dict[str, Union["Data", "_Dict"]]
     _File = Dict[Optional[str], Union["Data", "_Dict"]]

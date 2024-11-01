@@ -22,7 +22,7 @@ class FoamFile(
     FoamFileBase,
     MutableMapping[
         Optional[Union[str, Tuple[str, ...]]],
-        Union["FoamFile.Data", "FoamFile.SubDict"],
+        FoamFileBase._MutableData,
     ],
     FoamFileIO,
 ):
@@ -35,7 +35,7 @@ class FoamFile(
     """
 
     class SubDict(
-        MutableMapping[str, Union["FoamFile.Data", "FoamFile.SubDict"]],
+        MutableMapping[str, FoamFileBase._MutableData],
     ):
         """An OpenFOAM dictionary within a file as a mutable mapping."""
 
@@ -45,13 +45,13 @@ class FoamFile(
 
         def __getitem__(
             self, keyword: str
-        ) -> Union["FoamFile.Data", "FoamFile.SubDict"]:
+        ) -> Union[FoamFileBase._DataEntry, "FoamFile.SubDict"]:
             return self._file[(*self._keywords, keyword)]
 
         def __setitem__(
             self,
             keyword: str,
-            data: "FoamFile.Data",
+            data: FoamFileBase.Data,
         ) -> None:
             self._file[(*self._keywords, keyword)] = data
 
@@ -96,8 +96,8 @@ class FoamFile(
     def version(self) -> float:
         """Alias of `self["FoamFile", "version"]`."""
         ret = self["FoamFile", "version"]
-        if not isinstance(ret, float):
-            raise TypeError("version is not a float")
+        if not isinstance(ret, (int, float)):
+            raise TypeError("version is not a number")
         return ret
 
     @version.setter
@@ -156,7 +156,7 @@ class FoamFile(
 
     def __getitem__(
         self, keywords: Optional[Union[str, Tuple[str, ...]]]
-    ) -> "FoamFile.Data":
+    ) -> Union[FoamFileBase._DataEntry, "FoamFile.SubDict"]:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -173,7 +173,7 @@ class FoamFile(
         return deepcopy(value)
 
     def __setitem__(
-        self, keywords: Optional[Union[str, Tuple[str, ...]]], data: "FoamFile.Data"
+        self, keywords: Optional[Union[str, Tuple[str, ...]]], data: FoamFileBase.Data
     ) -> None:
         with self:
             if not keywords:
@@ -393,7 +393,7 @@ class FoamFieldFile(FoamFile):
 
     def __getitem__(
         self, keywords: Optional[Union[str, Tuple[str, ...]]]
-    ) -> FoamFile.Data:
+    ) -> Union[FoamFileBase._DataEntry, FoamFile.SubDict]:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
