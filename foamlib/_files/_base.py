@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Tuple, Union
@@ -33,9 +35,9 @@ class FoamFileBase:
 
     @dataclass
     class Dimensioned:
-        value: "FoamFileBase._Tensor" = 0
-        dimensions: Union["FoamFileBase.DimensionSet", Sequence[float]] = ()
-        name: Optional[str] = None
+        value: FoamFileBase._Tensor = 0
+        dimensions: FoamFileBase.DimensionSet | Sequence[float] = ()
+        name: str | None = None
 
         def __post_init__(self) -> None:
             if not isinstance(self.dimensions, FoamFileBase.DimensionSet):

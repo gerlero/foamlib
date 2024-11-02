@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 from copy import deepcopy
 from typing import Any, Optional, Tuple, Union, cast
@@ -39,13 +41,13 @@ class FoamFile(
     ):
         """An OpenFOAM dictionary within a file as a mutable mapping."""
 
-        def __init__(self, _file: "FoamFile", _keywords: Tuple[str, ...]) -> None:
+        def __init__(self, _file: FoamFile, _keywords: tuple[str, ...]) -> None:
             self._file = _file
             self._keywords = _keywords
 
         def __getitem__(
             self, keyword: str
-        ) -> Union[FoamFileBase._DataEntry, "FoamFile.SubDict"]:
+        ) -> FoamFileBase._DataEntry | FoamFile.SubDict:
             return self._file[(*self._keywords, keyword)]
 
         def __setitem__(
@@ -161,8 +163,8 @@ class FoamFile(
         self["FoamFile", "object"] = value
 
     def __getitem__(
-        self, keywords: Optional[Union[str, Tuple[str, ...]]]
-    ) -> Union[FoamFileBase._DataEntry, "FoamFile.SubDict"]:
+        self, keywords: str | tuple[str, ...] | None
+    ) -> FoamFileBase._DataEntry | FoamFile.SubDict:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -179,7 +181,7 @@ class FoamFile(
         return deepcopy(value)
 
     def __setitem__(
-        self, keywords: Optional[Union[str, Tuple[str, ...]]], data: FoamFileBase.Data
+        self, keywords: str | tuple[str, ...] | None, data: FoamFileBase.Data
     ) -> None:
         with self:
             if not keywords:
@@ -299,7 +301,7 @@ class FoamFile(
                 else:
                     parsed.put(keywords, data, before + dumps(data, kind=kind) + after)
 
-    def __delitem__(self, keywords: Optional[Union[str, Tuple[str, ...]]]) -> None:
+    def __delitem__(self, keywords: str | tuple[str, ...] | None) -> None:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -308,12 +310,12 @@ class FoamFile(
         with self:
             del self._get_parsed()[keywords]
 
-    def _iter(self, keywords: Tuple[str, ...] = ()) -> Iterator[Optional[str]]:
+    def _iter(self, keywords: tuple[str, ...] = ()) -> Iterator[str | None]:
         yield from (
             k[-1] if k else None for k in self._get_parsed() if k[:-1] == keywords
         )
 
-    def __iter__(self) -> Iterator[Optional[str]]:
+    def __iter__(self) -> Iterator[str | None]:
         yield from (k for k in self._iter() if k != "FoamFile")
 
     def __contains__(self, keywords: object) -> bool:
@@ -354,7 +356,7 @@ class FoamFieldFile(FoamFile):
     """An OpenFOAM dictionary file representing a field as a mutable mapping."""
 
     class BoundariesSubDict(FoamFile.SubDict):
-        def __getitem__(self, keyword: str) -> "FoamFieldFile.BoundarySubDict":
+        def __getitem__(self, keyword: str) -> FoamFieldFile.BoundarySubDict:
             value = super().__getitem__(keyword)
             if not isinstance(value, FoamFieldFile.BoundarySubDict):
                 assert not isinstance(value, FoamFile.SubDict)
@@ -400,8 +402,8 @@ class FoamFieldFile(FoamFile):
             del self["value"]
 
     def __getitem__(
-        self, keywords: Optional[Union[str, Tuple[str, ...]]]
-    ) -> Union[FoamFileBase._DataEntry, FoamFile.SubDict]:
+        self, keywords: str | tuple[str, ...] | None
+    ) -> FoamFileBase._DataEntry | FoamFile.SubDict:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -416,7 +418,7 @@ class FoamFieldFile(FoamFile):
         return ret
 
     @property
-    def dimensions(self) -> Union[FoamFile.DimensionSet, Sequence[float]]:
+    def dimensions(self) -> FoamFile.DimensionSet | Sequence[float]:
         """Alias of `self["dimensions"]`."""
         ret = self["dimensions"]
         if not isinstance(ret, FoamFile.DimensionSet):
@@ -425,7 +427,7 @@ class FoamFieldFile(FoamFile):
         return ret
 
     @dimensions.setter
-    def dimensions(self, value: Union[FoamFile.DimensionSet, Sequence[float]]) -> None:
+    def dimensions(self, value: FoamFile.DimensionSet | Sequence[float]) -> None:
         self["dimensions"] = value
 
     @property
@@ -443,7 +445,7 @@ class FoamFieldFile(FoamFile):
         self["internalField"] = value
 
     @property
-    def boundary_field(self) -> "FoamFieldFile.BoundariesSubDict":
+    def boundary_field(self) -> FoamFieldFile.BoundariesSubDict:
         """Alias of `self["boundaryField"]`."""
         ret = self["boundaryField"]
         if not isinstance(ret, FoamFieldFile.BoundariesSubDict):

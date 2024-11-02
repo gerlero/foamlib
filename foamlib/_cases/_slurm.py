@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import shutil
 import sys
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 if sys.version_info >= (3, 9):
     from collections.abc import Sequence
@@ -19,7 +21,7 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
 
     @staticmethod
     async def _run(
-        cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
+        cmd: Sequence[str | os.PathLike[str]] | str,
         *,
         cpus: int,
         fallback: bool = False,
@@ -42,10 +44,10 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
 
     async def run(
         self,
-        cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
+        cmd: Sequence[str | os.PathLike[str]] | str | None = None,
         *,
-        parallel: Optional[bool] = None,
-        cpus: Optional[int] = None,
+        parallel: bool | None = None,
+        cpus: int | None = None,
         check: bool = True,
         log: bool = True,
         fallback: bool = False,

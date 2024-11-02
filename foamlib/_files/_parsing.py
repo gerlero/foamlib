@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import array
 import sys
 from typing import Tuple, Union, cast
@@ -80,12 +82,12 @@ def _keyword_entry_of(
 
 def _unpack_binary_field(
     tks: ParseResults,
-) -> Sequence[Union[Sequence[float], Sequence[Sequence[float]]]]:
+) -> Sequence[Sequence[float] | Sequence[Sequence[float]]]:
     elsize = len(tks[0]) // 8
 
     arr = array.array("d", "".join(tks).encode("latin-1"))
 
-    values: Union[Sequence[float], Sequence[Sequence[float]]]
+    values: Sequence[float] | Sequence[Sequence[float]]
 
     if elsize != 1:
         values = [arr[i : i + elsize].tolist() for i in range(0, len(arr), elsize)]
@@ -210,8 +212,8 @@ _FILE = (
 class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisType]]):
     def __init__(self, contents: bytes) -> None:
         self._parsed: MutableMapping[
-            Tuple[str, ...],
-            Tuple[int, Union[FoamFileBase._DataEntry, EllipsisType], int],
+            tuple[str, ...],
+            tuple[int, FoamFileBase._DataEntry | EllipsisType, int],
         ] = {}
         for parse_result in _FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
@@ -223,13 +225,13 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisTyp
 
     @staticmethod
     def _flatten_result(
-        parse_result: ParseResults, *, _keywords: Tuple[str, ...] = ()
+        parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
     ) -> Mapping[
-        Tuple[str, ...], Tuple[int, Union[FoamFileBase._DataEntry, EllipsisType], int]
+        tuple[str, ...], tuple[int, FoamFileBase._DataEntry | EllipsisType, int]
     ]:
         ret: MutableMapping[
-            Tuple[str, ...],
-            Tuple[int, Union[FoamFileBase._DataEntry, EllipsisType], int],
+            tuple[str, ...],
+            tuple[int, FoamFileBase._DataEntry | EllipsisType, int],
         ] = {}
         start = parse_result.locn_start
         assert isinstance(start, int)
@@ -256,8 +258,8 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisTyp
         return ret
 
     def __getitem__(
-        self, keywords: Union[str, Tuple[str, ...]]
-    ) -> Union[FoamFileBase._DataEntry, EllipsisType]:
+        self, keywords: str | tuple[str, ...]
+    ) -> FoamFileBase._DataEntry | EllipsisType:
         if isinstance(keywords, str):
             keywords = (keywords,)
 
@@ -266,8 +268,8 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisTyp
 
     def put(
         self,
-        keywords: Tuple[str, ...],
-        data: Union[FoamFileBase._DataEntry, EllipsisType],
+        keywords: tuple[str, ...],
+        data: FoamFileBase._DataEntry | EllipsisType,
         content: bytes,
     ) -> None:
         start, end = self.entry_location(keywords, missing_ok=True)
@@ -288,7 +290,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisTyp
             if keywords != k and keywords == k[: len(keywords)]:
                 del self._parsed[k]
 
-    def __delitem__(self, keywords: Union[str, Tuple[str, ...]]) -> None:
+    def __delitem__(self, keywords: str | tuple[str, ...]) -> None:
         if isinstance(keywords, str):
             keywords = (keywords,)
 
@@ -312,15 +314,15 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisTyp
     def __contains__(self, keywords: object) -> bool:
         return keywords in self._parsed
 
-    def __iter__(self) -> Iterator[Tuple[str, ...]]:
+    def __iter__(self) -> Iterator[tuple[str, ...]]:
         return iter(self._parsed)
 
     def __len__(self) -> int:
         return len(self._parsed)
 
     def entry_location(
-        self, keywords: Tuple[str, ...], *, missing_ok: bool = False
-    ) -> Tuple[int, int]:
+        self, keywords: tuple[str, ...], *, missing_ok: bool = False
+    ) -> tuple[int, int]:
         try:
             start, _, end = self._parsed[keywords]
         except KeyError:

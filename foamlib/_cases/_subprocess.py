@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import subprocess
 import sys
 from io import BytesIO
-from typing import IO, TYPE_CHECKING, Optional, Union
+from typing import IO, TYPE_CHECKING
 
 if TYPE_CHECKING:
     import os
@@ -31,14 +33,14 @@ STDOUT = subprocess.STDOUT
 
 
 def run_sync(
-    cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
+    cmd: Sequence[str | os.PathLike[str]] | str,
     *,
     check: bool = True,
-    cwd: Optional["os.PathLike[str]"] = None,
-    env: Optional[Mapping[str, str]] = None,
-    stdout: Optional[Union[int, IO[bytes]]] = None,
-    stderr: Optional[Union[int, IO[bytes]]] = None,
-) -> "CompletedProcess[bytes]":
+    cwd: os.PathLike[str] | None = None,
+    env: Mapping[str, str] | None = None,
+    stdout: int | IO[bytes] | None = None,
+    stderr: int | IO[bytes] | None = None,
+) -> CompletedProcess[bytes]:
     if not isinstance(cmd, str) and sys.version_info < (3, 8):
         cmd = [str(arg) for arg in cmd]
 
@@ -87,14 +89,14 @@ def run_sync(
 
 
 async def run_async(
-    cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
+    cmd: Sequence[str | os.PathLike[str]] | str,
     *,
     check: bool = True,
-    cwd: Optional["os.PathLike[str]"] = None,
-    env: Optional[Mapping[str, str]] = None,
-    stdout: Optional[Union[int, IO[bytes]]] = None,
-    stderr: Optional[Union[int, IO[bytes]]] = None,
-) -> "CompletedProcess[bytes]":
+    cwd: os.PathLike[str] | None = None,
+    env: Mapping[str, str] | None = None,
+    stdout: int | IO[bytes] | None = None,
+    stderr: int | IO[bytes] | None = None,
+) -> CompletedProcess[bytes]:
     if isinstance(cmd, str):
         proc = await asyncio.create_subprocess_shell(
             cmd,
