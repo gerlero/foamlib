@@ -258,11 +258,8 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisTyp
         return ret
 
     def __getitem__(
-        self, keywords: str | tuple[str, ...]
+        self, keywords: tuple[str, ...]
     ) -> FoamFileBase._DataEntry | EllipsisType:
-        if isinstance(keywords, str):
-            keywords = (keywords,)
-
         _, data, _ = self._parsed[keywords]
         return data
 
@@ -290,10 +287,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisTyp
             if keywords != k and keywords == k[: len(keywords)]:
                 del self._parsed[k]
 
-    def __delitem__(self, keywords: str | tuple[str, ...]) -> None:
-        if isinstance(keywords, str):
-            keywords = (keywords,)
-
+    def __delitem__(self, keywords: tuple[str, ...]) -> None:
         start, end = self.entry_location(keywords)
         del self._parsed[keywords]
 

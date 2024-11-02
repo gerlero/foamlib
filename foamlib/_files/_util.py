@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any
+from typing import TYPE_CHECKING
 
 if sys.version_info >= (3, 9):
     from collections.abc import Sequence
@@ -13,8 +13,11 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeGuard
 
+if TYPE_CHECKING:
+    from ._base import FoamFileBase
+
 
 def is_sequence(
-    value: Any,
-) -> TypeGuard[Sequence[Any]]:
+    value: FoamFileBase.Data,
+) -> TypeGuard[Sequence[FoamFileBase.Data]]:
     return isinstance(value, Sequence) and not isinstance(value, str)
