@@ -12,11 +12,11 @@ if sys.version_info >= (3, 9):
     from collections.abc import (
         Iterator,
         Sequence,
-        Set,
     )
+    from collections.abc import Set as AbstractSet
 else:
-    from typing import AbstractSet as Set
     from typing import (
+        AbstractSet,
         Iterator,
         Sequence,
     )
@@ -28,10 +28,10 @@ if TYPE_CHECKING:
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
-    def __init__(self, path: Union["os.PathLike[str]", str] = Path()):
+    def __init__(self, path: Union["os.PathLike[str]", str] = Path()) -> None:
         self.path = Path(path).absolute()
 
-    class TimeDirectory(Set[FoamFieldFile]):
+    class TimeDirectory(AbstractSet[FoamFieldFile]):
         """
         An OpenFOAM time directory in a case.
 
@@ -40,7 +40,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         :param path: The path to the time directory.
         """
 
-        def __init__(self, path: Union["os.PathLike[str]", str]):
+        def __init__(self, path: Union["os.PathLike[str]", str]) -> None:
             self.path = Path(path).absolute()
 
         @property
@@ -129,7 +129,8 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             for time in self._times:
                 if time.time == index:
                     return time
-            raise IndexError(f"Time {index} not found")
+            msg = f"Time {index} not found"
+            raise IndexError(msg)
         return self._times[index]
 
     def __len__(self) -> int:
@@ -153,12 +154,14 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         try:
             nsubdomains = self.decompose_par_dict["numberOfSubdomains"]
             if not isinstance(nsubdomains, int):
-                raise TypeError(
+                msg = (
                     f"numberOfSubdomains in {self.decompose_par_dict} is not an integer"
                 )
-            return nsubdomains
+                raise TypeError(msg)
         except FileNotFoundError:
             return None
+        else:
+            return nsubdomains
 
     @property
     def _nprocessors(self) -> int:
@@ -170,7 +173,8 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         """The application name as set in the controlDict."""
         application = self.control_dict["application"]
         if not isinstance(application, str):
-            raise TypeError(f"application in {self.control_dict} is not a string")
+            msg = f"application in {self.control_dict} is not a string"
+            raise TypeError(msg)
         return application
 
     @property

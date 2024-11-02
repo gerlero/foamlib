@@ -22,11 +22,11 @@ if sys.version_info >= (3, 9):
         Generator,
         Mapping,
         Sequence,
-        Set,
     )
+    from collections.abc import Set as AbstractSet
 else:
-    from typing import AbstractSet as Set
     from typing import (
+        AbstractSet,
         Callable,
         Collection,
         Coroutine,
@@ -155,7 +155,7 @@ class FoamCaseRunBase(FoamCaseBase):
     def restore_0_dir(self) -> Union[None, Coroutine[None, None, None]]:
         raise NotImplementedError
 
-    def __clean_paths(self) -> Set[Path]:
+    def __clean_paths(self) -> AbstractSet[Path]:
         has_decompose_par_dict = (self.path / "system" / "decomposeParDict").is_file()
         has_block_mesh_dict = (self.path / "system" / "blockMeshDict").is_file()
 
@@ -242,9 +242,8 @@ class FoamCaseRunBase(FoamCaseBase):
                 elif parallel is False:
                     script = run if run.is_file() else all_run
                 else:
-                    raise ValueError(
-                        "Both (All)run and (All)run-parallel scripts are present. Please specify parallel argument."
-                    )
+                    msg = "Both (All)run and (All)run-parallel scripts are present. Please specify parallel argument."
+                    raise ValueError(msg)
             else:
                 script = run if run.is_file() else all_run
         elif parallel is not False and (
@@ -420,9 +419,8 @@ class FoamCaseRunBase(FoamCaseBase):
                             cpus = self._nsubdomains
                         else:
                             cpus = 1
-                else:
-                    if cpus is None:
-                        cpus = 1
+                elif cpus is None:
+                    cpus = 1
 
                 yield self.run(
                     [script_path], parallel=False, cpus=cpus, check=check, **kwargs
@@ -450,9 +448,8 @@ class FoamCaseRunBase(FoamCaseBase):
 
                     if cpus is None:
                         cpus = max(self._nprocessors, 1)
-                else:
-                    if cpus is None:
-                        cpus = 1
+                elif cpus is None:
+                    cpus = 1
 
                 yield self.run(
                     [self.application],

@@ -97,7 +97,8 @@ class FoamFile(
         """Alias of `self["FoamFile", "version"]`."""
         ret = self["FoamFile", "version"]
         if not isinstance(ret, (int, float)):
-            raise TypeError("version is not a number")
+            msg = "version is not a number"
+            raise TypeError(msg)
         return ret
 
     @version.setter
@@ -109,9 +110,11 @@ class FoamFile(
         """Alias of `self["FoamFile", "format"]`."""
         ret = self["FoamFile", "format"]
         if not isinstance(ret, str):
-            raise TypeError("format is not a string")
+            msg = "format is not a string"
+            raise TypeError(msg)
         if ret not in ("ascii", "binary"):
-            raise ValueError("format is not 'ascii' or 'binary'")
+            msg = "format is not 'ascii' or 'binary'"
+            raise ValueError(msg)
         return cast(Literal["ascii", "binary"], ret)
 
     @format.setter
@@ -123,7 +126,8 @@ class FoamFile(
         """Alias of `self["FoamFile", "class"]`."""
         ret = self["FoamFile", "class"]
         if not isinstance(ret, str):
-            raise TypeError("class is not a string")
+            msg = "class is not a string"
+            raise TypeError(msg)
         return ret
 
     @class_.setter
@@ -135,7 +139,8 @@ class FoamFile(
         """Alias of `self["FoamFile", "location"]`."""
         ret = self["FoamFile", "location"]
         if not isinstance(ret, str):
-            raise TypeError("location is not a string")
+            msg = "location is not a string"
+            raise TypeError(msg)
         return ret
 
     @location.setter
@@ -147,7 +152,8 @@ class FoamFile(
         """Alias of `self["FoamFile", "object"]`."""
         ret = self["FoamFile", "object"]
         if not isinstance(ret, str):
-            raise TypeError("object is not a string")
+            msg = "object is not a string"
+            raise TypeError(msg)
         return ret
 
     @object_.setter
@@ -213,7 +219,7 @@ class FoamFile(
                 kind = Kind.DIMENSIONS
 
             if (
-                kind == Kind.FIELD or kind == Kind.BINARY_FIELD
+                kind in (Kind.FIELD, Kind.BINARY_FIELD)
             ) and self.class_ == "dictionary":
                 if not is_sequence(data):
                     class_ = "volScalarField"
@@ -352,7 +358,8 @@ class FoamFieldFile(FoamFile):
             value = super().__getitem__(keyword)
             if not isinstance(value, FoamFieldFile.BoundarySubDict):
                 assert not isinstance(value, FoamFile.SubDict)
-                raise TypeError(f"boundary {keyword} is not a dictionary")
+                msg = f"boundary {keyword} is not a dictionary"
+                raise TypeError(msg)
             return value
 
     class BoundarySubDict(FoamFile.SubDict):
@@ -363,7 +370,8 @@ class FoamFieldFile(FoamFile):
             """Alias of `self["type"]`."""
             ret = self["type"]
             if not isinstance(ret, str):
-                raise TypeError("type is not a string")
+                msg = "type is not a string"
+                raise TypeError(msg)
             return ret
 
         @type.setter
@@ -412,7 +420,8 @@ class FoamFieldFile(FoamFile):
         """Alias of `self["dimensions"]`."""
         ret = self["dimensions"]
         if not isinstance(ret, FoamFile.DimensionSet):
-            raise TypeError("dimensions is not a DimensionSet")
+            msg = "dimensions is not a DimensionSet"
+            raise TypeError(msg)
         return ret
 
     @dimensions.setter
@@ -439,7 +448,8 @@ class FoamFieldFile(FoamFile):
         ret = self["boundaryField"]
         if not isinstance(ret, FoamFieldFile.BoundariesSubDict):
             assert not isinstance(ret, FoamFile.SubDict)
-            raise TypeError("boundaryField is not a dictionary")
+            msg = "boundaryField is not a dictionary"
+            raise TypeError(msg)
         return ret
 
     @boundary_field.setter

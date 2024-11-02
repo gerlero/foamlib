@@ -24,7 +24,7 @@ def flange() -> Generator[FoamCase, None, None]:
 
 
 @pytest.mark.parametrize("parallel", [True, False])
-def test_run(flange: FoamCase, parallel: bool) -> None:
+def test_run(flange: FoamCase, *, parallel: bool) -> None:
     if parallel:
         if not (flange.path / "Allrun-parallel").exists():
             pytest.skip()

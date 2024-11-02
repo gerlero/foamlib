@@ -23,7 +23,7 @@ R = TypeVar("R")
 
 
 class ValuedGenerator(Generic[Y, S, R]):
-    def __init__(self, generator: Generator[Y, S, R]):
+    def __init__(self, generator: Generator[Y, S, R]) -> None:
         self._generator = generator
 
     def __iter__(self) -> Generator[Y, S, R]:
@@ -32,7 +32,7 @@ class ValuedGenerator(Generic[Y, S, R]):
 
 
 class _AwaitableAsyncContextManager(Generic[R]):
-    def __init__(self, cm: "AsyncContextManager[R]"):
+    def __init__(self, cm: "AsyncContextManager[R]") -> None:
         self._cm = cm
 
     def __await__(self) -> Generator[Any, Any, R]:
