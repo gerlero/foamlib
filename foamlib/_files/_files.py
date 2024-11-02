@@ -250,21 +250,20 @@ class FoamFile(
 
             start, end = parsed.entry_location(keywords, missing_ok=True)
 
-            before = b""
-            if parsed.contents[:start] and not parsed.contents[:start].endswith(b"\n"):
-                before = b"\n"
-            if (
-                parsed.contents[:start]
-                and len(keywords) <= 1
-                and not parsed.contents[:start].endswith(b"\n\n")
-            ):
-                before = b"\n\n"
+            if start and not parsed.contents[:start].endswith(b"\n\n"):
+                if parsed.contents[:start].endswith(b"\n"):
+                    before = b"\n" if len(keywords) <= 1 else b""
+                else:
+                    before = b"\n\n" if len(keywords) <= 1 else b"\n"
+            else:
+                before = b""
 
-            after = b""
-            if parsed.contents[end:].startswith(b"}"):
-                after = b"    " * (len(keywords) - 2)
-            if not parsed.contents[end:] or not parsed.contents[end:].startswith(b"\n"):
-                after = b"\n" + after
+            if not parsed.contents[end:].strip() or parsed.contents[end:].startswith(
+                b"}"
+            ):
+                after = b"\n" + b"    " * (len(keywords) - 2)
+            else:
+                after = b""
 
             indentation = b"    " * (len(keywords) - 1)
 
@@ -292,7 +291,7 @@ class FoamFile(
             elif keywords:
                 parsed.put(
                     keywords,
-                    data,
+                    deepcopy(data),
                     before
                     + indentation
                     + dumps(keywords[-1])
@@ -303,7 +302,7 @@ class FoamFile(
                 )
 
             else:
-                parsed.put(keywords, data, before + dumps(data, kind=kind) + after)
+                parsed.put((), deepcopy(data), before + dumps(data, kind=kind) + after)
 
     def __delitem__(self, keywords: str | tuple[str, ...] | None) -> None:
         if not keywords:
