@@ -4,11 +4,12 @@ import array
 import itertools
 import sys
 from enum import Enum, auto
+from typing import cast
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 else:
-    from typing import Mapping
+    from typing import Mapping, Sequence
 
 from ._base import FoamFileBase
 from ._util import is_sequence
@@ -65,21 +66,26 @@ def dumps(
         return b"uniform " + dumps(data, kind=Kind.SINGLE_ENTRY)
 
     if kind in (Kind.FIELD, Kind.BINARY_FIELD) and is_sequence(data):
-        if isinstance(data[0], (int, float)):
+        if data and isinstance(data[0], (int, float)):
             tensor_kind = b"scalar"
-        elif len(data[0]) == 3:
-            tensor_kind = b"vector"
-        elif len(data[0]) == 6:
-            tensor_kind = b"symmTensor"
-        elif len(data[0]) == 9:
-            tensor_kind = b"tensor"
+        elif is_sequence(data[0]) and data[0] and isinstance(data[0][0], (int, float)):
+            if len(data[0]) == 3:
+                tensor_kind = b"vector"
+            elif len(data[0]) == 6:
+                tensor_kind = b"symmTensor"
+            elif len(data[0]) == 9:
+                tensor_kind = b"tensor"
+            else:
+                return dumps(data)
         else:
             return dumps(data)
 
         if kind == Kind.BINARY_FIELD:
             if tensor_kind == b"scalar":
+                data = cast(Sequence[float], data)
                 contents = b"(" + array.array("d", data).tobytes() + b")"
             else:
+                data = cast(Sequence[Sequence[float]], data)
                 contents = (
                     b"("
                     + array.array("d", itertools.chain.from_iterable(data)).tobytes()

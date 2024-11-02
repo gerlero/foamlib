@@ -183,12 +183,12 @@ class FoamFile(
     def __setitem__(
         self, keywords: str | tuple[str, ...] | None, data: FoamFileBase.Data
     ) -> None:
-        with self:
-            if not keywords:
-                keywords = ()
-            elif not isinstance(keywords, tuple):
-                keywords = (keywords,)
+        if not keywords:
+            keywords = ()
+        elif not isinstance(keywords, tuple):
+            keywords = (keywords,)
 
+        with self:
             try:
                 write_header = (
                     not self and "FoamFile" not in self and keywords != ("FoamFile",)
@@ -223,83 +223,87 @@ class FoamFile(
             if (
                 kind in (Kind.FIELD, Kind.BINARY_FIELD)
             ) and self.class_ == "dictionary":
-                if not is_sequence(data):
-                    class_ = "volScalarField"
-                elif (len(data) == 3 and not is_sequence(data[0])) or len(data[0]) == 3:
-                    class_ = "volVectorField"
-                elif (len(data) == 6 and not is_sequence(data[0])) or len(data[0]) == 6:
-                    class_ = "volSymmTensorField"
-                elif (len(data) == 9 and not is_sequence(data[0])) or len(data[0]) == 9:
-                    class_ = "volTensorField"
-                else:
-                    class_ = "volScalarField"
+                if isinstance(data, (int, float)):
+                    self.class_ = "volScalarField"
 
-                self.class_ = class_
-                self[keywords] = data
+                elif is_sequence(data) and data:
+                    if isinstance(data[0], (int, float)):
+                        if len(data) == 3:
+                            self.class_ = "volVectorField"
+                        elif len(data) == 6:
+                            self.class_ = "volSymmTensorField"
+                        elif len(data) == 9:
+                            self.class_ = "volTensorField"
+                    elif (
+                        is_sequence(data[0])
+                        and data[0]
+                        and isinstance(data[0][0], (int, float))
+                    ):
+                        if len(data[0]) == 3:
+                            self.class_ = "volVectorField"
+                        elif len(data[0]) == 6:
+                            self.class_ = "volSymmTensorField"
+                        elif len(data[0]) == 9:
+                            self.class_ = "volTensorField"
+
+            parsed = self._get_parsed(missing_ok=True)
+
+            start, end = parsed.entry_location(keywords, missing_ok=True)
+
+            before = b""
+            if parsed.contents[:start] and not parsed.contents[:start].endswith(b"\n"):
+                before = b"\n"
+            if (
+                parsed.contents[:start]
+                and len(keywords) <= 1
+                and not parsed.contents[:start].endswith(b"\n\n")
+            ):
+                before = b"\n\n"
+
+            after = b""
+            if parsed.contents[end:].startswith(b"}"):
+                after = b"    " * (len(keywords) - 2)
+            if not parsed.contents[end:] or not parsed.contents[end:].startswith(b"\n"):
+                after = b"\n" + after
+
+            indentation = b"    " * (len(keywords) - 1)
+
+            if isinstance(data, Mapping):
+                if isinstance(data, (FoamFile, FoamFile.SubDict)):
+                    data = data.as_dict()
+
+                parsed.put(
+                    keywords,
+                    ...,
+                    before
+                    + indentation
+                    + dumps(keywords[-1])
+                    + b"\n"
+                    + indentation
+                    + b"{\n"
+                    + indentation
+                    + b"}"
+                    + after,
+                )
+
+                for k, v in data.items():
+                    self[(*keywords, k)] = v
+
+            elif keywords:
+                parsed.put(
+                    keywords,
+                    data,
+                    before
+                    + indentation
+                    + dumps(keywords[-1])
+                    + b" "
+                    + dumps(data, kind=kind)
+                    + b";"
+                    + after,
+                )
 
             else:
-                parsed = self._get_parsed(missing_ok=True)
-
-                start, end = parsed.entry_location(keywords, missing_ok=True)
-
-                before = b""
-                if parsed.contents[:start] and not parsed.contents[:start].endswith(
-                    b"\n"
-                ):
-                    before = b"\n"
-                if (
-                    parsed.contents[:start]
-                    and len(keywords) <= 1
-                    and not parsed.contents[:start].endswith(b"\n\n")
-                ):
-                    before = b"\n\n"
-
-                after = b""
-                if parsed.contents[end:].startswith(b"}"):
-                    after = b"    " * (len(keywords) - 2)
-                if not parsed.contents[end:] or not parsed.contents[end:].startswith(
-                    b"\n"
-                ):
-                    after = b"\n" + after
-
-                indentation = b"    " * (len(keywords) - 1)
-
-                if isinstance(data, Mapping):
-                    if isinstance(data, (FoamFile, FoamFile.SubDict)):
-                        data = data.as_dict()
-
-                    parsed.put(
-                        keywords,
-                        ...,
-                        before
-                        + indentation
-                        + dumps(keywords[-1])
-                        + b"\n"
-                        + indentation
-                        + b"{\n"
-                        + indentation
-                        + b"}"
-                        + after,
-                    )
-
-                    for k, v in data.items():
-                        self[(*keywords, k)] = v
-
-                elif keywords:
-                    parsed.put(
-                        keywords,
-                        data,
-                        before
-                        + indentation
-                        + dumps(keywords[-1])
-                        + b" "
-                        + dumps(data, kind=kind)
-                        + b";"
-                        + after,
-                    )
-
-                else:
-                    parsed.put(keywords, data, before + dumps(data, kind=kind) + after)
+                parsed.put(keywords, data, before + dumps(data, kind=kind) + after)
 
     def __delitem__(self, keywords: str | tuple[str, ...] | None) -> None:
         if not keywords:
