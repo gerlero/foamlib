@@ -1,12 +1,9 @@
+from __future__ import annotations
+
 import shutil
 import sys
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Optional,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import (
@@ -28,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
-    def __init__(self, path: Union["os.PathLike[str]", str] = Path()) -> None:
+    def __init__(self, path: os.PathLike[str] | str = Path()) -> None:
         self.path = Path(path).absolute()
 
     class TimeDirectory(AbstractSet[FoamFieldFile]):
@@ -40,11 +37,11 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         :param path: The path to the time directory.
         """
 
-        def __init__(self, path: Union["os.PathLike[str]", str]) -> None:
+        def __init__(self, path: os.PathLike[str] | str) -> None:
             self.path = Path(path).absolute()
 
         @property
-        def _case(self) -> "FoamCaseBase":
+        def _case(self) -> FoamCaseBase:
             return FoamCaseBase(self.path.parent)
 
         @property
@@ -97,7 +94,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             return str(self.path)
 
     @property
-    def _times(self) -> Sequence["FoamCaseBase.TimeDirectory"]:
+    def _times(self) -> Sequence[FoamCaseBase.TimeDirectory]:
         times = []
         for p in self.path.iterdir():
             if p.is_dir():
@@ -113,16 +110,14 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         return times
 
     @overload
-    def __getitem__(
-        self, index: Union[int, float, str]
-    ) -> "FoamCaseBase.TimeDirectory": ...
+    def __getitem__(self, index: int | float | str) -> FoamCaseBase.TimeDirectory: ...
 
     @overload
-    def __getitem__(self, index: slice) -> Sequence["FoamCaseBase.TimeDirectory"]: ...
+    def __getitem__(self, index: slice) -> Sequence[FoamCaseBase.TimeDirectory]: ...
 
     def __getitem__(
-        self, index: Union[int, slice, float, str]
-    ) -> Union["FoamCaseBase.TimeDirectory", Sequence["FoamCaseBase.TimeDirectory"]]:
+        self, index: int | slice | float | str
+    ) -> FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]:
         if isinstance(index, str):
             return FoamCaseBase.TimeDirectory(self.path / index)
         if isinstance(index, float):
@@ -136,7 +131,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
     def __len__(self) -> int:
         return len(self._times)
 
-    def __delitem__(self, key: Union[int, float, str]) -> None:
+    def __delitem__(self, key: int | float | str) -> None:
         shutil.rmtree(self[key].path)
 
     @property
@@ -144,12 +139,12 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         """The name of the case."""
         return self.path.name
 
-    def file(self, path: Union["os.PathLike[str]", str]) -> FoamFile:
+    def file(self, path: os.PathLike[str] | str) -> FoamFile:
         """Return a FoamFile object for the given path in the case."""
         return FoamFile(self.path / path)
 
     @property
-    def _nsubdomains(self) -> Optional[int]:
+    def _nsubdomains(self) -> int | None:
         """Return the number of subdomains as set in the decomposeParDict, or None if no decomposeParDict is found."""
         try:
             nsubdomains = self.decompose_par_dict["numberOfSubdomains"]

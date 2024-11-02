@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 import functools
 import sys
-from types import TracebackType
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncContextManager,
     Callable,
     Generic,
-    Optional,
-    Type,
     TypeVar,
 )
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 if sys.version_info >= (3, 9):
     from collections.abc import Generator
@@ -32,7 +35,7 @@ class ValuedGenerator(Generic[Y, S, R]):
 
 
 class _AwaitableAsyncContextManager(Generic[R]):
-    def __init__(self, cm: "AsyncContextManager[R]") -> None:
+    def __init__(self, cm: AsyncContextManager[R]) -> None:
         self._cm = cm
 
     def __await__(self) -> Generator[Any, Any, R]:
@@ -43,15 +46,15 @@ class _AwaitableAsyncContextManager(Generic[R]):
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ) -> Optional[bool]:
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
         return await self._cm.__aexit__(exc_type, exc_val, exc_tb)
 
 
 def awaitableasynccontextmanager(
-    cm: Callable[..., "AsyncContextManager[R]"],
+    cm: Callable[..., AsyncContextManager[R]],
 ) -> Callable[..., _AwaitableAsyncContextManager[R]]:
     @functools.wraps(cm)
     def f(*args: Any, **kwargs: Any) -> _AwaitableAsyncContextManager[R]:

@@ -1,12 +1,10 @@
+from __future__ import annotations
+
 import gzip
 import sys
 from pathlib import Path
-from types import TracebackType
 from typing import (
     TYPE_CHECKING,
-    Optional,
-    Type,
-    Union,
 )
 
 if sys.version_info >= (3, 11):
@@ -18,14 +16,15 @@ from ._parsing import Parsed
 
 if TYPE_CHECKING:
     import os
+    from types import TracebackType
 
 
 class FoamFileIO:
-    def __init__(self, path: Union["os.PathLike[str]", str]) -> None:
+    def __init__(self, path: os.PathLike[str] | str) -> None:
         self.path = Path(path).absolute()
 
-        self.__parsed: Optional[Parsed] = None
-        self.__missing: Optional[bool] = None
+        self.__parsed: Parsed | None = None
+        self.__missing: bool | None = None
         self.__defer_io = 0
 
     def __enter__(self) -> Self:
@@ -36,9 +35,9 @@ class FoamFileIO:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         self.__defer_io -= 1
         if self.__defer_io == 0:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import shlex
 import shutil
@@ -6,13 +8,7 @@ import tempfile
 from abc import abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import (
-    IO,
-    Any,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import IO, TYPE_CHECKING, Any
 
 if sys.version_info >= (3, 9):
     from collections.abc import (
@@ -40,9 +36,11 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-from .._files import FoamFieldFile
 from ._base import FoamCaseBase
 from ._subprocess import DEVNULL, STDOUT
+
+if TYPE_CHECKING:
+    from .._files import FoamFieldFile
 
 
 class FoamCaseRunBase(FoamCaseBase):
@@ -50,12 +48,12 @@ class FoamCaseRunBase(FoamCaseBase):
         @abstractmethod
         def cell_centers(
             self,
-        ) -> Union[FoamFieldFile, Coroutine[None, None, FoamFieldFile]]:
+        ) -> FoamFieldFile | Coroutine[None, None, FoamFieldFile]:
             raise NotImplementedError
 
         @property
         @abstractmethod
-        def _case(self) -> "FoamCaseRunBase":
+        def _case(self) -> FoamCaseRunBase:
             raise NotImplementedError
 
         def _cell_centers_calls(self) -> Generator[Any, None, FoamFieldFile]:
@@ -70,89 +68,88 @@ class FoamCaseRunBase(FoamCaseBase):
 
             return ret
 
-    def __delitem__(self, key: Union[int, float, str]) -> None:
+    def __delitem__(self, key: int | float | str) -> None:
         shutil.rmtree(self[key].path)
 
     @staticmethod
     @abstractmethod
     def _run(
-        cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
+        cmd: Sequence[str | os.PathLike[str]] | str,
         *,
         cpus: int,
         **kwargs: Any,
-    ) -> Union[None, Coroutine[None, None, None]]:
+    ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @staticmethod
     @abstractmethod
     def _rmtree(
-        path: Union["os.PathLike[str]", str], *, ignore_errors: bool = False
-    ) -> Union[None, Coroutine[None, None, None]]:
+        path: os.PathLike[str] | str, *, ignore_errors: bool = False
+    ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @staticmethod
     @abstractmethod
     def _copytree(
-        src: Union["os.PathLike[str]", str],
-        dest: Union["os.PathLike[str]", str],
+        src: os.PathLike[str] | str,
+        dest: os.PathLike[str] | str,
         *,
         symlinks: bool = False,
-        ignore: Optional[
-            Callable[[Union["os.PathLike[str]", str], Collection[str]], Collection[str]]
-        ] = None,
-    ) -> Union[None, Coroutine[None, None, None]]:
+        ignore: Callable[[os.PathLike[str] | str, Collection[str]], Collection[str]]
+        | None = None,
+    ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @abstractmethod
-    def clean(self, *, check: bool = False) -> Union[None, Coroutine[None, None, None]]:
+    def clean(self, *, check: bool = False) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @abstractmethod
-    def copy(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> Any:
+    def copy(self, dst: os.PathLike[str] | str | None = None) -> Any:
         raise NotImplementedError
 
     @abstractmethod
-    def clone(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> Any:
+    def clone(self, dst: os.PathLike[str] | str | None = None) -> Any:
         raise NotImplementedError
 
     @abstractmethod
     def _prepare(
         self, *, check: bool = True, log: bool = True
-    ) -> Union[None, Coroutine[None, None, None]]:
+    ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @abstractmethod
     def run(
         self,
-        cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
+        cmd: Sequence[str | os.PathLike[str]] | str | None = None,
         *,
-        parallel: Optional[bool] = None,
-        cpus: Optional[int] = None,
+        parallel: bool | None = None,
+        cpus: int | None = None,
         check: bool = True,
         log: bool = True,
-    ) -> Union[None, Coroutine[None, None, None]]:
+    ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @abstractmethod
     def block_mesh(
         self, *, check: bool = True, log: bool = True
-    ) -> Union[None, Coroutine[None, None, None]]:
+    ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @abstractmethod
     def decompose_par(
         self, *, check: bool = True, log: bool = True
-    ) -> Union[None, Coroutine[None, None, None]]:
+    ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @abstractmethod
     def reconstruct_par(
         self, *, check: bool = True, log: bool = True
-    ) -> Union[None, Coroutine[None, None, None]]:
+    ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @abstractmethod
-    def restore_0_dir(self) -> Union[None, Coroutine[None, None, None]]:
+    def restore_0_dir(self) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     def __clean_paths(self) -> AbstractSet[Path]:
@@ -186,18 +183,18 @@ class FoamCaseRunBase(FoamCaseBase):
 
     def __clone_ignore(
         self,
-    ) -> Callable[[Union["os.PathLike[str]", str], Collection[str]], Collection[str]]:
+    ) -> Callable[[os.PathLike[str] | str, Collection[str]], Collection[str]]:
         clean_paths = self.__clean_paths()
 
         def ignore(
-            path: Union["os.PathLike[str]", str], names: Collection[str]
+            path: os.PathLike[str] | str, names: Collection[str]
         ) -> Collection[str]:
             paths = {Path(path) / name for name in names}
             return {p.name for p in paths.intersection(clean_paths)}
 
         return ignore
 
-    def __clean_script(self) -> Optional[Path]:
+    def __clean_script(self) -> Path | None:
         """Return the path to the (All)clean script, or None if no clean script is found."""
         clean = self.path / "clean"
         all_clean = self.path / "Allclean"
@@ -214,7 +211,7 @@ class FoamCaseRunBase(FoamCaseBase):
 
         return script
 
-    def __prepare_script(self) -> Optional[Path]:
+    def __prepare_script(self) -> Path | None:
         """Return the path to the Allrun.pre script, or None if no prepare script is found."""
         script = self.path / "Allrun.pre"
 
@@ -226,7 +223,7 @@ class FoamCaseRunBase(FoamCaseBase):
 
         return script
 
-    def __run_script(self, *, parallel: Optional[bool]) -> Optional[Path]:
+    def __run_script(self, *, parallel: bool | None) -> Path | None:
         """Return the path to the (All)run script, or None if no run script is found."""
         run = self.path / "run"
         run_parallel = self.path / "run-parallel"
@@ -258,7 +255,7 @@ class FoamCaseRunBase(FoamCaseBase):
 
         return script
 
-    def __env(self, *, shell: bool) -> Optional[Mapping[str, str]]:
+    def __env(self, *, shell: bool) -> Mapping[str, str] | None:
         sip_workaround = os.environ.get(
             "FOAM_LD_LIBRARY_PATH", ""
         ) and not os.environ.get("DYLD_LIBRARY_PATH", "")
@@ -277,8 +274,8 @@ class FoamCaseRunBase(FoamCaseBase):
 
     @contextmanager
     def __output(
-        self, cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str], *, log: bool
-    ) -> Generator[Tuple[Union[int, IO[bytes]], Union[int, IO[bytes]]], None, None]:
+        self, cmd: Sequence[str | os.PathLike[str]] | str, *, log: bool
+    ) -> Generator[tuple[int | IO[bytes], int | IO[bytes]], None, None]:
         if log:
             if isinstance(cmd, str):
                 name = shlex.split(cmd)[0]
@@ -298,7 +295,7 @@ class FoamCaseRunBase(FoamCaseBase):
         return ret
 
     def _copy_calls(
-        self, dst: Optional[Union["os.PathLike[str]", str]]
+        self, dst: os.PathLike[str] | str | None
     ) -> Generator[Any, None, Self]:
         if dst is None:
             dst = self.__mkrundir()
@@ -320,7 +317,7 @@ class FoamCaseRunBase(FoamCaseBase):
                     p.unlink()
 
     def _clone_calls(
-        self, dst: Optional[Union["os.PathLike[str]", str]]
+        self, dst: os.PathLike[str] | str | None
     ) -> Generator[Any, None, Self]:
         if dst is None:
             dst = self.__mkrundir()
@@ -365,10 +362,10 @@ class FoamCaseRunBase(FoamCaseBase):
 
     def _run_calls(
         self,
-        cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
+        cmd: Sequence[str | os.PathLike[str]] | str | None = None,
         *,
-        parallel: Optional[bool],
-        cpus: Optional[int],
+        parallel: bool | None,
+        cpus: int | None,
         check: bool,
         log: bool,
         **kwargs: Any,

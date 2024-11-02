@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import multiprocessing
 import sys
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import (
@@ -22,7 +24,6 @@ else:
 
 import aioshutil
 
-from .._files import FoamFieldFile
 from ._base import FoamCaseBase
 from ._run import FoamCaseRunBase
 from ._subprocess import run_async
@@ -30,6 +31,8 @@ from ._util import ValuedGenerator, awaitableasynccontextmanager
 
 if TYPE_CHECKING:
     import os
+
+    from .._files import FoamFieldFile
 
 X = TypeVar("X")
 Y = TypeVar("Y")
@@ -48,7 +51,7 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     class TimeDirectory(FoamCaseRunBase.TimeDirectory):
         @property
-        def _case(self) -> "AsyncFoamCase":
+        def _case(self) -> AsyncFoamCase:
             return AsyncFoamCase(self.path.parent)
 
         async def cell_centers(self) -> FoamFieldFile:
@@ -91,7 +94,7 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     @staticmethod
     async def _run(
-        cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
+        cmd: Sequence[str | os.PathLike[str]] | str,
         *,
         cpus: int,
         **kwargs: Any,
@@ -101,19 +104,18 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     @staticmethod
     async def _rmtree(
-        path: Union["os.PathLike[str]", str], *, ignore_errors: bool = False
+        path: os.PathLike[str] | str, *, ignore_errors: bool = False
     ) -> None:
         await aioshutil.rmtree(path, ignore_errors=ignore_errors)
 
     @staticmethod
     async def _copytree(
-        src: Union["os.PathLike[str]", str],
-        dest: Union["os.PathLike[str]", str],
+        src: os.PathLike[str] | str,
+        dest: os.PathLike[str] | str,
         *,
         symlinks: bool = False,
-        ignore: Optional[
-            Callable[[Union["os.PathLike[str]", str], Collection[str]], Collection[str]]
-        ] = None,
+        ignore: Callable[[os.PathLike[str] | str, Collection[str]], Collection[str]]
+        | None = None,
     ) -> None:
         await aioshutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
 
@@ -127,16 +129,14 @@ class AsyncFoamCase(FoamCaseRunBase):
             await coro
 
     @overload
-    def __getitem__(
-        self, index: Union[int, float, str]
-    ) -> "AsyncFoamCase.TimeDirectory": ...
+    def __getitem__(self, index: int | float | str) -> AsyncFoamCase.TimeDirectory: ...
 
     @overload
-    def __getitem__(self, index: slice) -> Sequence["AsyncFoamCase.TimeDirectory"]: ...
+    def __getitem__(self, index: slice) -> Sequence[AsyncFoamCase.TimeDirectory]: ...
 
     def __getitem__(
-        self, index: Union[int, slice, float, str]
-    ) -> Union["AsyncFoamCase.TimeDirectory", Sequence["AsyncFoamCase.TimeDirectory"]]:
+        self, index: int | slice | float | str
+    ) -> AsyncFoamCase.TimeDirectory | Sequence[AsyncFoamCase.TimeDirectory]:
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):
             return AsyncFoamCase.TimeDirectory(ret)
@@ -148,10 +148,10 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     async def run(
         self,
-        cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
+        cmd: Sequence[str | os.PathLike[str]] | str | None = None,
         *,
-        parallel: Optional[bool] = None,
-        cpus: Optional[int] = None,
+        parallel: bool | None = None,
+        cpus: int | None = None,
         check: bool = True,
         log: bool = True,
     ) -> None:
@@ -192,7 +192,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     @awaitableasynccontextmanager
     @asynccontextmanager
     async def copy(
-        self, dst: Optional[Union["os.PathLike[str]", str]] = None
+        self, dst: os.PathLike[str] | str | None = None
     ) -> AsyncGenerator[Self, None]:
         """
         Make a copy of this case.
@@ -213,7 +213,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     @awaitableasynccontextmanager
     @asynccontextmanager
     async def clone(
-        self, dst: Optional[Union["os.PathLike[str]", str]] = None
+        self, dst: os.PathLike[str] | str | None = None
     ) -> AsyncGenerator[Self, None]:
         """
         Clone this case (make a clean copy).

@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import shutil
 import sys
-from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, Optional, Type, Union, overload
+from typing import TYPE_CHECKING, Any, Callable, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Collection, Sequence
@@ -13,7 +14,6 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-from .._files import FoamFieldFile
 from ._base import FoamCaseBase
 from ._run import FoamCaseRunBase
 from ._subprocess import run_sync
@@ -21,6 +21,9 @@ from ._util import ValuedGenerator
 
 if TYPE_CHECKING:
     import os
+    from types import TracebackType
+
+    from .._files import FoamFieldFile
 
 
 class FoamCase(FoamCaseRunBase):
@@ -36,7 +39,7 @@ class FoamCase(FoamCaseRunBase):
 
     class TimeDirectory(FoamCaseRunBase.TimeDirectory):
         @property
-        def _case(self) -> "FoamCase":
+        def _case(self) -> FoamCase:
             return FoamCase(self.path.parent)
 
         def cell_centers(self) -> FoamFieldFile:
@@ -50,7 +53,7 @@ class FoamCase(FoamCaseRunBase):
 
     @staticmethod
     def _run(
-        cmd: Union[Sequence[Union[str, "os.PathLike[str]"]], str],
+        cmd: Sequence[str | os.PathLike[str]] | str,
         *,
         cpus: int,
         **kwargs: Any,
@@ -58,34 +61,29 @@ class FoamCase(FoamCaseRunBase):
         run_sync(cmd, **kwargs)
 
     @staticmethod
-    def _rmtree(
-        path: Union["os.PathLike[str]", str], *, ignore_errors: bool = False
-    ) -> None:
+    def _rmtree(path: os.PathLike[str] | str, *, ignore_errors: bool = False) -> None:
         shutil.rmtree(path, ignore_errors=ignore_errors)
 
     @staticmethod
     def _copytree(
-        src: Union["os.PathLike[str]", str],
-        dest: Union["os.PathLike[str]", str],
+        src: os.PathLike[str] | str,
+        dest: os.PathLike[str] | str,
         *,
         symlinks: bool = False,
-        ignore: Optional[
-            Callable[[Union["os.PathLike[str]", str], Collection[str]], Collection[str]]
-        ] = None,
+        ignore: Callable[[os.PathLike[str] | str, Collection[str]], Collection[str]]
+        | None = None,
     ) -> None:
         shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
 
     @overload
-    def __getitem__(
-        self, index: Union[int, float, str]
-    ) -> "FoamCase.TimeDirectory": ...
+    def __getitem__(self, index: int | float | str) -> FoamCase.TimeDirectory: ...
 
     @overload
-    def __getitem__(self, index: slice) -> Sequence["FoamCase.TimeDirectory"]: ...
+    def __getitem__(self, index: slice) -> Sequence[FoamCase.TimeDirectory]: ...
 
     def __getitem__(
-        self, index: Union[int, slice, float, str]
-    ) -> Union["FoamCase.TimeDirectory", Sequence["FoamCase.TimeDirectory"]]:
+        self, index: int | slice | float | str
+    ) -> FoamCase.TimeDirectory | Sequence[FoamCase.TimeDirectory]:
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):
             return FoamCase.TimeDirectory(ret)
@@ -96,9 +94,9 @@ class FoamCase(FoamCaseRunBase):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         self._rmtree(self.path)
 
@@ -117,10 +115,10 @@ class FoamCase(FoamCaseRunBase):
 
     def run(
         self,
-        cmd: Optional[Union[Sequence[Union[str, "os.PathLike[str]"]], str]] = None,
+        cmd: Sequence[str | os.PathLike[str]] | str | None = None,
         *,
-        parallel: Optional[bool] = None,
-        cpus: Optional[int] = None,
+        parallel: bool | None = None,
+        cpus: int | None = None,
         check: bool = True,
         log: bool = True,
     ) -> None:
@@ -158,7 +156,7 @@ class FoamCase(FoamCaseRunBase):
         for _ in self._restore_0_dir_calls():
             pass
 
-    def copy(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> Self:
+    def copy(self, dst: os.PathLike[str] | str | None = None) -> Self:
         """
         Make a copy of this case.
 
@@ -173,7 +171,7 @@ class FoamCase(FoamCaseRunBase):
 
         return calls.value
 
-    def clone(self, dst: Optional[Union["os.PathLike[str]", str]] = None) -> Self:
+    def clone(self, dst: os.PathLike[str] | str | None = None) -> Self:
         """
         Clone this case (make a clean copy).
 
