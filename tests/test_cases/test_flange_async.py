@@ -27,7 +27,7 @@ async def flange(request: pytest.FixtureRequest) -> AsyncGenerator[AsyncFoamCase
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parallel", [True, False])
-async def test_run(flange: AsyncFoamCase, parallel: bool) -> None:
+async def test_run(flange: AsyncFoamCase, *, parallel: bool) -> None:
     if parallel:
         if not (flange.path / "Allrun-parallel").exists():
             pytest.skip()

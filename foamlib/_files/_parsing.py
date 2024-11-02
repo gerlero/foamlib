@@ -85,14 +85,14 @@ def _unpack_binary_field(
 
     arr = array.array("d", "".join(tks).encode("latin-1"))
 
-    all: Union[Sequence[float], Sequence[Sequence[float]]]
+    values: Union[Sequence[float], Sequence[Sequence[float]]]
 
     if elsize != 1:
-        all = [arr[i : i + elsize].tolist() for i in range(0, len(arr), elsize)]
+        values = [arr[i : i + elsize].tolist() for i in range(0, len(arr), elsize)]
     else:
-        all = arr.tolist()
+        values = arr.tolist()
 
-    return [all]
+    return [values]
 
 
 _IDENTCHARS = identchars + "$"

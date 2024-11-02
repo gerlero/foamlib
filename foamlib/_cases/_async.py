@@ -62,8 +62,8 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     max_cpus = multiprocessing.cpu_count()
     """
-    Maximum number of CPUs to use for running instances of `AsyncFoamCase` concurrently. 
-    
+    Maximum number of CPUs to use for running instances of `AsyncFoamCase` concurrently.
+
     Defaults to the number of CPUs on the system.
     """
 
@@ -101,7 +101,7 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     @staticmethod
     async def _rmtree(
-        path: Union["os.PathLike[str]", str], ignore_errors: bool = False
+        path: Union["os.PathLike[str]", str], *, ignore_errors: bool = False
     ) -> None:
         await aioshutil.rmtree(path, ignore_errors=ignore_errors)
 

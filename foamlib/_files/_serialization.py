@@ -53,7 +53,7 @@ def dumps(
     ):
         return b"[" + b" ".join(dumps(v) for v in data) + b"]"
 
-    if (kind == Kind.FIELD or kind == Kind.BINARY_FIELD) and (
+    if kind in (Kind.FIELD, Kind.BINARY_FIELD) and (
         isinstance(data, (int, float))
         or is_sequence(data)
         and data
@@ -62,7 +62,7 @@ def dumps(
     ):
         return b"uniform " + dumps(data, kind=Kind.SINGLE_ENTRY)
 
-    if (kind == Kind.FIELD or kind == Kind.BINARY_FIELD) and is_sequence(data):
+    if kind in (Kind.FIELD, Kind.BINARY_FIELD) and is_sequence(data):
         if isinstance(data[0], (int, float)):
             tensor_kind = b"scalar"
         elif len(data[0]) == 3:
