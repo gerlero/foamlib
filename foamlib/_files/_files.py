@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from copy import deepcopy
 from typing import Any, Optional, Tuple, Union, cast
@@ -16,7 +17,7 @@ else:
 
 from ._base import FoamFileBase
 from ._io import FoamFileIO
-from ._serialization import Kind, dumps
+from ._serialization import Kind, dumps, normalize
 from ._util import is_sequence
 
 
@@ -216,12 +217,28 @@ class FoamFile(
                     or keywords[2].endswith("Gradient")
                 )
             ):
-                kind = Kind.BINARY_FIELD if self.format == "binary" else Kind.FIELD
+                if self.format == "binary":
+                    arch = self.get(("FoamFile", "arch"), default=None)
+                    assert arch is None or isinstance(arch, str)
+                    if (arch is not None and "scalar=32" in arch) or (
+                        arch is None
+                        and os.environ.get("WM_PRECISION_OPTION", default="DP") == "SP"
+                    ):
+                        kind = Kind.SINGLE_PRECISION_BINARY_FIELD
+                    else:
+                        kind = Kind.DOUBLE_PRECISION_BINARY_FIELD
+                else:
+                    kind = Kind.ASCII_FIELD
             elif keywords == ("dimensions",):
                 kind = Kind.DIMENSIONS
 
             if (
-                kind in (Kind.FIELD, Kind.BINARY_FIELD)
+                kind
+                in (
+                    Kind.ASCII_FIELD,
+                    Kind.DOUBLE_PRECISION_BINARY_FIELD,
+                    Kind.SINGLE_PRECISION_BINARY_FIELD,
+                )
             ) and self.class_ == "dictionary":
                 if isinstance(data, (int, float)):
                     self.class_ = "volScalarField"
@@ -288,21 +305,25 @@ class FoamFile(
                 for k, v in data.items():
                     self[(*keywords, k)] = v
 
-            elif keywords:
-                parsed.put(
-                    keywords,
-                    deepcopy(data),
-                    before
-                    + indentation
-                    + dumps(keywords[-1])
-                    + b" "
-                    + dumps(data, kind=kind)
-                    + b";"
-                    + after,
-                )
-
             else:
-                parsed.put((), deepcopy(data), before + dumps(data, kind=kind) + after)
+                data = normalize(data)
+                assert not isinstance(data, Mapping)
+
+                if keywords:
+                    parsed.put(
+                        keywords,
+                        data,
+                        before
+                        + indentation
+                        + dumps(keywords[-1])
+                        + b" "
+                        + dumps(data, kind=kind)
+                        + b";"
+                        + after,
+                    )
+
+                else:
+                    parsed.put((), data, before + dumps(data, kind=kind) + after)
 
     def __delitem__(self, keywords: str | tuple[str, ...] | None) -> None:
         if not keywords:

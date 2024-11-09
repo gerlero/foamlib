@@ -11,29 +11,35 @@ def test_serialize_data() -> None:
     assert dumps("word") == b"word"
     assert dumps(("word", "word")) == b"word word"
     assert dumps('"a string"') == b'"a string"'
-    assert dumps(1, kind=Kind.FIELD) == b"uniform 1"
-    assert dumps(1.0, kind=Kind.FIELD) == b"uniform 1.0"
-    assert dumps(1.0e-3, kind=Kind.FIELD) == b"uniform 0.001"
+    assert dumps(1, kind=Kind.ASCII_FIELD) == b"uniform 1"
+    assert dumps(1.0, kind=Kind.ASCII_FIELD) == b"uniform 1.0"
+    assert dumps(1.0e-3, kind=Kind.ASCII_FIELD) == b"uniform 0.001"
     assert dumps([1.0, 2.0, 3.0]) == b"(1.0 2.0 3.0)"
-    assert dumps([1, 2, 3], kind=Kind.FIELD) == b"uniform (1 2 3)"
+    assert dumps([1, 2, 3], kind=Kind.ASCII_FIELD) == b"uniform (1 2 3)"
     assert (
-        dumps([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], kind=Kind.FIELD)
+        dumps([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], kind=Kind.ASCII_FIELD)
         == b"nonuniform List<scalar> 10(1 2 3 4 5 6 7 8 9 10)"
     )
     assert (
-        dumps([[1, 2, 3], [4, 5, 6]], kind=Kind.FIELD)
+        dumps([[1, 2, 3], [4, 5, 6]], kind=Kind.ASCII_FIELD)
         == b"nonuniform List<vector> 2((1 2 3) (4 5 6))"
     )
-    assert dumps(1, kind=Kind.BINARY_FIELD) == b"uniform 1"
-    assert dumps(1.0, kind=Kind.BINARY_FIELD) == b"uniform 1.0"
-    assert dumps([1, 2, 3], kind=Kind.BINARY_FIELD) == b"uniform (1 2 3)"
+    assert dumps(1, kind=Kind.DOUBLE_PRECISION_BINARY_FIELD) == b"uniform 1"
+    assert dumps(1.0, kind=Kind.DOUBLE_PRECISION_BINARY_FIELD) == b"uniform 1.0"
     assert (
-        dumps([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], kind=Kind.BINARY_FIELD)
+        dumps([1, 2, 3], kind=Kind.DOUBLE_PRECISION_BINARY_FIELD) == b"uniform (1 2 3)"
+    )
+    assert (
+        dumps([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], kind=Kind.DOUBLE_PRECISION_BINARY_FIELD)
         == b'nonuniform List<scalar> 10(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@\x00\x00\x00\x00\x00\x00\x1c@\x00\x00\x00\x00\x00\x00 @\x00\x00\x00\x00\x00\x00"@\x00\x00\x00\x00\x00\x00$@)'
     )
     assert (
-        dumps([[1, 2, 3], [4, 5, 6]], kind=Kind.BINARY_FIELD)
+        dumps([[1, 2, 3], [4, 5, 6]], kind=Kind.DOUBLE_PRECISION_BINARY_FIELD)
         == b"nonuniform List<vector> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@)"
+    )
+    assert (
+        dumps([1, 2], kind=Kind.SINGLE_PRECISION_BINARY_FIELD)
+        == b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)"
     )
     assert (
         dumps(FoamFile.DimensionSet(mass=1, length=1, time=-2)) == b"[1 1 -2 0 0 0 0]"
