@@ -306,7 +306,7 @@ class FoamFile(
                     self[(*keywords, k)] = v
 
             else:
-                data = normalize(data)
+                data = normalize(data, kind=kind)
                 assert not isinstance(data, Mapping)
 
                 if keywords:
