@@ -82,10 +82,12 @@ def _keyword_entry_of(
 
 def _unpack_binary_field(
     tks: ParseResults,
+    *,
+    elsize: int = 1,
 ) -> Sequence[Sequence[float] | Sequence[Sequence[float]]]:
-    elsize = len(tks[0]) // 8
+    float_size = len(tks[0]) // elsize
 
-    arr = array.array("d", "".join(tks).encode("latin-1"))
+    arr = array.array("f" if float_size == 4 else "d", "".join(tks).encode("latin-1"))
 
     values: Sequence[float] | Sequence[Sequence[float]]
 
@@ -130,45 +132,92 @@ _IDENTIFIER = Combine(
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: FoamFileBase.Dimensioned(*reversed(tks.as_list()))
 )
-_FIELD = (Keyword("uniform").suppress() + _TENSOR) | (
-    Keyword("nonuniform").suppress()
+_FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
+    Keyword("nonuniform", _IDENTBODYCHARS).suppress()
     + (
         _list_of(_TENSOR)
         | (
             Literal("List").suppress()
             + Literal("<").suppress()
             + (
-                counted_array(
-                    CharsNotIn(exact=8),
+                (
                     Literal("scalar").suppress()
                     + Literal(">").suppress()
-                    + common.integer
-                    + Literal("(").suppress(),
-                )
-                | counted_array(
-                    CharsNotIn(exact=8 * 3),
+                    + (
+                        (
+                            counted_array(
+                                CharsNotIn(exact=8),
+                                common.integer + Literal("(").suppress(),
+                            )
+                        )
+                        | (
+                            counted_array(
+                                CharsNotIn(exact=4),
+                                common.integer + Literal("(").suppress(),
+                            )
+                        )
+                    )
+                    + Literal(")").suppress()
+                ).set_parse_action(_unpack_binary_field)
+                | (
                     Literal("vector").suppress()
                     + Literal(">").suppress()
-                    + common.integer
-                    + Literal("(").suppress(),
-                )
-                | counted_array(
-                    CharsNotIn(exact=8 * 6),
+                    + (
+                        (
+                            counted_array(
+                                CharsNotIn(exact=8 * 3),
+                                common.integer + Literal("(").suppress(),
+                            )
+                        )
+                        | (
+                            counted_array(
+                                CharsNotIn(exact=4 * 3),
+                                common.integer + Literal("(").suppress(),
+                            )
+                        )
+                    )
+                    + Literal(")").suppress()
+                ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=3))
+                | (
                     Literal("symmTensor").suppress()
                     + Literal(">").suppress()
-                    + common.integer
-                    + Literal("(").suppress(),
-                )
-                | counted_array(
-                    CharsNotIn(exact=8 * 9),
+                    + (
+                        (
+                            counted_array(
+                                CharsNotIn(exact=8 * 6),
+                                common.integer + Literal("(").suppress(),
+                            )
+                        )
+                        | (
+                            counted_array(
+                                CharsNotIn(exact=4 * 6),
+                                common.integer + Literal("(").suppress(),
+                            )
+                        )
+                    )
+                    + Literal(")").suppress()
+                ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=6))
+                | (
                     Literal("tensor").suppress()
                     + Literal(">").suppress()
-                    + common.integer
-                    + Literal("(").suppress(),
-                )
+                    + (
+                        (
+                            counted_array(
+                                CharsNotIn(exact=8 * 9),
+                                common.integer + Literal("(").suppress(),
+                            )
+                        )
+                        | (
+                            counted_array(
+                                CharsNotIn(exact=4 * 9),
+                                common.integer + Literal("(").suppress(),
+                            )
+                        )
+                    )
+                    + Literal(")").suppress()
+                ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=9))
             )
-            + Literal(")").suppress()
-        ).set_parse_action(_unpack_binary_field)
+        )
     )
 )
 _TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
