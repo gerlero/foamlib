@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import array
+import contextlib
 import itertools
+import re
 import sys
 from enum import Enum, auto
 from typing import cast
@@ -25,9 +27,68 @@ except ModuleNotFoundError:
 class Kind(Enum):
     DEFAULT = auto()
     SINGLE_ENTRY = auto()
-    FIELD = auto()
-    BINARY_FIELD = auto()
+    ASCII_FIELD = auto()
+    DOUBLE_PRECISION_BINARY_FIELD = auto()
+    SINGLE_PRECISION_BINARY_FIELD = auto()
     DIMENSIONS = auto()
+
+
+_TOKENS = re.compile(r'(?:[^\s"]|"(?:[^"])*")+')
+
+
+def normalize(
+    data: FoamFileBase.Data, *, kind: Kind = Kind.DEFAULT
+) -> FoamFileBase.Data:
+    if numpy and isinstance(data, np.ndarray):
+        ret = data.tolist()
+        assert isinstance(ret, list)
+        return ret
+
+    if kind == Kind.SINGLE_ENTRY and isinstance(data, tuple):
+        return normalize(list(data))
+
+    if isinstance(data, Mapping):
+        return {k: normalize(v, kind=kind) for k, v in data.items()}
+
+    if (
+        kind == Kind.DIMENSIONS
+        and is_sequence(data)
+        and len(data) <= 7
+        and all(isinstance(d, (int, float)) for d in data)
+    ):
+        data = cast(Sequence[float], data)
+        return FoamFileBase.DimensionSet(*data)
+
+    if is_sequence(data) and not isinstance(data, tuple):
+        return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
+
+    if isinstance(data, str):
+        with contextlib.suppress(ValueError):
+            return int(data)
+
+        with contextlib.suppress(ValueError):
+            return float(data)
+
+        tokens = re.findall(_TOKENS, data)
+
+        if len(tokens) == 1:
+            return tokens[0]  # type: ignore [no-any-return]
+
+        return tuple(tokens) if kind != Kind.SINGLE_ENTRY else " ".join(tokens)
+
+    if isinstance(data, FoamFileBase.Dimensioned):
+        value = normalize(data.value, kind=Kind.SINGLE_ENTRY)
+        assert isinstance(value, (int, float, list))
+        return FoamFileBase.Dimensioned(value, data.dimensions, data.name)
+
+    if isinstance(
+        data,
+        (int, float, bool, tuple, FoamFileBase.DimensionSet),
+    ):
+        return data
+
+    msg = f"Unsupported data type: {type(data)}"
+    raise TypeError(msg)
 
 
 def dumps(
@@ -35,28 +96,28 @@ def dumps(
     *,
     kind: Kind = Kind.DEFAULT,
 ) -> bytes:
-    if numpy and isinstance(data, np.ndarray):
-        return dumps(data.tolist(), kind=kind)
+    data = normalize(data, kind=kind)
 
     if isinstance(data, Mapping):
         entries = []
         for k, v in data.items():
-            b = dumps(v, kind=kind)
             if isinstance(v, Mapping):
-                entries.append(dumps(k) + b" {" + b + b"}")
-            elif not b:
+                entries.append(dumps(k) + b" {" + dumps(v) + b"}")
+            elif not v:
                 entries.append(dumps(k) + b";")
             else:
-                entries.append(dumps(k) + b" " + b + b";")
+                entries.append(dumps(k) + b" " + dumps(v) + b";")
 
         return b" ".join(entries)
 
-    if isinstance(data, FoamFileBase.DimensionSet) or (
-        kind == Kind.DIMENSIONS and is_sequence(data) and len(data) == 7
-    ):
+    if isinstance(data, FoamFileBase.DimensionSet):
         return b"[" + b" ".join(dumps(v) for v in data) + b"]"
 
-    if kind in (Kind.FIELD, Kind.BINARY_FIELD) and (
+    if kind in (
+        Kind.ASCII_FIELD,
+        Kind.DOUBLE_PRECISION_BINARY_FIELD,
+        Kind.SINGLE_PRECISION_BINARY_FIELD,
+    ) and (
         isinstance(data, (int, float))
         or is_sequence(data)
         and data
@@ -65,7 +126,11 @@ def dumps(
     ):
         return b"uniform " + dumps(data, kind=Kind.SINGLE_ENTRY)
 
-    if kind in (Kind.FIELD, Kind.BINARY_FIELD) and is_sequence(data):
+    if kind in (
+        Kind.ASCII_FIELD,
+        Kind.DOUBLE_PRECISION_BINARY_FIELD,
+        Kind.SINGLE_PRECISION_BINARY_FIELD,
+    ) and is_sequence(data):
         if data and isinstance(data[0], (int, float)):
             tensor_kind = b"scalar"
         elif is_sequence(data[0]) and data[0] and isinstance(data[0][0], (int, float)):
@@ -80,24 +145,27 @@ def dumps(
         else:
             return dumps(data)
 
-        if kind == Kind.BINARY_FIELD:
+        if kind in (
+            Kind.DOUBLE_PRECISION_BINARY_FIELD,
+            Kind.SINGLE_PRECISION_BINARY_FIELD,
+        ):
+            typecode = "f" if kind == Kind.SINGLE_PRECISION_BINARY_FIELD else "d"
             if tensor_kind == b"scalar":
                 data = cast(Sequence[float], data)
-                contents = b"(" + array.array("d", data).tobytes() + b")"
+                contents = b"(" + array.array(typecode, data).tobytes() + b")"
             else:
                 data = cast(Sequence[Sequence[float]], data)
                 contents = (
                     b"("
-                    + array.array("d", itertools.chain.from_iterable(data)).tobytes()
+                    + array.array(
+                        typecode, itertools.chain.from_iterable(data)
+                    ).tobytes()
                     + b")"
                 )
         else:
             contents = dumps(data, kind=Kind.SINGLE_ENTRY)
 
         return b"nonuniform List<" + tensor_kind + b"> " + dumps(len(data)) + contents
-
-    if kind != Kind.SINGLE_ENTRY and isinstance(data, tuple):
-        return b" ".join(dumps(v) for v in data)
 
     if isinstance(data, FoamFileBase.Dimensioned):
         if data.name is not None:
@@ -113,6 +181,9 @@ def dumps(
             + b" "
             + dumps(data.value, kind=Kind.SINGLE_ENTRY)
         )
+
+    if isinstance(data, tuple):
+        return b" ".join(dumps(v) for v in data)
 
     if is_sequence(data):
         return b"(" + b" ".join(dumps(v, kind=Kind.SINGLE_ENTRY) for v in data) + b")"
