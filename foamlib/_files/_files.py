@@ -305,25 +305,25 @@ class FoamFile(
                 for k, v in data.items():
                     self[(*keywords, k)] = v
 
+            elif keywords:
+                parsed.put(
+                    keywords,
+                    normalize(data, kind=kind),
+                    before
+                    + indentation
+                    + dumps(keywords[-1])
+                    + b" "
+                    + dumps(data, kind=kind)
+                    + b";"
+                    + after,
+                )
+
             else:
-                data = normalize(data, kind=kind)
-                assert not isinstance(data, Mapping)
-
-                if keywords:
-                    parsed.put(
-                        keywords,
-                        data,
-                        before
-                        + indentation
-                        + dumps(keywords[-1])
-                        + b" "
-                        + dumps(data, kind=kind)
-                        + b";"
-                        + after,
-                    )
-
-                else:
-                    parsed.put((), data, before + dumps(data, kind=kind) + after)
+                parsed.put(
+                    (),
+                    normalize(data, kind=kind),
+                    before + dumps(data, kind=kind) + after,
+                )
 
     def __delitem__(self, keywords: str | tuple[str, ...] | None) -> None:
         if not keywords:

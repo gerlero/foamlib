@@ -6,7 +6,7 @@ import itertools
 import re
 import sys
 from enum import Enum, auto
-from typing import cast
+from typing import cast, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
@@ -36,6 +36,18 @@ class Kind(Enum):
 _TOKENS = re.compile(r'(?:[^\s"]|"(?:[^"])*")+')
 
 
+@overload
+def normalize(
+    data: FoamFileBase._DataEntry, *, kind: Kind = Kind.DEFAULT
+) -> FoamFileBase._DataEntry: ...
+
+
+@overload
+def normalize(
+    data: FoamFileBase.Data, *, kind: Kind = Kind.DEFAULT
+) -> FoamFileBase.Data: ...
+
+
 def normalize(
     data: FoamFileBase.Data, *, kind: Kind = Kind.DEFAULT
 ) -> FoamFileBase.Data:
@@ -45,7 +57,9 @@ def normalize(
         return ret
 
     if kind == Kind.SINGLE_ENTRY and isinstance(data, tuple):
-        return normalize(list(data))
+        ret = normalize(list(data))
+        assert isinstance(ret, list)
+        return ret
 
     if isinstance(data, Mapping):
         return {k: normalize(v, kind=kind) for k, v in data.items()}
@@ -69,10 +83,10 @@ def normalize(
         with contextlib.suppress(ValueError):
             return float(data)
 
-        tokens = re.findall(_TOKENS, data)
+        tokens: list[str] = re.findall(_TOKENS, data)
 
         if len(tokens) == 1:
-            return tokens[0]  # type: ignore [no-any-return]
+            return tokens[0]
 
         return tuple(tokens) if kind != Kind.SINGLE_ENTRY else " ".join(tokens)
 
