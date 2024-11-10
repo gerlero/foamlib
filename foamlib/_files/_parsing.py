@@ -41,9 +41,7 @@ from ._base import FoamFileBase
 
 
 def _list_of(entry: ParserElement) -> ParserElement:
-    return Opt(
-        Literal("List") + Literal("<") + common.identifier + Literal(">")
-    ).suppress() + (
+    return (
         (
             counted_array(entry, common.integer + Literal("(").suppress())
             + Literal(")").suppress()
@@ -124,7 +122,11 @@ _SWITCH = (
 _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: FoamFileBase.DimensionSet(*tks))
-_TENSOR = _list_of(common.number) | common.number
+_TENSOR = common.number | (
+    Literal("(").suppress()
+    + Group(common.number[9] | common.number[6] | common.number[3], aslist=True)
+    + Literal(")").suppress()
+)
 _IDENTIFIER = Combine(
     Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()")
     + Opt(Literal("(") + Word(_IDENTBODYCHARS, exclude_chars="()") + Literal(")"))
@@ -135,87 +137,116 @@ _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
 _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
     Keyword("nonuniform", _IDENTBODYCHARS).suppress()
     + (
-        _list_of(_TENSOR)
-        | (
-            Literal("List").suppress()
-            + Literal("<").suppress()
-            + (
-                (
-                    Literal("scalar").suppress()
-                    + Literal(">").suppress()
-                    + (
+        Literal("List").suppress()
+        + Literal("<").suppress()
+        + (
+            (
+                Literal("scalar").suppress()
+                + Literal(">").suppress()
+                + (
+                    _list_of(common.number)
+                    | (
                         (
-                            counted_array(
-                                CharsNotIn(exact=8),
-                                common.integer + Literal("(").suppress(),
+                            (
+                                counted_array(
+                                    CharsNotIn(exact=8),
+                                    common.integer + Literal("(").suppress(),
+                                )
+                            )
+                            | (
+                                counted_array(
+                                    CharsNotIn(exact=4),
+                                    common.integer + Literal("(").suppress(),
+                                )
                             )
                         )
-                        | (
-                            counted_array(
-                                CharsNotIn(exact=4),
-                                common.integer + Literal("(").suppress(),
-                            )
-                        )
+                        + Literal(")").suppress()
+                    ).set_parse_action(_unpack_binary_field)
+                )
+            )
+            | (
+                Literal("vector").suppress()
+                + Literal(">").suppress()
+                + (
+                    _list_of(
+                        Literal("(").suppress()
+                        + Group(common.number[3], aslist=True)
+                        + Literal(")").suppress()
                     )
-                    + Literal(")").suppress()
-                ).set_parse_action(_unpack_binary_field)
-                | (
-                    Literal("vector").suppress()
-                    + Literal(">").suppress()
-                    + (
+                    | (
                         (
-                            counted_array(
-                                CharsNotIn(exact=8 * 3),
-                                common.integer + Literal("(").suppress(),
+                            (
+                                counted_array(
+                                    CharsNotIn(exact=8 * 3),
+                                    common.integer + Literal("(").suppress(),
+                                )
+                            )
+                            | (
+                                counted_array(
+                                    CharsNotIn(exact=4 * 3),
+                                    common.integer + Literal("(").suppress(),
+                                )
                             )
                         )
-                        | (
-                            counted_array(
-                                CharsNotIn(exact=4 * 3),
-                                common.integer + Literal("(").suppress(),
-                            )
-                        )
+                        + Literal(")").suppress()
+                    ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=3))
+                )
+            )
+            | (
+                Literal("vector").suppress()
+                + Literal(">").suppress()
+                + (
+                    _list_of(
+                        Literal("(").suppress()
+                        + Group(common.number[6], aslist=True)
+                        + Literal(")").suppress()
                     )
-                    + Literal(")").suppress()
-                ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=3))
-                | (
-                    Literal("symmTensor").suppress()
-                    + Literal(">").suppress()
-                    + (
+                    | (
                         (
-                            counted_array(
-                                CharsNotIn(exact=8 * 6),
-                                common.integer + Literal("(").suppress(),
+                            (
+                                counted_array(
+                                    CharsNotIn(exact=8 * 6),
+                                    common.integer + Literal("(").suppress(),
+                                )
+                            )
+                            | (
+                                counted_array(
+                                    CharsNotIn(exact=4 * 6),
+                                    common.integer + Literal("(").suppress(),
+                                )
                             )
                         )
-                        | (
-                            counted_array(
-                                CharsNotIn(exact=4 * 6),
-                                common.integer + Literal("(").suppress(),
-                            )
-                        )
+                        + Literal(")").suppress()
+                    ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=6))
+                )
+            )
+            | (
+                Literal("tensor").suppress()
+                + Literal(">").suppress()
+                + (
+                    _list_of(
+                        Literal("(").suppress()
+                        + Group(common.number[9], aslist=True)
+                        + Literal(")").suppress()
                     )
-                    + Literal(")").suppress()
-                ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=6))
-                | (
-                    Literal("tensor").suppress()
-                    + Literal(">").suppress()
-                    + (
+                    | (
                         (
-                            counted_array(
-                                CharsNotIn(exact=8 * 9),
-                                common.integer + Literal("(").suppress(),
+                            (
+                                counted_array(
+                                    CharsNotIn(exact=8 * 9),
+                                    common.integer + Literal("(").suppress(),
+                                )
+                            )
+                            | (
+                                counted_array(
+                                    CharsNotIn(exact=4 * 9),
+                                    common.integer + Literal("(").suppress(),
+                                )
                             )
                         )
-                        | (
-                            counted_array(
-                                CharsNotIn(exact=4 * 9),
-                                common.integer + Literal("(").suppress(),
-                            )
-                        )
-                    )
-                    + Literal(")").suppress()
-                ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=9))
+                        + Literal(")").suppress()
+                    ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=9))
+                )
             )
         )
     )
