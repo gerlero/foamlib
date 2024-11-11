@@ -26,6 +26,7 @@ except ModuleNotFoundError:
 
 class Kind(Enum):
     DEFAULT = auto()
+    KEYWORD = auto()
     SINGLE_ENTRY = auto()
     ASCII_FIELD = auto()
     DOUBLE_PRECISION_BINARY_FIELD = auto()
@@ -56,11 +57,6 @@ def normalize(
         assert isinstance(ret, list)
         return ret
 
-    if kind == Kind.SINGLE_ENTRY and isinstance(data, tuple):
-        ret = normalize(list(data))
-        assert isinstance(ret, list)
-        return ret
-
     if isinstance(data, Mapping):
         return {k: normalize(v, kind=kind) for k, v in data.items()}
 
@@ -73,7 +69,7 @@ def normalize(
         data = cast(Sequence[float], data)
         return FoamFileBase.DimensionSet(*data)
 
-    if is_sequence(data) and not isinstance(data, tuple):
+    if is_sequence(data) and (kind == Kind.SINGLE_ENTRY or not isinstance(data, tuple)):
         return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
 
     if isinstance(data, str):
@@ -82,6 +78,12 @@ def normalize(
 
         with contextlib.suppress(ValueError):
             return float(data)
+
+        if kind != Kind.KEYWORD:
+            if data in ("yes", "true", "on", "y", "t"):
+                return True
+            if data in ("no", "false", "off", "n", "f"):
+                return False
 
         tokens: list[str] = re.findall(_TOKENS, data)
 

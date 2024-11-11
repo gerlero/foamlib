@@ -293,7 +293,7 @@ class FoamFile(
                     ...,
                     before
                     + indentation
-                    + dumps(keywords[-1])
+                    + dumps(keywords[-1], kind=Kind.KEYWORD)
                     + b"\n"
                     + indentation
                     + b"{\n"
@@ -311,7 +311,7 @@ class FoamFile(
                     normalize(data, kind=kind),
                     before
                     + indentation
-                    + dumps(keywords[-1])
+                    + dumps(keywords[-1], kind=Kind.KEYWORD)
                     + b" "
                     + dumps(data, kind=kind)
                     + b";"
