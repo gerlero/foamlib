@@ -29,7 +29,6 @@ from pyparsing import (
     ParseResults,
     QuotedString,
     Word,
-    c_style_comment,
     common,
     counted_array,
     cpp_style_comment,
@@ -122,9 +121,11 @@ _SWITCH = (
 _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: FoamFileBase.DimensionSet(*tks))
-_TENSOR = common.number | (
+_TENSOR = common.ieee_float | (
     Literal("(").suppress()
-    + Group(common.number[9] | common.number[6] | common.number[3], aslist=True)
+    + Group(
+        common.ieee_float[9] | common.ieee_float[6] | common.ieee_float[3], aslist=True
+    )
     + Literal(")").suppress()
 )
 _IDENTIFIER = Combine(
@@ -144,7 +145,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("scalar").suppress()
                 + Literal(">").suppress()
                 + (
-                    _list_of(common.number)
+                    _list_of(common.ieee_float)
                     | (
                         (
                             (
@@ -170,7 +171,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 + (
                     _list_of(
                         Literal("(").suppress()
-                        + Group(common.number[3], aslist=True)
+                        + Group(common.ieee_float[3], aslist=True)
                         + Literal(")").suppress()
                     )
                     | (
@@ -198,7 +199,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 + (
                     _list_of(
                         Literal("(").suppress()
-                        + Group(common.number[6], aslist=True)
+                        + Group(common.ieee_float[6], aslist=True)
                         + Literal(")").suppress()
                     )
                     | (
@@ -226,7 +227,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 + (
                     _list_of(
                         Literal("(").suppress()
-                        + Group(common.number[9], aslist=True)
+                        + Group(common.ieee_float[9], aslist=True)
                         + Literal(")").suppress()
                     )
                     | (
@@ -260,9 +261,8 @@ _KEYWORD_ENTRY = Dict(Group(_keyword_entry_of(_KEYWORD, _DATA)), asdict=True)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = _list_of(_LIST_ENTRY)
-_DATA_ENTRY <<= (
-    _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | common.number | _SWITCH | _TOKEN
-)
+_NUMBER = common.signed_integer ^ common.ieee_float
+_DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | _TOKEN
 
 _DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
     lambda tks: tuple(tks) if len(tks) > 1 else [tks[0]]
@@ -282,7 +282,6 @@ _FILE = (
         )
         + Group(_keyword_entry_of(_KEYWORD, Opt(_DATA, default=""), located=True))[...]
     )
-    .ignore(c_style_comment)
     .ignore(cpp_style_comment)
     .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]
     .parse_with_tabs()
