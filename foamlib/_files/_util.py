@@ -14,10 +14,10 @@ else:
     from typing_extensions import TypeGuard
 
 if TYPE_CHECKING:
-    from ._base import FoamFileBase
+    from ._types import Data
 
 
 def is_sequence(
-    value: FoamFileBase.Data,
-) -> TypeGuard[Sequence[FoamFileBase.Data]]:
+    value: Data,
+) -> TypeGuard[Sequence[Data]]:
     return isinstance(value, Sequence) and not isinstance(value, str)

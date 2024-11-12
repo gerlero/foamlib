@@ -13,7 +13,7 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Mapping, Sequence
 
-from ._base import FoamFileBase
+from ._types import Data, DataEntry, Dimensioned, DimensionSet
 from ._util import is_sequence
 
 try:
@@ -38,20 +38,14 @@ _TOKENS = re.compile(r'(?:[^\s"]|"(?:[^"])*")+')
 
 
 @overload
-def normalize(
-    data: FoamFileBase._DataEntry, *, kind: Kind = Kind.DEFAULT
-) -> FoamFileBase._DataEntry: ...
+def normalize(data: DataEntry, *, kind: Kind = Kind.DEFAULT) -> DataEntry: ...
 
 
 @overload
-def normalize(
-    data: FoamFileBase.Data, *, kind: Kind = Kind.DEFAULT
-) -> FoamFileBase.Data: ...
+def normalize(data: Data, *, kind: Kind = Kind.DEFAULT) -> Data: ...
 
 
-def normalize(
-    data: FoamFileBase.Data, *, kind: Kind = Kind.DEFAULT
-) -> FoamFileBase.Data:
+def normalize(data: Data, *, kind: Kind = Kind.DEFAULT) -> Data:
     if numpy and isinstance(data, np.ndarray):
         ret = data.tolist()
         assert isinstance(ret, list)
@@ -67,7 +61,7 @@ def normalize(
         and all(isinstance(d, (int, float)) for d in data)
     ):
         data = cast(Sequence[float], data)
-        return FoamFileBase.DimensionSet(*data)
+        return DimensionSet(*data)
 
     if is_sequence(data) and (kind == Kind.SINGLE_ENTRY or not isinstance(data, tuple)):
         return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
@@ -107,14 +101,14 @@ def normalize(
 
         return tuple(tokens)
 
-    if isinstance(data, FoamFileBase.Dimensioned):
+    if isinstance(data, Dimensioned):
         value = normalize(data.value, kind=Kind.SINGLE_ENTRY)
         assert isinstance(value, (int, float, list))
-        return FoamFileBase.Dimensioned(value, data.dimensions, data.name)
+        return Dimensioned(value, data.dimensions, data.name)
 
     if isinstance(
         data,
-        (int, float, bool, tuple, FoamFileBase.DimensionSet),
+        (int, float, bool, tuple, DimensionSet),
     ):
         return data
 
@@ -123,7 +117,7 @@ def normalize(
 
 
 def dumps(
-    data: FoamFileBase.Data,
+    data: Data,
     *,
     kind: Kind = Kind.DEFAULT,
 ) -> bytes:
@@ -144,7 +138,7 @@ def dumps(
 
         return b" ".join(entries)
 
-    if isinstance(data, FoamFileBase.DimensionSet):
+    if isinstance(data, DimensionSet):
         return b"[" + b" ".join(dumps(v) for v in data) + b"]"
 
     if kind in (
@@ -201,7 +195,7 @@ def dumps(
 
         return b"nonuniform List<" + tensor_kind + b"> " + dumps(len(data)) + contents
 
-    if isinstance(data, FoamFileBase.Dimensioned):
+    if isinstance(data, Dimensioned):
         if data.name is not None:
             return (
                 dumps(data.name)

@@ -36,7 +36,7 @@ from pyparsing import (
     printables,
 )
 
-from ._base import FoamFileBase
+from ._types import DataEntry, Dimensioned, DimensionSet, File
 
 
 def _list_of(entry: ParserElement) -> ParserElement:
@@ -120,7 +120,7 @@ _SWITCH = (
 ).set_parse_action(lambda: False)
 _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
-).set_parse_action(lambda tks: FoamFileBase.DimensionSet(*tks))
+).set_parse_action(lambda tks: DimensionSet(*tks))
 _TENSOR = common.ieee_float | (
     Literal("(").suppress()
     + Group(
@@ -133,7 +133,7 @@ _IDENTIFIER = Combine(
     + Opt(Literal("(") + Word(_IDENTBODYCHARS, exclude_chars="()") + Literal(")"))
 )
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
-    lambda tks: FoamFileBase.Dimensioned(*reversed(tks.as_list()))
+    lambda tks: Dimensioned(*reversed(tks.as_list()))
 )
 _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
     Keyword("nonuniform", _IDENTBODYCHARS).suppress()
@@ -288,11 +288,11 @@ _FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisType]]):
+class Parsed(Mapping[Tuple[str, ...], Union[DataEntry, EllipsisType]]):
     def __init__(self, contents: bytes) -> None:
         self._parsed: MutableMapping[
             tuple[str, ...],
-            tuple[int, FoamFileBase._DataEntry | EllipsisType, int],
+            tuple[int, DataEntry | EllipsisType, int],
         ] = {}
         for parse_result in _FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
@@ -305,12 +305,10 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisTyp
     @staticmethod
     def _flatten_result(
         parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
-    ) -> Mapping[
-        tuple[str, ...], tuple[int, FoamFileBase._DataEntry | EllipsisType, int]
-    ]:
+    ) -> Mapping[tuple[str, ...], tuple[int, DataEntry | EllipsisType, int]]:
         ret: MutableMapping[
             tuple[str, ...],
-            tuple[int, FoamFileBase._DataEntry | EllipsisType, int],
+            tuple[int, DataEntry | EllipsisType, int],
         ] = {}
         start = parse_result.locn_start
         assert isinstance(start, int)
@@ -336,16 +334,14 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisTyp
                     ret[(*_keywords, keyword)] = (start, d, end)
         return ret
 
-    def __getitem__(
-        self, keywords: tuple[str, ...]
-    ) -> FoamFileBase._DataEntry | EllipsisType:
+    def __getitem__(self, keywords: tuple[str, ...]) -> DataEntry | EllipsisType:
         _, data, _ = self._parsed[keywords]
         return data
 
     def put(
         self,
         keywords: tuple[str, ...],
-        data: FoamFileBase._DataEntry | EllipsisType,
+        data: DataEntry | EllipsisType,
         content: bytes,
     ) -> None:
         start, end = self.entry_location(keywords, missing_ok=True)
@@ -413,14 +409,14 @@ class Parsed(Mapping[Tuple[str, ...], Union[FoamFileBase._DataEntry, EllipsisTyp
 
         return start, end
 
-    def as_dict(self) -> FoamFileBase._File:
-        ret: FoamFileBase._File = {}
+    def as_dict(self) -> File:
+        ret: File = {}
         for keywords, (_, data, _) in self._parsed.items():
             r = ret
             for k in keywords[:-1]:
                 v = r[k]
                 assert isinstance(v, dict)
-                r = cast(FoamFileBase._File, v)
+                r = cast(File, v)
 
             assert isinstance(r, dict)
             if keywords:
