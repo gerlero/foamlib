@@ -114,21 +114,20 @@ U = FoamFieldFile(Path(my_pitz) / "0/U")
 print(U.internal_field)
 ```
 
-### 🔁 Run an optimization loop in parallel
+### 🔁 Run an optimization loop on a Slurm-based cluster
 
 ```python
 import os
 from pathlib import Path
-from foamlib import AsyncFoamCase
+from foamlib import AsyncSlurmFoamCase
 from scipy.optimize import differential_evolution
 
-base = AsyncFoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily")
-# Replace with `AsyncSlurmFoamCase` if on a cluster and you want cases to be run as Slurm jobs
+base = AsyncSlurmFoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily")
 
 async def cost(x):
     async with base.clone() as clone:
         clone[0]["U"].boundary_field["inlet"].value = [x[0], 0, 0]
-        await clone.run()
+        await clone.run(fallback=True) # Run locally if Slurm is not available
         return abs(clone[-1]["U"].internal_field[0][0])
 
 result = differential_evolution(cost, bounds=[(-1, 1)], workers=AsyncFoamCase.map, polish=False)
