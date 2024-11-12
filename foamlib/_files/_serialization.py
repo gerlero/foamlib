@@ -72,11 +72,11 @@ def normalize(data: Data, *, kind: Kind = Kind.DEFAULT) -> Data:
 
     if isinstance(data, str):
         if kind == Kind.KEYWORD:
-            data = KEYWORD.parse_string(data)[0]
+            data = KEYWORD.parse_string(data, parse_all=True)[0]
             assert isinstance(data, str)
             return data
 
-        return cast(DataEntry, DATA.parse_string(data)[0])
+        return cast(DataEntry, DATA.parse_string(data, parse_all=True)[0])
 
     if isinstance(
         data,
