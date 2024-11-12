@@ -253,24 +253,24 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
     )
 )
 _TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
-_DATA = Forward()
-_KEYWORD = _TOKEN | _list_of(_IDENTIFIER).set_parse_action(
+DATA = Forward()
+KEYWORD = _TOKEN | _list_of(_IDENTIFIER).set_parse_action(
     lambda tks: "(" + " ".join(tks[0]) + ")"
 )
-_KEYWORD_ENTRY = Dict(Group(_keyword_entry_of(_KEYWORD, _DATA)), asdict=True)
+_KEYWORD_ENTRY = Dict(Group(_keyword_entry_of(KEYWORD, DATA)), asdict=True)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = _list_of(_LIST_ENTRY)
 _NUMBER = common.signed_integer ^ common.ieee_float
 _DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | _TOKEN
 
-_DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
+DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
     lambda tks: tuple(tks) if len(tks) > 1 else [tks[0]]
 )
 
 _FILE = (
     Dict(
-        Group(_keyword_entry_of(_KEYWORD, Opt(_DATA, default=""), located=True))[...]
+        Group(_keyword_entry_of(KEYWORD, Opt(DATA, default=""), located=True))[...]
         + Opt(
             Group(
                 Located(
@@ -280,7 +280,7 @@ _FILE = (
                 )
             )
         )
-        + Group(_keyword_entry_of(_KEYWORD, Opt(_DATA, default=""), located=True))[...]
+        + Group(_keyword_entry_of(KEYWORD, Opt(DATA, default=""), located=True))[...]
     )
     .ignore(cpp_style_comment)
     .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]

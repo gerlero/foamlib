@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import array
-import contextlib
 import itertools
-import re
 import sys
 from enum import Enum, auto
 from typing import cast, overload
@@ -13,6 +11,7 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Mapping, Sequence
 
+from ._parsing import DATA, KEYWORD
 from ._types import Data, DataEntry, Dimensioned, DimensionSet
 from ._util import is_sequence
 
@@ -32,9 +31,6 @@ class Kind(Enum):
     DOUBLE_PRECISION_BINARY_FIELD = auto()
     SINGLE_PRECISION_BINARY_FIELD = auto()
     DIMENSIONS = auto()
-
-
-_TOKENS = re.compile(r'(?:[^\s"]|"(?:[^"])*")+')
 
 
 @overload
@@ -69,45 +65,18 @@ def normalize(data: Data, *, kind: Kind = Kind.DEFAULT) -> Data:
 
         return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
 
-    if isinstance(data, str):
-        data = data.strip()
-
-        if data.startswith("(") and data.endswith(")"):
-            data = data[1:-1].split()
-            if kind == Kind.KEYWORD:
-                return "(" + " ".join(data) + ")"
-            return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
-
-        if data.startswith("[") and data.endswith("]"):
-            data = data[1:-1].split()
-            return normalize(data, kind=Kind.DIMENSIONS)
-
-        with contextlib.suppress(ValueError):
-            return int(data)
-
-        with contextlib.suppress(ValueError):
-            return float(data)
-
-        if kind != Kind.KEYWORD:
-            if data in ("yes", "true", "on", "y", "t"):
-                return True
-            if data in ("no", "false", "off", "n", "f"):
-                return False
-
-        tokens: list[str] = re.findall(_TOKENS, data)
-
-        if len(tokens) == 1:
-            return tokens[0]
-
-        if kind == Kind.KEYWORD:
-            return " ".join(tokens)
-
-        return tuple(tokens)
-
     if isinstance(data, Dimensioned):
         value = normalize(data.value, kind=Kind.SINGLE_ENTRY)
         assert isinstance(value, (int, float, list))
         return Dimensioned(value, data.dimensions, data.name)
+
+    if isinstance(data, str):
+        if kind == Kind.KEYWORD:
+            data = KEYWORD.parse_string(data)[0]
+            assert isinstance(data, str)
+            return data
+
+        return cast(DataEntry, DATA.parse_string(data)[0])
 
     if isinstance(
         data,
