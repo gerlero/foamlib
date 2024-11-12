@@ -75,6 +75,16 @@ def normalize(
     if isinstance(data, str):
         data = data.strip()
 
+        if data.startswith("(") and data.endswith(")"):
+            data = data[1:-1].split()
+            if kind == Kind.KEYWORD:
+                return "(" + " ".join(data) + ")"
+            return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
+
+        if data.startswith("[") and data.endswith("]"):
+            data = data[1:-1].split()
+            return normalize(data, kind=Kind.DIMENSIONS)
+
         with contextlib.suppress(ValueError):
             return int(data)
 
@@ -122,12 +132,15 @@ def dumps(
     if isinstance(data, Mapping):
         entries = []
         for k, v in data.items():
-            if isinstance(v, Mapping):
-                entries.append(dumps(k) + b" {" + dumps(v) + b"}")
-            elif not v:
-                entries.append(dumps(k) + b";")
+            value = normalize(v)
+            if isinstance(value, Mapping):
+                entries.append(
+                    dumps(k, kind=Kind.KEYWORD) + b" {" + dumps(value) + b"}"
+                )
+            elif not value:
+                entries.append(dumps(k, kind=Kind.KEYWORD) + b";")
             else:
-                entries.append(dumps(k) + b" " + dumps(v) + b";")
+                entries.append(dumps(k, kind=Kind.KEYWORD) + b" " + dumps(value) + b";")
 
         return b" ".join(entries)
 
