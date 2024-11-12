@@ -64,6 +64,9 @@ def normalize(data: Data, *, kind: Kind = Kind.DEFAULT) -> Data:
         return DimensionSet(*data)
 
     if is_sequence(data) and (kind == Kind.SINGLE_ENTRY or not isinstance(data, tuple)):
+        if len(data) == 1 and isinstance(data[0], Mapping) and len(data[0]) > 1:
+            return [normalize({k: v}) for k, v in data[0].items()]
+
         return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
 
     if isinstance(data, str):
