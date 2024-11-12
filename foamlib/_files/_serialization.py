@@ -73,6 +73,8 @@ def normalize(
         return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
 
     if isinstance(data, str):
+        data = data.strip()
+
         with contextlib.suppress(ValueError):
             return int(data)
 
@@ -90,7 +92,10 @@ def normalize(
         if len(tokens) == 1:
             return tokens[0]
 
-        return tuple(tokens) if kind != Kind.SINGLE_ENTRY else " ".join(tokens)
+        if kind == Kind.KEYWORD:
+            return " ".join(tokens)
+
+        return tuple(tokens)
 
     if isinstance(data, FoamFileBase.Dimensioned):
         value = normalize(data.value, kind=Kind.SINGLE_ENTRY)
