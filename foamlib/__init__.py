@@ -10,7 +10,7 @@ from ._cases import (
     FoamCaseBase,
     FoamCaseRunBase,
 )
-from ._files import FoamFieldFile, FoamFile, FoamFileBase
+from ._files import FoamFieldFile, FoamFile
 
 __all__ = [
     "AsyncFoamCase",
@@ -21,5 +21,4 @@ __all__ = [
     "FoamCaseBase",
     "FoamCaseRunBase",
     "FoamFieldFile",
-    "FoamFileBase",
 ]
