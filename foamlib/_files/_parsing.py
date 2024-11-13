@@ -28,10 +28,10 @@ from pyparsing import (
     ParserElement,
     ParseResults,
     QuotedString,
+    Regex,
     Word,
     common,
     counted_array,
-    cpp_style_comment,
     identchars,
     printables,
 )
@@ -95,6 +95,9 @@ def _unpack_binary_field(
 
     return [values]
 
+
+# https://github.com/pyparsing/pyparsing/pull/584
+_COMMENT = Regex(r"(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*)")
 
 _IDENTCHARS = identchars + "$"
 _IDENTBODYCHARS = (
@@ -254,8 +257,12 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
 )
 _TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
 DATA = Forward()
-KEYWORD = _TOKEN | _list_of(_IDENTIFIER).set_parse_action(
-    lambda tks: "(" + " ".join(tks[0]) + ")"
+KEYWORD = (
+    _TOKEN
+    | _list_of(_IDENTIFIER)
+    .set_parse_action(lambda tks: "(" + " ".join(tks[0]) + ")")
+    .ignore(_COMMENT)
+    .parse_with_tabs()
 )
 _KEYWORD_ENTRY = Dict(Group(_keyword_entry_of(KEYWORD, DATA)), asdict=True)
 _DATA_ENTRY = Forward()
@@ -264,25 +271,20 @@ _LIST = _list_of(_LIST_ENTRY)
 _NUMBER = common.signed_integer ^ common.ieee_float
 _DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | _TOKEN
 
-DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
-    lambda tks: tuple(tks) if len(tks) > 1 else [tks[0]]
+DATA <<= (
+    _DATA_ENTRY[1, ...]
+    .set_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else [tks[0]])
+    .ignore(_COMMENT)
+    .parse_with_tabs()
 )
 
 _FILE = (
     Dict(
         Group(_keyword_entry_of(KEYWORD, Opt(DATA, default=""), located=True))[...]
-        + Opt(
-            Group(
-                Located(
-                    _DATA_ENTRY[1, ...].set_parse_action(
-                        lambda tks: [None, tuple(tks) if len(tks) > 1 else tks[0]]
-                    )
-                )
-            )
-        )
+        + Opt(Group(Located(DATA.copy().add_parse_action(lambda tks: ["", tks[0]]))))
         + Group(_keyword_entry_of(KEYWORD, Opt(DATA, default=""), located=True))[...]
     )
-    .ignore(cpp_style_comment)
+    .ignore(_COMMENT)
     .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]
     .parse_with_tabs()
 )
@@ -317,7 +319,8 @@ class Parsed(Mapping[Tuple[str, ...], Union[DataEntry, EllipsisType]]):
         end = parse_result.locn_end
         assert isinstance(end, int)
         keyword, *data = item
-        if keyword is None:
+        assert isinstance(keyword, str)
+        if not keyword:
             assert not _keywords
             assert len(data) == 1
             assert not isinstance(data[0], ParseResults)
