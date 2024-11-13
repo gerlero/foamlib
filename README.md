@@ -130,7 +130,7 @@ async def cost(x):
         await clone.run(fallback=True) # Run locally if Slurm is not available
         return abs(clone[-1]["U"].internal_field[0][0])
 
-result = differential_evolution(cost, bounds=[(-1, 1)], workers=AsyncFoamCase.map, polish=False)
+result = differential_evolution(cost, bounds=[(-1, 1)], workers=AsyncSlurmFoamCase.map, polish=False)
 ```
 
 ### 📄 Use it to create a `run` (or `clean`) script
