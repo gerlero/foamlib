@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import array
+import re
 import sys
 from typing import Tuple, Union, cast
 
@@ -53,6 +54,21 @@ def _list_of(entry: ParserElement) -> ParserElement:
         | (
             common.integer + Literal("{").suppress() + entry + Literal("}").suppress()
         ).set_parse_action(lambda tks: [[tks[1]] * tks[0]])
+    )
+
+
+def _tensor(length: int, *, ignore: Regex) -> ParserElement:
+    spacing = rf"(?:(?:{ignore.re.pattern}|\s)+)"
+    float_ = r"([+-]?((\d+\.?\d*(e[+-]?\d+)?)|nan|inf(inity)?))"
+
+    tensor = rf"\({spacing}?"
+
+    tensor += spacing.join([float_] * length)
+
+    tensor += rf"{spacing}?\)"
+
+    return Regex(tensor, re.IGNORECASE).set_parse_action(
+        lambda tks: [[float(t) for t in re.sub(ignore.re, "", tks[0])[1:-1].split()]]
     )
 
 
@@ -124,21 +140,19 @@ _SWITCH = (
 _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: DimensionSet(*tks))
-_TENSOR = common.ieee_float | (
-    Literal("(").suppress()
-    + Group(
-        common.ieee_float[9] | common.ieee_float[6] | common.ieee_float[3], aslist=True
-    )
-    + Literal(")").suppress()
-)
+_SCALAR = common.ieee_float
+_VECTOR = _tensor(3, ignore=_COMMENT)
+_SYMM_TENSOR = _tensor(6, ignore=_COMMENT)
+_TENSOR = _tensor(9, ignore=_COMMENT)
+_ANY_TENSOR = _SCALAR | _VECTOR | _SYMM_TENSOR | _TENSOR
 _IDENTIFIER = Combine(
     Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()")
     + Opt(Literal("(") + Word(_IDENTBODYCHARS, exclude_chars="()") + Literal(")"))
 )
-_DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
+_DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _ANY_TENSOR).set_parse_action(
     lambda tks: Dimensioned(*reversed(tks.as_list()))
 )
-_FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
+_FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _ANY_TENSOR) | (
     Keyword("nonuniform", _IDENTBODYCHARS).suppress()
     + (
         Literal("List").suppress()
@@ -148,7 +162,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("scalar").suppress()
                 + Literal(">").suppress()
                 + (
-                    _list_of(common.ieee_float)
+                    _list_of(_SCALAR)
                     | (
                         (
                             (
@@ -172,11 +186,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("vector").suppress()
                 + Literal(">").suppress()
                 + (
-                    _list_of(
-                        Literal("(").suppress()
-                        + Group(common.ieee_float[3], aslist=True)
-                        + Literal(")").suppress()
-                    )
+                    _list_of(_VECTOR)
                     | (
                         (
                             (
@@ -197,14 +207,10 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 )
             )
             | (
-                Literal("vector").suppress()
+                Literal("symmTensor").suppress()
                 + Literal(">").suppress()
                 + (
-                    _list_of(
-                        Literal("(").suppress()
-                        + Group(common.ieee_float[6], aslist=True)
-                        + Literal(")").suppress()
-                    )
+                    _list_of(_SYMM_TENSOR)
                     | (
                         (
                             (
@@ -228,11 +234,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("tensor").suppress()
                 + Literal(">").suppress()
                 + (
-                    _list_of(
-                        Literal("(").suppress()
-                        + Group(common.ieee_float[9], aslist=True)
-                        + Literal(")").suppress()
-                    )
+                    _list_of(_TENSOR)
                     | (
                         (
                             (
