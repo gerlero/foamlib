@@ -57,19 +57,57 @@ def _list_of(entry: ParserElement) -> ParserElement:
     )
 
 
-def _tensor(length: int, *, ignore: Regex) -> ParserElement:
-    spacing = rf"(?:(?:{ignore.re.pattern}|\s)+)"
-    float_ = r"([+-]?((\d+\.?\d*(e[+-]?\d+)?)|nan|inf(inity)?))"
+def _counted_tensor_list(*, size: int, ignore: Regex) -> ParserElement:
+    float_pattern = r"[+-]?((\d+\.?\d*(e[+-]?\d+)?)|nan|inf(inity)?)"
+    ignore_pattern = rf"(?:{ignore.re.pattern}|\s)+"
 
-    tensor = rf"\({spacing}?"
+    if size == 1:
+        tensor_pattern = float_pattern
+        tensor = common.ieee_float
+    else:
+        tensor_pattern = rf"\((?:{ignore_pattern})?(?:{float_pattern}{ignore_pattern}){{{size - 1}}}{float_pattern}(?:{ignore_pattern})?\)"
+        tensor = (
+            Literal("(").suppress()
+            + Group(common.ieee_float[size], aslist=True)
+            + Literal(")").suppress()
+        )
 
-    tensor += spacing.join([float_] * length)
+    list_ = Forward()
 
-    tensor += rf"{spacing}?\)"
+    def count_parse_action(tks: ParseResults) -> None:
+        nonlocal list_
+        length = tks[0]
+        assert isinstance(length, int)
 
-    return Regex(tensor, re.IGNORECASE).set_parse_action(
-        lambda tks: [[float(t) for t in re.sub(ignore.re, "", tks[0])[1:-1].split()]]
-    )
+        list_ <<= Regex(
+            rf"\((?:{ignore_pattern})?(?:{tensor_pattern}{ignore_pattern}){{{length - 1}}}{tensor_pattern}(?:{ignore_pattern})?\)",
+            re.IGNORECASE,
+        )
+
+    count = common.integer.add_parse_action(count_parse_action)
+
+    def list_parse_action(
+        tks: ParseResults,
+    ) -> list[list[float]] | list[list[list[float]]]:
+        values = (
+            re.sub(ignore.re, " ", tks[0]).replace("(", " ").replace(")", " ").split()
+        )
+
+        if size == 1:
+            return [[float(v) for v in values]]
+
+        return [
+            [
+                [float(v) for v in values[i : i + size]]
+                for i in range(0, len(values), size)
+            ]
+        ]
+
+    list_.add_parse_action(list_parse_action)
+
+    return (count.suppress() + list_) | (
+        common.integer + Literal("{").suppress() + tensor + Literal("}").suppress()
+    ).set_parse_action(lambda tks: [[tks[1]] * tks[0]])
 
 
 def _keyword_entry_of(
@@ -140,19 +178,21 @@ _SWITCH = (
 _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: DimensionSet(*tks))
-_SCALAR = common.ieee_float
-_VECTOR = _tensor(3, ignore=_COMMENT)
-_SYMM_TENSOR = _tensor(6, ignore=_COMMENT)
-_TENSOR = _tensor(9, ignore=_COMMENT)
-_ANY_TENSOR = _SCALAR | _VECTOR | _SYMM_TENSOR | _TENSOR
+_TENSOR = common.ieee_float | (
+    Literal("(").suppress()
+    + Group(
+        common.ieee_float[3] | common.ieee_float[6] | common.ieee_float[9], aslist=True
+    )
+    + Literal(")").suppress()
+)
 _IDENTIFIER = Combine(
     Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()")
     + Opt(Literal("(") + Word(_IDENTBODYCHARS, exclude_chars="()") + Literal(")"))
 )
-_DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _ANY_TENSOR).set_parse_action(
+_DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: Dimensioned(*reversed(tks.as_list()))
 )
-_FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _ANY_TENSOR) | (
+_FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
     Keyword("nonuniform", _IDENTBODYCHARS).suppress()
     + (
         Literal("List").suppress()
@@ -162,7 +202,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _ANY_TENSOR) | (
                 Literal("scalar").suppress()
                 + Literal(">").suppress()
                 + (
-                    _list_of(_SCALAR)
+                    _counted_tensor_list(size=1, ignore=_COMMENT)
                     | (
                         (
                             (
@@ -186,7 +226,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _ANY_TENSOR) | (
                 Literal("vector").suppress()
                 + Literal(">").suppress()
                 + (
-                    _list_of(_VECTOR)
+                    _counted_tensor_list(size=3, ignore=_COMMENT)
                     | (
                         (
                             (
@@ -210,7 +250,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _ANY_TENSOR) | (
                 Literal("symmTensor").suppress()
                 + Literal(">").suppress()
                 + (
-                    _list_of(_SYMM_TENSOR)
+                    _counted_tensor_list(size=6, ignore=_COMMENT)
                     | (
                         (
                             (
@@ -234,7 +274,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _ANY_TENSOR) | (
                 Literal("tensor").suppress()
                 + Literal(">").suppress()
                 + (
-                    _list_of(_TENSOR)
+                    _counted_tensor_list(size=9, ignore=_COMMENT)
                     | (
                         (
                             (
