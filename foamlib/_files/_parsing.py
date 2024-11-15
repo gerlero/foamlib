@@ -61,7 +61,7 @@ def _list_of(entry: ParserElement) -> ParserElement:
 
 def _counted_tensor_list(*, size: int, ignore: Regex) -> ParserElement:
     float_pattern = r"[+-]?((\d+\.?\d*(e[+-]?\d+)?)|nan|inf(inity)?)"
-    ignore_pattern = rf"(?:{ignore.re.pattern}|\s)+"
+    ignore_pattern = rf"(?:\s|{ignore.re.pattern})+"
 
     if size == 1:
         tensor_pattern = float_pattern
@@ -83,7 +83,7 @@ def _counted_tensor_list(*, size: int, ignore: Regex) -> ParserElement:
 
         list_ <<= Regex(
             rf"\((?:{ignore_pattern})?(?:{tensor_pattern}{ignore_pattern}){{{length - 1}}}{tensor_pattern}(?:{ignore_pattern})?\)",
-            re.IGNORECASE,
+            flags=re.IGNORECASE,
         )
 
     count = common.integer.add_parse_action(count_parse_action)
