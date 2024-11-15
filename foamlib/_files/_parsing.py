@@ -41,7 +41,9 @@ from ._types import DataEntry, Dimensioned, DimensionSet, File
 
 
 def _list_of(entry: ParserElement) -> ParserElement:
-    return (
+    return Opt(
+        Literal("List") + Literal("<") + _IDENTIFIER + Literal(">")
+    ).suppress() + (
         (
             counted_array(entry, common.integer + Literal("(").suppress())
             + Literal(")").suppress()
