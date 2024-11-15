@@ -89,19 +89,18 @@ def _counted_tensor_list(*, size: int, ignore: Regex) -> ParserElement:
     def list_parse_action(
         tks: ParseResults,
     ) -> list[list[float]] | list[list[list[float]]]:
-        values = (
-            re.sub(ignore.re, " ", tks[0]).replace("(", " ").replace(")", " ").split()
-        )
+        values = [
+            float(v)
+            for v in re.sub(ignore.re, " ", tks[0])
+            .replace("(", " ")
+            .replace(")", " ")
+            .split()
+        ]
 
         if size == 1:
-            return [[float(v) for v in values]]
+            return [values]
 
-        return [
-            [
-                [float(v) for v in values[i : i + size]]
-                for i in range(0, len(values), size)
-            ]
-        ]
+        return [[values[i : i + size] for i in range(0, len(values), size)]]
 
     list_.add_parse_action(list_parse_action)
 
