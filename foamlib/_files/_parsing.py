@@ -59,18 +59,20 @@ def _list_of(entry: ParserElement) -> ParserElement:
     )
 
 
-def _counted_tensor_list(*, size: int, ignore: Regex) -> ParserElement:
+def _counted_tensor_list(
+    *, elsize: int = 1, ignore: Regex | None = None
+) -> ParserElement:
     float_pattern = r"(?i:[+-]?((\d+\.?\d*(e[+-]?\d+)?)|nan|inf(inity)?))"
-    ignore_pattern = rf"(?:\s|{ignore.re.pattern})+"
+    ignore_pattern = rf"(?:\s|{ignore.re.pattern})+" if ignore is not None else r"\s+"
 
-    if size == 1:
+    if elsize == 1:
         tensor_pattern = float_pattern
         tensor = common.ieee_float
     else:
-        tensor_pattern = rf"\((?:{ignore_pattern})?(?:{float_pattern}{ignore_pattern}){{{size - 1}}}{float_pattern}(?:{ignore_pattern})?\)"
+        tensor_pattern = rf"\((?:{ignore_pattern})?(?:{float_pattern}{ignore_pattern}){{{elsize - 1}}}{float_pattern}(?:{ignore_pattern})?\)"
         tensor = (
             Literal("(").suppress()
-            + Group(common.ieee_float[size], aslist=True)
+            + Group(common.ieee_float[elsize], aslist=True)
             + Literal(")").suppress()
         )
 
@@ -92,16 +94,16 @@ def _counted_tensor_list(*, size: int, ignore: Regex) -> ParserElement:
     ) -> list[list[float]] | list[list[list[float]]]:
         values = [
             float(v)
-            for v in re.sub(ignore.re, " ", tks[0])
+            for v in (re.sub(ignore.re, " ", tks[0]) if ignore is not None else tks[0])
             .replace("(", " ")
             .replace(")", " ")
             .split()
         ]
 
-        if size == 1:
+        if elsize == 1:
             return [values]
 
-        return [[values[i : i + size] for i in range(0, len(values), size)]]
+        return [[values[i : i + elsize] for i in range(0, len(values), elsize)]]
 
     list_.add_parse_action(list_parse_action)
 
@@ -202,7 +204,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("scalar").suppress()
                 + Literal(">").suppress()
                 + (
-                    _counted_tensor_list(size=1, ignore=_COMMENT)
+                    _counted_tensor_list(elsize=1, ignore=_COMMENT)
                     | (
                         (
                             (
@@ -226,7 +228,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("vector").suppress()
                 + Literal(">").suppress()
                 + (
-                    _counted_tensor_list(size=3, ignore=_COMMENT)
+                    _counted_tensor_list(elsize=3, ignore=_COMMENT)
                     | (
                         (
                             (
@@ -250,7 +252,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("symmTensor").suppress()
                 + Literal(">").suppress()
                 + (
-                    _counted_tensor_list(size=6, ignore=_COMMENT)
+                    _counted_tensor_list(elsize=6, ignore=_COMMENT)
                     | (
                         (
                             (
@@ -274,7 +276,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("tensor").suppress()
                 + Literal(">").suppress()
                 + (
-                    _counted_tensor_list(size=9, ignore=_COMMENT)
+                    _counted_tensor_list(elsize=9, ignore=_COMMENT)
                     | (
                         (
                             (
