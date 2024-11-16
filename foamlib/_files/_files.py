@@ -19,10 +19,10 @@ from ._io import FoamFileIO
 from ._serialization import Kind, dumps, normalize
 from ._types import (
     Data,
-    DataEntry,
     Dict_,
     Dimensioned,
     DimensionSet,
+    Entry,
     Field,
     File,
     MutableData,
@@ -57,13 +57,13 @@ class FoamFile(
             self._file = _file
             self._keywords = _keywords
 
-        def __getitem__(self, keyword: str) -> DataEntry | FoamFile.SubDict:
+        def __getitem__(self, keyword: str) -> Data | FoamFile.SubDict:
             return self._file[(*self._keywords, keyword)]
 
         def __setitem__(
             self,
             keyword: str,
-            data: Data,
+            data: Entry,
         ) -> None:
             self._file[(*self._keywords, keyword)] = data
 
@@ -174,7 +174,7 @@ class FoamFile(
 
     def __getitem__(
         self, keywords: str | tuple[str, ...] | None
-    ) -> DataEntry | FoamFile.SubDict:
+    ) -> Data | FoamFile.SubDict:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -190,7 +190,7 @@ class FoamFile(
             return FoamFile.SubDict(self, keywords)
         return deepcopy(value)
 
-    def __setitem__(self, keywords: str | tuple[str, ...] | None, data: Data) -> None:
+    def __setitem__(self, keywords: str | tuple[str, ...] | None, data: Entry) -> None:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -438,7 +438,7 @@ class FoamFieldFile(FoamFile):
 
     def __getitem__(
         self, keywords: str | tuple[str, ...] | None
-    ) -> DataEntry | FoamFile.SubDict:
+    ) -> Data | FoamFile.SubDict:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):

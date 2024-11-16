@@ -12,7 +12,7 @@ else:
     from typing import Mapping, Sequence
 
 from ._parsing import DATA, KEYWORD
-from ._types import Data, DataEntry, Dimensioned, DimensionSet
+from ._types import Data, Dimensioned, DimensionSet, Entry
 from ._util import is_sequence
 
 try:
@@ -34,14 +34,14 @@ class Kind(Enum):
 
 
 @overload
-def normalize(data: DataEntry, *, kind: Kind = Kind.DEFAULT) -> DataEntry: ...
-
-
-@overload
 def normalize(data: Data, *, kind: Kind = Kind.DEFAULT) -> Data: ...
 
 
-def normalize(data: Data, *, kind: Kind = Kind.DEFAULT) -> Data:
+@overload
+def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry: ...
+
+
+def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
     if numpy and isinstance(data, np.ndarray):
         ret = data.tolist()
         assert isinstance(ret, list)
@@ -76,7 +76,7 @@ def normalize(data: Data, *, kind: Kind = Kind.DEFAULT) -> Data:
             assert isinstance(data, str)
             return data
 
-        return cast(DataEntry, DATA.parse_string(data, parse_all=True)[0])
+        return cast(Data, DATA.parse_string(data, parse_all=True)[0])
 
     if isinstance(
         data,
@@ -89,7 +89,7 @@ def normalize(data: Data, *, kind: Kind = Kind.DEFAULT) -> Data:
 
 
 def dumps(
-    data: Data,
+    data: Entry,
     *,
     kind: Kind = Kind.DEFAULT,
 ) -> bytes:
