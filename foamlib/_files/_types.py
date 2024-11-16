@@ -46,33 +46,36 @@ class Dimensioned:
 
 
 Field = Union[
-    Tensor, Sequence[Tensor], "np.ndarray[Tuple[int, int], np.dtype[np.generic]]"
+    Tensor,
+    Sequence[Tensor],
+    "np.ndarray[Tuple[int], np.dtype[np.generic]]",
+    "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
 ]
 
-DataEntry = Union[
+Data = Union[
     str,
     int,
     float,
     bool,
     Dimensioned,
     DimensionSet,
-    Sequence["Data"],
+    Sequence["Entry"],
     Tensor,
     Field,
 ]
 
-Data = Union[
-    DataEntry,
-    Mapping[str, "Data"],
+Entry = Union[
+    Data,
+    Mapping[str, "Entry"],
 ]
 """
 A value that can be stored in an OpenFOAM file.
 """
 
 MutableData = Union[
-    DataEntry,
+    Data,
     MutableMapping[str, "MutableData"],
 ]
 
-Dict_ = Dict[str, Union["Data", "Dict_"]]
-File = Dict[Optional[str], Union["Data", "Dict_"]]
+Dict_ = Dict[str, Union["Entry", "Dict_"]]
+File = Dict[Optional[str], Union["Entry", "Dict_"]]

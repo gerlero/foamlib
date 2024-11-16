@@ -14,10 +14,10 @@ else:
     from typing_extensions import TypeGuard
 
 if TYPE_CHECKING:
-    from ._types import Data
+    from ._types import Entry
 
 
 def is_sequence(
-    value: Data,
-) -> TypeGuard[Sequence[Data]]:
+    value: Entry,
+) -> TypeGuard[Sequence[Entry]]:
     return isinstance(value, Sequence) and not isinstance(value, str)

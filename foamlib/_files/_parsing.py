@@ -37,7 +37,7 @@ from pyparsing import (
     printables,
 )
 
-from ._types import DataEntry, Dimensioned, DimensionSet, File
+from ._types import Data, Dimensioned, DimensionSet, File
 
 
 def _list_of(entry: ParserElement) -> ParserElement:
@@ -332,11 +332,11 @@ _FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[DataEntry, EllipsisType]]):
+class Parsed(Mapping[Tuple[str, ...], Union[Data, EllipsisType]]):
     def __init__(self, contents: bytes) -> None:
         self._parsed: MutableMapping[
             tuple[str, ...],
-            tuple[int, DataEntry | EllipsisType, int],
+            tuple[int, Data | EllipsisType, int],
         ] = {}
         for parse_result in _FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
@@ -349,10 +349,10 @@ class Parsed(Mapping[Tuple[str, ...], Union[DataEntry, EllipsisType]]):
     @staticmethod
     def _flatten_result(
         parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
-    ) -> Mapping[tuple[str, ...], tuple[int, DataEntry | EllipsisType, int]]:
+    ) -> Mapping[tuple[str, ...], tuple[int, Data | EllipsisType, int]]:
         ret: MutableMapping[
             tuple[str, ...],
-            tuple[int, DataEntry | EllipsisType, int],
+            tuple[int, Data | EllipsisType, int],
         ] = {}
         start = parse_result.locn_start
         assert isinstance(start, int)
@@ -379,14 +379,14 @@ class Parsed(Mapping[Tuple[str, ...], Union[DataEntry, EllipsisType]]):
                     ret[(*_keywords, keyword)] = (start, d, end)
         return ret
 
-    def __getitem__(self, keywords: tuple[str, ...]) -> DataEntry | EllipsisType:
+    def __getitem__(self, keywords: tuple[str, ...]) -> Data | EllipsisType:
         _, data, _ = self._parsed[keywords]
         return data
 
     def put(
         self,
         keywords: tuple[str, ...],
-        data: DataEntry | EllipsisType,
+        data: Data | EllipsisType,
         content: bytes,
     ) -> None:
         start, end = self.entry_location(keywords, missing_ok=True)
