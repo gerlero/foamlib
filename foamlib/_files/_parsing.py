@@ -28,11 +28,11 @@ from pyparsing import (
     Opt,
     ParserElement,
     ParseResults,
-    QuotedString,
     Regex,
     Word,
     common,
     counted_array,
+    dbl_quoted_string,
     identchars,
     printables,
 )
@@ -299,7 +299,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
         )
     )
 )
-_TOKEN = QuotedString('"', unquote_results=False) | _IDENTIFIER
+_TOKEN = dbl_quoted_string | _IDENTIFIER
 DATA = Forward()
 KEYWORD = (
     _TOKEN
