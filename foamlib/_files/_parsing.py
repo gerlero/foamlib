@@ -62,7 +62,7 @@ def _list_of(entry: ParserElement) -> ParserElement:
 def _counted_tensor_list(
     *, elsize: int = 1, ignore: Regex | None = None
 ) -> ParserElement:
-    float_pattern = r"(?i:[+-]?((\d+\.?\d*(e[+-]?\d+)?)|nan|inf(inity)?))"
+    float_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
     ignore_pattern = rf"(?:\s|{ignore.re.pattern})+" if ignore is not None else r"\s+"
 
     if elsize == 1:
