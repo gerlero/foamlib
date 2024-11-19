@@ -16,7 +16,6 @@ else:
     from typing import Any as EllipsisType
 
 from pyparsing import (
-    CharsNotIn,
     Combine,
     Dict,
     Forward,
@@ -59,6 +58,38 @@ def _list_of(entry: ParserElement) -> ParserElement:
     )
 
 
+def _parse_ascii_field(
+    s: str, *, elsize: int, ignore: Regex | None
+) -> list[float] | list[list[float]]:
+    values = [
+        float(v)
+        for v in (re.sub(ignore.re, " ", s) if ignore is not None else s)
+        .replace("(", " ")
+        .replace(")", " ")
+        .split()
+    ]
+
+    if elsize == 1:
+        return values
+
+    return [values[i : i + elsize] for i in range(0, len(values), elsize)]
+
+
+def _unpack_binary_field(
+    b: bytes, *, elsize: int, length: int
+) -> list[float] | list[list[float]]:
+    float_size = len(b) / elsize / length
+    assert float_size in (4, 8)
+
+    arr = array.array("f" if float_size == 4 else "d", b)
+    values = arr.tolist()
+
+    if elsize == 1:
+        return values
+
+    return [values[i : i + elsize] for i in range(0, len(values), elsize)]
+
+
 def _counted_tensor_list(
     *, elsize: int = 1, ignore: Regex | None = None
 ) -> ParserElement:
@@ -83,33 +114,29 @@ def _counted_tensor_list(
         length = tks[0]
         assert isinstance(length, int)
 
-        list_ <<= Regex(
-            rf"\((?:{ignore_pattern})?(?:{tensor_pattern}{ignore_pattern}){{{length - 1}}}{tensor_pattern}(?:{ignore_pattern})?\)"
+        list_ <<= (
+            Regex(
+                rf"\((?:{ignore_pattern})?(?:{tensor_pattern}{ignore_pattern}){{{length - 1}}}{tensor_pattern}(?:{ignore_pattern})?\)"
+            ).add_parse_action(
+                lambda tks: [_parse_ascii_field(tks[0], elsize=elsize, ignore=ignore)]
+            )
+            | Regex(
+                rf"\((?s:.{{{length * elsize * 8}}}|.{{{length * elsize * 4}}})\)"
+            ).set_parse_action(
+                lambda tks: [
+                    _unpack_binary_field(
+                        tks[0][1:-1].encode("latin-1"), elsize=elsize, length=length
+                    )
+                ]
+            )
+            | (
+                Literal("{").suppress() + tensor + Literal("}").suppress()
+            ).set_parse_action(lambda tks: [[tks[0]] * length])
         )
 
-    count = common.integer.add_parse_action(count_parse_action)
+    count = common.integer.copy().add_parse_action(count_parse_action)
 
-    def list_parse_action(
-        tks: ParseResults,
-    ) -> list[list[float]] | list[list[list[float]]]:
-        values = [
-            float(v)
-            for v in (re.sub(ignore.re, " ", tks[0]) if ignore is not None else tks[0])
-            .replace("(", " ")
-            .replace(")", " ")
-            .split()
-        ]
-
-        if elsize == 1:
-            return [values]
-
-        return [[values[i : i + elsize] for i in range(0, len(values), elsize)]]
-
-    list_.add_parse_action(list_parse_action)
-
-    return (count.suppress() + list_) | (
-        common.integer + Literal("{").suppress() + tensor + Literal("}").suppress()
-    ).set_parse_action(lambda tks: [[tks[1]] * tks[0]])
+    return count.suppress() + list_
 
 
 def _keyword_entry_of(
@@ -131,25 +158,6 @@ def _keyword_entry_of(
     subdict <<= Dict(Group(keyword_entry)[...], asdict=not located)
 
     return keyword_entry
-
-
-def _unpack_binary_field(
-    tks: ParseResults,
-    *,
-    elsize: int = 1,
-) -> Sequence[Sequence[float] | Sequence[Sequence[float]]]:
-    float_size = len(tks[0]) // elsize
-
-    arr = array.array("f" if float_size == 4 else "d", "".join(tks).encode("latin-1"))
-
-    values: Sequence[float] | Sequence[Sequence[float]]
-
-    if elsize != 1:
-        values = [arr[i : i + elsize].tolist() for i in range(0, len(arr), elsize)]
-    else:
-        values = arr.tolist()
-
-    return [values]
 
 
 # https://github.com/pyparsing/pyparsing/pull/584
@@ -203,98 +211,22 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
             (
                 Literal("scalar").suppress()
                 + Literal(">").suppress()
-                + (
-                    _counted_tensor_list(elsize=1, ignore=_COMMENT)
-                    | (
-                        (
-                            (
-                                counted_array(
-                                    CharsNotIn(exact=8),
-                                    common.integer + Literal("(").suppress(),
-                                )
-                            )
-                            | (
-                                counted_array(
-                                    CharsNotIn(exact=4),
-                                    common.integer + Literal("(").suppress(),
-                                )
-                            )
-                        )
-                        + Literal(")").suppress()
-                    ).set_parse_action(_unpack_binary_field)
-                )
+                + _counted_tensor_list(elsize=1, ignore=_COMMENT)
             )
             | (
                 Literal("vector").suppress()
                 + Literal(">").suppress()
-                + (
-                    _counted_tensor_list(elsize=3, ignore=_COMMENT)
-                    | (
-                        (
-                            (
-                                counted_array(
-                                    CharsNotIn(exact=8 * 3),
-                                    common.integer + Literal("(").suppress(),
-                                )
-                            )
-                            | (
-                                counted_array(
-                                    CharsNotIn(exact=4 * 3),
-                                    common.integer + Literal("(").suppress(),
-                                )
-                            )
-                        )
-                        + Literal(")").suppress()
-                    ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=3))
-                )
+                + _counted_tensor_list(elsize=3, ignore=_COMMENT)
             )
             | (
                 Literal("symmTensor").suppress()
                 + Literal(">").suppress()
-                + (
-                    _counted_tensor_list(elsize=6, ignore=_COMMENT)
-                    | (
-                        (
-                            (
-                                counted_array(
-                                    CharsNotIn(exact=8 * 6),
-                                    common.integer + Literal("(").suppress(),
-                                )
-                            )
-                            | (
-                                counted_array(
-                                    CharsNotIn(exact=4 * 6),
-                                    common.integer + Literal("(").suppress(),
-                                )
-                            )
-                        )
-                        + Literal(")").suppress()
-                    ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=6))
-                )
+                + _counted_tensor_list(elsize=6, ignore=_COMMENT)
             )
             | (
                 Literal("tensor").suppress()
                 + Literal(">").suppress()
-                + (
-                    _counted_tensor_list(elsize=9, ignore=_COMMENT)
-                    | (
-                        (
-                            (
-                                counted_array(
-                                    CharsNotIn(exact=8 * 9),
-                                    common.integer + Literal("(").suppress(),
-                                )
-                            )
-                            | (
-                                counted_array(
-                                    CharsNotIn(exact=4 * 9),
-                                    common.integer + Literal("(").suppress(),
-                                )
-                            )
-                        )
-                        + Literal(")").suppress()
-                    ).set_parse_action(lambda tks: _unpack_binary_field(tks, elsize=9))
-                )
+                + _counted_tensor_list(elsize=9, ignore=_COMMENT)
             )
         )
     )
