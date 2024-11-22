@@ -16,9 +16,9 @@ __all__ = [
     "AsyncFoamCase",
     "AsyncSlurmFoamCase",
     "CalledProcessError",
-    "FoamFile",
     "FoamCase",
     "FoamCaseBase",
     "FoamCaseRunBase",
     "FoamFieldFile",
+    "FoamFile",
 ]

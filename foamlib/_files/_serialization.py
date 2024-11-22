@@ -119,10 +119,12 @@ def dumps(
         Kind.SINGLE_PRECISION_BINARY_FIELD,
     ) and (
         isinstance(data, (int, float))
-        or is_sequence(data)
-        and data
-        and isinstance(data[0], (int, float))
-        and len(data) in (3, 6, 9)
+        or (
+            is_sequence(data)
+            and data
+            and isinstance(data[0], (int, float))
+            and len(data) in (3, 6, 9)
+        )
     ):
         return b"uniform " + dumps(data, kind=Kind.SINGLE_ENTRY)
 
