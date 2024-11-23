@@ -13,7 +13,7 @@ else:
 if sys.version_info >= (3, 10):
     from types import EllipsisType
 else:
-    from typing import Any as EllipsisType
+    EllipsisType = type(...)
 
 from pyparsing import (
     Combine,
