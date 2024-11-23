@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.2"]
+requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -72,9 +72,6 @@ Documentation = "https://foamlib.readthedocs.io"
 
 [tool.setuptools.dynamic]
 version = {attr = "foamlib.__version__"}
-
-[tool.setuptools.package-data]
-"foamlib" = ["py.typed"]
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
