@@ -2,14 +2,7 @@ from __future__ import annotations
 
 import functools
 import sys
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncContextManager,
-    Callable,
-    Generic,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, AsyncContextManager, Callable, Generic, TypeVar
 
 if TYPE_CHECKING:
     from types import TracebackType
