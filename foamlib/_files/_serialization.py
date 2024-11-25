@@ -11,7 +11,7 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Mapping, Sequence
 
-from ._parsing import DATA, KEYWORD
+from ._parsing import DATA, TOKEN
 from ._types import Data, Dimensioned, DimensionSet, Entry
 from ._util import is_sequence
 
@@ -60,9 +60,6 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
         return DimensionSet(*data)
 
     if is_sequence(data) and (kind == Kind.SINGLE_ENTRY or not isinstance(data, tuple)):
-        if len(data) == 1 and isinstance(data[0], Mapping) and len(data[0]) > 1:
-            return [normalize({k: v}) for k, v in data[0].items()]
-
         return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
 
     if isinstance(data, Dimensioned):
@@ -72,7 +69,7 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
 
     if isinstance(data, str):
         if kind == Kind.KEYWORD:
-            data = KEYWORD.parse_string(data, parse_all=True)[0]
+            data = TOKEN.parse_string(data, parse_all=True)[0]
             assert isinstance(data, str)
             return data
 
@@ -109,6 +106,10 @@ def dumps(
                 entries.append(dumps(k, kind=Kind.KEYWORD) + b" " + dumps(value) + b";")
 
         return b" ".join(entries)
+
+    if isinstance(data, tuple) and kind == Kind.SINGLE_ENTRY and len(data) == 2:
+        k, v = data
+        return dumps({k: v})
 
     if isinstance(data, DimensionSet):
         return b"[" + b" ".join(dumps(v) for v in data) + b"]"

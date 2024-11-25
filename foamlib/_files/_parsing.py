@@ -157,6 +157,9 @@ def _keyword_entry_of(
 
     subdict <<= Dict(Group(keyword_entry)[...], asdict=not located)
 
+    if not located:
+        return keyword_entry.copy().set_parse_action(lambda tks: tuple(tks))
+
     return keyword_entry
 
 
@@ -231,21 +234,14 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
         )
     )
 )
-_TOKEN = dbl_quoted_string | _IDENTIFIER
+TOKEN = dbl_quoted_string | _IDENTIFIER
 DATA = Forward()
-KEYWORD = (
-    _TOKEN
-    | _list_of(_IDENTIFIER)
-    .set_parse_action(lambda tks: "(" + " ".join(tks[0]) + ")")
-    .ignore(_COMMENT)
-    .parse_with_tabs()
-)
-_KEYWORD_ENTRY = Dict(Group(_keyword_entry_of(KEYWORD, DATA)), asdict=True)
+_KEYWORD_ENTRY = _keyword_entry_of(TOKEN | _list_of(_IDENTIFIER), DATA)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = _list_of(_LIST_ENTRY)
 _NUMBER = common.signed_integer ^ common.ieee_float
-_DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | _TOKEN
+_DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | TOKEN
 
 DATA <<= (
     _DATA_ENTRY[1, ...]
@@ -255,7 +251,7 @@ DATA <<= (
 )
 
 _LOCATED_DICTIONARY = Group(
-    _keyword_entry_of(_TOKEN, Opt(DATA, default=""), located=True)
+    _keyword_entry_of(TOKEN, Opt(DATA, default=""), located=True)
 )[...]
 _LOCATED_DATA = Group(Located(DATA.copy().add_parse_action(lambda tks: ["", tks[0]])))
 
