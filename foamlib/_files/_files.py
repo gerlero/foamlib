@@ -25,7 +25,7 @@ from ._types import (
     Entry,
     Field,
     File,
-    MutableData,
+    MutableEntry,
 )
 from ._util import is_sequence
 
@@ -33,7 +33,7 @@ from ._util import is_sequence
 class FoamFile(
     MutableMapping[
         Optional[Union[str, Tuple[str, ...]]],
-        MutableData,
+        MutableEntry,
     ],
     FoamFileIO,
 ):
@@ -49,7 +49,7 @@ class FoamFile(
     DimensionSet = DimensionSet
 
     class SubDict(
-        MutableMapping[str, MutableData],
+        MutableMapping[str, MutableEntry],
     ):
         """An OpenFOAM dictionary within a file as a mutable mapping."""
 
