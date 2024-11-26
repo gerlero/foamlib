@@ -72,9 +72,9 @@ Entry = Union[
 A value that can be stored in an OpenFOAM file.
 """
 
-MutableData = Union[
+MutableEntry = Union[
     Data,
-    MutableMapping[str, "MutableData"],
+    MutableMapping[str, "MutableEntry"],
 ]
 
 Dict_ = Dict[str, Union["Entry", "Dict_"]]

@@ -249,17 +249,18 @@ _DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH 
 
 DATA <<= (
     _DATA_ENTRY[1, ...]
-    .set_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else [tks[0]])
+    .set_parse_action(lambda tks: [tuple(tks)] if len(tks) > 1 else [tks[0]])
     .ignore(_COMMENT)
     .parse_with_tabs()
 )
 
+_LOCATED_DICTIONARY = Group(
+    _keyword_entry_of(_TOKEN, Opt(DATA, default=""), located=True)
+)[...]
+_LOCATED_DATA = Group(Located(DATA.copy().add_parse_action(lambda tks: ["", tks[0]])))
+
 _FILE = (
-    Dict(
-        Group(_keyword_entry_of(KEYWORD, Opt(DATA, default=""), located=True))[...]
-        + Opt(Group(Located(DATA.copy().add_parse_action(lambda tks: ["", tks[0]]))))
-        + Group(_keyword_entry_of(KEYWORD, Opt(DATA, default=""), located=True))[...]
-    )
+    Dict(_LOCATED_DICTIONARY + Opt(_LOCATED_DATA) + _LOCATED_DICTIONARY)
     .ignore(_COMMENT)
     .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]
     .parse_with_tabs()
