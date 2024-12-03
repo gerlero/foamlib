@@ -3,6 +3,7 @@ from __future__ import annotations
 import array
 import re
 import sys
+from enum import Enum, auto
 from typing import Tuple, Union, cast
 
 if sys.version_info >= (3, 9):
@@ -39,6 +40,61 @@ from pyparsing import (
 from ._types import Data, Dimensioned, DimensionSet, File
 
 
+class Tensor(Enum):
+    SCALAR = auto()
+    VECTOR = auto()
+    SYMM_TENSOR = auto()
+    TENSOR = auto()
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        return {
+            Tensor.SCALAR: (),
+            Tensor.VECTOR: (3,),
+            Tensor.SYMM_TENSOR: (6,),
+            Tensor.TENSOR: (9,),
+        }[self]
+
+    @property
+    def size(self) -> int:
+        return {
+            Tensor.SCALAR: 1,
+            Tensor.VECTOR: 3,
+            Tensor.SYMM_TENSOR: 6,
+            Tensor.TENSOR: 9,
+        }[self]
+
+    def pattern(self, *, ignore: Regex | None = None) -> str:
+        float_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
+
+        if self == Tensor.SCALAR:
+            return float_pattern
+
+        ignore_pattern = (
+            rf"(?:\s|{ignore.re.pattern})+" if ignore is not None else r"\s+"
+        )
+
+        return rf"\((?:{ignore_pattern})?(?:{float_pattern}{ignore_pattern}){{{self.size - 1}}}{float_pattern}(?:{ignore_pattern})?\)"
+
+    def parser(self) -> ParserElement:
+        if self == Tensor.SCALAR:
+            return common.ieee_float
+
+        return (
+            Literal("(").suppress()
+            + Group(common.ieee_float[self.size], aslist=True)
+            + Literal(")").suppress()
+        )
+
+    def __str__(self) -> str:
+        return {
+            Tensor.SCALAR: "scalar",
+            Tensor.VECTOR: "vector",
+            Tensor.SYMM_TENSOR: "symmTensor",
+            Tensor.TENSOR: "tensor",
+        }[self]
+
+
 def _list_of(entry: ParserElement) -> ParserElement:
     return Opt(
         Literal("List") + Literal("<") + _IDENTIFIER + Literal(">")
@@ -59,7 +115,7 @@ def _list_of(entry: ParserElement) -> ParserElement:
 
 
 def _parse_ascii_field(
-    s: str, *, elsize: int, ignore: Regex | None
+    s: str, tensor_kind: Tensor, *, ignore: Regex | None
 ) -> list[float] | list[list[float]]:
     values = [
         float(v)
@@ -69,45 +125,54 @@ def _parse_ascii_field(
         .split()
     ]
 
-    if elsize == 1:
+    if tensor_kind == Tensor.SCALAR:
         return values
 
-    return [values[i : i + elsize] for i in range(0, len(values), elsize)]
+    return [
+        values[i : i + tensor_kind.size]
+        for i in range(0, len(values), tensor_kind.size)
+    ]
 
 
 def _unpack_binary_field(
-    b: bytes, *, elsize: int, length: int
+    b: bytes, tensor_kind: Tensor, *, length: int
 ) -> list[float] | list[list[float]]:
-    float_size = len(b) / elsize / length
+    float_size = len(b) / tensor_kind.size / length
     assert float_size in (4, 8)
 
     arr = array.array("f" if float_size == 4 else "d", b)
     values = arr.tolist()
 
-    if elsize == 1:
+    if tensor_kind == Tensor.SCALAR:
         return values
 
-    return [values[i : i + elsize] for i in range(0, len(values), elsize)]
+    return [
+        values[i : i + tensor_kind.size]
+        for i in range(0, len(values), tensor_kind.size)
+    ]
 
 
-def _counted_tensor_list(
-    *, elsize: int = 1, ignore: Regex | None = None
+def _tensor_list(
+    tensor_kind: Tensor | None = None, *, ignore: Regex | None = None
 ) -> ParserElement:
-    float_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
-    ignore_pattern = rf"(?:\s|{ignore.re.pattern})+" if ignore is not None else r"\s+"
-
-    if elsize == 1:
-        tensor_pattern = float_pattern
-        tensor = common.ieee_float
-    else:
-        tensor_pattern = rf"\((?:{ignore_pattern})?(?:{float_pattern}{ignore_pattern}){{{elsize - 1}}}{float_pattern}(?:{ignore_pattern})?\)"
-        tensor = (
-            Literal("(").suppress()
-            + Group(common.ieee_float[elsize], aslist=True)
-            + Literal(")").suppress()
+    if tensor_kind is None:
+        return (
+            _tensor_list(Tensor.SCALAR, ignore=ignore)
+            | _tensor_list(Tensor.VECTOR, ignore=ignore)
+            | _tensor_list(Tensor.SYMM_TENSOR, ignore=ignore)
+            | _tensor_list(Tensor.TENSOR, ignore=ignore)
         )
 
+    tensor_pattern = tensor_kind.pattern(ignore=ignore)
+    ignore_pattern = rf"(?:\s|{ignore.re.pattern})+" if ignore is not None else r"\s+"
+
     list_ = Forward()
+
+    list_ <<= Regex(
+        rf"\((?:{ignore_pattern})?(?:{tensor_pattern}{ignore_pattern})*{tensor_pattern}(?:{ignore_pattern})?\)"
+    ).add_parse_action(
+        lambda tks: [_parse_ascii_field(tks[0], tensor_kind, ignore=ignore)]
+    )
 
     def count_parse_action(tks: ParseResults) -> None:
         nonlocal list_
@@ -118,25 +183,29 @@ def _counted_tensor_list(
             Regex(
                 rf"\((?:{ignore_pattern})?(?:{tensor_pattern}{ignore_pattern}){{{length - 1}}}{tensor_pattern}(?:{ignore_pattern})?\)"
             ).add_parse_action(
-                lambda tks: [_parse_ascii_field(tks[0], elsize=elsize, ignore=ignore)]
+                lambda tks: [_parse_ascii_field(tks[0], tensor_kind, ignore=ignore)]
             )
             | Regex(
-                rf"\((?s:.{{{length * elsize * 8}}}|.{{{length * elsize * 4}}})\)"
+                rf"\((?s:.{{{length * tensor_kind.size * 8}}}|.{{{length * tensor_kind.size * 4}}})\)"
             ).set_parse_action(
                 lambda tks: [
                     _unpack_binary_field(
-                        tks[0][1:-1].encode("latin-1"), elsize=elsize, length=length
+                        tks[0][1:-1].encode("latin-1"), tensor_kind, length=length
                     )
                 ]
             )
             | (
-                Literal("{").suppress() + tensor + Literal("}").suppress()
+                Literal("{").suppress() + tensor_kind.parser() + Literal("}").suppress()
             ).set_parse_action(lambda tks: [[tks[0]] * length])
         )
 
     count = common.integer.copy().add_parse_action(count_parse_action)
 
-    return count.suppress() + list_
+    return (
+        Opt(Literal("List") + Literal("<") + str(tensor_kind) + Literal(">")).suppress()
+        + Opt(count).suppress()
+        + list_
+    )
 
 
 def _keyword_entry_of(
@@ -191,12 +260,11 @@ _SWITCH = (
 _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: DimensionSet(*tks))
-_TENSOR = common.ieee_float | (
-    Literal("(").suppress()
-    + Group(
-        common.ieee_float[3] | common.ieee_float[6] | common.ieee_float[9], aslist=True
-    )
-    + Literal(")").suppress()
+_TENSOR = (
+    Tensor.SCALAR.parser()
+    | Tensor.VECTOR.parser()
+    | Tensor.SYMM_TENSOR.parser()
+    | Tensor.TENSOR.parser()
 )
 _IDENTIFIER = Combine(
     Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()")
@@ -206,33 +274,7 @@ _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: Dimensioned(*reversed(tks.as_list()))
 )
 _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
-    Keyword("nonuniform", _IDENTBODYCHARS).suppress()
-    + (
-        Literal("List").suppress()
-        + Literal("<").suppress()
-        + (
-            (
-                Literal("scalar").suppress()
-                + Literal(">").suppress()
-                + _counted_tensor_list(elsize=1, ignore=_COMMENT)
-            )
-            | (
-                Literal("vector").suppress()
-                + Literal(">").suppress()
-                + _counted_tensor_list(elsize=3, ignore=_COMMENT)
-            )
-            | (
-                Literal("symmTensor").suppress()
-                + Literal(">").suppress()
-                + _counted_tensor_list(elsize=6, ignore=_COMMENT)
-            )
-            | (
-                Literal("tensor").suppress()
-                + Literal(">").suppress()
-                + _counted_tensor_list(elsize=9, ignore=_COMMENT)
-            )
-        )
-    )
+    Keyword("nonuniform", _IDENTBODYCHARS).suppress() + _tensor_list(ignore=_COMMENT)
 )
 TOKEN = dbl_quoted_string | _IDENTIFIER
 DATA = Forward()
