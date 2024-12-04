@@ -69,5 +69,6 @@ def test_serialize_data() -> None:
     assert dumps([("a", "b"), ("c", "d")]) == b"(a b; c d;)"
     assert dumps([("a", {"b": "c"}), ("d", {"e": "g"})]) == b"(a {b c;} d {e g;})"
     assert dumps([("a", [0, 1, 2]), ("b", {})]) == b"(a (0 1 2); b {})"
+    assert dumps([{"a": "b", "c": "d"}, {"e": "g"}]) == b"({a b; c d;} {e g;})"
     assert dumps(["water", "oil", "mercury", "air"]) == b"(water oil mercury air)"
     assert dumps("div(phi,U)") == b"div(phi,U)"
