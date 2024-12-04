@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Union
 
 if TYPE_CHECKING:
     import numpy as np
@@ -29,8 +29,7 @@ class DimensionSet(NamedTuple):
 Tensor = Union[
     float,
     Sequence[float],
-    "np.ndarray[Tuple[()], np.dtype[np.generic]]",
-    "np.ndarray[Tuple[int], np.dtype[np.generic]]",
+    "np.ndarray[tuple[()], np.dtype[np.float64 | np.int_]]",
 ]
 
 
@@ -48,8 +47,7 @@ class Dimensioned:
 Field = Union[
     Tensor,
     Sequence[Tensor],
-    "np.ndarray[Tuple[int], np.dtype[np.generic]]",
-    "np.ndarray[Tuple[int, int], np.dtype[np.generic]]",
+    "np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.int_]]",
 ]
 
 Data = Union[
