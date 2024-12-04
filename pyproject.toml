@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.2"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "foamlib"
@@ -70,11 +70,8 @@ Homepage = "https://github.com/gerlero/foamlib"
 Repository = "https://github.com/gerlero/foamlib"
 Documentation = "https://foamlib.readthedocs.io"
 
-[tool.setuptools.dynamic]
-version = {attr = "foamlib.__version__"}
-
-[tool.setuptools.package-data]
-"foamlib" = ["py.typed"]
+[tool.hatch.version]
+path = "foamlib/__init__.py"
 
 [tool.mypy]
 packages = [
