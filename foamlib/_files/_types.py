@@ -29,7 +29,7 @@ class DimensionSet(NamedTuple):
 Tensor = Union[
     float,
     Sequence[float],
-    "np.ndarray[tuple[()], np.dtype[np.float64 | np.int_]]",
+    "np.ndarray[tuple[()] | tuple[int], np.dtype[np.float64 | np.int_]]",
 ]
 
 
