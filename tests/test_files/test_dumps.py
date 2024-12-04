@@ -66,8 +66,8 @@ def test_serialize_data() -> None:
         dumps(("hex", [0, 1, 2, 3, 4, 5, 6, 7], [1, 1, 1], "simpleGrading", [1, 1, 1]))
         == b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
-    assert dumps([{"a": "b"}, {"c": "d"}]) == b"(a b; c d;)"
-    assert dumps([{"a": {"b": "c"}}, {"d": {"e": "g"}}]) == b"(a {b c;} d {e g;})"
-    assert dumps([{"a": [0, 1, 2]}, {"b": {}}]) == b"(a (0 1 2); b {})"
+    assert dumps([("a", "b"), ("c", "d")]) == b"(a b; c d;)"
+    assert dumps([("a", {"b": "c"}), ("d", {"e": "g"})]) == b"(a {b c;} d {e g;})"
+    assert dumps([("a", [0, 1, 2]), ("b", {})]) == b"(a (0 1 2); b {})"
     assert dumps(["water", "oil", "mercury", "air"]) == b"(water oil mercury air)"
     assert dumps("div(phi,U)") == b"div(phi,U)"

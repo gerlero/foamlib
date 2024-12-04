@@ -59,6 +59,10 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
         data = cast(Sequence[float], data)
         return DimensionSet(*data)
 
+    if isinstance(data, tuple) and kind == Kind.SINGLE_ENTRY and len(data) == 2:
+        k, v = data
+        return (normalize(k, kind=Kind.KEYWORD), normalize(v))
+
     if is_sequence(data) and (kind == Kind.SINGLE_ENTRY or not isinstance(data, tuple)):
         return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
 
@@ -93,23 +97,18 @@ def dumps(
     data = normalize(data, kind=kind)
 
     if isinstance(data, Mapping):
-        entries = []
-        for k, v in data.items():
-            value = normalize(v)
-            if isinstance(value, Mapping):
-                entries.append(
-                    dumps(k, kind=Kind.KEYWORD) + b" {" + dumps(value) + b"}"
-                )
-            elif not value:
-                entries.append(dumps(k, kind=Kind.KEYWORD) + b";")
-            else:
-                entries.append(dumps(k, kind=Kind.KEYWORD) + b" " + dumps(value) + b";")
-
-        return b" ".join(entries)
+        return (
+            b"{"
+            + b" ".join(dumps((k, v), kind=Kind.SINGLE_ENTRY) for k, v in data.items())
+            + b"}"
+        )
 
     if isinstance(data, tuple) and kind == Kind.SINGLE_ENTRY and len(data) == 2:
         k, v = data
-        return dumps({k: v})
+        ret = dumps(k, kind=Kind.KEYWORD) + b" " + dumps(v)
+        if not isinstance(v, Mapping):
+            ret += b";"
+        return ret
 
     if isinstance(data, DimensionSet):
         return b"[" + b" ".join(dumps(v) for v in data) + b"]"
@@ -188,7 +187,7 @@ def dumps(
     if isinstance(data, tuple):
         return b" ".join(dumps(v) for v in data)
 
-    if is_sequence(data):
+    if is_sequence(data) and not isinstance(data, tuple):
         return b"(" + b" ".join(dumps(v, kind=Kind.SINGLE_ENTRY) for v in data) + b")"
 
     if data is True:
