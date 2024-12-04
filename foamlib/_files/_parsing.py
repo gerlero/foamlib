@@ -208,26 +208,39 @@ def _tensor_list(
     )
 
 
-def _keyword_entry_of(
-    keyword: ParserElement,
-    data_entries: ParserElement,
-    *,
-    located: bool = False,
+def _dict_of(
+    keyword: ParserElement, data: ParserElement, *, located: bool = False
 ) -> ParserElement:
-    subdict = Forward()
+    dict_ = Forward()
 
-    keyword_entry = keyword + (
-        (Literal("{").suppress() + subdict + Literal("}").suppress())
-        | (data_entries + Literal(";").suppress())
-    )
+    keyword_entry = keyword + (dict_ | (data + Literal(";").suppress()))
 
     if located:
         keyword_entry = Located(keyword_entry)
 
-    subdict <<= Dict(Group(keyword_entry)[...], asdict=not located)
+    dict_ <<= (
+        Literal("{").suppress()
+        + Dict(Group(keyword_entry)[...], asdict=not located)
+        + Literal("}").suppress()
+    )
 
-    if not located:
-        return keyword_entry.copy().set_parse_action(lambda tks: tuple(tks))
+    return dict_
+
+
+def _keyword_entry_of(
+    keyword: ParserElement,
+    data: ParserElement,
+    *,
+    located: bool = False,
+) -> ParserElement:
+    keyword_entry = keyword + (
+        _dict_of(keyword, data, located=located) | (data + Literal(";").suppress())
+    )
+
+    if located:
+        keyword_entry = Located(keyword_entry)
+    else:
+        keyword_entry = keyword_entry.copy().set_parse_action(lambda tks: tuple(tks))
 
     return keyword_entry
 
@@ -279,8 +292,9 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
 TOKEN = dbl_quoted_string | _IDENTIFIER
 DATA = Forward()
 _KEYWORD_ENTRY = _keyword_entry_of(TOKEN | _list_of(_IDENTIFIER), DATA)
+_DICT = _dict_of(TOKEN, DATA)
 _DATA_ENTRY = Forward()
-_LIST_ENTRY = _KEYWORD_ENTRY | _DATA_ENTRY
+_LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = _list_of(_LIST_ENTRY)
 _NUMBER = common.signed_integer ^ common.ieee_float
 _DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | TOKEN
