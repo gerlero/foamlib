@@ -1,34 +1,25 @@
 from __future__ import annotations
 
-import array
-import itertools
 import sys
 from enum import Enum, auto
-from typing import cast, overload
+from typing import overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Mapping
 else:
-    from typing import Mapping, Sequence
+    from typing import Mapping
+
+import numpy as np
 
 from ._parsing import parse_data
-from ._types import Data, Dimensioned, DimensionSet, Entry
-from ._util import is_sequence
-
-try:
-    import numpy as np
-
-    numpy = True
-except ModuleNotFoundError:
-    numpy = False
+from ._types import Data, Dimensioned, DimensionSet, Entry, is_sequence
 
 
 class Kind(Enum):
     DEFAULT = auto()
     SINGLE_ENTRY = auto()
     ASCII_FIELD = auto()
-    DOUBLE_PRECISION_BINARY_FIELD = auto()
-    SINGLE_PRECISION_BINARY_FIELD = auto()
+    BINARY_FIELD = auto()
     DIMENSIONS = auto()
 
 
@@ -41,9 +32,29 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry: ...
 
 
 def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
-    if numpy and isinstance(data, np.ndarray):
+    if kind in (Kind.ASCII_FIELD, Kind.BINARY_FIELD):
+        if is_sequence(data):
+            try:
+                arr = np.asarray(data)
+            except ValueError:
+                pass
+            else:
+                if not np.issubdtype(arr.dtype, np.floating):
+                    arr = arr.astype(float)
+
+                if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] in (3, 6, 9)):
+                    return arr
+
+            return data
+
+        if isinstance(data, int):
+            return float(data)
+
+        return data
+
+    if isinstance(data, np.ndarray):
         ret = data.tolist()
-        assert isinstance(ret, list)
+        assert isinstance(ret, (int, float, list))
         return ret
 
     if isinstance(data, Mapping):
@@ -55,7 +66,6 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
         and len(data) <= 7
         and all(isinstance(d, (int, float)) for d in data)
     ):
-        data = cast(Sequence[float], data)
         return DimensionSet(*data)
 
     if isinstance(data, tuple) and kind == Kind.SINGLE_ENTRY and len(data) == 2:
@@ -65,17 +75,12 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
     if is_sequence(data) and (kind == Kind.SINGLE_ENTRY or not isinstance(data, tuple)):
         return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
 
-    if isinstance(data, Dimensioned):
-        value = normalize(data.value, kind=Kind.SINGLE_ENTRY)
-        assert isinstance(value, (int, float, list))
-        return Dimensioned(value, data.dimensions, data.name)
-
     if isinstance(data, str):
         return parse_data(data)
 
     if isinstance(
         data,
-        (int, float, bool, tuple, DimensionSet),
+        (int, float, bool, tuple, DimensionSet, Dimensioned),
     ):
         return data
 
@@ -107,58 +112,35 @@ def dumps(
     if isinstance(data, DimensionSet):
         return b"[" + b" ".join(dumps(v) for v in data) + b"]"
 
-    if kind in (
-        Kind.ASCII_FIELD,
-        Kind.DOUBLE_PRECISION_BINARY_FIELD,
-        Kind.SINGLE_PRECISION_BINARY_FIELD,
-    ) and (
-        isinstance(data, (int, float))
-        or (
-            is_sequence(data)
-            and data
-            and isinstance(data[0], (int, float))
-            and len(data) in (3, 6, 9)
-        )
+    if kind in (Kind.ASCII_FIELD, Kind.BINARY_FIELD) and (
+        isinstance(data, (int, float, np.ndarray))
     ):
-        return b"uniform " + dumps(data, kind=Kind.SINGLE_ENTRY)
+        shape = np.shape(data)
+        if shape in ((), (3,), (6,), (9,)):
+            return b"uniform " + dumps(data, kind=Kind.SINGLE_ENTRY)
 
-    if kind in (
-        Kind.ASCII_FIELD,
-        Kind.DOUBLE_PRECISION_BINARY_FIELD,
-        Kind.SINGLE_PRECISION_BINARY_FIELD,
-    ) and is_sequence(data):
-        if data and isinstance(data[0], (int, float)):
+        assert isinstance(data, np.ndarray)
+        ndim = len(shape)
+        if ndim == 1:
             tensor_kind = b"scalar"
-        elif is_sequence(data[0]) and data[0] and isinstance(data[0][0], (int, float)):
-            if len(data[0]) == 3:
+
+        elif ndim == 2:
+            if shape[1] == 3:
                 tensor_kind = b"vector"
-            elif len(data[0]) == 6:
+            elif shape[1] == 6:
                 tensor_kind = b"symmTensor"
-            elif len(data[0]) == 9:
+            elif shape[1] == 9:
                 tensor_kind = b"tensor"
             else:
                 return dumps(data)
+
         else:
             return dumps(data)
 
-        if kind in (
-            Kind.DOUBLE_PRECISION_BINARY_FIELD,
-            Kind.SINGLE_PRECISION_BINARY_FIELD,
-        ):
-            typecode = "f" if kind == Kind.SINGLE_PRECISION_BINARY_FIELD else "d"
-            if tensor_kind == b"scalar":
-                data = cast(Sequence[float], data)
-                contents = b"(" + array.array(typecode, data).tobytes() + b")"
-            else:
-                data = cast(Sequence[Sequence[float]], data)
-                contents = (
-                    b"("
-                    + array.array(
-                        typecode, itertools.chain.from_iterable(data)
-                    ).tobytes()
-                    + b")"
-                )
+        if kind == Kind.BINARY_FIELD:
+            contents = b"(" + data.tobytes() + b")"
         else:
+            assert kind == Kind.ASCII_FIELD
             contents = dumps(data, kind=Kind.SINGLE_ENTRY)
 
         return b"nonuniform List<" + tensor_kind + b"> " + dumps(len(data)) + contents

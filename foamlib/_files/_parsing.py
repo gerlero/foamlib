@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import array
 import re
 import sys
 from enum import Enum, auto
@@ -16,6 +15,7 @@ if sys.version_info >= (3, 10):
 else:
     EllipsisType = type(...)
 
+import numpy as np
 from pyparsing import (
     Combine,
     Dict,
@@ -47,13 +47,16 @@ class _Tensor(Enum):
     TENSOR = auto()
 
     @property
-    def shape(self) -> tuple[int, ...]:
-        return {
-            _Tensor.SCALAR: (),
-            _Tensor.VECTOR: (3,),
-            _Tensor.SYMM_TENSOR: (6,),
-            _Tensor.TENSOR: (9,),
-        }[self]
+    def shape(self) -> tuple[()] | tuple[int]:
+        if self == _Tensor.SCALAR:
+            return ()
+        if self == _Tensor.VECTOR:
+            return (3,)
+        if self == _Tensor.SYMM_TENSOR:
+            return (6,)
+        if self == _Tensor.TENSOR:
+            return (9,)
+        raise NotImplementedError
 
     @property
     def size(self) -> int:
@@ -84,7 +87,7 @@ class _Tensor(Enum):
             Literal("(").suppress()
             + Group(common.ieee_float[self.size], aslist=True)
             + Literal(")").suppress()
-        )
+        ).add_parse_action(lambda tks: np.array(tks[0], dtype=float))
 
     def __str__(self) -> str:
         return {
@@ -116,40 +119,22 @@ def _list_of(entry: ParserElement) -> ParserElement:
 
 def _parse_ascii_field(
     s: str, tensor_kind: _Tensor, *, ignore: Regex | None
-) -> list[float] | list[list[float]]:
-    values = [
-        float(v)
-        for v in (re.sub(ignore.re, " ", s) if ignore is not None else s)
-        .replace("(", " ")
-        .replace(")", " ")
-        .split()
-    ]
+) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64]]:
+    if ignore is not None:
+        s = re.sub(ignore.re, " ", s)
+    s = s.replace("(", " ").replace(")", " ")
 
-    if tensor_kind == _Tensor.SCALAR:
-        return values
-
-    return [
-        values[i : i + tensor_kind.size]
-        for i in range(0, len(values), tensor_kind.size)
-    ]
+    return np.fromstring(s, dtype=float, sep=" ").reshape(-1, *tensor_kind.shape)
 
 
 def _unpack_binary_field(
     b: bytes, tensor_kind: _Tensor, *, length: int
-) -> list[float] | list[list[float]]:
+) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]:
     float_size = len(b) / tensor_kind.size / length
     assert float_size in (4, 8)
 
-    arr = array.array("f" if float_size == 4 else "d", b)
-    values = arr.tolist()
-
-    if tensor_kind == _Tensor.SCALAR:
-        return values
-
-    return [
-        values[i : i + tensor_kind.size]
-        for i in range(0, len(values), tensor_kind.size)
-    ]
+    dtype = np.float32 if float_size == 4 else float
+    return np.frombuffer(b, dtype=dtype).reshape(-1, *tensor_kind.shape)
 
 
 def _tensor_list(
@@ -187,7 +172,7 @@ def _tensor_list(
             )
             | Regex(
                 rf"\((?s:.{{{length * tensor_kind.size * 8}}}|.{{{length * tensor_kind.size * 4}}})\)"
-            ).set_parse_action(
+            ).add_parse_action(
                 lambda tks: [
                     _unpack_binary_field(
                         tks[0][1:-1].encode("latin-1"), tensor_kind, length=length
@@ -196,7 +181,9 @@ def _tensor_list(
             )
             | (
                 Literal("{").suppress() + tensor_kind.parser() + Literal("}").suppress()
-            ).set_parse_action(lambda tks: [[tks[0]] * length])
+            ).add_parse_action(
+                lambda tks: [np.full((length, *tensor_kind.shape), tks[0], dtype=float)]
+            )
         )
 
     count = common.integer.copy().add_parse_action(count_parse_action)

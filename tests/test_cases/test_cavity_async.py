@@ -9,6 +9,7 @@ if sys.version_info >= (3, 9):
 else:
     from typing import AsyncGenerator
 
+import numpy as np
 import pytest
 import pytest_asyncio
 from foamlib import AsyncFoamCase
@@ -50,7 +51,7 @@ async def test_run(cavity: AsyncFoamCase) -> None:
     await cavity.run(parallel=False)
     assert len(cavity) > 0
     internal = cavity[-1]["U"].internal_field
-    assert isinstance(internal, Sequence)
+    assert isinstance(internal, np.ndarray)
     assert len(internal) == 400
 
 
@@ -65,7 +66,7 @@ async def test_double_clean(cavity: AsyncFoamCase) -> None:
 async def test_cell_centers(cavity: AsyncFoamCase) -> None:
     await cavity.block_mesh()
     C = await cavity[0].cell_centers()
-    assert isinstance(C.internal_field, list)
+    assert isinstance(C.internal_field, np.ndarray)
     assert len(C.internal_field) == 400
 
 

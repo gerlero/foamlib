@@ -98,7 +98,9 @@ def test_new_field(tmp_path: Path) -> None:
     Path(tmp_path / "testField").touch()
     f = FoamFieldFile(tmp_path / "testField")
     f.internal_field = [1, 2, 3]
-    assert f.internal_field == [1, 2, 3]
+    field = f.internal_field
+    assert isinstance(field, np.ndarray)
+    assert np.array_equal(f.internal_field, [1, 2, 3])
     assert f.class_ == "volVectorField"
 
 
@@ -166,9 +168,8 @@ def test_internal_field(cavity: FoamCase) -> None:
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
     U = cavity[0]["U"].internal_field
-    assert isinstance(U, Sequence)
-    for u, u_arr in zip(U, U_arr):
-        assert u == pytest.approx(u_arr)
+    assert isinstance(U, np.ndarray)
+    assert U_arr == pytest.approx(U)
 
     p_arr = np.arange(size) * 1e-6
     U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
@@ -178,9 +179,8 @@ def test_internal_field(cavity: FoamCase) -> None:
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
     U = cavity[0]["U"].internal_field
-    assert isinstance(U, Sequence)
-    for u, u_arr in zip(U, U_arr):
-        assert u == pytest.approx(u_arr)
+    assert isinstance(U, np.ndarray)
+    assert U_arr == pytest.approx(U)
 
     cavity.run(parallel=False)
 
@@ -200,27 +200,23 @@ def test_binary_field(cavity: FoamCase) -> None:
     cavity.run(parallel=False)
 
     p_bin = cavity[-1]["p"].internal_field
-    assert isinstance(p_bin, Sequence)
+    assert isinstance(p_bin, np.ndarray)
     U_bin = cavity[-1]["U"].internal_field
-    assert isinstance(U_bin, Sequence)
-    assert isinstance(U_bin[0], Sequence)
-    assert len(U_bin[0]) == 3
-    size = len(p_bin)
-    assert len(U_bin) == size
+    assert isinstance(U_bin, np.ndarray)
+    assert U_bin.shape == (len(p_bin), 3)
 
     cavity.clean()
 
-    p_arr = np.arange(size) * 1e-6
-    U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
+    p_arr = np.arange(len(p_bin)) * 1e-6
+    U_arr = np.full_like(U_bin, [-1e-6, 1e-6, 0]) * np.arange(len(U_bin))[:, np.newaxis]
 
     cavity[0]["p"].internal_field = p_arr
     cavity[0]["U"].internal_field = U_arr
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
     U = cavity[0]["U"].internal_field
-    assert isinstance(U, Sequence)
-    for u, u_arr in zip(U, U_arr):
-        assert u == pytest.approx(u_arr)
+    assert isinstance(U, np.ndarray)
+    assert U_arr == pytest.approx(U)
 
     cavity.run(parallel=False)
 
@@ -231,26 +227,22 @@ def test_compressed_field(cavity: FoamCase) -> None:
     cavity.run(parallel=False)
 
     p_bin = cavity[-1]["p"].internal_field
-    assert isinstance(p_bin, Sequence)
+    assert isinstance(p_bin, np.ndarray)
     U_bin = cavity[-1]["U"].internal_field
-    assert isinstance(U_bin, Sequence)
-    assert isinstance(U_bin[0], Sequence)
-    assert len(U_bin[0]) == 3
-    size = len(p_bin)
-    assert len(U_bin) == size
+    assert isinstance(U_bin, np.ndarray)
+    assert U_bin.shape == (len(p_bin), 3)
 
     cavity.clean()
 
-    p_arr = np.arange(size) * 1e-6
-    U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
+    p_arr = np.arange(len(p_bin)) * 1e-6
+    U_arr = np.full_like(U_bin, [-1e-6, 1e-6, 0]) * np.arange(len(U_bin))[:, np.newaxis]
 
     cavity[0]["p"].internal_field = p_arr
     cavity[0]["U"].internal_field = U_arr
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
     U = cavity[0]["U"].internal_field
-    assert isinstance(U, Sequence)
-    for u, u_arr in zip(U, U_arr):
-        assert u == pytest.approx(u_arr)
+    assert isinstance(U, np.ndarray)
+    assert U_arr == pytest.approx(U)
 
     cavity.run(parallel=False)

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from copy import deepcopy
 from typing import Any, Optional, Tuple, Union, cast
@@ -15,6 +14,8 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Iterator, Mapping, MutableMapping, Sequence
 
+import numpy as np
+
 from ._io import FoamFileIO
 from ._serialization import Kind, dumps, normalize
 from ._types import (
@@ -27,7 +28,6 @@ from ._types import (
     File,
     MutableEntry,
 )
-from ._util import is_sequence
 
 
 class FoamFile(
@@ -228,50 +228,36 @@ class FoamFile(
                     or keywords[2].endswith("Gradient")
                 )
             ):
-                if self.format == "binary":
-                    arch = self.get(("FoamFile", "arch"), default=None)
-                    assert arch is None or isinstance(arch, str)
-                    if (arch is not None and "scalar=32" in arch) or (
-                        arch is None
-                        and os.environ.get("WM_PRECISION_OPTION", default="DP") == "SP"
-                    ):
-                        kind = Kind.SINGLE_PRECISION_BINARY_FIELD
-                    else:
-                        kind = Kind.DOUBLE_PRECISION_BINARY_FIELD
-                else:
-                    kind = Kind.ASCII_FIELD
+                kind = (
+                    Kind.BINARY_FIELD if self.format == "binary" else Kind.ASCII_FIELD
+                )
             elif keywords == ("dimensions",):
                 kind = Kind.DIMENSIONS
 
             if (
-                kind
-                in (
-                    Kind.ASCII_FIELD,
-                    Kind.DOUBLE_PRECISION_BINARY_FIELD,
-                    Kind.SINGLE_PRECISION_BINARY_FIELD,
-                )
+                kind in (Kind.ASCII_FIELD, Kind.BINARY_FIELD)
             ) and self.class_ == "dictionary":
-                if isinstance(data, (int, float)):
-                    self.class_ = "volScalarField"
-
-                elif is_sequence(data) and data:
-                    if isinstance(data[0], (int, float)):
-                        if len(data) == 3:
+                try:
+                    shape = np.shape(data)  # type: ignore [arg-type]
+                except ValueError:
+                    pass
+                else:
+                    if not shape:
+                        self.class_ = "volScalarField"
+                    elif shape == (3,):
+                        self.class_ = "volVectorField"
+                    elif shape == (6,):
+                        self.class_ = "volSymmTensorField"
+                    elif shape == (9,):
+                        self.class_ = "volTensorField"
+                    elif len(shape) == 1:
+                        self.class_ = "volScalarField"
+                    elif len(shape) == 2:
+                        if shape[1] == 3:
                             self.class_ = "volVectorField"
-                        elif len(data) == 6:
+                        elif shape[1] == 6:
                             self.class_ = "volSymmTensorField"
-                        elif len(data) == 9:
-                            self.class_ = "volTensorField"
-                    elif (
-                        is_sequence(data[0])
-                        and data[0]
-                        and isinstance(data[0][0], (int, float))
-                    ):
-                        if len(data[0]) == 3:
-                            self.class_ = "volVectorField"
-                        elif len(data[0]) == 6:
-                            self.class_ = "volSymmTensorField"
-                        elif len(data[0]) == 9:
+                        elif shape[1] == 9:
                             self.class_ = "volTensorField"
 
             parsed = self._get_parsed(missing_ok=True)
