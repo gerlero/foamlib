@@ -290,26 +290,31 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
     Keyword("nonuniform", _IDENTBODYCHARS).suppress() + _tensor_list(ignore=_COMMENT)
 )
 _TOKEN = dbl_quoted_string | _IDENTIFIER
-DATA = Forward()
-_KEYWORD_ENTRY = _keyword_entry_of(_TOKEN | _list_of(_IDENTIFIER), DATA)
-_DICT = _dict_of(_TOKEN, DATA)
+_DATA = Forward()
+_KEYWORD_ENTRY = _keyword_entry_of(_TOKEN | _list_of(_IDENTIFIER), _DATA)
+_DICT = _dict_of(_TOKEN, _DATA)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = _list_of(_LIST_ENTRY)
 _NUMBER = common.signed_integer ^ common.ieee_float
 _DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | _TOKEN
 
-DATA <<= (
+_DATA <<= (
     _DATA_ENTRY[1, ...]
     .set_parse_action(lambda tks: [tuple(tks)] if len(tks) > 1 else [tks[0]])
     .ignore(_COMMENT)
     .parse_with_tabs()
 )
 
+
+def parse_data(s: str) -> Data:
+    return cast(Data, _DATA.parse_string(s, parse_all=True)[0])
+
+
 _LOCATED_DICTIONARY = Group(
-    _keyword_entry_of(_TOKEN, Opt(DATA, default=""), located=True)
+    _keyword_entry_of(_TOKEN, Opt(_DATA, default=""), located=True)
 )[...]
-_LOCATED_DATA = Group(Located(DATA.copy().add_parse_action(lambda tks: ["", tks[0]])))
+_LOCATED_DATA = Group(Located(_DATA.copy().add_parse_action(lambda tks: ["", tks[0]])))
 
 _FILE = (
     Dict(_LOCATED_DICTIONARY + Opt(_LOCATED_DATA) + _LOCATED_DICTIONARY)
