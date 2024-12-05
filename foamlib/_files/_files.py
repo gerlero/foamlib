@@ -196,7 +196,7 @@ class FoamFile(
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        if keywords and not isinstance(normalize(keywords[-1], kind=Kind.KEYWORD), str):
+        if keywords and not isinstance(normalize(keywords[-1]), str):
             msg = f"Invalid keyword: {keywords[-1]}"
             raise ValueError(msg)
 
@@ -304,7 +304,7 @@ class FoamFile(
                     ...,
                     before
                     + indentation
-                    + dumps(keywords[-1], kind=Kind.KEYWORD)
+                    + dumps(keywords[-1])
                     + b"\n"
                     + indentation
                     + b"{\n"
@@ -322,7 +322,7 @@ class FoamFile(
                     normalize(data, kind=kind),
                     before
                     + indentation
-                    + dumps(keywords[-1], kind=Kind.KEYWORD)
+                    + dumps(keywords[-1])
                     + b" "
                     + dumps(data, kind=kind)
                     + b";"

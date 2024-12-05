@@ -11,7 +11,7 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Mapping, Sequence
 
-from ._parsing import DATA, TOKEN
+from ._parsing import DATA
 from ._types import Data, Dimensioned, DimensionSet, Entry
 from ._util import is_sequence
 
@@ -25,7 +25,6 @@ except ModuleNotFoundError:
 
 class Kind(Enum):
     DEFAULT = auto()
-    KEYWORD = auto()
     SINGLE_ENTRY = auto()
     ASCII_FIELD = auto()
     DOUBLE_PRECISION_BINARY_FIELD = auto()
@@ -61,7 +60,7 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
 
     if isinstance(data, tuple) and kind == Kind.SINGLE_ENTRY and len(data) == 2:
         k, v = data
-        return (normalize(k, kind=Kind.KEYWORD), normalize(v))
+        return (normalize(k), normalize(v))
 
     if is_sequence(data) and (kind == Kind.SINGLE_ENTRY or not isinstance(data, tuple)):
         return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
@@ -72,11 +71,6 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
         return Dimensioned(value, data.dimensions, data.name)
 
     if isinstance(data, str):
-        if kind == Kind.KEYWORD:
-            data = TOKEN.parse_string(data, parse_all=True)[0]
-            assert isinstance(data, str)
-            return data
-
         return cast(Data, DATA.parse_string(data, parse_all=True)[0])
 
     if isinstance(
@@ -105,7 +99,7 @@ def dumps(
 
     if isinstance(data, tuple) and kind == Kind.SINGLE_ENTRY and len(data) == 2:
         k, v = data
-        ret = dumps(k, kind=Kind.KEYWORD) + b" " + dumps(v)
+        ret = dumps(k) + b" " + dumps(v)
         if not isinstance(v, Mapping):
             ret += b";"
         return ret
