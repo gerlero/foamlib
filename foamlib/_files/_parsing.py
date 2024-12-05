@@ -40,7 +40,7 @@ from pyparsing import (
 from ._types import Data, Dimensioned, DimensionSet, File
 
 
-class Tensor(Enum):
+class _Tensor(Enum):
     SCALAR = auto()
     VECTOR = auto()
     SYMM_TENSOR = auto()
@@ -49,25 +49,25 @@ class Tensor(Enum):
     @property
     def shape(self) -> tuple[int, ...]:
         return {
-            Tensor.SCALAR: (),
-            Tensor.VECTOR: (3,),
-            Tensor.SYMM_TENSOR: (6,),
-            Tensor.TENSOR: (9,),
+            _Tensor.SCALAR: (),
+            _Tensor.VECTOR: (3,),
+            _Tensor.SYMM_TENSOR: (6,),
+            _Tensor.TENSOR: (9,),
         }[self]
 
     @property
     def size(self) -> int:
         return {
-            Tensor.SCALAR: 1,
-            Tensor.VECTOR: 3,
-            Tensor.SYMM_TENSOR: 6,
-            Tensor.TENSOR: 9,
+            _Tensor.SCALAR: 1,
+            _Tensor.VECTOR: 3,
+            _Tensor.SYMM_TENSOR: 6,
+            _Tensor.TENSOR: 9,
         }[self]
 
     def pattern(self, *, ignore: Regex | None = None) -> str:
         float_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
 
-        if self == Tensor.SCALAR:
+        if self == _Tensor.SCALAR:
             return float_pattern
 
         ignore_pattern = (
@@ -77,7 +77,7 @@ class Tensor(Enum):
         return rf"\((?:{ignore_pattern})?(?:{float_pattern}{ignore_pattern}){{{self.size - 1}}}{float_pattern}(?:{ignore_pattern})?\)"
 
     def parser(self) -> ParserElement:
-        if self == Tensor.SCALAR:
+        if self == _Tensor.SCALAR:
             return common.ieee_float
 
         return (
@@ -88,10 +88,10 @@ class Tensor(Enum):
 
     def __str__(self) -> str:
         return {
-            Tensor.SCALAR: "scalar",
-            Tensor.VECTOR: "vector",
-            Tensor.SYMM_TENSOR: "symmTensor",
-            Tensor.TENSOR: "tensor",
+            _Tensor.SCALAR: "scalar",
+            _Tensor.VECTOR: "vector",
+            _Tensor.SYMM_TENSOR: "symmTensor",
+            _Tensor.TENSOR: "tensor",
         }[self]
 
 
@@ -115,7 +115,7 @@ def _list_of(entry: ParserElement) -> ParserElement:
 
 
 def _parse_ascii_field(
-    s: str, tensor_kind: Tensor, *, ignore: Regex | None
+    s: str, tensor_kind: _Tensor, *, ignore: Regex | None
 ) -> list[float] | list[list[float]]:
     values = [
         float(v)
@@ -125,7 +125,7 @@ def _parse_ascii_field(
         .split()
     ]
 
-    if tensor_kind == Tensor.SCALAR:
+    if tensor_kind == _Tensor.SCALAR:
         return values
 
     return [
@@ -135,7 +135,7 @@ def _parse_ascii_field(
 
 
 def _unpack_binary_field(
-    b: bytes, tensor_kind: Tensor, *, length: int
+    b: bytes, tensor_kind: _Tensor, *, length: int
 ) -> list[float] | list[list[float]]:
     float_size = len(b) / tensor_kind.size / length
     assert float_size in (4, 8)
@@ -143,7 +143,7 @@ def _unpack_binary_field(
     arr = array.array("f" if float_size == 4 else "d", b)
     values = arr.tolist()
 
-    if tensor_kind == Tensor.SCALAR:
+    if tensor_kind == _Tensor.SCALAR:
         return values
 
     return [
@@ -153,14 +153,14 @@ def _unpack_binary_field(
 
 
 def _tensor_list(
-    tensor_kind: Tensor | None = None, *, ignore: Regex | None = None
+    tensor_kind: _Tensor | None = None, *, ignore: Regex | None = None
 ) -> ParserElement:
     if tensor_kind is None:
         return (
-            _tensor_list(Tensor.SCALAR, ignore=ignore)
-            | _tensor_list(Tensor.VECTOR, ignore=ignore)
-            | _tensor_list(Tensor.SYMM_TENSOR, ignore=ignore)
-            | _tensor_list(Tensor.TENSOR, ignore=ignore)
+            _tensor_list(_Tensor.SCALAR, ignore=ignore)
+            | _tensor_list(_Tensor.VECTOR, ignore=ignore)
+            | _tensor_list(_Tensor.SYMM_TENSOR, ignore=ignore)
+            | _tensor_list(_Tensor.TENSOR, ignore=ignore)
         )
 
     tensor_pattern = tensor_kind.pattern(ignore=ignore)
@@ -274,10 +274,10 @@ _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: DimensionSet(*tks))
 _TENSOR = (
-    Tensor.SCALAR.parser()
-    | Tensor.VECTOR.parser()
-    | Tensor.SYMM_TENSOR.parser()
-    | Tensor.TENSOR.parser()
+    _Tensor.SCALAR.parser()
+    | _Tensor.VECTOR.parser()
+    | _Tensor.SYMM_TENSOR.parser()
+    | _Tensor.TENSOR.parser()
 )
 _IDENTIFIER = Combine(
     Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()")
@@ -289,15 +289,15 @@ _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
 _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
     Keyword("nonuniform", _IDENTBODYCHARS).suppress() + _tensor_list(ignore=_COMMENT)
 )
-TOKEN = dbl_quoted_string | _IDENTIFIER
+_TOKEN = dbl_quoted_string | _IDENTIFIER
 DATA = Forward()
-_KEYWORD_ENTRY = _keyword_entry_of(TOKEN | _list_of(_IDENTIFIER), DATA)
-_DICT = _dict_of(TOKEN, DATA)
+_KEYWORD_ENTRY = _keyword_entry_of(_TOKEN | _list_of(_IDENTIFIER), DATA)
+_DICT = _dict_of(_TOKEN, DATA)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = _list_of(_LIST_ENTRY)
 _NUMBER = common.signed_integer ^ common.ieee_float
-_DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | TOKEN
+_DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | _TOKEN
 
 DATA <<= (
     _DATA_ENTRY[1, ...]
@@ -307,7 +307,7 @@ DATA <<= (
 )
 
 _LOCATED_DICTIONARY = Group(
-    _keyword_entry_of(TOKEN, Opt(DATA, default=""), located=True)
+    _keyword_entry_of(_TOKEN, Opt(DATA, default=""), located=True)
 )[...]
 _LOCATED_DATA = Group(Located(DATA.copy().add_parse_action(lambda tks: ["", tks[0]])))
 
