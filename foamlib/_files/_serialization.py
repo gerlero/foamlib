@@ -11,7 +11,7 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Mapping, Sequence
 
-from ._parsing import DATA
+from ._parsing import parse_data
 from ._types import Data, Dimensioned, DimensionSet, Entry
 from ._util import is_sequence
 
@@ -71,7 +71,7 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
         return Dimensioned(value, data.dimensions, data.name)
 
     if isinstance(data, str):
-        return cast(Data, DATA.parse_string(data, parse_all=True)[0])
+        return parse_data(data)
 
     if isinstance(
         data,
