@@ -2,13 +2,13 @@ import os
 import stat
 import sys
 from pathlib import Path
-from typing import Sequence
 
 if sys.version_info >= (3, 9):
     from collections.abc import Generator
 else:
     from typing import Generator
 
+import numpy as np
 import pytest
 from foamlib import FoamCase
 
@@ -48,7 +48,7 @@ def test_run(cavity: FoamCase) -> None:
     cavity.run(parallel=False)
     assert len(cavity) > 0
     internal = cavity[-1]["U"].internal_field
-    assert isinstance(internal, Sequence)
+    assert isinstance(internal, np.ndarray)
     assert len(internal) == 400
 
 
@@ -61,5 +61,5 @@ def test_double_clean(cavity: FoamCase) -> None:
 def test_cell_centers(cavity: FoamCase) -> None:
     cavity.block_mesh()
     C = cavity[0].cell_centers()
-    assert isinstance(C.internal_field, list)
+    assert isinstance(C.internal_field, np.ndarray)
     assert len(C.internal_field) == 400
