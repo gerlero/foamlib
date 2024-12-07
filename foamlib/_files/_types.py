@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import Dict, NamedTuple, Optional, Tuple, Union
+from enum import Enum
+from typing import Dict, NamedTuple, Optional, Union
 
 import numpy as np
 
@@ -33,8 +34,32 @@ class DimensionSet(NamedTuple):
 Tensor = Union[
     float,
     Sequence[float],
-    "np.ndarray[tuple[()] | Tuple[int], np.dtype[np.float64]]",
+    "np.ndarray[tuple[()] | tuple[int], np.dtype[np.float64]]",
 ]
+
+
+class TensorKind(Enum):
+    SCALAR = ()
+    VECTOR = (3,)
+    SYMM_TENSOR = (6,)
+    TENSOR = (9,)
+
+    @property
+    def shape(self) -> tuple[()] | tuple[int]:
+        shape: tuple[()] | tuple[int] = self.value
+        return shape
+
+    @property
+    def size(self) -> int:
+        return int(np.prod(self.shape))
+
+    def __str__(self) -> str:
+        return {
+            TensorKind.SCALAR: "scalar",
+            TensorKind.VECTOR: "vector",
+            TensorKind.SYMM_TENSOR: "symmTensor",
+            TensorKind.TENSOR: "tensor",
+        }[self]
 
 
 @dataclass
