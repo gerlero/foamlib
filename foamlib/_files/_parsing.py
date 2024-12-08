@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import sys
-from enum import Enum, auto
 from typing import Tuple, Union, cast
 
 if sys.version_info >= (3, 9):
@@ -37,65 +36,31 @@ from pyparsing import (
     printables,
 )
 
-from ._types import Data, Dimensioned, DimensionSet, File
+from ._types import Data, Dimensioned, DimensionSet, File, TensorKind
 
 
-class _Tensor(Enum):
-    SCALAR = auto()
-    VECTOR = auto()
-    SYMM_TENSOR = auto()
-    TENSOR = auto()
+def _tensor(tensor_kind: TensorKind, *, ignore: Regex | None = None) -> Regex:
+    float_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
 
-    @property
-    def shape(self) -> tuple[()] | tuple[int]:
-        if self == _Tensor.SCALAR:
-            return ()
-        if self == _Tensor.VECTOR:
-            return (3,)
-        if self == _Tensor.SYMM_TENSOR:
-            return (6,)
-        if self == _Tensor.TENSOR:
-            return (9,)
-        raise NotImplementedError
+    if tensor_kind == TensorKind.SCALAR:
+        ret = Regex(float_pattern)
+        ret.add_parse_action(lambda tks: [float(tks[0])])
+        return ret
 
-    @property
-    def size(self) -> int:
-        return {
-            _Tensor.SCALAR: 1,
-            _Tensor.VECTOR: 3,
-            _Tensor.SYMM_TENSOR: 6,
-            _Tensor.TENSOR: 9,
-        }[self]
+    ignore_pattern = rf"(?:\s|{ignore.re.pattern})+" if ignore is not None else r"\s+"
 
-    def pattern(self, *, ignore: Regex | None = None) -> str:
-        float_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
-
-        if self == _Tensor.SCALAR:
-            return float_pattern
-
-        ignore_pattern = (
-            rf"(?:\s|{ignore.re.pattern})+" if ignore is not None else r"\s+"
+    ret = Regex(
+        rf"\((?:{ignore_pattern})?(?:{float_pattern}{ignore_pattern}){{{tensor_kind.size - 1}}}{float_pattern}(?:{ignore_pattern})?\)"
+    )
+    ret.add_parse_action(
+        lambda tks: np.fromstring(
+            re.sub(ignore.re, " ", tks[0][1:-1])
+            if ignore is not None
+            else tks[0][1:-1],
+            sep=" ",
         )
-
-        return rf"\((?:{ignore_pattern})?(?:{float_pattern}{ignore_pattern}){{{self.size - 1}}}{float_pattern}(?:{ignore_pattern})?\)"
-
-    def parser(self) -> ParserElement:
-        if self == _Tensor.SCALAR:
-            return common.ieee_float
-
-        return (
-            Literal("(").suppress()
-            + Group(common.ieee_float[self.size], aslist=True)
-            + Literal(")").suppress()
-        ).add_parse_action(lambda tks: np.array(tks[0], dtype=float))
-
-    def __str__(self) -> str:
-        return {
-            _Tensor.SCALAR: "scalar",
-            _Tensor.VECTOR: "vector",
-            _Tensor.SYMM_TENSOR: "symmTensor",
-            _Tensor.TENSOR: "tensor",
-        }[self]
+    )
+    return ret
 
 
 def _list_of(entry: ParserElement) -> ParserElement:
@@ -118,17 +83,17 @@ def _list_of(entry: ParserElement) -> ParserElement:
 
 
 def _parse_ascii_field(
-    s: str, tensor_kind: _Tensor, *, ignore: Regex | None
+    s: str, tensor_kind: TensorKind, *, ignore: Regex | None
 ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64]]:
     if ignore is not None:
         s = re.sub(ignore.re, " ", s)
     s = s.replace("(", " ").replace(")", " ")
 
-    return np.fromstring(s, dtype=float, sep=" ").reshape(-1, *tensor_kind.shape)
+    return np.fromstring(s, sep=" ").reshape(-1, *tensor_kind.shape)
 
 
 def _unpack_binary_field(
-    b: bytes, tensor_kind: _Tensor, *, length: int
+    b: bytes, tensor_kind: TensorKind, *, length: int
 ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]:
     float_size = len(b) / tensor_kind.size / length
     assert float_size in (4, 8)
@@ -138,23 +103,15 @@ def _unpack_binary_field(
 
 
 def _tensor_list(
-    tensor_kind: _Tensor | None = None, *, ignore: Regex | None = None
+    tensor_kind: TensorKind, *, ignore: Regex | None = None
 ) -> ParserElement:
-    if tensor_kind is None:
-        return (
-            _tensor_list(_Tensor.SCALAR, ignore=ignore)
-            | _tensor_list(_Tensor.VECTOR, ignore=ignore)
-            | _tensor_list(_Tensor.SYMM_TENSOR, ignore=ignore)
-            | _tensor_list(_Tensor.TENSOR, ignore=ignore)
-        )
-
-    tensor_pattern = tensor_kind.pattern(ignore=ignore)
+    tensor = _tensor(tensor_kind, ignore=ignore)
     ignore_pattern = rf"(?:\s|{ignore.re.pattern})+" if ignore is not None else r"\s+"
 
     list_ = Forward()
 
     list_ <<= Regex(
-        rf"\((?:{ignore_pattern})?(?:{tensor_pattern}{ignore_pattern})*{tensor_pattern}(?:{ignore_pattern})?\)"
+        rf"\((?:{ignore_pattern})?(?:{tensor.re.pattern}{ignore_pattern})*{tensor.re.pattern}(?:{ignore_pattern})?\)"
     ).add_parse_action(
         lambda tks: [_parse_ascii_field(tks[0], tensor_kind, ignore=ignore)]
     )
@@ -166,7 +123,7 @@ def _tensor_list(
 
         list_ <<= (
             Regex(
-                rf"\((?:{ignore_pattern})?(?:{tensor_pattern}{ignore_pattern}){{{length - 1}}}{tensor_pattern}(?:{ignore_pattern})?\)"
+                rf"\((?:{ignore_pattern})?(?:{tensor.re.pattern}{ignore_pattern}){{{length - 1}}}{tensor.re.pattern}(?:{ignore_pattern})?\)"
             ).add_parse_action(
                 lambda tks: [_parse_ascii_field(tks[0], tensor_kind, ignore=ignore)]
             )
@@ -180,7 +137,7 @@ def _tensor_list(
                 ]
             )
             | (
-                Literal("{").suppress() + tensor_kind.parser() + Literal("}").suppress()
+                Literal("{").suppress() + tensor + Literal("}").suppress()
             ).add_parse_action(
                 lambda tks: [np.full((length, *tensor_kind.shape), tks[0], dtype=float)]
             )
@@ -261,10 +218,10 @@ _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: DimensionSet(*tks))
 _TENSOR = (
-    _Tensor.SCALAR.parser()
-    | _Tensor.VECTOR.parser()
-    | _Tensor.SYMM_TENSOR.parser()
-    | _Tensor.TENSOR.parser()
+    _tensor(TensorKind.SCALAR)
+    | _tensor(TensorKind.VECTOR)
+    | _tensor(TensorKind.SYMM_TENSOR)
+    | _tensor(TensorKind.TENSOR)
 )
 _IDENTIFIER = Combine(
     Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()")
@@ -274,7 +231,13 @@ _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: Dimensioned(*reversed(tks.as_list()))
 )
 _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
-    Keyword("nonuniform", _IDENTBODYCHARS).suppress() + _tensor_list(ignore=_COMMENT)
+    Keyword("nonuniform", _IDENTBODYCHARS).suppress()
+    + (
+        _tensor_list(TensorKind.SCALAR, ignore=_COMMENT)
+        | _tensor_list(TensorKind.VECTOR, ignore=_COMMENT)
+        | _tensor_list(TensorKind.SYMM_TENSOR, ignore=_COMMENT)
+        | _tensor_list(TensorKind.TENSOR, ignore=_COMMENT)
+    )
 )
 _TOKEN = dbl_quoted_string | _IDENTIFIER
 _DATA = Forward()
