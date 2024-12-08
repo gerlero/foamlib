@@ -19,7 +19,9 @@ class Kind(Enum):
     DEFAULT = auto()
     SINGLE_ENTRY = auto()
     ASCII_FIELD = auto()
+    SCALAR_ASCII_FIELD = auto()
     BINARY_FIELD = auto()
+    SCALAR_BINARY_FIELD = auto()
     DIMENSIONS = auto()
 
 
@@ -32,7 +34,12 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry: ...
 
 
 def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
-    if kind in (Kind.ASCII_FIELD, Kind.BINARY_FIELD):
+    if kind in (
+        Kind.ASCII_FIELD,
+        Kind.SCALAR_ASCII_FIELD,
+        Kind.BINARY_FIELD,
+        Kind.SCALAR_BINARY_FIELD,
+    ):
         if is_sequence(data):
             try:
                 arr = np.asarray(data)
@@ -112,11 +119,17 @@ def dumps(
     if isinstance(data, DimensionSet):
         return b"[" + b" ".join(dumps(v) for v in data) + b"]"
 
-    if kind in (Kind.ASCII_FIELD, Kind.BINARY_FIELD) and (
-        isinstance(data, (int, float, np.ndarray))
-    ):
+    if kind in (
+        Kind.ASCII_FIELD,
+        Kind.SCALAR_ASCII_FIELD,
+        Kind.BINARY_FIELD,
+        Kind.SCALAR_BINARY_FIELD,
+    ) and (isinstance(data, (int, float, np.ndarray))):
         shape = np.shape(data)
-        if shape in ((), (3,), (6,), (9,)):
+        if not shape or (
+            kind not in (Kind.SCALAR_ASCII_FIELD, Kind.SCALAR_BINARY_FIELD)
+            and shape in ((3,), (6,), (9,))
+        ):
             return b"uniform " + dumps(data, kind=Kind.SINGLE_ENTRY)
 
         assert isinstance(data, np.ndarray)
@@ -137,10 +150,10 @@ def dumps(
         else:
             return dumps(data)
 
-        if kind == Kind.BINARY_FIELD:
+        if kind in (Kind.BINARY_FIELD, Kind.SCALAR_BINARY_FIELD):
             contents = b"(" + data.tobytes() + b")"
         else:
-            assert kind == Kind.ASCII_FIELD
+            assert kind in (Kind.ASCII_FIELD, Kind.SCALAR_ASCII_FIELD)
             contents = dumps(data, kind=Kind.SINGLE_ENTRY)
 
         return b"nonuniform List<" + tensor_kind + b"> " + dumps(len(data)) + contents

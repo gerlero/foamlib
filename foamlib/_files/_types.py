@@ -61,6 +61,15 @@ class TensorKind(Enum):
             TensorKind.TENSOR: "tensor",
         }[self]
 
+    @staticmethod
+    def from_shape(shape: tuple[int, ...]) -> TensorKind:
+        for kind in TensorKind:
+            if kind.shape == shape:
+                return kind
+
+        msg = f"No tensor kind for shape {shape!r}"
+        raise ValueError(msg)
+
 
 @dataclass
 class Dimensioned:

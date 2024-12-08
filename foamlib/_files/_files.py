@@ -260,6 +260,11 @@ class FoamFile(
                         elif shape[1] == 9:
                             self.class_ = "volTensorField"
 
+            if kind == Kind.ASCII_FIELD and self.class_.endswith("scalarField"):
+                kind = Kind.SCALAR_ASCII_FIELD
+            elif kind == Kind.BINARY_FIELD and self.class_.endswith("scalarField"):
+                kind = Kind.SCALAR_BINARY_FIELD
+
             parsed = self._get_parsed(missing_ok=True)
 
             start, end = parsed.entry_location(keywords, missing_ok=True)
