@@ -101,7 +101,7 @@ Besides its obvious use to orchestrate parallel optimization loops, `AsyncFoamCa
 
 The `FoamFile` class offers high-level facilities for reading and writing OpenFOAM files, providing an interface similar to that of a Python `dict`. `FoamFile` fully understands OpenFOAM's file formats, and is able to edit file contents in place without disrupting formatting and comments. All types of OpenFOAM files are supported, meaning that `FoamFile` can be used for both and pre- and post-processing tasks.
 
-OpenFOAM data types stored in files are mapped to built-in Python types as much as possible, making it easy to work with OpenFOAM data in Python. \autoref{datatypes} shows the mapping of OpenFOAM data types to Python data types with `foamlib`. We note that NumPy arrays are accepted as values for fields, even though NumPy is not a required dependency. Also, disambiguation between Python data types that may represent different OpenFOAM data types (e.g. a scalar value and a uniform scalar field) is resolved by `foamlib` at the time of writing by considering their contextual location within the file. The major exception to this preference for built-ins is posed by the `FoamFile.SubDict` class, which is returned for sub-dictionaries contained in `FoamFile`s, and allows for one-step modification of entries in nested dictionary structures—as is commonly required when configuring OpenFOAM cases.
+OpenFOAM data types stored in files are mapped to built-in Python or NumPy [@numpy] types as much as possible, making it easy to work with OpenFOAM data in Python. \autoref{datatypes} shows the mapping of OpenFOAM data types to Python data types with `foamlib`. Also, disambiguation between Python data types that may represent different OpenFOAM data types (e.g. a scalar value and a uniform scalar field) is resolved by `foamlib` at the time of writing by considering their contextual location within the file. The major exception to this preference for built-ins is posed by the `FoamFile.SubDict` class, which is returned for sub-dictionaries contained in `FoamFile`s, and allows for one-step modification of entries in nested dictionary structures—as is commonly required when configuring OpenFOAM cases.
 
 For clarity and additional efficiency, `FoamFile` objects can be used as context managers to make multiple reads and writes to the same file while minimizing the number of filesystem and parsing operations required.
 
@@ -110,21 +110,22 @@ Finally, we note that all OpenFOAM file formats are transparently supported by `
 
 : Mapping of OpenFOAM data types to Python data types with `foamlib`. \label{datatypes}
 
-| OpenFOAM          | `foamlib` (accepts and returns)      | `foamlib` (also accepts)                                          |
-|:-----------------:|:------------------------------------:|:-----------------------------------------------------------------:|
-| scalar            | `float`                              |                                                                   |
-| vector/tensor     | `list[float]`                        | `Sequence[float]` \| `numpy.array`                                |
-| label             | `int`                                |                                                                   |
-| switch            | `bool`                               |                                                                   |
-| word              | `str`                                |                                                                   |
-| string            | `str` (quoted)                       |                                                                   |
-| multiple tokens   | `tuple`                              |                                                                   |
-| list              | `list`                               | `Sequence`                                                        |
-| dictionary        | `FoamFile.SubDict` \| `dict`         | `Mapping`                                                         |
-| uniform field     | `float` \| `list[float]`             | `Sequence[float]` \| `numpy.array`                                |
-| non-uniform field | `list[float]` \| `list[list[float]]` | `Sequence[float]` \| `Sequence[Sequence[float]]` \| `numpy.array` |
-| dimension set     | `FoamFile.DimensionSet`              | `Sequence[float] ` \| `numpy.array`                               |
-| dimensioned       | `FoamFile.Dimensioned`               |                                                                   |
+| OpenFOAM          | `foamlib` (accepts and returns)  | `foamlib` (also accepts)                         |
+|:-----------------:|:--------------------------------:|:------------------------------------------------:|
+| scalar            | `float`                          |                                                  |
+| vector/tensor     | `numpy.ndarray` \| `list[float]` | `Sequence[float]`                                |
+| label             | `int`                            |                                                  |
+| switch            | `bool`                           |                                                  |
+| word              | `str`                            |                                                  |
+| string            | `str` (quoted)                   |                                                  |
+| multiple tokens   | `tuple`                          |                                                  |
+| list              | `list`                           | `Sequence`                                       |
+| dictionary        | `FoamFile.SubDict` \| `dict`     | `Mapping`                                        |
+| dictionary entry  | `tuple`                          |                                                  |
+| uniform field     | `float` \| `np.ndarray`          | `Sequence[float]`                                |
+| non-uniform field | `numpy.ndarray`                  | `Sequence[float]` \| `Sequence[Sequence[float]]` |
+| dimension set     | `FoamFile.DimensionSet`          | `Sequence[float]` \| `numpy.ndarray`             |
+| dimensioned       | `FoamFile.Dimensioned`           |                                                  |
 
 
 ### `FoamFieldFile` class
@@ -144,6 +145,8 @@ Examples of `foamlib` usage are provided in the [README file](https://github.com
 ## Parsing
 
 `foamlib` contains a full parser for OpenFOAM files, which is able to understand and write to the different types of files used by OpenFOAM. The parser is implemented using the `pyparsing` [@pyparsing] library, which provides a powerful and flexible way to define parsing grammars.
+
+A special case parser is internally used for non-uniform OpenFOAM fields, which can commonly contain very large amounts of data in either ASCII or binary formats. The specialized parser uses the regular expressions to extract these data, which results in greatly improved parsing performance—a more than 25x speedup versus PyFoam—, while not sacrificing any of the generality of the parsing grammar. For extra efficiency and convenience, these fields map to NumPy arrays in Python.
 
 ## Asynchronous support
 
