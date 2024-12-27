@@ -79,7 +79,7 @@ class Dimensioned:
 
     def __post_init__(self) -> None:
         if is_sequence(self.value):
-            self.value = np.asarray(self.value, dtype=float)
+            self.value = np.asarray(self.value, dtype=float)  # type: ignore [assignment]
         else:
             assert isinstance(self.value, (int, float, np.ndarray))
             self.value = float(self.value)

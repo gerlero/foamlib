@@ -50,7 +50,7 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
                     arr = arr.astype(float)
 
                 if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] in (3, 6, 9)):
-                    return arr
+                    return arr  # type: ignore [return-value]
 
             return data
 

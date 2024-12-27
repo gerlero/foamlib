@@ -89,7 +89,7 @@ def _parse_ascii_field(
         s = re.sub(ignore.re, " ", s)
     s = s.replace("(", " ").replace(")", " ")
 
-    return np.fromstring(s, sep=" ").reshape(-1, *tensor_kind.shape)
+    return np.fromstring(s, sep=" ").reshape(-1, *tensor_kind.shape)  # type: ignore [return-value]
 
 
 def _unpack_binary_field(
@@ -99,7 +99,7 @@ def _unpack_binary_field(
     assert float_size in (4, 8)
 
     dtype = np.float32 if float_size == 4 else float
-    return np.frombuffer(b, dtype=dtype).reshape(-1, *tensor_kind.shape)
+    return np.frombuffer(b, dtype=dtype).reshape(-1, *tensor_kind.shape)  # type: ignore [return-value]
 
 
 def _tensor_list(
