@@ -92,6 +92,7 @@ def test_parse_value() -> None:
     assert Parsed(b"({a b; c d;} {e g;})")[()] == [{"a": "b", "c": "d"}, {"e": "g"}]
     assert Parsed(b"(water oil mercury air)")[()] == ["water", "oil", "mercury", "air"]
     assert Parsed(b"div(phi,U)")[()] == "div(phi,U)"
+    assert Parsed(b"div(nuEff*dev(T(grad(U))))")[()] == "div(nuEff*dev(T(grad(U))))"
     assert Parsed(b"((air and water) { type constant; sigma 0.07; })")[()] == [
         (["air", "and", "water"], {"type": "constant", "sigma": 0.07})
     ]
