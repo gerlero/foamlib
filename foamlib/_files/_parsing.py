@@ -223,9 +223,10 @@ _TENSOR = (
     | _tensor(TensorKind.SYMM_TENSOR)
     | _tensor(TensorKind.TENSOR)
 )
-_IDENTIFIER = Combine(
+_IDENTIFIER = Forward()
+_IDENTIFIER <<= Combine(
     Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()")
-    + Opt(Literal("(") + Word(_IDENTBODYCHARS, exclude_chars="()") + Literal(")"))
+    + Opt(Literal("(") + _IDENTIFIER + Literal(")"))
 )
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: Dimensioned(*reversed(tks.as_list()))
