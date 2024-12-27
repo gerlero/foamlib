@@ -37,7 +37,7 @@ def test_serialize_data() -> None:
         == b"nonuniform List<vector> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@)"
     )
     assert (
-        dumps(np.array([1, 2], dtype=np.float32), kind=Kind.BINARY_FIELD)
+        dumps(np.array([1, 2], dtype=np.float32), kind=Kind.BINARY_FIELD)  # type: ignore [arg-type]
         == b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)"
     )
     assert (
