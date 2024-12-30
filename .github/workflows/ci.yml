@@ -16,9 +16,9 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Lint with Ruff
-      uses: astral-sh/ruff-action@v1
+      uses: astral-sh/ruff-action@v3
     - name: Format with Ruff
-      uses: astral-sh/ruff-action@v1
+      uses: astral-sh/ruff-action@v3
       with:
         args: 'format --check'
 
@@ -28,7 +28,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Install uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@v5
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -74,7 +74,7 @@ jobs:
       with:
         openfoam-version: ${{ matrix.openfoam-version }}
     - name: Install uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@v5
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
@@ -84,16 +84,16 @@ jobs:
       uses: koesterlab/setup-slurm-action@v1
     - name: Install test dependencies
       run: |
-        uv pip install --system .[test]
+        uv sync --extra test
     - name: Test with pytest
       run: |
-        pytest --cov=foamlib
+        uv run pytest --cov=foamlib --cov-report xml
       env:
         OMPI_MCA_rmaps_base_oversubscribe: 1
         OMPI_ALLOW_RUN_AS_ROOT: 1
         OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
     - name: Upload code coverage results to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
   
@@ -103,7 +103,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Install uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@v5
     - name: Check package build
       run: |
         uv build

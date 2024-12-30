@@ -7,9 +7,9 @@ from ._sync import FoamCase
 
 __all__ = [
     "AsyncFoamCase",
-    "FoamCaseBase",
-    "FoamCaseRunBase",
     "AsyncSlurmFoamCase",
     "CalledProcessError",
     "FoamCase",
+    "FoamCaseBase",
+    "FoamCaseRunBase",
 ]

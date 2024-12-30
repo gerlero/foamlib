@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from copy import deepcopy
 from typing import Any, Optional, Tuple, Union, cast
@@ -15,25 +14,26 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Iterator, Mapping, MutableMapping, Sequence
 
+import numpy as np
+
 from ._io import FoamFileIO
 from ._serialization import Kind, dumps, normalize
 from ._types import (
     Data,
-    DataEntry,
     Dict_,
     Dimensioned,
     DimensionSet,
+    Entry,
     Field,
     File,
-    MutableData,
+    MutableEntry,
 )
-from ._util import is_sequence
 
 
 class FoamFile(
     MutableMapping[
         Optional[Union[str, Tuple[str, ...]]],
-        MutableData,
+        MutableEntry,
     ],
     FoamFileIO,
 ):
@@ -49,7 +49,7 @@ class FoamFile(
     DimensionSet = DimensionSet
 
     class SubDict(
-        MutableMapping[str, MutableData],
+        MutableMapping[str, MutableEntry],
     ):
         """An OpenFOAM dictionary within a file as a mutable mapping."""
 
@@ -57,13 +57,13 @@ class FoamFile(
             self._file = _file
             self._keywords = _keywords
 
-        def __getitem__(self, keyword: str) -> DataEntry | FoamFile.SubDict:
+        def __getitem__(self, keyword: str) -> Data | FoamFile.SubDict:
             return self._file[(*self._keywords, keyword)]
 
         def __setitem__(
             self,
             keyword: str,
-            data: Data,
+            data: Entry,
         ) -> None:
             self._file[(*self._keywords, keyword)] = data
 
@@ -174,7 +174,7 @@ class FoamFile(
 
     def __getitem__(
         self, keywords: str | tuple[str, ...] | None
-    ) -> DataEntry | FoamFile.SubDict:
+    ) -> Data | FoamFile.SubDict:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -190,13 +190,13 @@ class FoamFile(
             return FoamFile.SubDict(self, keywords)
         return deepcopy(value)
 
-    def __setitem__(self, keywords: str | tuple[str, ...] | None, data: Data) -> None:
+    def __setitem__(self, keywords: str | tuple[str, ...] | None, data: Entry) -> None:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        if keywords and not isinstance(normalize(keywords[-1], kind=Kind.KEYWORD), str):
+        if keywords and not isinstance(normalize(keywords[-1]), str):
             msg = f"Invalid keyword: {keywords[-1]}"
             raise ValueError(msg)
 
@@ -228,51 +228,42 @@ class FoamFile(
                     or keywords[2].endswith("Gradient")
                 )
             ):
-                if self.format == "binary":
-                    arch = self.get(("FoamFile", "arch"), default=None)
-                    assert arch is None or isinstance(arch, str)
-                    if (arch is not None and "scalar=32" in arch) or (
-                        arch is None
-                        and os.environ.get("WM_PRECISION_OPTION", default="DP") == "SP"
-                    ):
-                        kind = Kind.SINGLE_PRECISION_BINARY_FIELD
-                    else:
-                        kind = Kind.DOUBLE_PRECISION_BINARY_FIELD
-                else:
-                    kind = Kind.ASCII_FIELD
+                kind = (
+                    Kind.BINARY_FIELD if self.format == "binary" else Kind.ASCII_FIELD
+                )
             elif keywords == ("dimensions",):
                 kind = Kind.DIMENSIONS
 
             if (
-                kind
-                in (
-                    Kind.ASCII_FIELD,
-                    Kind.DOUBLE_PRECISION_BINARY_FIELD,
-                    Kind.SINGLE_PRECISION_BINARY_FIELD,
-                )
+                kind in (Kind.ASCII_FIELD, Kind.BINARY_FIELD)
             ) and self.class_ == "dictionary":
-                if isinstance(data, (int, float)):
-                    self.class_ = "volScalarField"
+                try:
+                    shape = np.shape(data)  # type: ignore [arg-type]
+                except ValueError:
+                    pass
+                else:
+                    if not shape:
+                        self.class_ = "volScalarField"
+                    elif shape == (3,):
+                        self.class_ = "volVectorField"
+                    elif shape == (6,):
+                        self.class_ = "volSymmTensorField"
+                    elif shape == (9,):
+                        self.class_ = "volTensorField"
+                    elif len(shape) == 1:
+                        self.class_ = "volScalarField"
+                    elif len(shape) == 2:
+                        if shape[1] == 3:
+                            self.class_ = "volVectorField"
+                        elif shape[1] == 6:
+                            self.class_ = "volSymmTensorField"
+                        elif shape[1] == 9:
+                            self.class_ = "volTensorField"
 
-                elif is_sequence(data) and data:
-                    if isinstance(data[0], (int, float)):
-                        if len(data) == 3:
-                            self.class_ = "volVectorField"
-                        elif len(data) == 6:
-                            self.class_ = "volSymmTensorField"
-                        elif len(data) == 9:
-                            self.class_ = "volTensorField"
-                    elif (
-                        is_sequence(data[0])
-                        and data[0]
-                        and isinstance(data[0][0], (int, float))
-                    ):
-                        if len(data[0]) == 3:
-                            self.class_ = "volVectorField"
-                        elif len(data[0]) == 6:
-                            self.class_ = "volSymmTensorField"
-                        elif len(data[0]) == 9:
-                            self.class_ = "volTensorField"
+            if kind == Kind.ASCII_FIELD and self.class_.endswith("scalarField"):
+                kind = Kind.SCALAR_ASCII_FIELD
+            elif kind == Kind.BINARY_FIELD and self.class_.endswith("scalarField"):
+                kind = Kind.SCALAR_BINARY_FIELD
 
             parsed = self._get_parsed(missing_ok=True)
 
@@ -304,7 +295,7 @@ class FoamFile(
                     ...,
                     before
                     + indentation
-                    + dumps(keywords[-1], kind=Kind.KEYWORD)
+                    + dumps(keywords[-1])
                     + b"\n"
                     + indentation
                     + b"{\n"
@@ -322,7 +313,7 @@ class FoamFile(
                     normalize(data, kind=kind),
                     before
                     + indentation
-                    + dumps(keywords[-1], kind=Kind.KEYWORD)
+                    + dumps(keywords[-1])
                     + b" "
                     + dumps(data, kind=kind)
                     + b";"
@@ -438,7 +429,7 @@ class FoamFieldFile(FoamFile):
 
     def __getitem__(
         self, keywords: str | tuple[str, ...] | None
-    ) -> DataEntry | FoamFile.SubDict:
+    ) -> Data | FoamFile.SubDict:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):

@@ -6,17 +6,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import (
-        Iterator,
-        Sequence,
-    )
+    from collections.abc import Iterator, Sequence
     from collections.abc import Set as AbstractSet
 else:
-    from typing import (
-        AbstractSet,
-        Iterator,
-        Sequence,
-    )
+    from typing import AbstractSet, Iterator, Sequence
 
 from .._files import FoamFieldFile, FoamFile
 
