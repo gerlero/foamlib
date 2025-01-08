@@ -316,7 +316,7 @@ class FoamFile(
                     + dumps(keywords[-1])
                     + b" "
                     + dumps(data, kind=kind)
-                    + b";"
+                    + (b";" if not keywords[-1].startswith("#") else b"")
                     + after,
                 )
 

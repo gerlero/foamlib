@@ -98,3 +98,11 @@ def test_parse_value() -> None:
     ]
     assert Parsed(b"[]")[()] == FoamFile.DimensionSet()
     assert Parsed(b"object f.1;")[("object",)] == "f.1"
+
+
+def test_parse_directive() -> None:
+    assert Parsed(b'#include "filename"')[("#include",)] == '"filename"'
+    assert (
+        Parsed(b"functions\n{\n#includeFunc funcName\n}")[("functions", "#includeFunc")]
+        == "funcName"
+    )
