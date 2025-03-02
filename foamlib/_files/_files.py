@@ -316,7 +316,7 @@ class FoamFile(
                     + indentation
                     + dumps(keywords[-1])
                     + ((b" " + val) if val else b"")
-                    + b";"
+                    + (b";" if not keywords[-1].startswith("#") else b"")
                     + after,
                 )
 
