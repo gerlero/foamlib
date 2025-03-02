@@ -111,7 +111,10 @@ def dumps(
 
     if isinstance(data, tuple) and kind == Kind.SINGLE_ENTRY and len(data) == 2:
         k, v = data
-        ret = dumps(k) + b" " + dumps(v)
+        ret = dumps(k)
+        val = dumps(v)
+        if val:
+            ret += b" " + val
         if not isinstance(v, Mapping):
             ret += b";"
         return ret

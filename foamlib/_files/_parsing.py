@@ -272,6 +272,8 @@ _DATA <<= (
 
 
 def parse_data(s: str) -> Data:
+    if not s.strip():
+        return ""
     return cast(Data, _DATA.parse_string(s, parse_all=True)[0])
 
 
