@@ -308,14 +308,14 @@ class FoamFile(
                     self[(*keywords, k)] = v
 
             elif keywords:
+                val = dumps(data, kind=kind)
                 parsed.put(
                     keywords,
                     normalize(data, kind=kind),
                     before
                     + indentation
                     + dumps(keywords[-1])
-                    + b" "
-                    + dumps(data, kind=kind)
+                    + ((b" " + val) if val else b"")
                     + b";"
                     + after,
                 )
