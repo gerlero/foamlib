@@ -153,11 +153,18 @@ def _tensor_list(
 
 
 def _dict_of(
-    keyword: ParserElement, data: ParserElement, *, located: bool = False
+    keyword: ParserElement,
+    data: ParserElement,
+    *,
+    directive: ParserElement | None = None,
+    located: bool = False,
 ) -> ParserElement:
     dict_ = Forward()
 
     keyword_entry = keyword + (dict_ | (data + Literal(";").suppress()))
+
+    if directive is not None:
+        keyword_entry |= directive + data + LineEnd().suppress()  # type: ignore [no-untyped-call]
 
     if located:
         keyword_entry = Located(keyword_entry)
@@ -175,11 +182,16 @@ def _keyword_entry_of(
     keyword: ParserElement,
     data: ParserElement,
     *,
+    directive: ParserElement | None = None,
     located: bool = False,
 ) -> ParserElement:
     keyword_entry = keyword + (
-        _dict_of(keyword, data, located=located) | (data + Literal(";").suppress())
+        _dict_of(keyword, data, directive=directive, located=located)
+        | (data + Literal(";").suppress())
     )
+
+    if directive is not None:
+        keyword_entry |= directive + data + LineEnd().suppress()  # type: ignore [no-untyped-call]
 
     if located:
         keyword_entry = Located(keyword_entry)
@@ -240,7 +252,8 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
         | _tensor_list(TensorKind.TENSOR, ignore=_COMMENT)
     )
 )
-_TOKEN = dbl_quoted_string | _IDENTIFIER
+_DIRECTIVE = Word("#", _IDENTBODYCHARS)
+_TOKEN = dbl_quoted_string | _IDENTIFIER | _DIRECTIVE
 _DATA = Forward()
 _KEYWORD_ENTRY = _keyword_entry_of(_TOKEN | _list_of(_IDENTIFIER), _DATA)
 _DICT = _dict_of(_TOKEN, _DATA)
@@ -259,18 +272,21 @@ _DATA <<= (
 
 
 def parse_data(s: str) -> Data:
+    if not s.strip():
+        return ""
     return cast(Data, _DATA.parse_string(s, parse_all=True)[0])
 
 
 _LOCATED_DICTIONARY = Group(
-    _keyword_entry_of(_TOKEN, Opt(_DATA, default=""), located=True)
+    _keyword_entry_of(
+        _TOKEN, Opt(_DATA, default=""), directive=_DIRECTIVE, located=True
+    )
 )[...]
 _LOCATED_DATA = Group(Located(_DATA.copy().add_parse_action(lambda tks: ["", tks[0]])))
 
 _FILE = (
     Dict(_LOCATED_DICTIONARY + Opt(_LOCATED_DATA) + _LOCATED_DICTIONARY)
     .ignore(_COMMENT)
-    .ignore(Literal("#include") + ... + LineEnd())  # type: ignore [no-untyped-call]
     .parse_with_tabs()
 )
 
