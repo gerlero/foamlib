@@ -18,16 +18,32 @@ if TYPE_CHECKING:
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
+    """
+    Base class for OpenFOAM cases.
+
+    Provides methods for accessing files and time directories in the case, but does not
+    provide methods for running the case or any commands. Users are encouraged to use
+    `FoamCase` or `AsyncFoamCase` instead of this class.
+
+    Access the time directories of the case as a sequence, e.g. `case[0]` or `case[-1]`.
+    These will return `FoamCaseBase.TimeDirectory` objects.
+
+    :param path: The path to the case directory. Defaults to the current working
+        directory.
+    """
+
     def __init__(self, path: os.PathLike[str] | str = Path()) -> None:
         self.path = Path(path).absolute()
 
     class TimeDirectory(AbstractSet[FoamFieldFile]):
         """
-        An OpenFOAM time directory in a case.
+        An time directory in an OpenFOAM case.
 
-        Use to access field files in the directory, e.g. `time["U"]`.
+        Use to access field files in the directory (e.g. `time["U"]`). These will be
+        retrned as `FoamFieldFile` objects.
 
-        :param path: The path to the time directory.
+        It also behaves as a set of `FoamFieldFile` objects (e.g. it can be
+        iterated over with `for field in time: ...`).
         """
 
         def __init__(self, path: os.PathLike[str] | str) -> None:
@@ -39,12 +55,12 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
         @property
         def time(self) -> float:
-            """The time that corresponds to this directory."""
+            """The time that corresponds to this directory, as a float."""
             return float(self.path.name)
 
         @property
         def name(self) -> str:
-            """The name of this time directory."""
+            """The name of this time directory (the time as a string)."""
             return self.path.name
 
         def __getitem__(self, key: str) -> FoamFieldFile:
