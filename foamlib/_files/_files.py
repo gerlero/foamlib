@@ -478,12 +478,10 @@ class FoamFieldFile(FoamFile):
     """
 
     class BoundariesSubDict(FoamFile.SubDict):
-        def __getitem__(self, keyword: str) -> FoamFieldFile.BoundarySubDict:
+        def __getitem__(self, keyword: str) -> FoamFieldFile.BoundarySubDict | Data:
             value = super().__getitem__(keyword)
-            if not isinstance(value, FoamFieldFile.BoundarySubDict):
-                assert not isinstance(value, FoamFile.SubDict)
-                msg = f"boundary {keyword} is not a dictionary"
-                raise TypeError(msg)
+            if isinstance(value, FoamFieldFile.SubDict):
+                assert isinstance(value, FoamFieldFile.BoundarySubDict)
             return value
 
     class BoundarySubDict(FoamFile.SubDict):
