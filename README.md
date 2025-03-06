@@ -16,11 +16,18 @@
 
 **foamlib** provides a simple, modern, ergonomic and fast Python interface for interacting with [OpenFOAM](https://www.openfoam.com).
 
-<p align="center">
-    <img alt="benchmark" src="https://github.com/gerlero/foamlib/raw/main/benchmark.png" height="250">
-    <br>
-  <i>Parsing a </i>volVectorField<i> with 200k cells.</i>
-</p>
+<div align="center">
+<img alt="benchmark" src="https://github.com/gerlero/foamlib/raw/main/benchmark/benchmark.png" height="250">
+
+Parsing a volVectorField with 200k cells.<sup>[1](#benchmark)</sup>
+</div>
+
+
+## 🚀 Introduction
+
+**foamlib** is a Python package designed to simplify the manipulation of OpenFOAM cases and files. Its standalone parser makes it easy to work with OpenFOAM’s input/output files from Python, while its case-handling capabilities facilitate various execution workflows—reducing boilerplate code and enabling efficient Python-based pre- and post-processing, as well as simulation management.
+
+Compared to [PyFoam](https://openfoamwiki.net/index.php/Contrib/PyFoam) and other similar tools like [fluidfoam](https://github.com/fluiddyn/fluidfoam), [fluidsimfoam](https://foss.heptapod.net/fluiddyn/fluidsimfoam), and [Ofpp](https://github.com/xu-xianghua/ofpp), **foamlib** offers advantages such as modern Python compatibility, support for binary-formatted fields, a fully type-hinted API, and asynchronous operations; making OpenFOAM workflows more accessible and streamlined.
 
 ## 👋 Basics
 
@@ -154,3 +161,17 @@ case.run()
 ## 📘 Documentation
 
 For more information, check out the [documentation](https://foamlib.readthedocs.io/).
+
+## 🙋 Support
+
+If you have any questions or need help, feel free to open a [discussion](https://github.com/gerlero/foamlib/discussions).
+
+If you believe you have found a bug in **foamlib**, please open an [issue](https://github.com/gerlero/foamlib/issues).
+
+## 🧑‍💻 Contributing
+
+You're welcome to contribute to **foamlib**! Check out the [contributing guidelines](CONTRIBUTING.md) for more information.
+
+## Footnotes
+
+<a id="benchmark">[1]</a> foamlib 0.8.1 vs PyFoam 2023.7 on a MacBook Air (2020, M1) with 8 GB of RAM. [Benchmark script](benchmark/benchmark.py).
