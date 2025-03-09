@@ -235,11 +235,12 @@ _TENSOR = (
     | _tensor(TensorKind.SYMM_TENSOR)
     | _tensor(TensorKind.TENSOR)
 )
-_IDENTIFIER = Forward()
-_IDENTIFIER <<= Combine(
-    Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()")
-    + Opt(Literal("(") + _IDENTIFIER + Literal(")"))
+_PARENTHESIZED = Forward()
+_IDENTIFIER = Combine(
+    Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()") + Opt(_PARENTHESIZED)
 )
+_PARENTHESIZED <<= Combine(Literal("(") + (_PARENTHESIZED | _IDENTIFIER) + Literal(")"))
+
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: Dimensioned(*reversed(tks.as_list()))
 )
