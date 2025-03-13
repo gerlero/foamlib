@@ -157,6 +157,7 @@ def _dict_of(
     data: ParserElement,
     *,
     directive: ParserElement | None = None,
+    data_entry: ParserElement | None = None,
     located: bool = False,
 ) -> ParserElement:
     dict_ = Forward()
@@ -164,7 +165,8 @@ def _dict_of(
     keyword_entry = keyword + (dict_ | (data + Literal(";").suppress()))
 
     if directive is not None:
-        keyword_entry |= directive + data + LineEnd().suppress()  # type: ignore [no-untyped-call]
+        assert data_entry is not None
+        keyword_entry |= directive + data_entry + LineEnd().suppress()  # type: ignore [no-untyped-call]
 
     if located:
         keyword_entry = Located(keyword_entry)
@@ -183,15 +185,19 @@ def _keyword_entry_of(
     data: ParserElement,
     *,
     directive: ParserElement | None = None,
+    data_entry: ParserElement | None = None,
     located: bool = False,
 ) -> ParserElement:
     keyword_entry = keyword + (
-        _dict_of(keyword, data, directive=directive, located=located)
+        _dict_of(
+            keyword, data, directive=directive, data_entry=data_entry, located=located
+        )
         | (data + Literal(";").suppress())
     )
 
     if directive is not None:
-        keyword_entry |= directive + data + LineEnd().suppress()  # type: ignore [no-untyped-call]
+        assert data_entry is not None
+        keyword_entry |= directive + data_entry + LineEnd().suppress()  # type: ignore [no-untyped-call]
 
     if located:
         keyword_entry = Located(keyword_entry)
@@ -280,7 +286,11 @@ def parse_data(s: str) -> Data:
 
 _LOCATED_DICTIONARY = Group(
     _keyword_entry_of(
-        _TOKEN, Opt(_DATA, default=""), directive=_DIRECTIVE, located=True
+        _TOKEN,
+        Opt(_DATA, default=""),
+        directive=_DIRECTIVE,
+        data_entry=_DATA_ENTRY,
+        located=True,
     )
 )[...]
 _LOCATED_DATA = Group(Located(_DATA.copy().add_parse_action(lambda tks: ["", tks[0]])))
