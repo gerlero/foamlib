@@ -100,9 +100,9 @@ class FoamFile(
                 assert isinstance(ret, dict)
                 v = ret[k]
                 assert isinstance(v, dict)
-                ret = cast(File, v)
+                ret = cast("File", v)
 
-            return cast(Dict_, ret)
+            return cast("Dict_", ret)
 
     @property
     def version(self) -> float:
@@ -127,7 +127,7 @@ class FoamFile(
         if ret not in ("ascii", "binary"):
             msg = "format is not 'ascii' or 'binary'"
             raise ValueError(msg)
-        return cast(Literal["ascii", "binary"], ret)
+        return cast("Literal['ascii', 'binary']", ret)
 
     @format.setter
     def format(self, value: Literal["ascii", "binary"]) -> None:
@@ -412,7 +412,7 @@ class FoamFieldFile(FoamFile):
         ) -> Field:
             """Alias of `self["value"]`."""
             return cast(
-                Field,
+                "Field",
                 self["value"],
             )
 
@@ -461,7 +461,7 @@ class FoamFieldFile(FoamFile):
         self,
     ) -> Field:
         """Alias of `self["internalField"]`."""
-        return cast(Field, self["internalField"])
+        return cast("Field", self["internalField"])
 
     @internal_field.setter
     def internal_field(
