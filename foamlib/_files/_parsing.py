@@ -281,7 +281,7 @@ _DATA <<= (
 def parse_data(s: str) -> Data:
     if not s.strip():
         return ""
-    return cast(Data, _DATA.parse_string(s, parse_all=True)[0])
+    return cast("Data", _DATA.parse_string(s, parse_all=True)[0])
 
 
 _LOCATED_DICTIONARY = Group(
@@ -431,7 +431,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, EllipsisType]]):
             for k in keywords[:-1]:
                 v = r[k]
                 assert isinstance(v, dict)
-                r = cast(File, v)
+                r = cast("File", v)
 
             assert isinstance(r, dict)
             if keywords:
