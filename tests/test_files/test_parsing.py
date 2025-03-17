@@ -10,6 +10,7 @@ def test_parse_value() -> None:
     assert Parsed(b"yes")[()] is True
     assert Parsed(b"no")[()] is False
     assert Parsed(b"word")[()] == "word"
+    assert Parsed(b"inference")[()] == "inference"
     assert Parsed(b"word word")[()] == ("word", "word")
     assert Parsed(b'"a string"')[()] == '"a string"'
     assert Parsed(b"uniform 1")[()] == 1
