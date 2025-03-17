@@ -16,6 +16,7 @@ else:
 
 import numpy as np
 from pyparsing import (
+    CaselessKeyword,
     Combine,
     Dict,
     Forward,
@@ -267,7 +268,16 @@ _DICT = _dict_of(_TOKEN, _DATA)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = _list_of(_LIST_ENTRY)
-_NUMBER = common.signed_integer ^ common.ieee_float
+_NUMBER = (
+    common.number
+    | CaselessKeyword("nan").set_parse_action(lambda: np.nan)
+    | (CaselessKeyword("inf") | CaselessKeyword("infinity")).set_parse_action(
+        lambda: np.inf
+    )
+    | (CaselessKeyword("-inf") | CaselessKeyword("-infinity")).set_parse_action(
+        lambda: -np.inf
+    )
+)
 _DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | _TOKEN
 
 _DATA <<= (
