@@ -80,7 +80,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        openfoam-version: [2406, 2312, 12, 11]
+        openfoam-version: [2412, 2406, 12, 11]
       fail-fast: false
     steps:
       - name: Set up QEMU
