@@ -99,6 +99,9 @@ class AsyncFoamCase(FoamCaseRunBase):
         cpus: int,
         **kwargs: Any,
     ) -> None:
+        if isinstance(cmd, str):
+            cmd = [*AsyncFoamCase._SHELL, cmd]
+
         async with AsyncFoamCase._cpus(cpus):
             await run_async(cmd, **kwargs)
 

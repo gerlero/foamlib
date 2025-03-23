@@ -58,6 +58,9 @@ class FoamCase(FoamCaseRunBase):
         cpus: int,
         **kwargs: Any,
     ) -> None:
+        if isinstance(cmd, str):
+            cmd = [*FoamCase._SHELL, cmd]
+
         run_sync(cmd, **kwargs)
 
     @staticmethod

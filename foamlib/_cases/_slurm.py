@@ -31,10 +31,10 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
             await AsyncFoamCase._run(cmd, cpus=cpus, **kwargs)
             return
 
-        if cpus >= 1:
-            if isinstance(cmd, str):
-                cmd = ["/bin/sh", "-c", cmd]
+        if isinstance(cmd, str):
+            cmd = [*AsyncSlurmFoamCase._SHELL, cmd]
 
+        if cpus >= 1:
             if cpus == 1:
                 cmd = ["srun", *cmd]
 

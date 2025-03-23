@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import selectors
 import subprocess
 import sys
-from io import BytesIO
-from typing import IO, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    import os
+from io import StringIO
+from pathlib import Path
+from typing import IO
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
@@ -33,38 +32,45 @@ PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
 
 
+def _env(case: os.PathLike[str]) -> Mapping[str, str]:
+    env = os.environ.copy()
+
+    env["PWD"] = str(Path(case))
+
+    if os.environ.get("FOAM_LD_LIBRARY_PATH", "") and not os.environ.get(
+        "DYLD_LIBRARY_PATH", ""
+    ):
+        env["DYLD_LIBRARY_PATH"] = env["FOAM_LD_LIBRARY_PATH"]
+
+    return env
+
+
 def run_sync(
-    cmd: Sequence[str | os.PathLike[str]] | str,
+    cmd: Sequence[str | os.PathLike[str]],
     *,
+    case: os.PathLike[str],
     check: bool = True,
-    cwd: os.PathLike[str] | None = None,
-    env: Mapping[str, str] | None = None,
-    stdout: int | IO[bytes] | None = None,
-    stderr: int | IO[bytes] | None = None,
-) -> CompletedProcess[bytes]:
-    if not isinstance(cmd, str) and sys.version_info < (3, 8):
+    stdout: int | IO[str] = DEVNULL,
+    stderr: int | IO[str] = STDOUT,
+) -> CompletedProcess[str]:
+    if sys.version_info < (3, 8):
         cmd = [str(arg) for arg in cmd]
 
     with subprocess.Popen(
         cmd,
-        cwd=cwd,
-        env=env,
+        cwd=case,
+        env=_env(case),
         stdout=PIPE,
         stderr=PIPE,
-        shell=isinstance(cmd, str),
+        text=True,
     ) as proc:
         assert proc.stdout is not None
         assert proc.stderr is not None
 
-        output = BytesIO() if stdout is PIPE else None
-        error = BytesIO()
+        output = StringIO() if stdout is PIPE else None
+        error = StringIO()
 
-        if stdout is None:
-            stdout = sys.stdout.buffer
-
-        if stderr is None:
-            stderr = sys.stderr.buffer
-        elif stderr is subprocess.STDOUT:
+        if stderr is STDOUT:
             stderr = stdout
 
         with selectors.DefaultSelector() as selector:
@@ -110,49 +116,34 @@ def run_sync(
 
 
 async def run_async(
-    cmd: Sequence[str | os.PathLike[str]] | str,
+    cmd: Sequence[str | os.PathLike[str]],
     *,
+    case: os.PathLike[str],
     check: bool = True,
-    cwd: os.PathLike[str] | None = None,
-    env: Mapping[str, str] | None = None,
-    stdout: int | IO[bytes] | None = None,
-    stderr: int | IO[bytes] | None = None,
-) -> CompletedProcess[bytes]:
-    if isinstance(cmd, str):
-        proc = await asyncio.create_subprocess_shell(
-            cmd,
-            cwd=cwd,
-            env=env,
-            stdout=PIPE,
-            stderr=PIPE,
-        )
+    stdout: int | IO[str] = DEVNULL,
+    stderr: int | IO[str] = STDOUT,
+) -> CompletedProcess[str]:
+    if sys.version_info < (3, 8):
+        cmd = [str(arg) for arg in cmd]
 
-    else:
-        if sys.version_info < (3, 8):
-            cmd = [str(arg) for arg in cmd]
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            cwd=cwd,
-            env=env,
-            stdout=PIPE,
-            stderr=PIPE,
-        )
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        cwd=case,
+        env=_env(case),
+        stdout=PIPE,
+        stderr=PIPE,
+    )
 
-    if stdout is None:
-        stdout = sys.stdout.buffer
-
-    if stderr is None:
-        stderr = sys.stderr.buffer
-    elif stderr is subprocess.STDOUT:
+    if stderr is STDOUT:
         stderr = stdout
 
-    output = BytesIO() if stdout is PIPE else None
-    error = BytesIO()
+    output = StringIO() if stdout is PIPE else None
+    error = StringIO()
 
     async def process_stdout() -> None:
         while True:
             assert proc.stdout is not None
-            line = await proc.stdout.readline()
+            line = (await proc.stdout.readline()).decode()
             if not line:
                 break
             if output is not None:
@@ -164,7 +155,7 @@ async def run_async(
     async def process_stderr() -> None:
         while True:
             assert proc.stderr is not None
-            line = await proc.stderr.readline()
+            line = (await proc.stderr.readline()).decode()
             if not line:
                 break
             error.write(line)

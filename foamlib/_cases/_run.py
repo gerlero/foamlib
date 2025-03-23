@@ -16,7 +16,6 @@ if sys.version_info >= (3, 9):
         Collection,
         Coroutine,
         Generator,
-        Mapping,
         Sequence,
     )
     from collections.abc import Set as AbstractSet
@@ -27,7 +26,6 @@ else:
         Collection,
         Coroutine,
         Generator,
-        Mapping,
         Sequence,
     )
 
@@ -67,6 +65,8 @@ class FoamCaseRunBase(FoamCaseBase):
                 )
 
             return ret
+
+    _SHELL = ("bash", "-c")
 
     def __delitem__(self, key: int | float | str) -> None:
         shutil.rmtree(self[key].path)
@@ -255,34 +255,17 @@ class FoamCaseRunBase(FoamCaseBase):
 
         return script
 
-    def __env(self, *, shell: bool) -> Mapping[str, str] | None:
-        sip_workaround = os.environ.get(
-            "FOAM_LD_LIBRARY_PATH", ""
-        ) and not os.environ.get("DYLD_LIBRARY_PATH", "")
-
-        if not shell or sip_workaround:
-            env = os.environ.copy()
-
-            if not shell:
-                env["PWD"] = str(self.path)
-
-            if sip_workaround:
-                env["DYLD_LIBRARY_PATH"] = env["FOAM_LD_LIBRARY_PATH"]
-
-            return env
-        return None
-
     @contextmanager
     def __output(
         self, cmd: Sequence[str | os.PathLike[str]] | str, *, log: bool
-    ) -> Generator[tuple[int | IO[bytes], int | IO[bytes]], None, None]:
+    ) -> Generator[tuple[int | IO[str], int | IO[str]], None, None]:
         if log:
             if isinstance(cmd, str):
                 name = shlex.split(cmd)[0]
             else:
                 name = Path(cmd[0]).name if isinstance(cmd[0], os.PathLike) else cmd[0]
 
-            with (self.path / f"log.{name}").open("ab") as stdout:
+            with (self.path / f"log.{name}").open("a") as stdout:
                 yield stdout, STDOUT
         else:
             yield DEVNULL, DEVNULL
@@ -396,9 +379,8 @@ class FoamCaseRunBase(FoamCaseBase):
                 yield self._run(
                     cmd,
                     cpus=cpus,
+                    case=self,
                     check=check,
-                    cwd=self.path,
-                    env=self.__env(shell=isinstance(cmd, str)),
                     stdout=stdout,
                     stderr=stderr,
                     **kwargs,
