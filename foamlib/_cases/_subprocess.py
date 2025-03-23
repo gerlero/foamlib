@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import selectors
 import subprocess
 import sys
 from io import BytesIO
@@ -44,34 +45,51 @@ def run_sync(
     if not isinstance(cmd, str) and sys.version_info < (3, 8):
         cmd = [str(arg) for arg in cmd]
 
-    proc = subprocess.Popen(
+    with subprocess.Popen(
         cmd,
         cwd=cwd,
         env=env,
-        stdout=stdout,
+        stdout=PIPE,
         stderr=PIPE,
         shell=isinstance(cmd, str),
-    )
+    ) as proc:
+        assert proc.stdout is not None
+        assert proc.stderr is not None
 
-    if stderr == STDOUT:
-        stderr = stdout
-    if stderr not in (PIPE, DEVNULL):
-        stderr_copy = BytesIO()
+        output = BytesIO() if stdout is PIPE else None
+        error = BytesIO()
 
-        assert not isinstance(stderr, int)
+        if stdout is None:
+            stdout = sys.stdout.buffer
+
         if stderr is None:
             stderr = sys.stderr.buffer
+        elif stderr is subprocess.STDOUT:
+            stderr = stdout
 
-        assert proc.stderr is not None
-        for line in proc.stderr:
-            stderr.write(line)
-            stderr_copy.write(line)
-
-        output, _ = proc.communicate()
-        assert not _
-        error = stderr_copy.getvalue()
-    else:
-        output, error = proc.communicate()
+        with selectors.DefaultSelector() as selector:
+            selector.register(proc.stdout, selectors.EVENT_READ)
+            selector.register(proc.stderr, selectors.EVENT_READ)
+            open_streams = {proc.stdout, proc.stderr}
+            while open_streams:
+                for key, _ in selector.select():
+                    assert key.fileobj in open_streams
+                    line = key.fileobj.readline()  # type: ignore [union-attr]
+                    if not line:
+                        selector.unregister(key.fileobj)
+                        open_streams.remove(key.fileobj)  # type: ignore [arg-type]
+                    elif key.fileobj is proc.stdout:
+                        if output is not None:
+                            output.write(line)
+                        if stdout not in (DEVNULL, PIPE):
+                            assert not isinstance(stdout, int)
+                            stdout.write(line)
+                    else:
+                        assert key.fileobj is proc.stderr
+                        error.write(line)
+                        if stderr not in (DEVNULL, PIPE):
+                            assert not isinstance(stderr, int)
+                            stderr.write(line)
 
     assert proc.returncode is not None
 
@@ -79,12 +97,15 @@ def run_sync(
         raise CalledProcessError(
             returncode=proc.returncode,
             cmd=cmd,
-            output=output,
-            stderr=error,
+            output=output.getvalue() if output is not None else None,
+            stderr=error.getvalue(),
         )
 
     return CompletedProcess(
-        cmd, returncode=proc.returncode, stdout=output, stderr=error
+        cmd,
+        returncode=proc.returncode,
+        stdout=output.getvalue() if output is not None else None,
+        stderr=error.getvalue(),
     )
 
 
@@ -102,7 +123,7 @@ async def run_async(
             cmd,
             cwd=cwd,
             env=env,
-            stdout=stdout,
+            stdout=PIPE,
             stderr=PIPE,
         )
 
@@ -113,40 +134,60 @@ async def run_async(
             *cmd,
             cwd=cwd,
             env=env,
-            stdout=stdout,
+            stdout=PIPE,
             stderr=PIPE,
         )
 
-    if stderr == STDOUT:
+    if stdout is None:
+        stdout = sys.stdout.buffer
+
+    if stderr is None:
+        stderr = sys.stderr.buffer
+    elif stderr is subprocess.STDOUT:
         stderr = stdout
-    if stderr not in (PIPE, DEVNULL):
-        stderr_copy = BytesIO()
 
-        assert not isinstance(stderr, int)
-        if stderr is None:
-            stderr = sys.stderr.buffer
+    output = BytesIO() if stdout is PIPE else None
+    error = BytesIO()
 
-        assert proc.stderr is not None
-        async for line in proc.stderr:
-            stderr.write(line)
-            stderr_copy.write(line)
+    async def process_stdout() -> None:
+        while True:
+            assert proc.stdout is not None
+            line = await proc.stdout.readline()
+            if not line:
+                break
+            if output is not None:
+                output.write(line)
+            if stdout not in (DEVNULL, PIPE):
+                assert not isinstance(stdout, int)
+                stdout.write(line)
 
-        output, _ = await proc.communicate()
-        assert not _
-        error = stderr_copy.getvalue()
-    else:
-        output, error = await proc.communicate()
+    async def process_stderr() -> None:
+        while True:
+            assert proc.stderr is not None
+            line = await proc.stderr.readline()
+            if not line:
+                break
+            error.write(line)
+            if stderr not in (DEVNULL, PIPE):
+                assert not isinstance(stderr, int)
+                stderr.write(line)
 
+    await asyncio.gather(process_stdout(), process_stderr())
+
+    await proc.wait()
     assert proc.returncode is not None
 
     if check and proc.returncode != 0:
         raise CalledProcessError(
             returncode=proc.returncode,
             cmd=cmd,
-            output=output,
-            stderr=error,
+            output=output.getvalue() if output is not None else None,
+            stderr=error.getvalue(),
         )
 
     return CompletedProcess(
-        cmd, returncode=proc.returncode, stdout=output, stderr=error
+        cmd,
+        returncode=proc.returncode,
+        stdout=output.getvalue() if output is not None else None,
+        stderr=error.getvalue(),
     )
