@@ -167,7 +167,7 @@ def _dict_of(
 
     if directive is not None:
         assert data_entry is not None
-        keyword_entry |= directive + data_entry + LineEnd().suppress()  # type: ignore [no-untyped-call]
+        keyword_entry |= directive + data_entry + LineEnd().suppress()
 
     if located:
         keyword_entry = Located(keyword_entry)
@@ -198,7 +198,7 @@ def _keyword_entry_of(
 
     if directive is not None:
         assert data_entry is not None
-        keyword_entry |= directive + data_entry + LineEnd().suppress()  # type: ignore [no-untyped-call]
+        keyword_entry |= directive + data_entry + LineEnd().suppress()
 
     if located:
         keyword_entry = Located(keyword_entry)
