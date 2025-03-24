@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import IO
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 else:
-    from typing import Mapping, Sequence
+    from typing import Callable, Mapping, Sequence
 
 CompletedProcess = subprocess.CompletedProcess
 
@@ -52,6 +52,7 @@ def run_sync(
     check: bool = True,
     stdout: int | IO[str] = DEVNULL,
     stderr: int | IO[str] = STDOUT,
+    process_stdout: Callable[[str], None] = lambda _: None,
 ) -> CompletedProcess[str]:
     if sys.version_info < (3, 8):
         cmd = [str(arg) for arg in cmd]
@@ -85,6 +86,7 @@ def run_sync(
                         selector.unregister(key.fileobj)
                         open_streams.remove(key.fileobj)  # type: ignore [arg-type]
                     elif key.fileobj is proc.stdout:
+                        process_stdout(line)
                         if output is not None:
                             output.write(line)
                         if stdout not in (DEVNULL, PIPE):
@@ -122,6 +124,7 @@ async def run_async(
     check: bool = True,
     stdout: int | IO[str] = DEVNULL,
     stderr: int | IO[str] = STDOUT,
+    process_stdout: Callable[[str], None] = lambda _: None,
 ) -> CompletedProcess[str]:
     if sys.version_info < (3, 8):
         cmd = [str(arg) for arg in cmd]
@@ -140,19 +143,20 @@ async def run_async(
     output = StringIO() if stdout is PIPE else None
     error = StringIO()
 
-    async def process_stdout() -> None:
+    async def tee_stdout() -> None:
         while True:
             assert proc.stdout is not None
             line = (await proc.stdout.readline()).decode()
             if not line:
                 break
+            process_stdout(line)
             if output is not None:
                 output.write(line)
             if stdout not in (DEVNULL, PIPE):
                 assert not isinstance(stdout, int)
                 stdout.write(line)
 
-    async def process_stderr() -> None:
+    async def tee_stderr() -> None:
         while True:
             assert proc.stderr is not None
             line = (await proc.stderr.readline()).decode()
@@ -163,7 +167,7 @@ async def run_async(
                 assert not isinstance(stderr, int)
                 stderr.write(line)
 
-    await asyncio.gather(process_stdout(), process_stderr())
+    await asyncio.gather(tee_stdout(), tee_stderr())
 
     await proc.wait()
     assert proc.returncode is not None
