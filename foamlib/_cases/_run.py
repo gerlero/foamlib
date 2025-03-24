@@ -369,8 +369,7 @@ class FoamCaseRunBase(FoamCaseBase):
                             "mpiexec",
                             "-n",
                             str(cpus),
-                            "/bin/sh",
-                            "-c",
+                            *FoamCaseRunBase._SHELL,
                             f"{cmd} -parallel",
                         ]
                     else:
