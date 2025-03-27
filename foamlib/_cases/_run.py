@@ -46,6 +46,12 @@ if TYPE_CHECKING:
 
 
 class FoamCaseRunBase(FoamCaseBase):
+    """
+    Abstract base class of `FoamCase` and `AsyncFoamCase`.
+
+    Do not use this class directly: use `FoamCase` or `AsyncFoamCase` instead.
+    """
+
     class TimeDirectory(FoamCaseBase.TimeDirectory):
         @abstractmethod
         def cell_centers(
