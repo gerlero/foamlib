@@ -261,17 +261,19 @@ class FoamCaseRunBase(FoamCaseBase):
 
         return script
 
+    @staticmethod
+    def __cmd_name(cmd: Sequence[str | os.PathLike[str]] | str) -> str:
+        if isinstance(cmd, str):
+            cmd = shlex.split(cmd)
+
+        return Path(cmd[0]).name
+
     @contextmanager
     def __output(
         self, cmd: Sequence[str | os.PathLike[str]] | str, *, log: bool
     ) -> Generator[tuple[int | IO[str], int | IO[str]], None, None]:
         if log:
-            if isinstance(cmd, str):
-                name = shlex.split(cmd)[0]
-            else:
-                name = Path(cmd[0]).name if isinstance(cmd[0], os.PathLike) else cmd[0]
-
-            with (self.path / f"log.{name}").open("a") as stdout:
+            with (self.path / f"log.{self.__cmd_name(cmd)}").open("a") as stdout:
                 yield stdout, STDOUT
         else:
             yield DEVNULL, DEVNULL
@@ -280,11 +282,6 @@ class FoamCaseRunBase(FoamCaseBase):
     def __process_stdout(
         self, cmd: Sequence[str | os.PathLike[str]] | str
     ) -> Generator[Callable[[str], None], None, None]:
-        if isinstance(cmd, str):
-            name = shlex.split(cmd)[0]
-        else:
-            name = Path(cmd[0]).name if isinstance(cmd[0], os.PathLike) else cmd[0]
-
         try:
             with self.control_dict as control_dict:
                 if control_dict["stopAt"] == "endTime":
@@ -299,7 +296,9 @@ class FoamCaseRunBase(FoamCaseBase):
             end_time = None
 
         with self.__progress as progress:
-            task = progress.add_task(f"({self.name}) Running {name}...", total=None)
+            task = progress.add_task(
+                f"({self.name}) Running {self.__cmd_name(cmd)}...", total=None
+            )
 
             def process_stdout(line: str) -> None:
                 if line.startswith("Time = "):
