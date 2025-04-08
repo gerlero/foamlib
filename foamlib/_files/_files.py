@@ -48,7 +48,7 @@ class FoamFile(
     accessed and modified, but they are not evaluated or expanded by this library.
 
     Use `FoamFile` as a mutable mapping (i.e., like a `dict`) to access and modify
-    entries. When accesing a sub-dictionary, the returned value will be a
+    entries. When accessing a sub-dictionary, the returned value will be a
     `FoamFile.SubDict` object, that allows for further access and modification of nested
     dictionaries within the `FoamFile` in a single operation.
 
