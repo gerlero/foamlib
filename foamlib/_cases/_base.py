@@ -40,7 +40,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         A time directory in an OpenFOAM case.
 
         Use to access field files in the directory (e.g. `time["U"]`). These will be
-        retrned as `FoamFieldFile` objects.
+        returned as `FoamFieldFile` objects.
 
         It also behaves as a set of `FoamFieldFile` objects (e.g. it can be
         iterated over with `for field in time: ...`).
