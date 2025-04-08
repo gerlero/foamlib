@@ -299,7 +299,7 @@ for time in case[1:]:
 
 ## 📘 API documentation
 
-For more information on how to use **famlibs**'s classes and methods, check out the [documentation](https://foamlib.readthedocs.io/).
+For more information on how to use **foamlibs**'s classes and methods, check out the [documentation](https://foamlib.readthedocs.io/).
 
 ## 🙋 Support
 
