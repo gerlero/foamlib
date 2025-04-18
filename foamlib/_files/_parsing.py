@@ -214,6 +214,8 @@ _COMMENT = Regex(r"(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*)")
 _IDENTCHARS = identchars + "$"
 _IDENTBODYCHARS = (
     printables.replace(";", "")
+    .replace("(", "")
+    .replace(")", "")
     .replace("{", "")
     .replace("}", "")
     .replace("[", "")
@@ -243,10 +245,12 @@ _TENSOR = (
     | _tensor(TensorKind.TENSOR)
 )
 _PARENTHESIZED = Forward()
-_IDENTIFIER = Combine(
-    Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()") + Opt(_PARENTHESIZED)
+_IDENTIFIER = Combine(Word(_IDENTCHARS, _IDENTBODYCHARS) + Opt(_PARENTHESIZED))
+_PARENTHESIZED <<= Combine(
+    Literal("(")
+    + (_PARENTHESIZED | Word(_IDENTBODYCHARS) + Opt(_PARENTHESIZED))
+    + Literal(")")
 )
-_PARENTHESIZED <<= Combine(Literal("(") + (_PARENTHESIZED | _IDENTIFIER) + Literal(")"))
 
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: Dimensioned(*reversed(tks.as_list()))
@@ -261,7 +265,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
     )
 )
 _DIRECTIVE = Word("#", _IDENTBODYCHARS)
-_TOKEN = dbl_quoted_string | _IDENTIFIER | _DIRECTIVE
+_TOKEN = dbl_quoted_string | _DIRECTIVE | _IDENTIFIER
 _DATA = Forward()
 _KEYWORD_ENTRY = _keyword_entry_of(_TOKEN | _list_of(_IDENTIFIER), _DATA)
 _DICT = _dict_of(_TOKEN, _DATA)
