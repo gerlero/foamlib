@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, NamedTuple, Optional, Union
 
@@ -33,8 +32,13 @@ class DimensionSet(NamedTuple):
 
 Tensor = Union[
     float,
+    "np.ndarray[tuple[int], np.dtype[np.float64]]",
+]
+
+TensorLike = Union[
     Sequence[float],
-    "np.ndarray[tuple[()] | tuple[int], np.dtype[np.float64]]",
+    "np.ndarray[tuple[()], np.dtype[np.float64]]",
+    Tensor,
 ]
 
 
@@ -71,21 +75,25 @@ class TensorKind(Enum):
         raise ValueError(msg)
 
 
-@dataclass
 class Dimensioned:
-    value: Tensor = 0
-    dimensions: DimensionSet | Sequence[float] = ()
-    name: str | None = None
-
-    def __post_init__(self) -> None:
-        if is_sequence(self.value):
-            self.value = np.asarray(self.value, dtype=float)  # type: ignore [assignment]
+    def __init__(
+        self,
+        value: TensorLike,
+        dimensions: DimensionSet | Sequence[float],
+        name: str | None = None,
+    ) -> None:
+        if is_sequence(value):
+            self.value: Tensor = np.array(value, dtype=float)  # type: ignore [assignment]
         else:
-            assert isinstance(self.value, (int, float, np.ndarray))
-            self.value = float(self.value)
+            assert isinstance(value, (int, float, np.ndarray))
+            self.value = float(value)
 
-        if not isinstance(self.dimensions, DimensionSet):
-            self.dimensions = DimensionSet(*self.dimensions)
+        if not isinstance(dimensions, DimensionSet):
+            self.dimensions = DimensionSet(*dimensions)
+        else:
+            self.dimensions = dimensions
+
+        self.name = name
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Dimensioned):
@@ -99,10 +107,17 @@ class Dimensioned:
 
 
 Field = Union[
-    Tensor,
-    Sequence[Tensor],
+    float,
     "np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]",
 ]
+
+FieldLike = Union[
+    TensorLike,
+    Sequence[TensorLike],
+    Sequence[Sequence[TensorLike]],
+    Field,
+]
+
 
 Data = Union[
     str,
@@ -123,11 +138,22 @@ Entry = Union[
 A value that can be stored in an OpenFOAM file.
 """
 
+DataLike = Union[
+    FieldLike,
+    Sequence["EntryLike"],
+    Data,
+]
+
+EntryLike = Union[
+    DataLike,
+    Mapping[str, "EntryLike"],
+]
+
 
 def is_sequence(
-    value: Entry,
+    value: EntryLike,
 ) -> TypeGuard[
-    Sequence[Entry]
+    Sequence[EntryLike]
     | np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]
 ]:
     return (isinstance(value, Sequence) and not isinstance(value, str)) or (

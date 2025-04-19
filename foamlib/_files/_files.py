@@ -23,8 +23,9 @@ from ._types import (
     Dict_,
     Dimensioned,
     DimensionSet,
-    Entry,
+    EntryLike,
     Field,
+    FieldLike,
     File,
     MutableEntry,
 )
@@ -63,7 +64,7 @@ class FoamFile(
         def __setitem__(
             self,
             keyword: str,
-            data: Entry,
+            data: EntryLike,
         ) -> None:
             self._file[(*self._keywords, keyword)] = data
 
@@ -190,7 +191,9 @@ class FoamFile(
             return FoamFile.SubDict(self, keywords)
         return deepcopy(value)
 
-    def __setitem__(self, keywords: str | tuple[str, ...] | None, data: Entry) -> None:
+    def __setitem__(
+        self, keywords: str | tuple[str, ...] | None, data: EntryLike
+    ) -> None:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -419,7 +422,7 @@ class FoamFieldFile(FoamFile):
         @value.setter
         def value(
             self,
-            value: Field,
+            value: FieldLike,
         ) -> None:
             self["value"] = value
 
@@ -466,7 +469,7 @@ class FoamFieldFile(FoamFile):
     @internal_field.setter
     def internal_field(
         self,
-        value: Field,
+        value: FieldLike,
     ) -> None:
         self["internalField"] = value
 

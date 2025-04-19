@@ -12,7 +12,15 @@ else:
 import numpy as np
 
 from ._parsing import parse_data
-from ._types import Data, Dimensioned, DimensionSet, Entry, is_sequence
+from ._types import (
+    Data,
+    DataLike,
+    Dimensioned,
+    DimensionSet,
+    Entry,
+    EntryLike,
+    is_sequence,
+)
 
 
 class Kind(Enum):
@@ -26,14 +34,14 @@ class Kind(Enum):
 
 
 @overload
-def normalize(data: Data, *, kind: Kind = Kind.DEFAULT) -> Data: ...
+def normalize(data: DataLike, *, kind: Kind = Kind.DEFAULT) -> Data: ...
 
 
 @overload
-def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry: ...
+def normalize(data: EntryLike, *, kind: Kind = Kind.DEFAULT) -> Entry: ...
 
 
-def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
+def normalize(data: EntryLike, *, kind: Kind = Kind.DEFAULT) -> Entry:
     if kind in (
         Kind.ASCII_FIELD,
         Kind.SCALAR_ASCII_FIELD,
@@ -52,12 +60,12 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
                 if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] in (3, 6, 9)):
                     return arr  # type: ignore [return-value]
 
-            return data
+            return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
 
         if isinstance(data, int):
             return float(data)
 
-        return data
+        return normalize(data)
 
     if isinstance(data, np.ndarray):
         ret = data.tolist()
@@ -96,7 +104,7 @@ def normalize(data: Entry, *, kind: Kind = Kind.DEFAULT) -> Entry:
 
 
 def dumps(
-    data: Entry,
+    data: EntryLike,
     *,
     kind: Kind = Kind.DEFAULT,
 ) -> bytes:
