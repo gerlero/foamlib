@@ -49,6 +49,12 @@ dev = [
     "sphinx_rtd_theme",
 ]
 
+[project.optional-dependencies]
+docs = [
+    "sphinx>=5,<9",
+    "sphinx_rtd_theme",
+]
+
 [project.urls]
 Homepage = "https://github.com/gerlero/foamlib"
 Repository = "https://github.com/gerlero/foamlib"
