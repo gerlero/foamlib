@@ -35,7 +35,7 @@ jobs:
         python-version-file: pyproject.toml
     - name: Check types with mypy
       run: |
-        uv run --extra typing mypy
+        uv run mypy
 
   test:
     runs-on: ubuntu-22.04
@@ -84,7 +84,7 @@ jobs:
       uses: koesterlab/setup-slurm-action@v1
     - name: Install test dependencies
       run: |
-        uv sync --extra test
+        uv sync
     - name: Test with pytest
       run: |
         uv run pytest --cov=foamlib --cov-report xml
