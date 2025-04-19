@@ -97,7 +97,7 @@ def test_write_read(tmp_path: Path) -> None:
 def test_new_field(tmp_path: Path) -> None:
     Path(tmp_path / "testField").touch()
     f = FoamFieldFile(tmp_path / "testField")
-    f.internal_field = [1, 2, 3]
+    f.internal_field = [1, 2, 3]  # type: ignore [assignment]
     field = f.internal_field
     assert isinstance(field, np.ndarray)
     assert np.array_equal(f.internal_field, [1, 2, 3])
