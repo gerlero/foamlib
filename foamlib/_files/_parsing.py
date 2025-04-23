@@ -16,6 +16,7 @@ else:
 
 import numpy as np
 from pyparsing import (
+    CaselessKeyword,
     Combine,
     Dict,
     Forward,
@@ -157,6 +158,7 @@ def _dict_of(
     data: ParserElement,
     *,
     directive: ParserElement | None = None,
+    data_entry: ParserElement | None = None,
     located: bool = False,
 ) -> ParserElement:
     dict_ = Forward()
@@ -164,7 +166,8 @@ def _dict_of(
     keyword_entry = keyword + (dict_ | (data + Literal(";").suppress()))
 
     if directive is not None:
-        keyword_entry |= directive + data + LineEnd().suppress()  # type: ignore [no-untyped-call]
+        assert data_entry is not None
+        keyword_entry |= directive + data_entry + LineEnd().suppress()
 
     if located:
         keyword_entry = Located(keyword_entry)
@@ -183,15 +186,19 @@ def _keyword_entry_of(
     data: ParserElement,
     *,
     directive: ParserElement | None = None,
+    data_entry: ParserElement | None = None,
     located: bool = False,
 ) -> ParserElement:
     keyword_entry = keyword + (
-        _dict_of(keyword, data, directive=directive, located=located)
+        _dict_of(
+            keyword, data, directive=directive, data_entry=data_entry, located=located
+        )
         | (data + Literal(";").suppress())
     )
 
     if directive is not None:
-        keyword_entry |= directive + data + LineEnd().suppress()  # type: ignore [no-untyped-call]
+        assert data_entry is not None
+        keyword_entry |= directive + data_entry + LineEnd().suppress()
 
     if located:
         keyword_entry = Located(keyword_entry)
@@ -207,6 +214,8 @@ _COMMENT = Regex(r"(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*)")
 _IDENTCHARS = identchars + "$"
 _IDENTBODYCHARS = (
     printables.replace(";", "")
+    .replace("(", "")
+    .replace(")", "")
     .replace("{", "")
     .replace("}", "")
     .replace("[", "")
@@ -235,11 +244,14 @@ _TENSOR = (
     | _tensor(TensorKind.SYMM_TENSOR)
     | _tensor(TensorKind.TENSOR)
 )
-_IDENTIFIER = Forward()
-_IDENTIFIER <<= Combine(
-    Word(_IDENTCHARS, _IDENTBODYCHARS, exclude_chars="()")
-    + Opt(Literal("(") + _IDENTIFIER + Literal(")"))
+_PARENTHESIZED = Forward()
+_IDENTIFIER = Combine(Word(_IDENTCHARS, _IDENTBODYCHARS) + Opt(_PARENTHESIZED))
+_PARENTHESIZED <<= Combine(
+    Literal("(")
+    + (_PARENTHESIZED | Word(_IDENTBODYCHARS) + Opt(_PARENTHESIZED))
+    + Literal(")")
 )
+
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: Dimensioned(*reversed(tks.as_list()))
 )
@@ -253,14 +265,23 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
     )
 )
 _DIRECTIVE = Word("#", _IDENTBODYCHARS)
-_TOKEN = dbl_quoted_string | _IDENTIFIER | _DIRECTIVE
+_TOKEN = dbl_quoted_string | _DIRECTIVE | _IDENTIFIER
 _DATA = Forward()
 _KEYWORD_ENTRY = _keyword_entry_of(_TOKEN | _list_of(_IDENTIFIER), _DATA)
 _DICT = _dict_of(_TOKEN, _DATA)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = _list_of(_LIST_ENTRY)
-_NUMBER = common.signed_integer ^ common.ieee_float
+_NUMBER = (
+    common.number
+    | CaselessKeyword("nan").set_parse_action(lambda: np.nan)
+    | (CaselessKeyword("inf") | CaselessKeyword("infinity")).set_parse_action(
+        lambda: np.inf
+    )
+    | (CaselessKeyword("-inf") | CaselessKeyword("-infinity")).set_parse_action(
+        lambda: -np.inf
+    )
+)
 _DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | _TOKEN
 
 _DATA <<= (
@@ -274,12 +295,16 @@ _DATA <<= (
 def parse_data(s: str) -> Data:
     if not s.strip():
         return ""
-    return cast(Data, _DATA.parse_string(s, parse_all=True)[0])
+    return cast("Data", _DATA.parse_string(s, parse_all=True)[0])
 
 
 _LOCATED_DICTIONARY = Group(
     _keyword_entry_of(
-        _TOKEN, Opt(_DATA, default=""), directive=_DIRECTIVE, located=True
+        _TOKEN,
+        Opt(_DATA, default=""),
+        directive=_DIRECTIVE,
+        data_entry=_DATA_ENTRY,
+        located=True,
     )
 )[...]
 _LOCATED_DATA = Group(Located(_DATA.copy().add_parse_action(lambda tks: ["", tks[0]])))
@@ -420,7 +445,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, EllipsisType]]):
             for k in keywords[:-1]:
                 v = r[k]
                 assert isinstance(v, dict)
-                r = cast(File, v)
+                r = cast("File", v)
 
             assert isinstance(r, dict)
             if keywords:

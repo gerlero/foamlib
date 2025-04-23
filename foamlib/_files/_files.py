@@ -23,8 +23,9 @@ from ._types import (
     Dict_,
     Dimensioned,
     DimensionSet,
-    Entry,
+    EntryLike,
     Field,
+    FieldLike,
     File,
     MutableEntry,
 )
@@ -40,9 +41,46 @@ class FoamFile(
     """
     An OpenFOAM data file.
 
-    Use as a mutable mapping (i.e., like a dict) to access and modify entries.
+    `FoamFile` supports most OpenFOAM data and configuration files (i.e., files with a
+    "FoamFile" header), including those with regular expressions and #-based directives.
+    Notable exceptions are FoamFiles with #codeStreams and those multiple #-directives
+    with the same name, which are currently not supported. Non-FoamFile output files are
+    also not suppored by this class. Regular expressions and #-based directives can be
+    accessed and modified, but they are not evaluated or expanded by this library.
 
-    Use as a context manager to make multiple changes to the file while saving all changes only once at the end.
+    Use `FoamFile` as a mutable mapping (i.e., like a `dict`) to access and modify
+    entries. When accessing a sub-dictionary, the returned value will be a
+    `FoamFile.SubDict` object, that allows for further access and modification of nested
+    dictionaries within the `FoamFile` in a single operation.
+
+    If the `FoamFile` does not store a dictionary, the main stored value can be accessed
+    and modified by passing `None` as the key (e.g., `file[None]`).
+
+    You can also use the `FoamFile` as a context manager (i.e., within a `with` block)
+    to make multiple changes to the file while saving any and all changes only once at
+    the end.
+
+    :param path: The path to the file. If the file does not exist, it will be created
+        when the first change is made. However, if an attempt is made to access entries
+        in a non-existent file, a `FileNotFoundError` will be raised.
+
+    Example usage: ::
+        from foamlib import FoamFile
+
+        file = FoamFile("path/to/case/system/controlDict") # Load a controlDict file
+        print(file["endTime"]) # Print the end time
+        file["writeInterval"] = 100 # Set the write interval to 100
+        file["writeFormat"] = "binary" # Set the write format to binary
+
+    or (better): ::
+        from foamlib import FoamCase
+
+        case = FoamCase("path/to/case")
+
+        with case.control_dict as file: # Load the controlDict file
+            print(file["endTime"]) # Print the end time
+            file["writeInterval"] = 100
+            file["writeFormat"] = "binary"
     """
 
     Dimensioned = Dimensioned
@@ -51,7 +89,32 @@ class FoamFile(
     class SubDict(
         MutableMapping[str, MutableEntry],
     ):
-        """An OpenFOAM dictionary within a file as a mutable mapping."""
+        """
+        An OpenFOAM sub-dictionary within a file.
+
+        `FoamFile.SubDict` is a mutable mapping that allows for accessing and modifying
+        nested dictionaries within a `FoamFile` in a single operation. It behaves like a
+        `dict` and can be used to access and modify entries in the sub-dictionary.
+
+        To obtain a `FoamFile.SubDict` object, access a sub-dictionary in a `FoamFile`
+        object (e.g., `file["subDict"]`).
+
+        Example usage: ::
+            from foamlib import FoamFile
+
+            file = FoamFile("path/to/case/system/fvSchemes") # Load an fvSchemes file
+            print(file["ddtSchemes"]["default"]) # Print the default ddt scheme
+            file["ddtSchemes"]["default"] = "Euler" # Set the default ddt scheme
+
+        or (better): ::
+            from foamlib import FoamCase
+
+            case = FoamCase("path/to/case")
+
+            with case.fv_schemes as file: # Load the fvSchemes file
+                print(file["ddtSchemes"]["default"])
+                file["ddtSchemes"]["default"] = "Euler"
+        """
 
         def __init__(self, _file: FoamFile, _keywords: tuple[str, ...]) -> None:
             self._file = _file
@@ -63,7 +126,7 @@ class FoamFile(
         def __setitem__(
             self,
             keyword: str,
-            data: Entry,
+            data: EntryLike,
         ) -> None:
             self._file[(*self._keywords, keyword)] = data
 
@@ -93,16 +156,16 @@ class FoamFile(
             return f"{type(self).__qualname__}('{self._file}', {self._keywords})"
 
         def as_dict(self) -> Dict_:
-            """Return a nested dict representation of the dictionary."""
+            """Return a nested dict representation of the sub-dictionary."""
             ret = self._file.as_dict(include_header=True)
 
             for k in self._keywords:
                 assert isinstance(ret, dict)
                 v = ret[k]
                 assert isinstance(v, dict)
-                ret = cast(File, v)
+                ret = cast("File", v)
 
-            return cast(Dict_, ret)
+            return cast("Dict_", ret)
 
     @property
     def version(self) -> float:
@@ -127,7 +190,7 @@ class FoamFile(
         if ret not in ("ascii", "binary"):
             msg = "format is not 'ascii' or 'binary'"
             raise ValueError(msg)
-        return cast(Literal["ascii", "binary"], ret)
+        return cast("Literal['ascii', 'binary']", ret)
 
     @format.setter
     def format(self, value: Literal["ascii", "binary"]) -> None:
@@ -190,7 +253,9 @@ class FoamFile(
             return FoamFile.SubDict(self, keywords)
         return deepcopy(value)
 
-    def __setitem__(self, keywords: str | tuple[str, ...] | None, data: Entry) -> None:
+    def __setitem__(
+        self, keywords: str | tuple[str, ...] | None, data: EntryLike
+    ) -> None:
         if not keywords:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -379,15 +444,44 @@ class FoamFile(
 
 
 class FoamFieldFile(FoamFile):
-    """An OpenFOAM dictionary file representing a field as a mutable mapping."""
+    """
+    Subclass of `FoamFile` for representing OpenFOAM field files specifically.
+
+    The difference between `FoamFieldFile` and `FoamFile` is that `FoamFieldFile` has
+    the additional properties `dimensions`, `internal_field`, and `boundary_field` that
+    are commonly found in OpenFOAM field files. Note that these are only a shorthand for
+    accessing the corresponding entries in the file.
+
+    See `FoamFile` for more information on how to read and edit OpenFOAM files.
+
+    :param path: The path to the file. If the file does not exist, it will be created
+        when the first change is made. However, if an attempt is made to access entries
+        in a non-existent file, a `FileNotFoundError` will be raised.
+
+    Example usage: ::
+        from foamlib import FoamFieldFile
+
+        field = FoamFieldFile("path/to/case/0/U") # Load a field
+        print(field.dimensions) # Print the dimensions
+        print(field.boundary_field) # Print the boundary field
+        field.internal_field = [0, 0, 0] # Set the internal field
+
+    or (better): ::
+        from foamlib import FoamCase
+
+        case = FoamCase("path/to/case")
+
+        with case[0]["U"] as field: # Load a field
+            print(field.dimensions)
+            print(field.boundary_field)
+            field.internal_field = [0, 0, 0]
+    """
 
     class BoundariesSubDict(FoamFile.SubDict):
-        def __getitem__(self, keyword: str) -> FoamFieldFile.BoundarySubDict:
+        def __getitem__(self, keyword: str) -> FoamFieldFile.BoundarySubDict | Data:
             value = super().__getitem__(keyword)
-            if not isinstance(value, FoamFieldFile.BoundarySubDict):
-                assert not isinstance(value, FoamFile.SubDict)
-                msg = f"boundary {keyword} is not a dictionary"
-                raise TypeError(msg)
+            if isinstance(value, FoamFieldFile.SubDict):
+                assert isinstance(value, FoamFieldFile.BoundarySubDict)
             return value
 
     class BoundarySubDict(FoamFile.SubDict):
@@ -412,14 +506,14 @@ class FoamFieldFile(FoamFile):
         ) -> Field:
             """Alias of `self["value"]`."""
             return cast(
-                Field,
+                "Field",
                 self["value"],
             )
 
         @value.setter
         def value(
             self,
-            value: Field,
+            value: FieldLike,
         ) -> None:
             self["value"] = value
 
@@ -461,12 +555,12 @@ class FoamFieldFile(FoamFile):
         self,
     ) -> Field:
         """Alias of `self["internalField"]`."""
-        return cast(Field, self["internalField"])
+        return cast("Field", self["internalField"])
 
     @internal_field.setter
     def internal_field(
         self,
-        value: Field,
+        value: FieldLike,
     ) -> None:
         self["internalField"] = value
 

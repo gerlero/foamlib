@@ -10,6 +10,7 @@ def test_parse_value() -> None:
     assert Parsed(b"yes")[()] is True
     assert Parsed(b"no")[()] is False
     assert Parsed(b"word")[()] == "word"
+    assert Parsed(b"inference")[()] == "inference"
     assert Parsed(b"word word")[()] == ("word", "word")
     assert Parsed(b'"a string"')[()] == '"a string"'
     assert Parsed(b"uniform 1")[()] == 1
@@ -92,7 +93,9 @@ def test_parse_value() -> None:
     assert Parsed(b"({a b; c d;} {e g;})")[()] == [{"a": "b", "c": "d"}, {"e": "g"}]
     assert Parsed(b"(water oil mercury air)")[()] == ["water", "oil", "mercury", "air"]
     assert Parsed(b"div(phi,U)")[()] == "div(phi,U)"
+    assert Parsed(b"U.component(1)")[()] == "U.component(1)"
     assert Parsed(b"div(nuEff*dev(T(grad(U))))")[()] == "div(nuEff*dev(T(grad(U))))"
+    assert Parsed(b"div((nuEff*dev(T(grad(U)))))")[()] == "div((nuEff*dev(T(grad(U)))))"
     assert Parsed(b"((air and water) { type constant; sigma 0.07; })")[()] == [
         (["air", "and", "water"], {"type": "constant", "sigma": 0.07})
     ]
@@ -103,6 +106,8 @@ def test_parse_value() -> None:
 def test_parse_directive() -> None:
     assert Parsed(b'#include "filename"')[("#include",)] == '"filename"'
     assert (
-        Parsed(b"functions\n{\n#includeFunc funcName\n}")[("functions", "#includeFunc")]
+        Parsed(b"functions\n{\n#includeFunc funcName\nsubdict{}}")[
+            ("functions", "#includeFunc")
+        ]
         == "funcName"
     )

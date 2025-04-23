@@ -10,13 +10,16 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any
 
+from rich.progress import Progress
+
+from ._util import SingletonContextManager
+
 if sys.version_info >= (3, 9):
     from collections.abc import (
         Callable,
         Collection,
         Coroutine,
         Generator,
-        Mapping,
         Sequence,
     )
     from collections.abc import Set as AbstractSet
@@ -27,7 +30,6 @@ else:
         Collection,
         Coroutine,
         Generator,
-        Mapping,
         Sequence,
     )
 
@@ -44,6 +46,12 @@ if TYPE_CHECKING:
 
 
 class FoamCaseRunBase(FoamCaseBase):
+    """
+    Abstract base class of `FoamCase` and `AsyncFoamCase`.
+
+    Do not use this class directly: use `FoamCase` or `AsyncFoamCase` instead.
+    """
+
     class TimeDirectory(FoamCaseBase.TimeDirectory):
         @abstractmethod
         def cell_centers(
@@ -67,6 +75,10 @@ class FoamCaseRunBase(FoamCaseBase):
                 )
 
             return ret
+
+    _SHELL = ("bash", "-c")
+
+    __progress = SingletonContextManager(Progress)
 
     def __delitem__(self, key: int | float | str) -> None:
         shutil.rmtree(self[key].path)
@@ -255,37 +267,58 @@ class FoamCaseRunBase(FoamCaseBase):
 
         return script
 
-    def __env(self, *, shell: bool) -> Mapping[str, str] | None:
-        sip_workaround = os.environ.get(
-            "FOAM_LD_LIBRARY_PATH", ""
-        ) and not os.environ.get("DYLD_LIBRARY_PATH", "")
+    @staticmethod
+    def __cmd_name(cmd: Sequence[str | os.PathLike[str]] | str) -> str:
+        if isinstance(cmd, str):
+            cmd = shlex.split(cmd)
 
-        if not shell or sip_workaround:
-            env = os.environ.copy()
-
-            if not shell:
-                env["PWD"] = str(self.path)
-
-            if sip_workaround:
-                env["DYLD_LIBRARY_PATH"] = env["FOAM_LD_LIBRARY_PATH"]
-
-            return env
-        return None
+        return Path(cmd[0]).name
 
     @contextmanager
     def __output(
         self, cmd: Sequence[str | os.PathLike[str]] | str, *, log: bool
-    ) -> Generator[tuple[int | IO[bytes], int | IO[bytes]], None, None]:
+    ) -> Generator[tuple[int | IO[str], int | IO[str]], None, None]:
         if log:
-            if isinstance(cmd, str):
-                name = shlex.split(cmd)[0]
-            else:
-                name = Path(cmd[0]).name if isinstance(cmd[0], os.PathLike) else cmd[0]
-
-            with (self.path / f"log.{name}").open("ab") as stdout:
+            with (self.path / f"log.{self.__cmd_name(cmd)}").open("a") as stdout:
                 yield stdout, STDOUT
         else:
             yield DEVNULL, DEVNULL
+
+    @contextmanager
+    def __process_stdout(
+        self, cmd: Sequence[str | os.PathLike[str]] | str
+    ) -> Generator[Callable[[str], None], None, None]:
+        try:
+            with self.control_dict as control_dict:
+                if control_dict["stopAt"] == "endTime":
+                    control_dict_end_time = control_dict["endTime"]
+                    if isinstance(control_dict_end_time, (int, float)):
+                        end_time = control_dict_end_time
+                    else:
+                        end_time = None
+                else:
+                    end_time = None
+        except (KeyError, FileNotFoundError):
+            end_time = None
+
+        with self.__progress as progress:
+            task = progress.add_task(
+                f"({self.name}) Running {self.__cmd_name(cmd)}...", total=None
+            )
+
+            def process_stdout(line: str) -> None:
+                if line.startswith("Time = "):
+                    try:
+                        time = float(line.split()[2])
+                    except ValueError:
+                        progress.update(task)
+                    else:
+                        progress.update(task, completed=time, total=end_time)
+                else:
+                    progress.update(task)
+
+            yield process_stdout
+            progress.update(task, completed=1, total=1)
 
     def __mkrundir(self) -> Path:
         d = Path(os.environ["FOAM_RUN"], "foamlib")
@@ -379,15 +412,16 @@ class FoamCaseRunBase(FoamCaseBase):
                 if cpus is None:
                     cpus = 1
 
-            with self.__output(cmd, log=log) as (stdout, stderr):
+            with self.__output(cmd, log=log) as (stdout, stderr), self.__process_stdout(
+                cmd
+            ) as process_stdout:
                 if parallel:
                     if isinstance(cmd, str):
                         cmd = [
                             "mpiexec",
                             "-n",
                             str(cpus),
-                            "/bin/sh",
-                            "-c",
+                            *FoamCaseRunBase._SHELL,
                             f"{cmd} -parallel",
                         ]
                     else:
@@ -396,11 +430,11 @@ class FoamCaseRunBase(FoamCaseBase):
                 yield self._run(
                     cmd,
                     cpus=cpus,
+                    case=self,
                     check=check,
-                    cwd=self.path,
-                    env=self.__env(shell=isinstance(cmd, str)),
                     stdout=stdout,
                     stderr=stderr,
+                    process_stdout=process_stdout,
                     **kwargs,
                 )
 

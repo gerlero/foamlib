@@ -33,8 +33,21 @@ class FoamCase(FoamCaseRunBase):
     Provides methods for running and cleaning cases, as well as accessing files.
 
     Access the time directories of the case as a sequence, e.g. `case[0]` or `case[-1]`.
+    These will return `FoamCase.TimeDirectory` objects.
 
-    :param path: The path to the case directory.
+    :param path: The path to the case directory. Defaults to the current working
+        directory.
+
+    Example usage: ::
+
+        from foamlib import FoamCase
+
+        case = FoamCase("path/to/case") # Load an OpenFOAM case
+        case[0]["U"].internal_field = [0, 0, 0] # Set the initial velocity field to zero
+        case.run() # Run the case
+        for time in case: # Iterate over the time directories
+            print(time.time) # Print the time
+            print(time["U"].internal_field) # Print the velocity field
     """
 
     class TimeDirectory(FoamCaseRunBase.TimeDirectory):
@@ -43,7 +56,12 @@ class FoamCase(FoamCaseRunBase):
             return FoamCase(self.path.parent)
 
         def cell_centers(self) -> FoamFieldFile:
-            """Write and return the cell centers."""
+            """
+            Write and return the cell centers.
+
+            Currently only works for reconstructed cases (decomposed cases will need to
+            be reconstructed first).
+            """
             calls = ValuedGenerator(self._cell_centers_calls())
 
             for _ in calls:
@@ -58,6 +76,9 @@ class FoamCase(FoamCaseRunBase):
         cpus: int,
         **kwargs: Any,
     ) -> None:
+        if isinstance(cmd, str):
+            cmd = [*FoamCase._SHELL, cmd]
+
         run_sync(cmd, **kwargs)
 
     @staticmethod
@@ -104,7 +125,20 @@ class FoamCase(FoamCaseRunBase):
         """
         Clean this case.
 
-        :param check: If True, raise a CalledProcessError if the clean script returns a non-zero exit code.
+        If a `clean` or `Allclean` script is present in the case directory, it will be invoked.
+        Otherwise, the case directory will be cleaned using these rules:
+
+        - All time directories except `0` will be deleted.
+        - The `0` time directory will be deleted if `0.orig` exists.
+        - `processor*` directories will be deleted if a `system/decomposeParDict` file is present.
+        - `constant/polyMesh` will be deleted if a `system/blockMeshDict` file is present.
+        - All `log.*` files will be deleted.
+
+        If this behavior is not appropriate for a case, it is recommended to write a custom
+        `clean` script.
+
+        :param check: If True, raise a `CalledProcessError` if the clean script returns a
+            non-zero exit code.
         """
         for _ in self._clean_calls(check=check):
             pass
@@ -125,11 +159,35 @@ class FoamCase(FoamCaseRunBase):
         """
         Run this case, or a specified command in the context of this case.
 
-        :param cmd: The command to run. If None, run the case. If a sequence, the first element is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
-        :param parallel: If True, run in parallel using MPI. If None, autodetect whether to run in parallel.
-        :param cpus: The number of CPUs to use. If None, autodetect according to the case.
-        :param check: If True, raise a CalledProcessError if any command returns a non-zero exit code.
-        :param log: If True, log the command output to a file.
+        If `cmd` is given, this method will run the given command in the context of the case.
+
+        If `cmd` is `None`, a series of heuristic rules will be used to run the case. This works as
+        follows:
+
+        - If a `run`, `Allrun` or `Allrun-parallel` script is present in the case directory,
+        it will be invoked. If both `run` and `Allrun` are present, `Allrun` will be used. If
+        both `Allrun` and `Allrun-parallel` are present and `parallel` is `None`, an error will
+        be raised.
+        - If no run script is present but an `Allrun.pre` script exists, it will be invoked.
+        - Otherwise, if a `system/blockMeshDict` file is present, the method will call
+        `self.block_mesh()`.
+        - Then, if a `0.orig` directory is present, it will call `self.restore_0_dir()`.
+        - Then, if the case is to be run in parallel (see the `parallel` option) and no
+        `processor*` directories exist but a`system/decomposeParDict` file is present, it will
+        call `self.decompose_par()`.
+        - Then, it will run the case using the application specified in the `controlDict` file.
+
+        If this behavior is not appropriate for a case, it is recommended to write a custom
+        `run`, `Allrun`, `Allrun-parallel` or `Allrun.pre` script.
+
+        :param cmd: The command to run. If `None`, run the case. If a sequence, the first element
+            is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
+        :param parallel: If `True`, run in parallel using MPI. If None, autodetect whether to run
+            in parallel.
+        :param cpus: The number of CPUs to use. If `None`, autodetect from to the case.
+        :param check: If `True`, raise a `CalledProcessError` if any command returns a non-zero
+            exit code.
+        :param log: If `True`, log the command output to `log.*` files in the case directory.
         """
         for _ in self._run_calls(
             cmd=cmd, parallel=parallel, cpus=cpus, check=check, log=log
@@ -160,9 +218,21 @@ class FoamCase(FoamCaseRunBase):
         """
         Make a copy of this case.
 
-        Use as a context manager to automatically delete the copy when done.
+        If used as a context manager (i.e., within a `with` block) the copy will be deleted
+        automatically when exiting the block.
 
-        :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
+        :param dst: The destination path. If `None`, clone to `$FOAM_RUN/foamlib`.
+
+        :return: The copy of the case.
+
+        Example usage: ::
+            import os
+            from pathlib import Path
+            from foamlib import FoamCase
+
+            pitz_tutorial = FoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily")
+
+            my_pitz = pitz_tutorial.copy("myPitz")
         """
         calls = ValuedGenerator(self._copy_calls(dst))
 
@@ -175,9 +245,24 @@ class FoamCase(FoamCaseRunBase):
         """
         Clone this case (make a clean copy).
 
-        Use as a context manager to automatically delete the clone when done.
+        This is equivalent to running `self.copy().clean()`, but it can be more efficient in cases
+        that do not contain custom clean scripts.
 
-        :param dst: The destination path. If None, clone to `$FOAM_RUN/foamlib`.
+        If used as a context manager (i.e., within a `with` block) the cloned copy will be deleted
+        automatically when exiting the block.
+
+        :param dst: The destination path. If `None`, clone to `$FOAM_RUN/foamlib`.
+
+        :return: The clone of the case.
+
+        Example usage: ::
+            import os
+            from pathlib import Path
+            from foamlib import FoamCase
+
+            pitz_tutorial = FoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily")
+
+            my_pitz = pitz_tutorial.clone("myPitz")
         """
         calls = ValuedGenerator(self._clone_calls(dst))
 

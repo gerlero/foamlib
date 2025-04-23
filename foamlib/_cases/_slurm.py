@@ -17,7 +17,16 @@ if TYPE_CHECKING:
 
 
 class AsyncSlurmFoamCase(AsyncFoamCase):
-    """An asynchronous OpenFOAM case that launches jobs on a Slurm cluster."""
+    """
+    An asynchronous OpenFOAM case that launches jobs on a Slurm cluster.
+
+    `AsyncSlurmFoamCase` is a subclass of `AsyncFoamCase`. It provides the same interface,
+    as the latter, except that it will launch jobs on a Slurm cluster (using `salloc` and
+    `srun`) on the user's behalf when running a case or command.
+
+    :param path: The path to the case directory. Defaults to the current working
+        directory.
+    """
 
     @staticmethod
     async def _run(
@@ -31,10 +40,10 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
             await AsyncFoamCase._run(cmd, cpus=cpus, **kwargs)
             return
 
-        if cpus >= 1:
-            if isinstance(cmd, str):
-                cmd = ["/bin/sh", "-c", cmd]
+        if isinstance(cmd, str):
+            cmd = [*AsyncSlurmFoamCase._SHELL, cmd]
 
+        if cpus >= 1:
             if cpus == 1:
                 cmd = ["srun", *cmd]
 

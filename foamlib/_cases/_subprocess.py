@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import selectors
 import subprocess
 import sys
-from io import BytesIO
-from typing import IO, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    import os
+from io import StringIO
+from pathlib import Path
+from typing import IO
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 else:
-    from typing import Mapping, Sequence
+    from typing import Callable, Mapping, Sequence
 
 CompletedProcess = subprocess.CompletedProcess
 
@@ -32,46 +32,72 @@ PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
 
 
+def _env(case: os.PathLike[str]) -> Mapping[str, str]:
+    env = os.environ.copy()
+
+    env["PWD"] = str(Path(case))
+
+    if os.environ.get("FOAM_LD_LIBRARY_PATH", "") and not os.environ.get(
+        "DYLD_LIBRARY_PATH", ""
+    ):
+        env["DYLD_LIBRARY_PATH"] = env["FOAM_LD_LIBRARY_PATH"]
+
+    return env
+
+
 def run_sync(
-    cmd: Sequence[str | os.PathLike[str]] | str,
+    cmd: Sequence[str | os.PathLike[str]],
     *,
+    case: os.PathLike[str],
     check: bool = True,
-    cwd: os.PathLike[str] | None = None,
-    env: Mapping[str, str] | None = None,
-    stdout: int | IO[bytes] | None = None,
-    stderr: int | IO[bytes] | None = None,
-) -> CompletedProcess[bytes]:
-    if not isinstance(cmd, str) and sys.version_info < (3, 8):
+    stdout: int | IO[str] = DEVNULL,
+    stderr: int | IO[str] = STDOUT,
+    process_stdout: Callable[[str], None] = lambda _: None,
+) -> CompletedProcess[str]:
+    if sys.version_info < (3, 8):
         cmd = [str(arg) for arg in cmd]
 
-    proc = subprocess.Popen(
+    with subprocess.Popen(
         cmd,
-        cwd=cwd,
-        env=env,
-        stdout=stdout,
+        cwd=case,
+        env=_env(case),
+        stdout=PIPE,
         stderr=PIPE,
-        shell=isinstance(cmd, str),
-    )
-
-    if stderr == STDOUT:
-        stderr = stdout
-    if stderr not in (PIPE, DEVNULL):
-        stderr_copy = BytesIO()
-
-        assert not isinstance(stderr, int)
-        if stderr is None:
-            stderr = sys.stderr.buffer
-
+        text=True,
+    ) as proc:
+        assert proc.stdout is not None
         assert proc.stderr is not None
-        for line in proc.stderr:
-            stderr.write(line)
-            stderr_copy.write(line)
 
-        output, _ = proc.communicate()
-        assert not _
-        error = stderr_copy.getvalue()
-    else:
-        output, error = proc.communicate()
+        output = StringIO() if stdout is PIPE else None
+        error = StringIO()
+
+        if stderr is STDOUT:
+            stderr = stdout
+
+        with selectors.DefaultSelector() as selector:
+            selector.register(proc.stdout, selectors.EVENT_READ)
+            selector.register(proc.stderr, selectors.EVENT_READ)
+            open_streams = {proc.stdout, proc.stderr}
+            while open_streams:
+                for key, _ in selector.select():
+                    assert key.fileobj in open_streams
+                    line = key.fileobj.readline()  # type: ignore [union-attr]
+                    if not line:
+                        selector.unregister(key.fileobj)
+                        open_streams.remove(key.fileobj)  # type: ignore [arg-type]
+                    elif key.fileobj is proc.stdout:
+                        process_stdout(line)
+                        if output is not None:
+                            output.write(line)
+                        if stdout not in (DEVNULL, PIPE):
+                            assert not isinstance(stdout, int)
+                            stdout.write(line)
+                    else:
+                        assert key.fileobj is proc.stderr
+                        error.write(line)
+                        if stderr not in (DEVNULL, PIPE):
+                            assert not isinstance(stderr, int)
+                            stderr.write(line)
 
     assert proc.returncode is not None
 
@@ -79,74 +105,84 @@ def run_sync(
         raise CalledProcessError(
             returncode=proc.returncode,
             cmd=cmd,
-            output=output,
-            stderr=error,
+            output=output.getvalue() if output is not None else None,
+            stderr=error.getvalue(),
         )
 
     return CompletedProcess(
-        cmd, returncode=proc.returncode, stdout=output, stderr=error
+        cmd,
+        returncode=proc.returncode,
+        stdout=output.getvalue() if output is not None else None,
+        stderr=error.getvalue(),
     )
 
 
 async def run_async(
-    cmd: Sequence[str | os.PathLike[str]] | str,
+    cmd: Sequence[str | os.PathLike[str]],
     *,
+    case: os.PathLike[str],
     check: bool = True,
-    cwd: os.PathLike[str] | None = None,
-    env: Mapping[str, str] | None = None,
-    stdout: int | IO[bytes] | None = None,
-    stderr: int | IO[bytes] | None = None,
-) -> CompletedProcess[bytes]:
-    if isinstance(cmd, str):
-        proc = await asyncio.create_subprocess_shell(
-            cmd,
-            cwd=cwd,
-            env=env,
-            stdout=stdout,
-            stderr=PIPE,
-        )
+    stdout: int | IO[str] = DEVNULL,
+    stderr: int | IO[str] = STDOUT,
+    process_stdout: Callable[[str], None] = lambda _: None,
+) -> CompletedProcess[str]:
+    if sys.version_info < (3, 8):
+        cmd = [str(arg) for arg in cmd]
 
-    else:
-        if sys.version_info < (3, 8):
-            cmd = [str(arg) for arg in cmd]
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            cwd=cwd,
-            env=env,
-            stdout=stdout,
-            stderr=PIPE,
-        )
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        cwd=case,
+        env=_env(case),
+        stdout=PIPE,
+        stderr=PIPE,
+    )
 
-    if stderr == STDOUT:
+    if stderr is STDOUT:
         stderr = stdout
-    if stderr not in (PIPE, DEVNULL):
-        stderr_copy = BytesIO()
 
-        assert not isinstance(stderr, int)
-        if stderr is None:
-            stderr = sys.stderr.buffer
+    output = StringIO() if stdout is PIPE else None
+    error = StringIO()
 
-        assert proc.stderr is not None
-        async for line in proc.stderr:
-            stderr.write(line)
-            stderr_copy.write(line)
+    async def tee_stdout() -> None:
+        while True:
+            assert proc.stdout is not None
+            line = (await proc.stdout.readline()).decode()
+            if not line:
+                break
+            process_stdout(line)
+            if output is not None:
+                output.write(line)
+            if stdout not in (DEVNULL, PIPE):
+                assert not isinstance(stdout, int)
+                stdout.write(line)
 
-        output, _ = await proc.communicate()
-        assert not _
-        error = stderr_copy.getvalue()
-    else:
-        output, error = await proc.communicate()
+    async def tee_stderr() -> None:
+        while True:
+            assert proc.stderr is not None
+            line = (await proc.stderr.readline()).decode()
+            if not line:
+                break
+            error.write(line)
+            if stderr not in (DEVNULL, PIPE):
+                assert not isinstance(stderr, int)
+                stderr.write(line)
 
+    await asyncio.gather(tee_stdout(), tee_stderr())
+
+    await proc.wait()
     assert proc.returncode is not None
 
     if check and proc.returncode != 0:
         raise CalledProcessError(
             returncode=proc.returncode,
             cmd=cmd,
-            output=output,
-            stderr=error,
+            output=output.getvalue() if output is not None else None,
+            stderr=error.getvalue(),
         )
 
     return CompletedProcess(
-        cmd, returncode=proc.returncode, stdout=output, stderr=error
+        cmd,
+        returncode=proc.returncode,
+        stdout=output.getvalue() if output is not None else None,
+        stderr=error.getvalue(),
     )
