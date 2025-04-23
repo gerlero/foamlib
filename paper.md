@@ -36,7 +36,7 @@ bibliography: paper.bib
 
 Dealing with OpenFOAM simulations from Python can be challenging, as (i) OpenFOAM uses its own non-standard file format that is not trivial to parse, and (ii) actually running OpenFOAM cases programmatically can require substantial boilerplate code for determining the correct commands to use, and then invoking said commands while accounting for other relevant considerations such as avoiding oversubscription of CPU resources when executing multiple cases at the same time. `foamlib` aims to address these challenges by providing a modern Python interface for interacting with OpenFOAM cases and files. By abstracting away the details of OpenFOAM's file formats, case structures, and recipes for execution, `foamlib` makes it easier to create Python-based workflows that involve running OpenFOAM simulations, as well as their pre- and post-processing steps. The ultimate goal of `foamlib` is that code for common OpenFOAM workflows—such as running parallel or HPC-based optimization loops—can be easily written in a concise, readable, and composable manner.
 
-The closest existing software to `foamlib` is PyFoam [@pyfoam], which is an established package that provides an alternative approach for working with OpenFOAM from Python. We believe that `foamlib` offers several advantages over it; notably including compatibility with current versions of Python, transparent support for fields stored in binary format, a more Pythonic fully type-hinted API with PEP 8–compliant naming, as well as support for other modern Python features such as asynchronous operations.
+The closest existing software to `foamlib` is PyFoam [@pyfoam], which is an established package that provides an alternative approach for working with OpenFOAM from Python. We believe that `foamlib` offers several advantages over it; notably including compatibility with current versions of Python, transparent support for fields stored in binary format, a more Pythonic fully type-hinted API with PEP 8–compliant naming, as well as support for other modern Python features such as asynchronous operations. We would also like to mention here other Python packages with similar functionality—most notably including the ability to parse OpenFOAM output files—: `fluidfoam` [@fluidfoam], `fluidsimfoam` [@fluidsimfoam] and `Ofpp` [@ofpp].
 
 
 # Features
@@ -46,6 +46,10 @@ The closest existing software to `foamlib` is PyFoam [@pyfoam], which is an esta
 `foamlib` is published on PyPI and conda-forge, meaning that it can be easily installed using either `pip` or `conda`. The only pre-requisite is having an installation of Python 3.7 and later–with 3.7 being chosen due to the fact that many high-performance computing (HPC) environments do not provide more up-to-date Python versions. However, in contrast with PyFoam which is not currently compatible with Python releases newer than 3.11, `foamlib` works and is tested with all supported Python versions up to the current Python 3.13.
 
 Besides the recommended packaged installs, official Docker images are also made available (with variants with or without OpenFOAM provided).
+
+### Rationale for building a standalone library
+
+`foamlib` is designed to be a standalone library that can be used independently of OpenFOAM itself. Notably, it does not expose nor use the OpenFOAM C++ API itself. This allows `foamlib` to avoid any kind of dependence on any version or distribution of OpenFOAM, which is especially relevant considering that OpenFOAM is available in two major, incrementally diverging distributions. This design choice also allows for the development of workflows that involve OpenFOAM simulations to be performed on a different system than the one used to run the simulations. The major disadvantage of this approach is that `foamlib` needs to maintain its own implementation of an OpenFOAM file parser. However, this is mitigated by the fact that OpenFOAM's file formats are not expected to change frequently, and that `foamlib`'s parser is designed to be flexible and easily extensible.
 
 ### OpenFOAM distribution support
 
@@ -57,7 +61,7 @@ Besides the recommended packaged installs, official Docker images are also made 
 
 ### `FoamCaseBase` class
 
-The `FoamCaseBase` class is the base class for all OpenFOAM case manipulation classes in `foamlib`. It takes the path to an OpenFOAM case on construction, and provides methods for inspecting and manipulating the case structure, whether before, during or after running the case. `FoamCaseBase` behaves as a sequence of `FoamCaseBase.TimeDirectory` objects, each representing a time directory in the case. `FoamCaseBase.TimeDirectory` objects themselves are mapping objects that provide access to the field files present in each time directory (as `FoamFieldFile`s—read below for information on file manipulation).
+The `FoamCaseBase` class is the base class for all OpenFOAM case manipulation classes in `foamlib`. It takes the path to an OpenFOAM case on construction, and provides methods for inspecting and manipulating the case structure, whether before, during or after running the case. `FoamCaseBase` behaves as a sequence of `FoamCaseBase.TimeDirectory` objects, each representing a time directory in the case. `FoamCaseBase.TimeDirectory` objects themselves are mapping objects that provide access to the field files present in each time directory (as `FoamFieldFile`s—read below for information on file manipulation). Note, as of now, even in the case of a decomposed case, the `TimeDirectory` object will iterate over the reconstructed time directories.
 
 ### `FoamCase` class
 
@@ -99,7 +103,7 @@ Besides its obvious use to orchestrate parallel optimization loops, `AsyncFoamCa
 
 ### `FoamFile` class
 
-The `FoamFile` class offers high-level facilities for reading and writing OpenFOAM files, providing an interface similar to that of a Python `dict`. `FoamFile` fully understands OpenFOAM's file formats, and is able to edit file contents in place without disrupting formatting and comments. All types of OpenFOAM files are supported, meaning that `FoamFile` can be used for both and pre- and post-processing tasks.
+The `FoamFile` class offers high-level facilities for reading and writing OpenFOAM files, providing an interface similar to that of a Python `dict`. `FoamFile` understands OpenFOAM's common input/output file formats, and is able to edit file contents in place without disrupting formatting and comments. Most types of OpenFOAM "FoamFile" files are supported, meaning that `FoamFile` can be used for both and pre- and post-processing tasks.
 
 OpenFOAM data types stored in files are mapped to built-in Python or NumPy [@numpy] types as much as possible, making it easy to work with OpenFOAM data in Python. \autoref{datatypes} shows the mapping of OpenFOAM data types to Python data types with `foamlib`. Also, disambiguation between Python data types that may represent different OpenFOAM data types (e.g. a scalar value and a uniform scalar field) is resolved by `foamlib` at the time of writing by considering their contextual location within the file. The major exception to this preference for built-ins is posed by the `FoamFile.SubDict` class, which is returned for sub-dictionaries contained in `FoamFile`s, and allows for one-step modification of entries in nested dictionary structures—as is commonly required when configuring OpenFOAM cases.
 
@@ -122,7 +126,7 @@ Finally, we note that all OpenFOAM file formats are transparently supported by `
 | list              | `list`                           | `Sequence`                                       |
 | dictionary        | `FoamFile.SubDict` \| `dict`     | `Mapping`                                        |
 | dictionary entry  | `tuple`                          |                                                  |
-| uniform field     | `float` \| `np.ndarray`          | `Sequence[float]`                                |
+| uniform field     | `float` \| `numpy.ndarray`       | `Sequence[float]`                                |
 | non-uniform field | `numpy.ndarray`                  | `Sequence[float]` \| `Sequence[Sequence[float]]` |
 | dimension set     | `FoamFile.DimensionSet`          | `Sequence[float]` \| `numpy.ndarray`             |
 | dimensioned       | `FoamFile.Dimensioned`           |                                                  |
@@ -146,7 +150,7 @@ Examples of `foamlib` usage are provided in the [README file](https://github.com
 
 `foamlib` contains a full parser for OpenFOAM files, which is able to understand and write to the different types of files used by OpenFOAM. The parser is implemented using the `pyparsing` [@pyparsing] library, which provides a powerful and flexible way to define parsing grammars.
 
-A special case parser is internally used for non-uniform OpenFOAM fields, which can commonly contain very large amounts of data in either ASCII or binary formats. The specialized parser uses the regular expressions to extract these data, which results in greatly improved parsing performance—a more than 25x speedup versus PyFoam—, while not sacrificing any of the generality of the parsing grammar. For extra efficiency and convenience, these fields map to NumPy arrays in Python.
+A special case parser is internally used for non-uniform OpenFOAM fields, which can commonly contain very large amounts of data in either ASCII or binary formats. The specialized parser uses the regular expressions to extract these data, which results in greatly improved parsing performance—a more than 25x speedup versus PyFoam, as measured on a MacBook Air (Apple Inc., Cupertino, Calif., USA) with an M1 processor and 8 GB of system RAM—, while not sacrificing any of the generality of the parsing grammar. For extra efficiency and convenience, these fields map to NumPy arrays in Python.
 
 ## Asynchronous support
 
