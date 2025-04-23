@@ -57,6 +57,7 @@ test = [
 typing = [
     "foamlib[test]",
     "mypy>=1,<2",
+    "scipy-stubs; python_version>='3.10'",
 ]
 docs = [
     "ruff",
