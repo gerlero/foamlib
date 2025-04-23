@@ -52,6 +52,7 @@ test = [
     "pytest>=7,<9",
     "pytest-asyncio>=0.21,<0.27",
     "pytest-cov",
+    "scipy>=1,<2",
 ]
 typing = [
     "foamlib[test]",
