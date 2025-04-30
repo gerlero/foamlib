@@ -1,6 +1,8 @@
-import pandas as pd
+from itertools import islice
 from pathlib import Path
 from typing import Callable, Dict,Optional, List
+
+import pandas as pd
 
 class TableReader:
     """
@@ -61,6 +63,23 @@ class TableReader:
         if ext not in self._registry:
             raise ValueError(f"No reader registered for extension: '{ext}'")
         return self._registry[ext](filepath, column_names=column_names)
+
+
+def extract_column_names(filepath: str) -> Optional[List[str]]:
+    with open(filepath, "r") as f:
+        first_lines = [line.strip() for line in islice(f, 20)]
+
+    # Filter only comment lines
+    comment_lines = [line for line in first_lines if line.startswith("#")]
+    
+    if not comment_lines:
+        return None
+    
+    # Take the last comment line and split into column names
+    last_comment = comment_lines[-1]
+    headers = last_comment.lstrip("#").strip()
+    return headers.split()
+
 
 def update_column_names(df: pd.DataFrame, column_names: Optional[List[str]]) -> pd.DataFrame:
     """
