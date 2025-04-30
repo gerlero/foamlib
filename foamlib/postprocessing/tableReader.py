@@ -1,7 +1,6 @@
 import pandas as pd
 from pathlib import Path
-from typing import Callable, Dict
-
+from typing import Callable, Dict,Optional, List
 
 class TableReader:
     """
@@ -47,7 +46,7 @@ class TableReader:
 
         return decorator
 
-    def read(self, filepath: str) -> pd.DataFrame:
+    def read(self, filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
         """
         Reads a file and returns its contents as a pandas DataFrame.
         The file extension is used to determine the appropriate reader function.
@@ -61,10 +60,28 @@ class TableReader:
         ext = Path(filepath).suffix.lower()
         if ext not in self._registry:
             raise ValueError(f"No reader registered for extension: '{ext}'")
-        return self._registry[ext](filepath)
+        return self._registry[ext](filepath, column_names=column_names)
+
+def update_column_names(df: pd.DataFrame, column_names: Optional[List[str]]) -> pd.DataFrame:
+    """
+    Update the column names of a DataFrame if provided.
+    Args:
+        df (pd.DataFrame): The DataFrame to update.
+        column_names (Optional[List[str]]): The new column names to set.
+    Returns:
+        pd.DataFrame: The updated DataFrame with new column names.
+    """
+    print(f"Updating column names: {column_names}")
+    print(f"Current column names: {df.columns.tolist()}")
+    if column_names is not None:
+        if len(column_names) != len(df.columns):
+            raise ValueError(f"Number of column names ({len(column_names)}) does not match number of columns in DataFrame ({df.columns}).")
+        df.columns = column_names
+    print(f"Current column names: {df.columns.tolist()}")
+    return df
 
 
-def read_oftable(filepath: str) -> pd.DataFrame:
+def read_oftable(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
     """
     This function uses a regular expression to parse the file and seperates on
     paratheses and whitespace
@@ -76,39 +93,46 @@ def read_oftable(filepath: str) -> pd.DataFrame:
     df = pd.read_csv(filepath, comment="#", sep="[()\s]+", engine="python", header=None)
     # Remove empty columns
     df = df.dropna(axis=1, how="all")
+    update_column_names(df, column_names)
     return df
 
 
 @TableReader.register(".dat")
-def read_dat(filepath: str) -> pd.DataFrame:
+def read_dat(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
     """Read a .dat file and return a DataFrame."""
 
-    return read_oftable(filepath)
+    return read_oftable(filepath,column_names=column_names)
 
 
 @TableReader.register(".raw")
-def read_raw(filepath: str) -> pd.DataFrame:
+def read_raw(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
     """Read a .raw file and return a DataFrame."""
 
-    return pd.read_csv(filepath, comment="#", sep="\s+", header=None)
+    df = pd.read_csv(filepath, comment="#", sep="\s+", header=None)
+    update_column_names(df, column_names)
+    return df
 
 
 @TableReader.register("")
-def read_default(filepath: str) -> pd.DataFrame:
+def read_default(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
     """Read a file with no extension and return a DataFrame."""
 
-    return read_oftable(filepath)
+    return read_oftable(filepath,column_names=column_names)
 
 
 @TableReader.register(".xy")
-def read_xy(filepath: str) -> pd.DataFrame:
+def read_xy(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
     """Read a .xy file and return a DataFrame."""
 
-    return pd.read_csv(filepath, comment="#", sep="\s+", header=None)
+    df = pd.read_csv(filepath, comment="#", sep="\s+", header=None)
+    update_column_names(df, column_names)
+    return df
 
 
 @TableReader.register(".csv")
-def read_csv(filepath: str) -> pd.DataFrame:
+def read_csv(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
     """Read a .csv file and return a DataFrame."""
 
-    return pd.read_csv(filepath, comment="#", header=None)
+    df = pd.read_csv(filepath, comment="#", header=None)
+    update_column_names(df, column_names)
+    return df
