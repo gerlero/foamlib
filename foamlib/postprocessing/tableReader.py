@@ -90,13 +90,11 @@ def update_column_names(df: pd.DataFrame, column_names: Optional[List[str]]) -> 
     Returns:
         pd.DataFrame: The updated DataFrame with new column names.
     """
-    print(f"Updating column names: {column_names}")
-    print(f"Current column names: {df.columns.tolist()}")
+
     if column_names is not None:
         if len(column_names) != len(df.columns):
             raise ValueError(f"Number of column names ({len(column_names)}) does not match number of columns in DataFrame ({df.columns}).")
         df.columns = column_names
-    print(f"Current column names: {df.columns.tolist()}")
     return df
 
 
