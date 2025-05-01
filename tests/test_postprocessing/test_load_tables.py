@@ -1,6 +1,5 @@
-from foamlib.postprocessing.tableReader import TableReader, extract_column_names
 import pytest
-
+from foamlib.postprocessing.table_reader import TableReader, extract_column_names
 
 # Constants for file paths
 force_file = "tests/test_postprocessing/postProcessing/forces/0/force.dat"
@@ -43,7 +42,7 @@ HEADER_TEST_CASES = [
 ]
 
 
-@pytest.mark.parametrize("file_path, expected_headers", HEADER_TEST_CASES)
+@pytest.mark.parametrize(("file_path", "expected_headers"), HEADER_TEST_CASES)
 def test_read_headers(file_path, expected_headers) -> None:
     headers = extract_column_names(file_path)
     assert headers == expected_headers
@@ -84,18 +83,18 @@ TABLE_TEST_CASES = [
 
 
 @pytest.mark.parametrize(
-    "file_path, expected_shape, expected_columns, column_names", TABLE_TEST_CASES
+    ("file_path", "expected_shape", "expected_columns", "column_names"), TABLE_TEST_CASES
 )
 def test_read_table(file_path, expected_shape, expected_columns, column_names) -> None:
     """Test that tables are correctly read and columns match expectations."""
     reader = TableReader()
-    df = reader.read(file_path)
-    assert df.shape == expected_shape
-    assert list(df.columns) == expected_columns
+    table = reader.read(file_path)
+    assert table.shape == expected_shape
+    assert list(table.columns) == expected_columns
 
-    df = reader.read(file_path, column_names=column_names)
-    assert df.shape == expected_shape
-    assert list(df.columns) == column_names
+    table = reader.read(file_path, column_names=column_names)
+    assert table.shape == expected_shape
+    assert list(table.columns) == column_names
 
 
 def test_missing_file() -> None:
