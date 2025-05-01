@@ -35,7 +35,7 @@ class TableReader:
             for the file's extension.
     """
 
-    _registry: ClassVar[dict[str, Callable[[str], pd.DataFrame]]] = {}
+    _registry: ClassVar[dict[str, Callable[[str, Optional[list[str]]], pd.DataFrame]]] = {}
 
     def __init__(self) -> None:
         """Initialize the TableReader instance."""
@@ -43,7 +43,7 @@ class TableReader:
     @classmethod
     def register(
         cls, extension: str
-    ) -> Callable[[Callable[[str], pd.DataFrame]], Callable[[str], pd.DataFrame]]:
+    ) -> Callable[[Callable[[str, Optional[list[str]]], pd.DataFrame]], Callable[[str, Optional[list[str]]], pd.DataFrame]]:
         """
         Register a reader function for a specific file extension.
 
@@ -53,13 +53,13 @@ class TableReader:
             extension (str): The file extension (e.g., ".dat", ".raw") to register the reader for.
 
         Returns:
-            Callable[[Callable[[str], pd.DataFrame]], Callable[[str], pd.DataFrame]]:
+            Callable[[Callable[[str, Optional[list[str]]], pd.DataFrame]], Callable[[str, Optional[list[str]]], pd.DataFrame]]:
                 A decorator that registers the function as a reader for the specified extension.
         """
 
         def decorator(
-            func: Callable[[str], pd.DataFrame],
-        ) -> Callable[[str], pd.DataFrame]:
+            func: Callable[[str, Optional[list[str]]], pd.DataFrame],
+        ) -> Callable[[str, Optional[list[str]]], pd.DataFrame]:
             cls._registry[extension.lower()] = func
             return func
 
@@ -86,7 +86,7 @@ class TableReader:
         if ext not in self._registry:
             error_message = f"No reader registered for extension: '{ext}'"
             raise ReaderNotRegisteredError(error_message)
-        return self._registry[ext](filepath, column_names=column_names)
+        return self._registry[ext](filepath, column_names)
 
 
 def is_convertible_to_float(values: list[str]) -> bool:
@@ -150,7 +150,7 @@ def update_column_names(
                 f"number of columns in DataFrame ({len(table.columns)})."
             )
             raise ValueError(error_message)
-        table.columns = column_names
+        table.columns = pd.Index(column_names)
     return table
 
 
