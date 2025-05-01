@@ -1,8 +1,9 @@
 from itertools import islice
 from pathlib import Path
-from typing import Callable, Dict,Optional, List
+from typing import Callable, Dict, Optional, List
 
 import pandas as pd
+
 
 class TableReader:
     """
@@ -48,7 +49,9 @@ class TableReader:
 
         return decorator
 
-    def read(self, filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
+    def read(
+        self, filepath: str, column_names: Optional[List[str]] = None
+    ) -> pd.DataFrame:
         """
         Reads a file and returns its contents as a pandas DataFrame.
         The file extension is used to determine the appropriate reader function.
@@ -65,23 +68,40 @@ class TableReader:
         return self._registry[ext](filepath, column_names=column_names)
 
 
+def is_convertible_to_float(values: List[str]) -> bool:
+    """
+    Check if all values in a list are convertible to floats.
+    Args:
+        values (List[str]): A list of string values to check.
+    Returns:
+        bool: True if all values are convertible to floats, False otherwise.
+    """
+    try:
+        [float(value) for value in values]
+        return True
+    except ValueError:
+        return False
+
+
 def extract_column_names(filepath: str) -> Optional[List[str]]:
     with open(filepath, "r") as f:
         first_lines = [line.strip() for line in islice(f, 20)]
 
     # Filter only comment lines
     comment_lines = [line for line in first_lines if line.startswith("#")]
-    
+
     if not comment_lines:
         return None
-    
+
     # Take the last comment line and split into column names
     last_comment = comment_lines[-1]
     headers = last_comment.lstrip("#").strip()
     return headers.split()
 
 
-def update_column_names(df: pd.DataFrame, column_names: Optional[List[str]]) -> pd.DataFrame:
+def update_column_names(
+    df: pd.DataFrame, column_names: Optional[List[str]]
+) -> pd.DataFrame:
     """
     Update the column names of a DataFrame if provided.
     Args:
@@ -93,12 +113,16 @@ def update_column_names(df: pd.DataFrame, column_names: Optional[List[str]]) -> 
 
     if column_names is not None:
         if len(column_names) != len(df.columns):
-            raise ValueError(f"Number of column names ({len(column_names)}) does not match number of columns in DataFrame ({df.columns}).")
+            raise ValueError(
+                f"Number of column names ({len(column_names)}) does not match number of columns in DataFrame ({df.columns})."
+            )
         df.columns = column_names
     return df
 
 
-def read_oftable(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
+def read_oftable(
+    filepath: str, column_names: Optional[List[str]] = None
+) -> pd.DataFrame:
     """
     This function uses a regular expression to parse the file and seperates on
     paratheses and whitespace
@@ -118,7 +142,7 @@ def read_oftable(filepath: str, column_names: Optional[List[str]] = None) -> pd.
 def read_dat(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
     """Read a .dat file and return a DataFrame."""
 
-    return read_oftable(filepath,column_names=column_names)
+    return read_oftable(filepath, column_names=column_names)
 
 
 @TableReader.register(".raw")
@@ -131,10 +155,12 @@ def read_raw(filepath: str, column_names: Optional[List[str]] = None) -> pd.Data
 
 
 @TableReader.register("")
-def read_default(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
+def read_default(
+    filepath: str, column_names: Optional[List[str]] = None
+) -> pd.DataFrame:
     """Read a file with no extension and return a DataFrame."""
 
-    return read_oftable(filepath,column_names=column_names)
+    return read_oftable(filepath, column_names=column_names)
 
 
 @TableReader.register(".xy")
@@ -150,6 +176,21 @@ def read_xy(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataF
 def read_csv(filepath: str, column_names: Optional[List[str]] = None) -> pd.DataFrame:
     """Read a .csv file and return a DataFrame."""
 
-    df = pd.read_csv(filepath, comment="#", header=None)
+    with open(filepath, "r") as f:
+        first_line = [line for line in islice(f, 20)]
+
+    non_comment_lines = [line for line in first_line if not line.startswith("#")]
+
+    # check if all of the lines can be converted to floats
+    # assume the they are comma separated
+    entries = [line.split(",") for line in non_comment_lines]
+
+    # Check if all entries in each line are convertible to floats
+    has_header = not all(is_convertible_to_float(entry) for entry in entries)
+
+    if has_header:
+        df = pd.read_csv(filepath, comment="#")
+    else:
+        df = pd.read_csv(filepath, comment="#", header=None)
     update_column_names(df, column_names)
     return df

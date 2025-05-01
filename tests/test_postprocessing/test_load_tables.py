@@ -14,6 +14,7 @@ probe_p_file = "tests/test_postprocessing/postProcessing/probes/0/p"
 probe_u_file = "tests/test_postprocessing/postProcessing/probes/0/U"
 probe_t_file = "tests/test_postprocessing/postProcessing/probes/0/T"
 sample_file = "tests/test_postprocessing/postProcessing/sample1/0.1/centreLine_T.xy"
+csv_file = "tests/test_postprocessing/postProcessing/sample2/0.1/centreLine_U.csv"
 
 # Test data for headers
 HEADER_TEST_CASES = [
@@ -38,6 +39,7 @@ HEADER_TEST_CASES = [
     (probe_u_file, ["Time", "0"]),
     (probe_t_file, ["Time", "0"]),
     (sample_file, None),
+    (csv_file, None),
 ]
 
 
@@ -72,6 +74,12 @@ TABLE_TEST_CASES = [
     (probe_u_file, (109, 4), [0, 1, 2, 3], ["time", "u", "v", "w"]),
     (probe_t_file, (109, 2), [0, 1], ["time", "T"]),
     (sample_file, (100, 2), [0, 1], ["x", "y"]),
+    (
+        csv_file,
+        (100, 6),
+        ["x", "y", "z", "U_0", "U_1", "U_2"],
+        ["a", "b", "c", "d", "e", "f"],
+    ),
 ]
 
 
@@ -88,3 +96,17 @@ def test_read_table(file_path, expected_shape, expected_columns, column_names) -
     df = reader.read(file_path, column_names=column_names)
     assert df.shape == expected_shape
     assert list(df.columns) == column_names
+
+
+def test_missing_file() -> None:
+    """Test that an error is raised when a file is missing."""
+    reader = TableReader()
+    with pytest.raises(FileNotFoundError):
+        reader.read("non_existent_file.dat")
+
+
+def test_invalid_extension() -> None:
+    """Test that an error is raised when an invalid file extension is used."""
+    reader = TableReader()
+    with pytest.raises(ValueError):
+        reader.read("invalid_file.missing_extension")
