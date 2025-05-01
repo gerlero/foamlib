@@ -35,15 +35,18 @@ class TableReader:
             for the file's extension.
     """
 
-    _registry: ClassVar[dict[str, Callable[[str, Optional[list[str]]], pd.DataFrame]]] = {}
+    _registry: ClassVar[
+        dict[str, Callable[[str, Optional[list[str]]], pd.DataFrame]]
+    ] = {}
 
     def __init__(self) -> None:
         """Initialize the TableReader instance."""
 
     @classmethod
-    def register(
-        cls, extension: str
-    ) -> Callable[[Callable[[str, Optional[list[str]]], pd.DataFrame]], Callable[[str, Optional[list[str]]], pd.DataFrame]]:
+    def register(cls, extension: str) -> Callable[
+        [Callable[[str, Optional[list[str]]], pd.DataFrame]],
+        Callable[[str, Optional[list[str]]], pd.DataFrame],
+    ]:
         """
         Register a reader function for a specific file extension.
 
