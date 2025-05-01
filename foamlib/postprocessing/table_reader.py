@@ -8,9 +8,10 @@ from typing import Callable, ClassVar, Optional
 
 import pandas as pd
 
+
 class ReaderNotRegisteredError(Exception):
     """Exception raised when no reader is registered for a given file extension."""
-    pass
+
 
 class TableReader:
     """
@@ -112,7 +113,7 @@ def extract_column_names(filepath: str) -> Optional[list[str]]:
         Optional[list[str]]: A list of column names extracted from the file, or None if no
             comment lines are found.
     """
-    with Path.open(filepath) as f:
+    with open(filepath) as f:
         first_lines = [line.strip() for line in islice(f, 20)]
 
     # Filter only comment lines
@@ -203,7 +204,7 @@ def read_xy(filepath: str, column_names: Optional[list[str]] = None) -> pd.DataF
 @TableReader.register(".csv")
 def read_csv(filepath: str, column_names: Optional[list[str]] = None) -> pd.DataFrame:
     """Read a .csv file and return a DataFrame."""
-    with Path.open(filepath) as f:
+    with open(filepath) as f:
         first_lines = list(islice(f, 20))
 
     non_comment_lines = [line for line in first_lines if not line.startswith("#")]

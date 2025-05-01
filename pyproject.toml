@@ -98,6 +98,7 @@ extend-ignore = [
     "PLR0913",
     "PLR0915",
     "PLR2004",
+    "PTH123",
     "PYI041",
     "S101",
     "S603",
