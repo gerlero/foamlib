@@ -8,6 +8,9 @@ from typing import Callable, ClassVar, Optional
 
 import pandas as pd
 
+class ReaderNotRegisteredError(Exception):
+    """Exception raised when no reader is registered for a given file extension."""
+    pass
 
 class TableReader:
     """
@@ -78,7 +81,7 @@ class TableReader:
         ext = Path(filepath).suffix.lower()
         if ext not in self._registry:
             error_message = f"No reader registered for extension: '{ext}'"
-            raise ValueError(error_message)
+            raise ReaderNotRegisteredError(error_message)
         return self._registry[ext](filepath, column_names=column_names)
 
 

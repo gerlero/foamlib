@@ -1,5 +1,11 @@
+from __future__ import annotations
+
 import pytest
-from foamlib.postprocessing.table_reader import TableReader, extract_column_names
+from foamlib.postprocessing.table_reader import (
+    ReaderNotRegisteredError,
+    TableReader,
+    extract_column_names,
+)
 
 # Constants for file paths
 force_file = "tests/test_postprocessing/postProcessing/forces/0/force.dat"
@@ -43,7 +49,7 @@ HEADER_TEST_CASES = [
 
 
 @pytest.mark.parametrize(("file_path", "expected_headers"), HEADER_TEST_CASES)
-def test_read_headers(file_path, expected_headers) -> None:
+def test_read_headers(file_path: str, expected_headers: list[str]) -> None:
     headers = extract_column_names(file_path)
     assert headers == expected_headers
 
@@ -85,7 +91,7 @@ TABLE_TEST_CASES = [
 @pytest.mark.parametrize(
     ("file_path", "expected_shape", "expected_columns", "column_names"), TABLE_TEST_CASES
 )
-def test_read_table(file_path, expected_shape, expected_columns, column_names) -> None:
+def test_read_table(file_path: str, expected_shape: tuple[int,int], expected_columns: list[str], column_names: list[str]) -> None:
     """Test that tables are correctly read and columns match expectations."""
     reader = TableReader()
     table = reader.read(file_path)
@@ -107,5 +113,5 @@ def test_missing_file() -> None:
 def test_invalid_extension() -> None:
     """Test that an error is raised when an invalid file extension is used."""
     reader = TableReader()
-    with pytest.raises(ValueError):
+    with pytest.raises(ReaderNotRegisteredError):
         reader.read("invalid_file.missing_extension")
