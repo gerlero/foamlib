@@ -89,9 +89,15 @@ TABLE_TEST_CASES = [
 
 
 @pytest.mark.parametrize(
-    ("file_path", "expected_shape", "expected_columns", "column_names"), TABLE_TEST_CASES
+    ("file_path", "expected_shape", "expected_columns", "column_names"),
+    TABLE_TEST_CASES,
 )
-def test_read_table(file_path: str, expected_shape: tuple[int,int], expected_columns: list[str], column_names: list[str]) -> None:
+def test_read_table(
+    file_path: str,
+    expected_shape: tuple[int, int],
+    expected_columns: list[str],
+    column_names: list[str],
+) -> None:
     """Test that tables are correctly read and columns match expectations."""
     reader = TableReader()
     table = reader.read(file_path)

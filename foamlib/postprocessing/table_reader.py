@@ -37,13 +37,13 @@ class TableReader:
 
     _registry: ClassVar[dict[str, Callable[[str], pd.DataFrame]]] = {}
 
-
-    def __init__(self)-> None:
+    def __init__(self) -> None:
         """Initialize the TableReader instance."""
 
-
     @classmethod
-    def register(cls, extension: str) -> Callable[[Callable[[str], pd.DataFrame]], Callable[[str], pd.DataFrame]]:
+    def register(
+        cls, extension: str
+    ) -> Callable[[Callable[[str], pd.DataFrame]], Callable[[str], pd.DataFrame]]:
         """
         Register a reader function for a specific file extension.
 
@@ -56,7 +56,10 @@ class TableReader:
             Callable[[Callable[[str], pd.DataFrame]], Callable[[str], pd.DataFrame]]:
                 A decorator that registers the function as a reader for the specified extension.
         """
-        def decorator(func: Callable[[str], pd.DataFrame]) -> Callable[[str], pd.DataFrame]:
+
+        def decorator(
+            func: Callable[[str], pd.DataFrame],
+        ) -> Callable[[str], pd.DataFrame]:
             cls._registry[extension.lower()] = func
             return func
 
@@ -164,7 +167,9 @@ def read_oftable(
     Returns:
         pd.DataFrame: The contents of the .oftable file as a pandas DataFrame.
     """
-    table = pd.read_csv(filepath, comment="#", sep=r"[()\s]+", engine="python", header=None)
+    table = pd.read_csv(
+        filepath, comment="#", sep=r"[()\s]+", engine="python", header=None
+    )
     # Remove empty columns
     table = table.dropna(axis=1, how="all")
     update_column_names(table, column_names)
