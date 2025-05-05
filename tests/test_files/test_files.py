@@ -86,6 +86,11 @@ def test_write_read(tmp_path: Path) -> None:
         value=[0, 0, -9.81],
     )
 
+    sd["n"] = 1
+    sd["y"] = 2
+    assert sd["n"] == 1
+    assert sd["y"] == 2
+
     with d:
         lst = d["subdict", "list"]
         assert isinstance(lst, list)

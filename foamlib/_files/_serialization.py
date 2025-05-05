@@ -31,6 +31,7 @@ class Kind(Enum):
     BINARY_FIELD = auto()
     SCALAR_BINARY_FIELD = auto()
     DIMENSIONS = auto()
+    KEYWORD = auto()
 
 
 @overload
@@ -91,7 +92,10 @@ def normalize(data: EntryLike, *, kind: Kind = Kind.DEFAULT) -> Entry:
         return [normalize(d, kind=Kind.SINGLE_ENTRY) for d in data]
 
     if isinstance(data, str):
-        return parse_data(data)
+        parsed_data = parse_data(data)
+        if kind == Kind.KEYWORD and isinstance(parsed_data, bool):
+            return data
+        return parsed_data
 
     if isinstance(
         data,
