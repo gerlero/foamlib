@@ -129,7 +129,7 @@ def _tensor_list(
                 lambda tks: [_parse_ascii_field(tks[0], tensor_kind, ignore=ignore)]
             )
             | Regex(
-                rf"\((?s:.{{{length * tensor_kind.size * 8}}}|.{{{length * tensor_kind.size * 4}}})\)"
+                rf"\((?s:({'.' * 8 * tensor_kind.size}|{'.' * 4 * tensor_kind.size}){{{length}}})\)"
             ).add_parse_action(
                 lambda tks: [
                     _unpack_binary_field(
