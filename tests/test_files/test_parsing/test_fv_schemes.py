@@ -59,14 +59,14 @@ def test_simple(tmp_path: Path) -> None:
 
     fv_schemes = FoamFile(path)
 
-    assert fv_schemes["ddtSchemes"]["default"] == "Euler"
+    assert fv_schemes["ddtSchemes", "default"] == "Euler"
     assert not fv_schemes["gradSchemes"]
-    assert fv_schemes["divSchemes"]["div(phi,T)"] == ("Gauss", "limitedLinear", 1)
-    assert fv_schemes["divSchemes"]["div(phi,U)"] == "foo"
-    assert fv_schemes["divSchemes"]["div(phi.b,k.b)"] == ("Gauss", "limitedLinear", 1)
-    assert fv_schemes["divSchemes"]["div(phi,k)"] == "$turbulence"
+    assert fv_schemes["divSchemes", "div(phi,T)"] == ("Gauss", "limitedLinear", 1)
+    assert fv_schemes["divSchemes", "div(phi,U)"] == "foo"
+    assert fv_schemes["divSchemes", "div(phi.b,k.b)"] == ("Gauss", "limitedLinear", 1)
+    assert fv_schemes["divSchemes", "div(phi,k)"] == "$turbulence"
     assert not fv_schemes["laplacianSchemes"]
     assert not fv_schemes["interpolationSchemes"]
     assert not fv_schemes["snGradSchemes"]
-    assert fv_schemes["fluxRequired"]["default"] is False
-    assert fv_schemes["fluxRequired"]["p_rbgh"] == ""
+    assert fv_schemes["fluxRequired", "default"] is False
+    assert fv_schemes["fluxRequired", "p_rbgh"] == ""

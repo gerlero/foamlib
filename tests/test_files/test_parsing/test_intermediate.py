@@ -1,6 +1,5 @@
 # Based on https://foss.heptapod.net/fluiddyn/fluidsimfoam/-/blob/branch/default/tests/test_parser.py
 
-import numpy as np
 import pytest
 from foamlib import FoamFile
 from foamlib._files._parsing import Parsed
@@ -383,8 +382,11 @@ def test_dimension_set() -> None:
         }
     """)
     assert parsed[("dimensions",)] == FoamFile.DimensionSet(length=2, time=-1)
+    assert isinstance(parsed[("nu",)], FoamFile.Dimensioned)
     assert parsed[("nu",)].dimensions == FoamFile.DimensionSet(length=2, time=-1)
+    assert isinstance(parsed[("nu1",)], FoamFile.Dimensioned)
     assert parsed[("nu1",)].dimensions == FoamFile.DimensionSet(length=2, time=-1)
+    assert isinstance(parsed[("SIMPLE", "rhoMin")], FoamFile.Dimensioned)
     assert parsed[("SIMPLE", "rhoMin")].dimensions == FoamFile.DimensionSet(
         mass=1, length=-3
     )
@@ -715,4 +717,4 @@ def test_list_uniform() -> None:
             );
         """)
     assert parsed[("a",)] == 1
-    assert np.allclose(parsed[("internalField",)], [0.1, 0, 0])
+    assert parsed[("internalField",)] == pytest.approx([0.1, 0, 0])
