@@ -39,25 +39,16 @@ dependencies = [
 dynamic = ["version"]
 
 [dependency-groups]
-dev = ["foamlib[dev]"]
-lint = ["foamlib[lint]"]
-test = ["foamlib[test]"]
-typing = ["foamlib[typing]"]
-docs = ["foamlib[docs]"]
-
-[project.optional-dependencies]
 lint = ["ruff"]
-test = [
+typing = [
     "mypy>=1,<2",
+    "scipy-stubs; python_version>='3.10'",
+]
+test = [
     "pytest>=7,<9",
     "pytest-asyncio>=0.21,<0.27",
     "pytest-cov",
     "scipy>=1,<2",
-]
-typing = [
-    "foamlib[test]",
-    "mypy>=1,<2",
-    "scipy-stubs; python_version>='3.10'",
 ]
 docs = [
     "ruff",
@@ -65,10 +56,17 @@ docs = [
     "sphinx_rtd_theme",
 ]
 dev = [
-    "foamlib[lint]",
-    "foamlib[test]",
-    "foamlib[typing]",
-    "foamlib[docs]",
+    {include-group = "lint"},
+    {include-group = "typing"},
+    {include-group = "test"},
+    {include-group = "docs"},
+]
+
+[project.optional-dependencies]
+docs = [
+    "ruff",
+    "sphinx>=5,<9",
+    "sphinx_rtd_theme",
 ]
 
 [project.urls]
