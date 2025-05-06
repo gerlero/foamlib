@@ -26,6 +26,12 @@ def test_parse_value() -> None:
     field = Parsed(b"nonuniform List<scalar> 2{1}")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(field, [1, 1])
+    field = Parsed(b"nonuniform List<symmTensor> 0()")[()]
+    assert isinstance(field, np.ndarray)
+    assert field.shape == (0, 6)
+    field = Parsed(b"nonuniform List<tensor> ()")[()]
+    assert isinstance(field, np.ndarray)
+    assert field.shape == (0, 9)
     assert Parsed(b"3(1 2 3)")[()] == [1, 2, 3]
     assert Parsed(b"2((1 2 3) (4 5 6))")[()] == [
         [1, 2, 3],
