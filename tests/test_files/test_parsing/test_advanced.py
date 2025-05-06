@@ -1,6 +1,5 @@
 # Based on https://foss.heptapod.net/fluiddyn/fluidsimfoam/-/blob/branch/default/tests/test_parser_advanced.py
 
-import numpy as np
 import pytest
 from foamlib._files._parsing import Parsed
 
@@ -17,10 +16,10 @@ def test_dict_strange_name() -> None:
     """
     )
     assert parsed[
-        (("div(phi,ft_b_ha_hau)", "Gauss", "multivariateSelection"), "ft")
+        (("div(phi,ft_b_ha_hau)", "Gauss", "multivariateSelection"), "ft")  # type: ignore[index]
     ] == ("limitedLinear01", 1)
     assert parsed[
-        (("div(phi,ft_b_ha_hau)", "Gauss", "multivariateSelection"), "b")
+        (("div(phi,ft_b_ha_hau)", "Gauss", "multivariateSelection"), "b")  # type: ignore[index]
     ] == ("limitedLinear01", 1)
 
 
@@ -263,7 +262,7 @@ def test_list_triple_named() -> None:
         """
     )
     assert parsed[("velocity-inlet-5", "type")] == "fixedValue"
-    assert np.allclose(parsed[("velocity-inlet-5", "value")], [1, 0, 0])
+    assert parsed[("velocity-inlet-5", "value")] == pytest.approx([1, 0, 0])
 
 
 def test_assignment_strange_name() -> None:
@@ -356,9 +355,9 @@ def test_list_as_write_cell_centers() -> None:
         );
         """
     )
-    assert np.allclose(parsed[("value",)], [47.619, 142.857])
+    assert parsed[("value",)] == pytest.approx([47.619, 142.857])
 
 
 def test_list_as_write_cell_centers_short() -> None:
     parsed = Parsed(b"value           nonuniform List<scalar> 4(250 750 1250 1750);")
-    assert np.allclose(parsed[("value",)], [250, 750, 1250, 1750])
+    assert parsed[("value",)] == pytest.approx([250, 750, 1250, 1750])

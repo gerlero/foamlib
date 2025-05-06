@@ -78,7 +78,10 @@ Documentation = "https://foamlib.readthedocs.io"
 path = "foamlib/__init__.py"
 
 [tool.mypy]
-packages = ["foamlib"]
+packages = [
+    "foamlib",
+    "tests",
+]
 strict = true
 
 [tool.ruff.lint]

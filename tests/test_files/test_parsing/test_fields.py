@@ -4,6 +4,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import numpy as np
+import pytest
 from foamlib import FoamFieldFile
 
 code_p = dedent(
@@ -79,8 +80,9 @@ def test_nut(tmp_path: Path) -> None:
 
     assert field.dimensions == FoamFieldFile.DimensionSet(length=2, time=-1)
     assert field.internal_field == 0
-    assert field.boundary_field["wall"]["type"] == "nutkWallFunction"
-    assert field.boundary_field["wall"]["value"] == "$internalField"
+    assert isinstance(field.boundary_field["wall"], FoamFieldFile.BoundarySubDict)
+    assert field.boundary_field["wall"].type == "nutkWallFunction"
+    assert field.boundary_field["wall"].value == "$internalField"
     assert field.boundary_field["#includeEtc"] == '"caseDicts/setConstraintTypes"'
 
 
@@ -282,7 +284,7 @@ code_cx = dedent(
 )
 
 
-def test_cells_centers(tmp_path: Path) -> None:
+def test_cell_centers(tmp_path: Path) -> None:
     """Data obtained with `postProcess -func writeCellCentres`
 
     https://www.openfoam.com/documentation/guides/latest/doc/guide-fos-field-writeCellCentres.html
@@ -299,4 +301,5 @@ def test_cells_centers(tmp_path: Path) -> None:
     assert field_c.dimensions == FoamFieldFile.DimensionSet(length=1)
     assert field_cx.dimensions == FoamFieldFile.DimensionSet(length=1)
 
-    assert np.allclose(field_c.internal_field[:, 0], field_cx.internal_field)
+    assert isinstance(field_c.internal_field, np.ndarray)
+    assert field_c.internal_field[:, 0] == pytest.approx(field_cx.internal_field)
