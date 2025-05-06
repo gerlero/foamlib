@@ -115,12 +115,24 @@ def _tensor_list(
         rf"\((?:{ignore_pattern})?(?:{tensor.re.pattern}{ignore_pattern})*{tensor.re.pattern}(?:{ignore_pattern})?\)"
     ).add_parse_action(
         lambda tks: [_parse_ascii_field(tks[0], tensor_kind, ignore=ignore)]
+    ) | (
+        (Literal("(") + Literal(")"))
+        .suppress()
+        .add_parse_action(lambda: np.array([]).reshape(0, *tensor_kind.shape))
     )
 
     def count_parse_action(tks: ParseResults) -> None:
         nonlocal list_
         length = tks[0]
         assert isinstance(length, int)
+
+        if not length:
+            list_ <<= (
+                ((Literal("(") + Literal(")")) | (Literal("{") + Literal("}")))
+                .suppress()
+                .add_parse_action(lambda: np.array([]).reshape(0, *tensor_kind.shape))
+            )
+            return
 
         list_ <<= (
             Regex(
