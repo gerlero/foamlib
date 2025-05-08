@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from enum import Enum
 from typing import Dict, NamedTuple, Optional, Union
 
 import numpy as np
@@ -40,39 +39,6 @@ TensorLike = Union[
     "np.ndarray[tuple[()], np.dtype[np.float64]]",
     Tensor,
 ]
-
-
-class TensorKind(Enum):
-    SCALAR = ()
-    VECTOR = (3,)
-    SYMM_TENSOR = (6,)
-    TENSOR = (9,)
-
-    @property
-    def shape(self) -> tuple[()] | tuple[int]:
-        shape: tuple[()] | tuple[int] = self.value
-        return shape
-
-    @property
-    def size(self) -> int:
-        return int(np.prod(self.shape))
-
-    def __str__(self) -> str:
-        return {
-            TensorKind.SCALAR: "scalar",
-            TensorKind.VECTOR: "vector",
-            TensorKind.SYMM_TENSOR: "symmTensor",
-            TensorKind.TENSOR: "tensor",
-        }[self]
-
-    @staticmethod
-    def from_shape(shape: tuple[int, ...]) -> TensorKind:
-        for kind in TensorKind:
-            if kind.shape == shape:
-                return kind
-
-        msg = f"No tensor kind for shape {shape!r}"
-        raise ValueError(msg)
 
 
 class Dimensioned:
