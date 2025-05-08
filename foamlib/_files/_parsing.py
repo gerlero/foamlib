@@ -25,6 +25,7 @@ from pyparsing import (
     LineEnd,
     Literal,
     Located,
+    NoMatch,
     Opt,
     ParserElement,
     ParseResults,
@@ -37,37 +38,182 @@ from pyparsing import (
     printables,
 )
 
-from ._types import Data, Dimensioned, DimensionSet, File, TensorKind
+from ._types import Data, Dimensioned, DimensionSet, File
 
 
-def _tensor(tensor_kind: TensorKind, *, ignore: Regex | None = None) -> Regex:
+def _numeric_list(
+    *, nested: int | None = None, ignore: Regex | None = None, force_float: bool = False
+) -> ParserElement:
+    if not force_float:
+        int_pattern = r"(?:-?\d+)"
     float_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
+    spacing_pattern = (
+        rf"(?:(?:\s|{ignore.re.pattern})+)" if ignore is not None else r"\s+"
+    )
 
-    if tensor_kind == TensorKind.SCALAR:
-        ret = Regex(float_pattern)
-        ret.add_parse_action(lambda tks: [float(tks[0])])
+    if nested is None:
+        if not force_float:
+            int_element_pattern = int_pattern
+            int_element = common.integer
+        float_element_pattern = float_pattern
+        float_element = common.ieee_float
+    else:
+        if not force_float:
+            int_element_pattern = rf"(?:(?:{nested})?{spacing_pattern}?\({spacing_pattern}?(?:{int_pattern}{spacing_pattern}){{{nested - 1}}}{int_pattern}{spacing_pattern}?\))"
+            int_element = (
+                Opt(Literal(str(nested))).suppress()
+                + Literal("(").suppress()
+                + Group(common.integer[nested])
+                + Literal(")").suppress()
+            )
+        float_element_pattern = rf"(?:(?:{nested})?{spacing_pattern}?\({spacing_pattern}?(?:{float_pattern}{spacing_pattern}){{{nested - 1}}}{float_pattern}{spacing_pattern}?\))"
+        float_element = (
+            Opt(Literal(str(nested))).suppress()
+            + Literal("(").suppress()
+            + Group(common.ieee_float[nested])
+            + Literal(")").suppress()
+        )
+
+    if not force_float:
+        int_list = Forward()
+    float_list = Forward()
+
+    def process_count(tks: ParseResults) -> None:
+        nonlocal int_list, float_list
+
+        if not tks:
+            count = None
+        else:
+            (count,) = tks
+            assert isinstance(count, int)
+
+        if count is None:
+            if not force_float:
+                int_list_pattern = rf"\({spacing_pattern}?(?:{int_element_pattern}{spacing_pattern})*{int_element_pattern}{spacing_pattern}?\)"
+                float_list_pattern = rf"\({spacing_pattern}?(?:{float_element_pattern}{spacing_pattern})*{float_element_pattern}{spacing_pattern}?\)"
+            else:
+                float_list_pattern = rf"\({spacing_pattern}?(?:{float_element_pattern}{spacing_pattern})*{float_element_pattern}?{spacing_pattern}?\)"
+
+        elif count == 0:
+            if not force_float:
+                int_list <<= NoMatch()
+                float_list <<= NoMatch()
+            else:
+                float_list <<= (Literal("(") + Literal(")")).add_parse_action(
+                    lambda: np.empty((0, nested) if nested else 0, dtype=float)
+                )
+            return
+
+        else:
+            if not force_float:
+                int_list_pattern = rf"\({spacing_pattern}?(?:{int_element_pattern}{spacing_pattern}){{{count - 1}}}{int_element_pattern}{spacing_pattern}?\)"
+            float_list_pattern = rf"\({spacing_pattern}?(?:{float_element_pattern}{spacing_pattern}){{{count - 1}}}{float_element_pattern}{spacing_pattern}?\)"
+
+        if not force_float:
+            int_list <<= Regex(int_list_pattern).add_parse_action(
+                lambda tks: to_array(tks, dtype=int)
+            )
+        float_list <<= Regex(float_list_pattern).add_parse_action(
+            lambda tks: to_array(tks, dtype=float)
+        )
+
+    def to_array(
+        tks: ParseResults, *, dtype: type
+    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.int64 | np.float64]]:
+        (s,) = tks
+        s = s.replace("(", "").replace(")", "")
+
+        if ignore is not None:
+            s = re.sub(ignore.re, " ", s)
+
+        ret: np.ndarray[
+            tuple[int] | tuple[int, int], np.dtype[np.int64 | np.float64]
+        ] = np.fromstring(s, sep=" ", dtype=dtype)  # type: ignore[assignment]
+
+        if nested is not None:
+            ret = ret.reshape(-1, nested)
+
         return ret
 
-    ignore_pattern = rf"(?:\s|{ignore.re.pattern})+" if ignore is not None else r"\s+"
+    def to_full_array(
+        tks: ParseResults, *, dtype: type
+    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.int64 | np.float64]]:
+        count, lst = tks
+        assert isinstance(count, int)
 
-    ret = Regex(
-        rf"\((?:{ignore_pattern})?(?:{float_pattern}{ignore_pattern}){{{tensor_kind.size - 1}}}{float_pattern}(?:{ignore_pattern})?\)"
+        if nested is None:
+            return np.full(count, lst, dtype=dtype)
+
+        return np.full((count, nested), lst, dtype=dtype)  # type: ignore[return-value]
+
+    count = Opt(common.integer).add_parse_action(process_count)
+
+    ret = count.suppress() + (
+        (int_list | float_list) if not force_float else float_list
     )
-    ret.add_parse_action(
-        lambda tks: np.fromstring(
-            re.sub(ignore.re, " ", tks[0][1:-1])
-            if ignore is not None
-            else tks[0][1:-1],
-            sep=" ",
-        )
-    )
+
+    if not force_float:
+        ret |= (
+            common.integer
+            + Literal("{").suppress()
+            + int_element
+            + Literal("}").suppress()
+        ).add_parse_action(lambda tks: to_full_array(tks, dtype=int))
+    ret |= (
+        common.integer
+        + Literal("{").suppress()
+        + float_element
+        + Literal("}").suppress()
+    ).add_parse_action(lambda tks: to_full_array(tks, dtype=float))
+
+    if ignore is not None:
+        ret.ignore(ignore)
+
     return ret
 
 
+def _binary_field(*, nested: int | None = None) -> ParserElement:
+    elsize = nested if nested is not None else 1
+
+    binary_field = Forward()
+
+    def process_count(tks: ParseResults) -> None:
+        nonlocal binary_field
+        (size,) = tks
+        assert isinstance(size, int)
+
+        binary_field <<= Regex(
+            rf"\((?s:({'.' * 8 * elsize}|{'.' * 4 * elsize}){{{size}}})\)"
+        )
+
+    def to_array(
+        tks: ParseResults,
+    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]:
+        size, s = tks
+        assert isinstance(size, int)
+        assert isinstance(s, str)
+        assert s[0] == "("
+        assert s[-1] == ")"
+        s = s[1:-1]
+
+        float_size = len(s) / elsize / size
+        assert float_size in (4, 8)
+
+        dtype = np.float32 if float_size == 4 else float
+        ret = np.frombuffer(s.encode("latin-1"), dtype=dtype)
+
+        if nested is not None:
+            ret = ret.reshape(-1, nested)
+
+        return ret  # type: ignore[return-value]
+
+    count = common.integer.copy().add_parse_action(process_count)
+
+    return (count + binary_field).add_parse_action(to_array)
+
+
 def _list_of(entry: ParserElement) -> ParserElement:
-    return Opt(
-        Literal("List") + Literal("<") + _IDENTIFIER + Literal(">")
-    ).suppress() + (
+    return (
         (
             counted_array(entry, common.integer + Literal("(").suppress())
             + Literal(")").suppress()
@@ -80,88 +226,6 @@ def _list_of(entry: ParserElement) -> ParserElement:
         | (
             common.integer + Literal("{").suppress() + entry + Literal("}").suppress()
         ).set_parse_action(lambda tks: [[tks[1]] * tks[0]])
-    )
-
-
-def _parse_ascii_field(
-    s: str, tensor_kind: TensorKind, *, ignore: Regex | None
-) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64]]:
-    if ignore is not None:
-        s = re.sub(ignore.re, " ", s)
-    s = s.replace("(", " ").replace(")", " ")
-
-    return np.fromstring(s, sep=" ").reshape(-1, *tensor_kind.shape)  # type: ignore [return-value]
-
-
-def _unpack_binary_field(
-    b: bytes, tensor_kind: TensorKind, *, length: int
-) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]:
-    float_size = len(b) / tensor_kind.size / length
-    assert float_size in (4, 8)
-
-    dtype = np.float32 if float_size == 4 else float
-    return np.frombuffer(b, dtype=dtype).reshape(-1, *tensor_kind.shape)  # type: ignore [return-value]
-
-
-def _tensor_list(
-    tensor_kind: TensorKind, *, ignore: Regex | None = None
-) -> ParserElement:
-    tensor = _tensor(tensor_kind, ignore=ignore)
-    ignore_pattern = rf"(?:\s|{ignore.re.pattern})+" if ignore is not None else r"\s+"
-
-    list_ = Forward()
-
-    list_ <<= Regex(
-        rf"\((?:{ignore_pattern})?(?:{tensor.re.pattern}{ignore_pattern})*{tensor.re.pattern}(?:{ignore_pattern})?\)"
-    ).add_parse_action(
-        lambda tks: [_parse_ascii_field(tks[0], tensor_kind, ignore=ignore)]
-    ) | (
-        (Literal("(") + Literal(")"))
-        .suppress()
-        .add_parse_action(lambda: np.array([]).reshape(0, *tensor_kind.shape))
-    )
-
-    def count_parse_action(tks: ParseResults) -> None:
-        nonlocal list_
-        length = tks[0]
-        assert isinstance(length, int)
-
-        if not length:
-            list_ <<= (
-                ((Literal("(") + Literal(")")) | (Literal("{") + Literal("}")))
-                .suppress()
-                .add_parse_action(lambda: np.array([]).reshape(0, *tensor_kind.shape))
-            )
-            return
-
-        list_ <<= (
-            Regex(
-                rf"\((?:{ignore_pattern})?(?:{tensor.re.pattern}{ignore_pattern}){{{length - 1}}}{tensor.re.pattern}(?:{ignore_pattern})?\)"
-            ).add_parse_action(
-                lambda tks: [_parse_ascii_field(tks[0], tensor_kind, ignore=ignore)]
-            )
-            | Regex(
-                rf"\((?s:({'.' * 8 * tensor_kind.size}|{'.' * 4 * tensor_kind.size}){{{length}}})\)"
-            ).add_parse_action(
-                lambda tks: [
-                    _unpack_binary_field(
-                        tks[0][1:-1].encode("latin-1"), tensor_kind, length=length
-                    )
-                ]
-            )
-            | (
-                Literal("{").suppress() + tensor + Literal("}").suppress()
-            ).add_parse_action(
-                lambda tks: [np.full((length, *tensor_kind.shape), tks[0], dtype=float)]
-            )
-        )
-
-    count = common.integer.copy().add_parse_action(count_parse_action)
-
-    return (
-        Opt(Literal("List") + Literal("<") + str(tensor_kind) + Literal(">")).suppress()
-        + Opt(count).suppress()
-        + list_
     )
 
 
@@ -250,12 +314,11 @@ _SWITCH = (
 _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: DimensionSet(*tks))
-_TENSOR = (
-    _tensor(TensorKind.SCALAR)
-    | _tensor(TensorKind.VECTOR)
-    | _tensor(TensorKind.SYMM_TENSOR)
-    | _tensor(TensorKind.TENSOR)
-)
+_TENSOR = common.ieee_float | (
+    Literal("(").suppress()
+    + Group(common.ieee_float[3] | common.ieee_float[6] | common.ieee_float[9])
+    + Literal(")").suppress()
+).add_parse_action(lambda tks: np.array(tks[0], dtype=float))
 _PARENTHESIZED = Forward()
 _IDENTIFIER = Combine(Word(_IDENTCHARS, _IDENTBODYCHARS) + Opt(_PARENTHESIZED))
 _PARENTHESIZED <<= Combine(
@@ -270,12 +333,46 @@ _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
 _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
     Keyword("nonuniform", _IDENTBODYCHARS).suppress()
     + (
-        _tensor_list(TensorKind.SCALAR, ignore=_COMMENT)
-        | _tensor_list(TensorKind.VECTOR, ignore=_COMMENT)
-        | _tensor_list(TensorKind.SYMM_TENSOR, ignore=_COMMENT)
-        | _tensor_list(TensorKind.TENSOR, ignore=_COMMENT)
+        (
+            Opt(
+                Literal("List") + Literal("<") + Literal("scalar") + Literal(">")
+            ).suppress()
+            + (_numeric_list(force_float=True, ignore=_COMMENT) | _binary_field())
+        )
+        | (
+            Opt(
+                Literal("List") + Literal("<") + Literal("vector") + Literal(">")
+            ).suppress()
+            + (
+                _numeric_list(nested=3, force_float=True, ignore=_COMMENT)
+                | _binary_field(nested=3)
+            )
+        )
+        | (
+            Opt(
+                Literal("List") + Literal("<") + Literal("symmTensor") + Literal(">")
+            ).suppress()
+            + (
+                _numeric_list(
+                    nested=6,
+                    force_float=True,
+                    ignore=_COMMENT,
+                )
+                | _binary_field(nested=6)
+            )
+        )
+        | (
+            Opt(
+                Literal("List") + Literal("<") + Literal("tensor") + Literal(">")
+            ).suppress()
+            + (
+                _numeric_list(nested=9, force_float=True, ignore=_COMMENT)
+                | _binary_field(nested=9)
+            )
+        )
     )
 )
+
 _DIRECTIVE = Word("#", _IDENTBODYCHARS)
 _TOKEN = dbl_quoted_string | _DIRECTIVE | _IDENTIFIER
 _DATA = Forward()
@@ -283,7 +380,12 @@ _KEYWORD_ENTRY = _keyword_entry_of(_TOKEN | _list_of(_IDENTIFIER), _DATA)
 _DICT = _dict_of(_TOKEN, _DATA)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
-_LIST = _list_of(_LIST_ENTRY)
+_LIST = (
+    _numeric_list(ignore=_COMMENT)
+    | _numeric_list(nested=3, ignore=_COMMENT)
+    | _numeric_list(nested=4, ignore=_COMMENT)
+    | _list_of(_LIST_ENTRY)
+)
 _NUMBER = (
     common.number
     | CaselessKeyword("nan").set_parse_action(lambda: np.nan)

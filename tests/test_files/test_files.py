@@ -3,9 +3,9 @@ import sys
 from pathlib import Path
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Generator, Sequence
+    from collections.abc import Generator
 else:
-    from typing import Generator, Sequence
+    from typing import Generator
 
 import numpy as np
 import pytest
@@ -153,16 +153,16 @@ def test_mesh(cavity: FoamCase) -> None:
 
     points = file[None]
 
-    assert isinstance(points, Sequence)
-    assert isinstance(points[0], Sequence)
-    assert len(points[0]) == 3
+    assert isinstance(points, np.ndarray)
+    assert points.ndim == 2
+    assert points.shape[-1] == 3
 
 
 def test_internal_field(cavity: FoamCase) -> None:
     blocks = cavity.block_mesh_dict["blocks"]
     assert isinstance(blocks, list)
     sizes = blocks[2]
-    assert isinstance(sizes, list)
+    assert isinstance(sizes, np.ndarray)
     size = np.prod(sizes)
 
     p_arr = np.zeros(size)

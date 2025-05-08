@@ -1,5 +1,6 @@
 # Based on https://foss.heptapod.net/fluiddyn/fluidsimfoam/-/blob/branch/default/tests/test_parser_advanced.py
 
+import numpy as np
 import pytest
 from foamlib._files._parsing import Parsed
 
@@ -276,9 +277,10 @@ def test_assignment_strange_name() -> None:
     """
     )
     assert parsed[("equations", '"(U|e|k).*"')] == 0.7
-    assert parsed[("equations", '"(U|e|k|epsilon).*"')] == (
-        "table",
-        [[0, 0.4], [0.5, 0.7]],
+    assert isinstance(parsed[("equations", '"(U|e|k|epsilon).*"')], tuple)
+    assert parsed[("equations", '"(U|e|k|epsilon).*"')][0] == "table"
+    assert np.array_equal(
+        parsed[("equations", '"(U|e|k|epsilon).*"')][1], [[0, 0.4], [0.5, 0.7]]
     )
 
 
@@ -331,17 +333,23 @@ def test_list_u() -> None:
         )
         """
     )
-    assert parsed[()] == [
-        [4.50773, 1.79963, 0.0],
-        [6.06208, 2.40831, 0.0],
-        [6.874, 2.72079, 0.0],
-        [7.42929, 2.931, 0.0],
-        [7.85095, 3.08805, 0.0],
-        [8.19202, 3.21306, 0.0],
-        [17.5, 1.92559e-09, 0.0],
-        [17.5, 6.81045e-12, 0.0],
-        [17.5, 6.81045e-12, 0.0],
-    ]
+    data = parsed[()]
+    assert isinstance(data, np.ndarray)
+    assert data.shape == (9, 3)
+    assert np.array_equal(
+        data,
+        [
+            [4.507730000e00, 1.799630000e00, 0.000000000e00],
+            [6.062080000e00, 2.408310000e00, 0.000000000e00],
+            [6.874000000e00, 2.720790000e00, 0.000000000e00],
+            [7.429290000e00, 2.931000000e00, 0.000000000e00],
+            [7.850950000e00, 3.088050000e00, 0.000000000e00],
+            [8.192020000e00, 3.213060000e00, 0.000000000e00],
+            [1.750000000e01, 1.925590000e-09, 0.000000000e00],
+            [1.750000000e01, 6.810450000e-12, 0.000000000e00],
+            [1.750000000e01, 6.810450000e-12, 0.000000000e00],
+        ],
+    )
 
 
 def test_list_as_write_cell_centers() -> None:

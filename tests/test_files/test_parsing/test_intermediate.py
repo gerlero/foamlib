@@ -1,5 +1,6 @@
 # Based on https://foss.heptapod.net/fluiddyn/fluidsimfoam/-/blob/branch/default/tests/test_parser.py
 
+import numpy as np
 import pytest
 from foamlib import FoamFile
 from foamlib._files._parsing import Parsed
@@ -61,20 +62,20 @@ def test_strange_names() -> None:
 
 
 def test_list_simple() -> None:
-    assert Parsed(b"""
+    faces = Parsed(b"""
         faces
         (
             (1 5 4 0)
             (2 3 4 5)
         );
-    """)[("faces",)] == [
-        [1, 5, 4, 0],
-        [2, 3, 4, 5],
-    ]
+    """)[("faces",)]
+
+    assert isinstance(faces, np.ndarray)
+    assert np.array_equal(faces, [[1, 5, 4, 0], [2, 3, 4, 5]])
 
 
 def test_list_assignment() -> None:
-    assert Parsed(b"""
+    faces = Parsed(b"""
         faces
         (
             1
@@ -82,7 +83,9 @@ def test_list_assignment() -> None:
             4
             0
         );
-    """)[("faces",)] == [1, 5, 4, 0]
+    """)[("faces",)]
+    assert isinstance(faces, np.ndarray)
+    assert np.array_equal(faces, [1, 5, 4, 0])
 
 
 def test_dict_simple() -> None:
@@ -135,11 +138,12 @@ def test_dict_with_list() -> None:
             pRefValue                   0;
         }
     """)
-    assert parsed[("PISO", "pRefPoint")] == [0, 0, 0]
+    assert isinstance(parsed[("PISO", "pRefPoint")], np.ndarray)
+    assert np.array_equal(parsed[("PISO", "pRefPoint")], [0, 0, 0])
 
 
 def test_list_with_dict() -> None:
-    assert Parsed(b"""
+    boundary = Parsed(b"""
         boundary
         (
             upperBoundary
@@ -152,33 +156,36 @@ def test_list_with_dict() -> None:
                 );
             }
         );
-    """)[("boundary",)] == [
-        (
-            "upperBoundary",
-            {
-                "type": "cyclic",
-                "neighbourPatch": "lowerBoundary",
-                "faces": [
-                    [3, 7, 6, 2],
-                ],
-            },
-        ),
-    ]
+    """)[("boundary",)]
+    assert isinstance(boundary, list)
+    assert len(boundary) == 1
+
+    upper_boundary = boundary[0]
+    assert upper_boundary[0] == "upperBoundary"
+    assert upper_boundary[1]["type"] == "cyclic"
+    assert upper_boundary[1]["neighbourPatch"] == "lowerBoundary"
+    assert isinstance(upper_boundary[1]["faces"], np.ndarray)
+    assert np.array_equal(upper_boundary[1]["faces"], [[3, 7, 6, 2]])
 
 
 def test_list_with_str() -> None:
-    assert Parsed(b"""
+    blocks = Parsed(b"""
         blocks
         (
             hex (0 1 2 3 4 5 6 7) (40 40 40) simpleGrading (1 1 1)
         );
-    """)[("blocks",)] == [
-        "hex",
-        [0, 1, 2, 3, 4, 5, 6, 7],
-        [40, 40, 40],
-        "simpleGrading",
-        [1, 1, 1],
-    ]
+    """)[("blocks",)]
+    assert isinstance(blocks, list)
+    assert len(blocks) == 5
+
+    assert blocks[0] == "hex"
+    assert isinstance(blocks[1], np.ndarray)
+    assert np.array_equal(blocks[1], [0, 1, 2, 3, 4, 5, 6, 7])
+    assert isinstance(blocks[2], np.ndarray)
+    assert np.array_equal(blocks[2], [40, 40, 40])
+    assert blocks[3] == "simpleGrading"
+    assert isinstance(blocks[4], np.ndarray)
+    assert np.array_equal(blocks[4], [1, 1, 1])
 
 
 def test_file_simple() -> None:
@@ -230,10 +237,9 @@ def test_file() -> None:
     """)
     assert parsed[("a",)] == 1
     assert parsed[("b",)] == 2
-    assert parsed[("faces",)] == [
-        [1, 5, 4, 0],
-        [2, 3, 4, 5],
-    ]
+    faces = parsed[("faces",)]
+    assert isinstance(faces, np.ndarray)
+    assert np.array_equal(faces, [[1, 5, 4, 0], [2, 3, 4, 5]])
     assert parsed[("my_dict", "a")] == 1
 
 
@@ -455,12 +461,15 @@ def test_for_blockmesh() -> None:
         );
     """)
     assert parsed[("negHalfWidth",)] == ("#neg", "$halfWidth")
-    assert parsed[("blocks",)] == [
-        "hex",
-        [4, 6, 14, 12, 0, 2, 10, 8],
-        [1, "$upstreamCells", "$cylinderBoxCells"],
-        "$expandBlock",
-    ]
+    blocks = parsed[("blocks",)]
+    assert isinstance(blocks, list)
+    assert len(blocks) == 4
+
+    assert blocks[0] == "hex"
+    assert isinstance(blocks[1], np.ndarray)
+    assert np.array_equal(blocks[1], [4, 6, 14, 12, 0, 2, 10, 8])
+    assert blocks[2] == [1, "$upstreamCells", "$cylinderBoxCells"]
+    assert blocks[3] == "$expandBlock"
 
 
 def test_for_u() -> None:
@@ -483,30 +492,44 @@ def test_blocks() -> None:
             hex (16 17 18 19 20 21 22 23) (96 1 72) simpleGrading (1 1 1)
         );
     """)
-    assert parsed[("blocks",)] == [
-        "hex",
-        [0, 1, 2, 3, 4, 5, 6, 7],
-        "inletChannel",
-        [40, 1, 64],
-        "simpleGrading",
-        [1, 1, 1],
-        "hex",
-        [4, 5, 6, 7, 8, 9, 10, 11, 12],
-        "inletChannel",
-        [40, 1, 16],
-        "simpleGrading",
-        [1, 1, 1],
-        "hex",
-        [12, 13, 14, 15, 16, 17, 18, 19],
-        [96, 1, 8],
-        "simpleGrading",
-        [1, 1, 1],
-        "hex",
-        [16, 17, 18, 19, 20, 21, 22, 23],
-        [96, 1, 72],
-        "simpleGrading",
-        [1, 1, 1],
-    ]
+    blocks = parsed[("blocks",)]
+    assert isinstance(blocks, list)
+    assert len(blocks) == 22
+
+    assert blocks[0] == "hex"
+    assert isinstance(blocks[1], np.ndarray)
+    assert np.array_equal(blocks[1], [0, 1, 2, 3, 4, 5, 6, 7])
+    assert blocks[2] == "inletChannel"
+    assert isinstance(blocks[3], np.ndarray)
+    assert np.array_equal(blocks[3], [40, 1, 64])
+    assert blocks[4] == "simpleGrading"
+    assert isinstance(blocks[5], np.ndarray)
+    assert np.array_equal(blocks[5], [1, 1, 1])
+    assert blocks[6] == "hex"
+    assert isinstance(blocks[7], np.ndarray)
+    assert np.array_equal(blocks[7], [4, 5, 6, 7, 8, 9, 10, 11, 12])
+    assert blocks[8] == "inletChannel"
+    assert isinstance(blocks[9], np.ndarray)
+    assert np.array_equal(blocks[9], [40, 1, 16])
+    assert blocks[10] == "simpleGrading"
+    assert isinstance(blocks[11], np.ndarray)
+    assert np.array_equal(blocks[11], [1, 1, 1])
+    assert blocks[12] == "hex"
+    assert isinstance(blocks[13], np.ndarray)
+    assert np.array_equal(blocks[13], [12, 13, 14, 15, 16, 17, 18, 19])
+    assert isinstance(blocks[14], np.ndarray)
+    assert np.array_equal(blocks[14], [96, 1, 8])
+    assert blocks[15] == "simpleGrading"
+    assert isinstance(blocks[16], np.ndarray)
+    assert np.array_equal(blocks[16], [1, 1, 1])
+    assert blocks[17] == "hex"
+    assert isinstance(blocks[18], np.ndarray)
+    assert np.array_equal(blocks[18], [16, 17, 18, 19, 20, 21, 22, 23])
+    assert isinstance(blocks[19], np.ndarray)
+    assert np.array_equal(blocks[19], [96, 1, 72])
+    assert blocks[20] == "simpleGrading"
+    assert isinstance(blocks[21], np.ndarray)
+    assert np.array_equal(blocks[21], [1, 1, 1])
 
 
 @pytest.mark.xfail(reason="Not currently supported")
@@ -586,10 +609,16 @@ def test_list_edges() -> None:
             spline 6 5 ((0.6 0.0124 0.05) (0.7 0.0395 0.05) (0.8 0.0724 0.05) (0.9 0.132 0.05) (1 0.172 0.05) (1.1 0.132 0.05) (1.2 0.0724 0.05) (1.3 0.0395 0.05) (1.4 0.0124 0.05))
         );
     """)
-    assert parsed[("edges",)] == [
-        "spline",
-        1,
-        2,
+    edges = parsed[("edges",)]
+    assert isinstance(edges, list)
+    assert len(edges) == 8
+
+    assert edges[0] == "spline"
+    assert edges[1] == 1
+    assert edges[2] == 2
+    assert isinstance(edges[3], np.ndarray)
+    assert np.array_equal(
+        edges[3],
         [
             [0.6, 0.0124, 0.0],
             [0.7, 0.0395, 0.0],
@@ -601,9 +630,13 @@ def test_list_edges() -> None:
             [1.3, 0.0395, 0.0],
             [1.4, 0.0124, 0.0],
         ],
-        "spline",
-        6,
-        5,
+    )
+    assert edges[4] == "spline"
+    assert edges[5] == 6
+    assert edges[6] == 5
+    assert isinstance(edges[7], np.ndarray)
+    assert np.array_equal(
+        edges[7],
         [
             [0.6, 0.0124, 0.05],
             [0.7, 0.0395, 0.05],
@@ -615,7 +648,7 @@ def test_list_edges() -> None:
             [1.3, 0.0395, 0.05],
             [1.4, 0.0124, 0.05],
         ],
-    ]
+    )
 
 
 def test_list_edges_arcs() -> None:
@@ -626,18 +659,21 @@ def test_list_edges_arcs() -> None:
             arc 5 10 origin (0 0 0)
         );
     """)
-    assert parsed[("edges",)] == [
-        "arc",
-        0,
-        5,
-        "origin",
-        [0, 0, 0],
-        "arc",
-        5,
-        10,
-        "origin",
-        [0, 0, 0],
-    ]
+    edges = parsed[("edges",)]
+    assert isinstance(edges, list)
+    assert len(edges) == 10
+    assert edges[0] == "arc"
+    assert edges[1] == 0
+    assert edges[2] == 5
+    assert edges[3] == "origin"
+    assert isinstance(edges[4], np.ndarray)
+    assert np.array_equal(edges[4], [0, 0, 0])
+    assert edges[5] == "arc"
+    assert edges[6] == 5
+    assert edges[7] == 10
+    assert edges[8] == "origin"
+    assert isinstance(edges[9], np.ndarray)
+    assert np.array_equal(edges[9], [0, 0, 0])
 
 
 def test_list_blocks() -> None:
@@ -649,23 +685,47 @@ def test_list_blocks() -> None:
             hex (2 3 11 10 5 4 12 13) (225 100 1) simpleGrading (1 ((0.1 0.25 41.9) (0.9 0.75 1)) 1)
         );
     """)
-    assert parsed[("blocks",)] == [
-        "hex",
-        [0, 1, 9, 8, 7, 6, 14, 15],
-        [50, 100, 1],
-        "simpleGrading",
-        [1, [[0.1, 0.25, 41.9], [0.9, 0.75, 1]], 1],
-        "hex",
-        [1, 2, 10, 9, 6, 5, 13, 14],
-        [50, 100, 1],
-        "simpleGrading",
-        [1, [[0.1, 0.25, 41.9], [0.9, 0.75, 1]], 1],
-        "hex",
-        [2, 3, 11, 10, 5, 4, 12, 13],
-        [225, 100, 1],
-        "simpleGrading",
-        [1, [[0.1, 0.25, 41.9], [0.9, 0.75, 1]], 1],
-    ]
+    blocks = parsed[("blocks",)]
+
+    assert isinstance(blocks, list)
+    assert len(blocks) == 15
+
+    assert blocks[0] == "hex"
+    assert isinstance(blocks[1], np.ndarray)
+    assert np.array_equal(blocks[1], [0, 1, 9, 8, 7, 6, 14, 15])
+    assert isinstance(blocks[2], np.ndarray)
+    assert np.array_equal(blocks[2], [50, 100, 1])
+    assert blocks[3] == "simpleGrading"
+    assert isinstance(blocks[4], list)
+    assert len(blocks[4]) == 3
+    assert blocks[4][0] == 1
+    assert isinstance(blocks[4][1], np.ndarray)
+    assert np.array_equal(blocks[4][1], [[0.1, 0.25, 41.9], [0.9, 0.75, 1]])
+    assert blocks[4][2] == 1
+    assert blocks[5] == "hex"
+    assert isinstance(blocks[6], np.ndarray)
+    assert np.array_equal(blocks[6], [1, 2, 10, 9, 6, 5, 13, 14])
+    assert isinstance(blocks[7], np.ndarray)
+    assert np.array_equal(blocks[7], [50, 100, 1])
+    assert blocks[8] == "simpleGrading"
+    assert isinstance(blocks[9], list)
+    assert len(blocks[9]) == 3
+    assert blocks[9][0] == 1
+    assert isinstance(blocks[9][1], np.ndarray)
+    assert np.array_equal(blocks[9][1], [[0.1, 0.25, 41.9], [0.9, 0.75, 1]])
+    assert blocks[9][2] == 1
+    assert blocks[10] == "hex"
+    assert isinstance(blocks[11], np.ndarray)
+    assert np.array_equal(blocks[11], [2, 3, 11, 10, 5, 4, 12, 13])
+    assert isinstance(blocks[12], np.ndarray)
+    assert np.array_equal(blocks[12], [225, 100, 1])
+    assert blocks[13] == "simpleGrading"
+    assert isinstance(blocks[14], list)
+    assert len(blocks[14]) == 3
+    assert blocks[14][0] == 1
+    assert isinstance(blocks[14][1], np.ndarray)
+    assert np.array_equal(blocks[14][1], [[0.1, 0.25, 41.9], [0.9, 0.75, 1]])
+    assert blocks[14][2] == 1
 
 
 @pytest.mark.xfail(reason="Not currently supported")
