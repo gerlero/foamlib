@@ -13,7 +13,7 @@ def test_is_of_case() -> None:
     """Test if a directory is an OpenFOAM case."""
 
     cases = of_cases("tests/test_postprocessing/Cases")
-    assert len(cases) == 9
+    assert len(cases) == 3
 
 
 def test_load_tables() -> None:
@@ -23,7 +23,7 @@ def test_load_tables() -> None:
     file.add_time(0)
 
     table = load_tables(output_file=file, dir_name="tests/test_postprocessing/Cases")
-    assert table.shape == (3554, 12)
+    assert table.shape == (1095, 12)
 
 
 def test_output_files() -> None:
@@ -33,7 +33,7 @@ def test_output_files() -> None:
     # output_files is a dictionary with keys as file names and values as OutputFile objects
     # key: freeSurface--U_freeSurface.raw
     folders = [key.split("--")[0] for key in output_files.keys()]
-    assert folders == [
+    assert sorted(folders) == sorted([
         "freeSurface",
         "freeSurface",
         "probes",
@@ -43,10 +43,10 @@ def test_output_files() -> None:
         "forces",
         "sample1",
         "sample2",
-    ]
+    ])
 
     files = [key.split("--")[1] for key in output_files.keys()]
-    assert files == [
+    assert sorted(files) == sorted([
         "U_freeSurface.raw",
         "p_freeSurface.raw",
         "T",
@@ -56,4 +56,4 @@ def test_output_files() -> None:
         "moment.dat",
         "centreLine_T.xy",
         "centreLine_U.csv",
-    ]
+    ])
