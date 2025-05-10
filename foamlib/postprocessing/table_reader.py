@@ -4,7 +4,7 @@ from __future__ import annotations  # Add this import at the top of the file
 
 from itertools import islice
 from pathlib import Path
-from typing import Callable, ClassVar, Optional
+from typing import Callable, ClassVar, Optional, Union
 
 import pandas as pd
 
@@ -29,14 +29,14 @@ class TableReader:
             A class method decorator used to register a reader function for a specific file extension.
             The extension is case-insensitive.
 
-        read(filepath: str) -> pd.DataFrame:
+        read(filepath: Union[str, Path]) -> pd.DataFrame:
             Reads a file and returns its contents as a pandas DataFrame. The file extension is used
             to determine the appropriate reader function. Raises a ValueError if no reader is registered
             for the file's extension.
     """
 
     _registry: ClassVar[
-        dict[str, Callable[[str, Optional[list[str]]], pd.DataFrame]]
+        dict[str, Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame]]
     ] = {}
 
     def __init__(self) -> None:
@@ -44,8 +44,8 @@ class TableReader:
 
     @classmethod
     def register(cls, extension: str) -> Callable[
-        [Callable[[str, Optional[list[str]]], pd.DataFrame]],
-        Callable[[str, Optional[list[str]]], pd.DataFrame],
+        [Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame]],
+        Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame],
     ]:
         """
         Register a reader function for a specific file extension.
@@ -61,15 +61,15 @@ class TableReader:
         """
 
         def decorator(
-            func: Callable[[str, Optional[list[str]]], pd.DataFrame],
-        ) -> Callable[[str, Optional[list[str]]], pd.DataFrame]:
+            func: Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame],
+        ) -> Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame]:
             cls._registry[extension.lower()] = func
             return func
 
         return decorator
 
     def read(
-        self, filepath: str, column_names: Optional[list[str]] = None
+        self, filepath: Union[str, Path], column_names: Optional[list[str]] = None
     ) -> pd.DataFrame:
         """
         Read a file and return its contents as a pandas DataFrame.
@@ -80,12 +80,12 @@ class TableReader:
             ValueError: If no reader is registered for the file's extension.
 
         Args:
-            filepath (str): The path to the file to be read.
+            filepath (Union[str, Path]): The path to the file to be read.
 
         Returns:
             pd.DataFrame: The contents of the file as a pandas DataFrame.
         """
-        ext = Path(filepath).suffix.lower()
+        ext = str(Path(filepath).suffix.lower())
         if ext not in self._registry:
             error_message = f"No reader registered for extension: '{ext}'"
             raise ReaderNotRegisteredError(error_message)
@@ -109,7 +109,7 @@ def is_convertible_to_float(values: list[str]) -> bool:
         return True
 
 
-def extract_column_names(filepath: str) -> Optional[list[str]]:
+def extract_column_names(filepath: Union[str, Path]) -> Optional[list[str]]:
     """
     Extract column names from the first 20 lines of a file.
 
@@ -158,7 +158,7 @@ def update_column_names(
 
 
 def read_oftable(
-    filepath: str, column_names: Optional[list[str]] = None
+    filepath: Union[str, Path], column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """
     Use a regular expression to parse the file and separate on parentheses and whitespace.
@@ -175,22 +175,29 @@ def read_oftable(
     )
     # Remove empty columns
     table = table.dropna(axis=1, how="all")
-    if column_names is None:
-        column_names = extract_column_names(filepath)
+    column_headers = extract_column_names(filepath)
+    if column_names is not None:
+        column_headers = column_names
         if len(column_names) != len(table.columns):
             column_names = None
-    update_column_names(table, column_names)
+    if column_headers is None or len(column_headers) != len(table.columns):
+        column_headers = None
+    update_column_names(table, column_headers)
     return table
 
 
 @TableReader.register(".dat")
-def read_dat(filepath: str, column_names: Optional[list[str]] = None) -> pd.DataFrame:
+def read_dat(
+    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+) -> pd.DataFrame:
     """Read a .dat file and return a DataFrame."""
     return read_oftable(filepath, column_names=column_names)
 
 
 @TableReader.register(".raw")
-def read_raw(filepath: str, column_names: Optional[list[str]] = None) -> pd.DataFrame:
+def read_raw(
+    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+) -> pd.DataFrame:
     """Read a .raw file and return a DataFrame."""
     if column_names is None:
         column_names = extract_column_names(filepath)
@@ -201,14 +208,16 @@ def read_raw(filepath: str, column_names: Optional[list[str]] = None) -> pd.Data
 
 @TableReader.register("")
 def read_default(
-    filepath: str, column_names: Optional[list[str]] = None
+    filepath: Union[str, Path], column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """Read a file with no extension and return a DataFrame."""
     return read_oftable(filepath, column_names=column_names)
 
 
 @TableReader.register(".xy")
-def read_xy(filepath: str, column_names: Optional[list[str]] = None) -> pd.DataFrame:
+def read_xy(
+    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+) -> pd.DataFrame:
     """Read a .xy file and return a DataFrame."""
     if column_names is None:
         column_names = extract_column_names(filepath)
@@ -218,7 +227,9 @@ def read_xy(filepath: str, column_names: Optional[list[str]] = None) -> pd.DataF
 
 
 @TableReader.register(".csv")
-def read_csv(filepath: str, column_names: Optional[list[str]] = None) -> pd.DataFrame:
+def read_csv(
+    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+) -> pd.DataFrame:
     """Read a .csv file and return a DataFrame."""
     with open(filepath) as f:
         first_lines = list(islice(f, 20))

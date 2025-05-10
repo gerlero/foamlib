@@ -1,13 +1,11 @@
-#%%
-import os
+# %%
+from __future__ import annotations
+
 from pathlib import Path
-from foamlib import FoamCase, FoamFile
-from foamlib.postprocessing.load_tables import load_tables,OutputFile, list_outputfiles
+
 import pandas as pd
-import json
 
-from collections import defaultdict
-
+from foamlib.postprocessing.load_tables import OutputFile, list_outputfiles, load_tables
 
 # damBreak
 root = Path(__file__).parent
@@ -16,7 +14,9 @@ results.mkdir(exist_ok=True)
 # %%
 out_files = list_outputfiles(root / "Cases")
 
-def max_height_filter(table: pd.DataFrame,parameters: dict[str,str]) -> pd.DataFrame:
+
+def max_height_filter(table: pd.DataFrame, parameters: dict[str, str]) -> pd.DataFrame:
+    """Filter the table to get the maximum height."""
     d = {
         "x": [table["x"].max()],
         "y": [table["y"].max()],
@@ -25,10 +25,10 @@ def max_height_filter(table: pd.DataFrame,parameters: dict[str,str]) -> pd.DataF
     d.update(parameters)
     return pd.DataFrame(d)
 
+
 # %%
 forces = load_tables(
-    output_file=out_files["forces--force.dat"],
-    dir_name=root / "Cases"
+    output_file=out_files["forces--force.dat"], dir_name=root / "Cases"
 )
 # %%
 forces.to_csv(
@@ -36,24 +36,20 @@ forces.to_csv(
     index=False,
 )
 
-probeU = load_tables(
-    output_file=out_files["probes--U"],
-    dir_name=root / "Cases"
-)
-probeU.to_csv(
-    results / "probeU.csv",
+probe_u = load_tables(output_file=out_files["probes--U"], dir_name=root / "Cases")
+probe_u.to_csv(
+    results / "probe_u.csv",
     index=False,
 )
 
 file = OutputFile(file_name="U_freeSurface.raw", folder="freeSurface")
-surfaceHeights = load_tables(
-    output_file=file, dir_name=root / "Cases", filter=max_height_filter
+surface_heights = load_tables(
+    output_file=file, dir_name=root / "Cases", filter_table=max_height_filter
 )
-surfaceHeights.to_csv(
-    results / "surfaceHeights.csv",
+surface_heights.to_csv(
+    results / "surface_heights.csv",
     index=False,
 )
-
 
 
 # %%

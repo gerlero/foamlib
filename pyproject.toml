@@ -84,6 +84,11 @@ path = "foamlib/__init__.py"
 packages = ["foamlib"]
 strict = true
 
+[tool.ruff]
+exclude = [
+    "example"
+]
+
 [tool.ruff.lint]
 extend-select = ["ALL"]
 extend-ignore = [
@@ -109,3 +114,4 @@ extend-ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
+
