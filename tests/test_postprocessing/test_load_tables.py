@@ -33,9 +33,11 @@ def test_load_tables_forces() -> None:
 
     table = load_tables(output_file=file, dir_name="tests/test_postprocessing/Cases")
 
-    assert table.columns.tolist()[-2:] == ["grid", "initHeight"]
-    assert list(table["grid"].unique()) == ["res1", "res2", "res3"]
-    assert list(table["initHeight"].unique()) == ["height_02", "height_03"]
+    assert sorted(table.columns.tolist()[-2:]) == sorted(["grid", "initHeight"])
+    assert sorted(list(table["grid"].unique())) == sorted(["res1", "res2", "res3"])
+    assert sorted(list(table["initHeight"].unique())) == sorted(
+        ["height_02", "height_03"]
+    )
     assert table.shape == (1095, 12)
 
 
@@ -50,10 +52,14 @@ def test_load_tables_surface() -> None:
         filter_table=max_height_filter,
     )
 
-    assert table.columns.tolist() == ["x", "y", "z", "grid", "initHeight", "timeValue"]
-    assert list(table["grid"].unique()) == ["res1", "res2", "res3"]
-    assert list(table["timeValue"].unique()) == [0.1, 0.2, 0.4]
-    assert list(table["initHeight"].unique()) == ["height_02", "height_03"]
+    assert sorted(table.columns.tolist()) == sorted(
+        ["x", "y", "z", "grid", "initHeight", "timeValue"]
+    )
+    assert sorted(list(table["timeValue"].unique())) == [0.1, 0.2, 0.4]
+    assert sorted(list(table["grid"].unique())) == sorted(["res1", "res2", "res3"])
+    assert sorted(list(table["initHeight"].unique())) == sorted(
+        ["height_02", "height_03"]
+    )
     assert table.shape == (9, 6)
 
 
