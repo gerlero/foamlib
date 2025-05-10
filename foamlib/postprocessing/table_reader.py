@@ -175,6 +175,10 @@ def read_oftable(
     )
     # Remove empty columns
     table = table.dropna(axis=1, how="all")
+    if column_names is None:
+        column_names = extract_column_names(filepath)
+        if len(column_names) != len(table.columns):
+            column_names = None
     update_column_names(table, column_names)
     return table
 
@@ -188,6 +192,8 @@ def read_dat(filepath: str, column_names: Optional[list[str]] = None) -> pd.Data
 @TableReader.register(".raw")
 def read_raw(filepath: str, column_names: Optional[list[str]] = None) -> pd.DataFrame:
     """Read a .raw file and return a DataFrame."""
+    if column_names is None:
+        column_names = extract_column_names(filepath)
     table = pd.read_csv(filepath, comment="#", sep=r"\s+", header=None)
     update_column_names(table, column_names)
     return table
@@ -204,6 +210,8 @@ def read_default(
 @TableReader.register(".xy")
 def read_xy(filepath: str, column_names: Optional[list[str]] = None) -> pd.DataFrame:
     """Read a .xy file and return a DataFrame."""
+    if column_names is None:
+        column_names = extract_column_names(filepath)
     table = pd.read_csv(filepath, comment="#", sep=r"\s+", header=None)
     update_column_names(table, column_names)
     return table

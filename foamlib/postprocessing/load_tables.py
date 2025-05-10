@@ -2,9 +2,10 @@ from __future__ import annotations  # Add this import at the top of the file
 
 from dataclasses import dataclass, field
 import os
+import json
 import pandas as pd
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 from collections import defaultdict
 from .table_reader import TableReader
 
@@ -52,17 +53,19 @@ def of_cases(dir_name: str) -> list[str]:
 class OutputFile:
     file_name: str
     folder: Union[str, Path] = None
-    _times: set[float] = field(default_factory=set, init=False, repr=False)
+    _times: set[str] = field(default_factory=set, init=False, repr=False)
 
-    def add_time(self, t: float):
+    def add_time(self, t: str):
         self._times.add(t)
 
     @property
-    def times(self) -> list[float]:
+    def times(self) -> list[str]:
         return sorted(self._times)
 
 
-def load_tables(output_file: OutputFile, dir_name: str) -> Optional[pd.DataFrame]:
+def load_tables(
+    output_file: OutputFile, dir_name: str, filter: Optional[callable[[pd.DataFrame, dict[str, str]], pd.DataFrame]]=None
+) -> Optional[pd.DataFrame]:
     """
     Load and concatenate all available dataframes for an OutputFile across time steps.
 
@@ -87,18 +90,34 @@ def load_tables(output_file: OutputFile, dir_name: str) -> Optional[pd.DataFrame
         if not postproc_root.exists():
             continue
 
+        postproc_folder = postproc_root / output_file.folder
+
+        if not output_file.times:
+            [
+                output_file.add_time(f.name)
+                for f in postproc_folder.iterdir()
+                if f.is_dir()
+            ]
+
         for time in output_file.times:
-            file_path = (
-                postproc_root / output_file.folder / str(time) / output_file.file_name
-            )
+            file_path = postproc_folder / time / output_file.file_name
 
             if file_path.exists():
                 print(f"Loading {file_path}")
                 reader = TableReader()
                 table = reader.read(file_path)
-                file_path
-                table["__case__"] = case_path.name
-                table["__time__"] = time
+                json_path = Path(case_path) / "parameters.json"
+
+                with open(json_path) as f:
+                    json_data = json.load(f)
+                    parameters = json_data.get("parameters", {})
+                    if len(output_file.times) > 1:
+                        parameters["timeValue"] = float(time)
+                    # add parameters as columns
+                    for key, value in parameters.items():
+                        table[key] = value
+                if filter is not None:
+                    table = filter(table,parameters)
                 all_tables.append(table)
 
     if all_tables:
@@ -124,7 +143,7 @@ def _outputfiles(file_map, case_path_str, postproc_root):
             # Skip directories that are not time directories
             continue
 
-        time = float(base)
+        time = base
         time_path = Path(dirpath)
         rel_to_postproc = time_path.relative_to(postproc_root)
         folder = rel_to_postproc.parent

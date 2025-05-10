@@ -55,11 +55,12 @@ def test_read_headers(file_path: str, expected_headers: list[str]) -> None:
 
 
 # Test data for table reading
+
 TABLE_TEST_CASES = [
     (
         force_file,
         (109, 10),
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        ['Time', 'total_x', 'total_y', 'total_z', 'pressure_x', 'pressure_y', 'pressure_z', 'viscous_x', 'viscous_y', 'viscous_z'],
         [
             "time",
             "Fx",
@@ -73,11 +74,11 @@ TABLE_TEST_CASES = [
             "visk_Fz",
         ],
     ),
-    (free_surface_p_file, (278, 4), [0, 1, 2, 3], ["x", "y", "z", "p"]),
-    (free_surface_u_file, (278, 6), [0, 1, 2, 3, 4, 5], ["x", "y", "z", "u", "v", "w"]),
-    (probe_p_file, (109, 2), [0, 1], ["time", "p"]),
+    (free_surface_p_file, (278, 4), ['x', 'y', 'z', 'p'], ["x", "y", "z", "p"]),
+    (free_surface_u_file, (278, 6), ['x', 'y', 'z', 'U_x', 'U_y', 'U_z'], ["x", "y", "z", "u", "v", "w"]),
+    (probe_p_file, (109, 2), ['Time', '0'], ["time", "p"]),
     (probe_u_file, (109, 4), [0, 1, 2, 3], ["time", "u", "v", "w"]),
-    (probe_t_file, (109, 2), [0, 1], ["time", "T"]),
+    (probe_t_file, (109, 2), ['Time', '0'], ["time", "T"]),
     (sample_file, (100, 2), [0, 1], ["x", "y"]),
     (
         csv_file,
