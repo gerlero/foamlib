@@ -69,9 +69,7 @@ def test_list_simple() -> None:
             (2 3 4 5)
         );
     """)[("faces",)]
-
-    assert isinstance(faces, np.ndarray)
-    assert np.array_equal(faces, [[1, 5, 4, 0], [2, 3, 4, 5]])
+    assert np.array_equal(faces, [[1, 5, 4, 0], [2, 3, 4, 5]])  # type: ignore[arg-type]
 
 
 def test_list_assignment() -> None:
@@ -84,8 +82,7 @@ def test_list_assignment() -> None:
             0
         );
     """)[("faces",)]
-    assert isinstance(faces, np.ndarray)
-    assert np.array_equal(faces, [1, 5, 4, 0])
+    assert np.array_equal(faces, [1, 5, 4, 0])  # type: ignore[arg-type]
 
 
 def test_dict_simple() -> None:
@@ -138,8 +135,7 @@ def test_dict_with_list() -> None:
             pRefValue                   0;
         }
     """)
-    assert isinstance(parsed[("PISO", "pRefPoint")], np.ndarray)
-    assert np.array_equal(parsed[("PISO", "pRefPoint")], [0, 0, 0])
+    assert np.array_equal(parsed[("PISO", "pRefPoint")], [0, 0, 0])  # type: ignore[arg-type]
 
 
 def test_list_with_dict() -> None:
@@ -164,7 +160,6 @@ def test_list_with_dict() -> None:
     assert upper_boundary[0] == "upperBoundary"
     assert upper_boundary[1]["type"] == "cyclic"
     assert upper_boundary[1]["neighbourPatch"] == "lowerBoundary"
-    assert isinstance(upper_boundary[1]["faces"], np.ndarray)
     assert np.array_equal(upper_boundary[1]["faces"], [[3, 7, 6, 2]])
 
 
@@ -179,12 +174,9 @@ def test_list_with_str() -> None:
     assert len(blocks) == 5
 
     assert blocks[0] == "hex"
-    assert isinstance(blocks[1], np.ndarray)
     assert np.array_equal(blocks[1], [0, 1, 2, 3, 4, 5, 6, 7])
-    assert isinstance(blocks[2], np.ndarray)
     assert np.array_equal(blocks[2], [40, 40, 40])
     assert blocks[3] == "simpleGrading"
-    assert isinstance(blocks[4], np.ndarray)
     assert np.array_equal(blocks[4], [1, 1, 1])
 
 
@@ -238,8 +230,7 @@ def test_file() -> None:
     assert parsed[("a",)] == 1
     assert parsed[("b",)] == 2
     faces = parsed[("faces",)]
-    assert isinstance(faces, np.ndarray)
-    assert np.array_equal(faces, [[1, 5, 4, 0], [2, 3, 4, 5]])
+    assert np.array_equal(faces, [[1, 5, 4, 0], [2, 3, 4, 5]])  # type: ignore[arg-type]
     assert parsed[("my_dict", "a")] == 1
 
 
@@ -466,7 +457,6 @@ def test_for_blockmesh() -> None:
     assert len(blocks) == 4
 
     assert blocks[0] == "hex"
-    assert isinstance(blocks[1], np.ndarray)
     assert np.array_equal(blocks[1], [4, 6, 14, 12, 0, 2, 10, 8])
     assert blocks[2] == [1, "$upstreamCells", "$cylinderBoxCells"]
     assert blocks[3] == "$expandBlock"
@@ -497,38 +487,26 @@ def test_blocks() -> None:
     assert len(blocks) == 22
 
     assert blocks[0] == "hex"
-    assert isinstance(blocks[1], np.ndarray)
     assert np.array_equal(blocks[1], [0, 1, 2, 3, 4, 5, 6, 7])
     assert blocks[2] == "inletChannel"
-    assert isinstance(blocks[3], np.ndarray)
     assert np.array_equal(blocks[3], [40, 1, 64])
     assert blocks[4] == "simpleGrading"
-    assert isinstance(blocks[5], np.ndarray)
     assert np.array_equal(blocks[5], [1, 1, 1])
     assert blocks[6] == "hex"
-    assert isinstance(blocks[7], np.ndarray)
     assert np.array_equal(blocks[7], [4, 5, 6, 7, 8, 9, 10, 11, 12])
     assert blocks[8] == "inletChannel"
-    assert isinstance(blocks[9], np.ndarray)
     assert np.array_equal(blocks[9], [40, 1, 16])
     assert blocks[10] == "simpleGrading"
-    assert isinstance(blocks[11], np.ndarray)
     assert np.array_equal(blocks[11], [1, 1, 1])
     assert blocks[12] == "hex"
-    assert isinstance(blocks[13], np.ndarray)
     assert np.array_equal(blocks[13], [12, 13, 14, 15, 16, 17, 18, 19])
-    assert isinstance(blocks[14], np.ndarray)
     assert np.array_equal(blocks[14], [96, 1, 8])
     assert blocks[15] == "simpleGrading"
-    assert isinstance(blocks[16], np.ndarray)
     assert np.array_equal(blocks[16], [1, 1, 1])
     assert blocks[17] == "hex"
-    assert isinstance(blocks[18], np.ndarray)
     assert np.array_equal(blocks[18], [16, 17, 18, 19, 20, 21, 22, 23])
-    assert isinstance(blocks[19], np.ndarray)
     assert np.array_equal(blocks[19], [96, 1, 72])
     assert blocks[20] == "simpleGrading"
-    assert isinstance(blocks[21], np.ndarray)
     assert np.array_equal(blocks[21], [1, 1, 1])
 
 
@@ -616,7 +594,6 @@ def test_list_edges() -> None:
     assert edges[0] == "spline"
     assert edges[1] == 1
     assert edges[2] == 2
-    assert isinstance(edges[3], np.ndarray)
     assert np.array_equal(
         edges[3],
         [
@@ -634,7 +611,6 @@ def test_list_edges() -> None:
     assert edges[4] == "spline"
     assert edges[5] == 6
     assert edges[6] == 5
-    assert isinstance(edges[7], np.ndarray)
     assert np.array_equal(
         edges[7],
         [
@@ -666,13 +642,11 @@ def test_list_edges_arcs() -> None:
     assert edges[1] == 0
     assert edges[2] == 5
     assert edges[3] == "origin"
-    assert isinstance(edges[4], np.ndarray)
     assert np.array_equal(edges[4], [0, 0, 0])
     assert edges[5] == "arc"
     assert edges[6] == 5
     assert edges[7] == 10
     assert edges[8] == "origin"
-    assert isinstance(edges[9], np.ndarray)
     assert np.array_equal(edges[9], [0, 0, 0])
 
 
@@ -691,39 +665,30 @@ def test_list_blocks() -> None:
     assert len(blocks) == 15
 
     assert blocks[0] == "hex"
-    assert isinstance(blocks[1], np.ndarray)
     assert np.array_equal(blocks[1], [0, 1, 9, 8, 7, 6, 14, 15])
-    assert isinstance(blocks[2], np.ndarray)
     assert np.array_equal(blocks[2], [50, 100, 1])
     assert blocks[3] == "simpleGrading"
     assert isinstance(blocks[4], list)
     assert len(blocks[4]) == 3
     assert blocks[4][0] == 1
-    assert isinstance(blocks[4][1], np.ndarray)
     assert np.array_equal(blocks[4][1], [[0.1, 0.25, 41.9], [0.9, 0.75, 1]])
     assert blocks[4][2] == 1
     assert blocks[5] == "hex"
-    assert isinstance(blocks[6], np.ndarray)
     assert np.array_equal(blocks[6], [1, 2, 10, 9, 6, 5, 13, 14])
-    assert isinstance(blocks[7], np.ndarray)
     assert np.array_equal(blocks[7], [50, 100, 1])
     assert blocks[8] == "simpleGrading"
     assert isinstance(blocks[9], list)
     assert len(blocks[9]) == 3
     assert blocks[9][0] == 1
-    assert isinstance(blocks[9][1], np.ndarray)
     assert np.array_equal(blocks[9][1], [[0.1, 0.25, 41.9], [0.9, 0.75, 1]])
     assert blocks[9][2] == 1
     assert blocks[10] == "hex"
-    assert isinstance(blocks[11], np.ndarray)
     assert np.array_equal(blocks[11], [2, 3, 11, 10, 5, 4, 12, 13])
-    assert isinstance(blocks[12], np.ndarray)
     assert np.array_equal(blocks[12], [225, 100, 1])
     assert blocks[13] == "simpleGrading"
     assert isinstance(blocks[14], list)
     assert len(blocks[14]) == 3
     assert blocks[14][0] == 1
-    assert isinstance(blocks[14][1], np.ndarray)
     assert np.array_equal(blocks[14][1], [[0.1, 0.25, 41.9], [0.9, 0.75, 1]])
     assert blocks[14][2] == 1
 

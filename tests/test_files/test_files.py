@@ -162,7 +162,6 @@ def test_internal_field(cavity: FoamCase) -> None:
     blocks = cavity.block_mesh_dict["blocks"]
     assert isinstance(blocks, list)
     sizes = blocks[2]
-    assert isinstance(sizes, np.ndarray)
     size = np.prod(sizes)
 
     p_arr = np.zeros(size)

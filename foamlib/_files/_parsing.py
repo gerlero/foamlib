@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
-from typing import Tuple, Union, cast
+from typing import TYPE_CHECKING, Tuple, Union, cast
 
 if sys.version_info >= (3, 9):
     from collections.abc import Iterator, Mapping, MutableMapping, Sequence
@@ -40,46 +40,43 @@ from pyparsing import (
 
 from ._types import Data, Dimensioned, DimensionSet, File
 
+if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
 
-def _numeric_list(
-    *, nested: int | None = None, ignore: Regex | None = None, force_float: bool = False
+
+def _ascii_numeric_list(
+    dtype: DTypeLike,
+    *,
+    nested: int | None = None,
+    ignore: Regex | None = None,
+    empty_ok: bool = False,
 ) -> ParserElement:
-    if not force_float:
-        int_pattern = r"(?:-?\d+)"
-    float_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
+    dtype = np.dtype(dtype)
+
+    if np.issubdtype(dtype, np.floating):
+        element = common.ieee_float
+        element_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
+    elif np.issubdtype(dtype, np.integer):
+        element = common.integer
+        element_pattern = r"(?:-?\d+)"
+    else:
+        msg = f"Unsupported dtype: {dtype}"
+        raise TypeError(msg)
+
     spacing_pattern = (
-        rf"(?:(?:\s|{ignore.re.pattern})+)" if ignore is not None else r"\s+"
+        rf"(?:(?:\s|{ignore.re.pattern})+)" if ignore is not None else r"(?:\s+)"
     )
 
-    if nested is None:
-        if not force_float:
-            int_element_pattern = int_pattern
-            int_element = common.integer
-        float_element_pattern = float_pattern
-        float_element = common.ieee_float
-    else:
-        if not force_float:
-            int_element_pattern = rf"(?:(?:{nested})?{spacing_pattern}?\({spacing_pattern}?(?:{int_pattern}{spacing_pattern}){{{nested - 1}}}{int_pattern}{spacing_pattern}?\))"
-            int_element = (
-                Opt(Literal(str(nested))).suppress()
-                + Literal("(").suppress()
-                + Group(common.integer[nested])
-                + Literal(")").suppress()
-            )
-        float_element_pattern = rf"(?:(?:{nested})?{spacing_pattern}?\({spacing_pattern}?(?:{float_pattern}{spacing_pattern}){{{nested - 1}}}{float_pattern}{spacing_pattern}?\))"
-        float_element = (
-            Opt(Literal(str(nested))).suppress()
-            + Literal("(").suppress()
-            + Group(common.ieee_float[nested])
-            + Literal(")").suppress()
+    if nested is not None:
+        element = (
+            Literal("(").suppress() + Group(element[nested]) + Literal(")").suppress()
         )
+        element_pattern = rf"(?:{spacing_pattern}?\({element_pattern}?(?:{element_pattern}{spacing_pattern}){{{nested - 1}}}{element_pattern}{spacing_pattern}?\))"
 
-    if not force_float:
-        int_list = Forward()
-    float_list = Forward()
+    list_ = Forward()
 
     def process_count(tks: ParseResults) -> None:
-        nonlocal int_list, float_list
+        nonlocal list_
 
         if not tks:
             count = None
@@ -88,46 +85,41 @@ def _numeric_list(
             assert isinstance(count, int)
 
         if count is None:
-            if not force_float:
-                int_list_pattern = rf"\({spacing_pattern}?(?:{int_element_pattern}{spacing_pattern})*{int_element_pattern}{spacing_pattern}?\)"
-                float_list_pattern = rf"\({spacing_pattern}?(?:{float_element_pattern}{spacing_pattern})*{float_element_pattern}{spacing_pattern}?\)"
+            if not empty_ok:
+                list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern})*{element_pattern}{spacing_pattern}?\)"
             else:
-                float_list_pattern = rf"\({spacing_pattern}?(?:{float_element_pattern}{spacing_pattern})*{float_element_pattern}?{spacing_pattern}?\)"
+                list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern})*{element_pattern}?{spacing_pattern}?\)"
 
         elif count == 0:
-            if not force_float:
-                int_list <<= NoMatch()
-                float_list <<= NoMatch()
+            if not empty_ok:
+                list_ <<= NoMatch()
             else:
-                float_list <<= (Literal("(") + Literal(")")).add_parse_action(
-                    lambda: np.empty((0, nested) if nested else 0, dtype=float)
+                list_ <<= (Literal("(") + Literal(")")).add_parse_action(
+                    lambda: np.empty((0, nested) if nested else 0, dtype=dtype)
                 )
             return
 
         else:
-            if not force_float:
-                int_list_pattern = rf"\({spacing_pattern}?(?:{int_element_pattern}{spacing_pattern}){{{count - 1}}}{int_element_pattern}{spacing_pattern}?\)"
-            float_list_pattern = rf"\({spacing_pattern}?(?:{float_element_pattern}{spacing_pattern}){{{count - 1}}}{float_element_pattern}{spacing_pattern}?\)"
+            list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern}){{{count - 1}}}{element_pattern}{spacing_pattern}?\)"
 
-        if not force_float:
-            int_list <<= Regex(int_list_pattern).add_parse_action(
-                lambda tks: to_array(tks, dtype=int)
-            )
-        float_list <<= Regex(float_list_pattern).add_parse_action(
-            lambda tks: to_array(tks, dtype=float)
+        list_ <<= Regex(list_pattern).add_parse_action(
+            lambda tks: to_array(tks, dtype=dtype)
         )
 
     def to_array(
-        tks: ParseResults, *, dtype: type
-    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.int64 | np.float64]]:
+        tks: ParseResults, *, dtype: DTypeLike
+    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.integer | np.floating]]:
         (s,) = tks
-        s = s.replace("(", "").replace(")", "")
-
+        assert s.startswith("(")
+        assert s.endswith(")")
+        s = s[1:-1]
         if ignore is not None:
             s = re.sub(ignore.re, " ", s)
+        if nested is not None:
+            s = s.replace("(", " ").replace(")", " ")
 
         ret: np.ndarray[
-            tuple[int] | tuple[int, int], np.dtype[np.int64 | np.float64]
+            tuple[int] | tuple[int, int], np.dtype[np.integer | np.floating]
         ] = np.fromstring(s, sep=" ", dtype=dtype)  # type: ignore[assignment]
 
         if nested is not None:
@@ -137,7 +129,7 @@ def _numeric_list(
 
     def to_full_array(
         tks: ParseResults, *, dtype: type
-    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.int64 | np.float64]]:
+    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.integer | np.floating]]:
         count, lst = tks
         assert isinstance(count, int)
 
@@ -146,24 +138,8 @@ def _numeric_list(
 
         return np.full((count, nested), lst, dtype=dtype)  # type: ignore[return-value]
 
-    count = Opt(common.integer).add_parse_action(process_count)
-
-    ret = count.suppress() + (
-        (int_list | float_list) if not force_float else float_list
-    )
-
-    if not force_float:
-        ret |= (
-            common.integer
-            + Literal("{").suppress()
-            + int_element
-            + Literal("}").suppress()
-        ).add_parse_action(lambda tks: to_full_array(tks, dtype=int))
-    ret |= (
-        common.integer
-        + Literal("{").suppress()
-        + float_element
-        + Literal("}").suppress()
+    ret = ((Opt(common.integer).add_parse_action(process_count)).suppress() + list_) | (
+        common.integer + Literal("{").suppress() + element + Literal("}").suppress()
     ).add_parse_action(lambda tks: to_full_array(tks, dtype=float))
 
     if ignore is not None:
@@ -172,23 +148,29 @@ def _numeric_list(
     return ret
 
 
-def _binary_field(*, nested: int | None = None) -> ParserElement:
+def _binary_numeric_list(
+    dtype: DTypeLike, *, nested: int | None = None, empty_ok: bool = False
+) -> ParserElement:
+    dtype = np.dtype(dtype)
+
     elsize = nested if nested is not None else 1
 
-    binary_field = Forward()
+    list_ = Forward()
 
     def process_count(tks: ParseResults) -> None:
-        nonlocal binary_field
+        nonlocal list_
         (size,) = tks
         assert isinstance(size, int)
 
-        binary_field <<= Regex(
-            rf"\((?s:({'.' * 8 * elsize}|{'.' * 4 * elsize}){{{size}}})\)"
-        )
+        if size == 0 and not empty_ok:
+            list_ <<= NoMatch()
+            return
+
+        list_ <<= Regex(rf"\((?s:{'.' * dtype.itemsize * elsize}){{{size}}}\)")
 
     def to_array(
         tks: ParseResults,
-    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]:
+    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.integer | np.floating]]:
         size, s = tks
         assert isinstance(size, int)
         assert isinstance(s, str)
@@ -196,10 +178,6 @@ def _binary_field(*, nested: int | None = None) -> ParserElement:
         assert s[-1] == ")"
         s = s[1:-1]
 
-        float_size = len(s) / elsize / size
-        assert float_size in (4, 8)
-
-        dtype = np.float32 if float_size == 4 else float
         ret = np.frombuffer(s.encode("latin-1"), dtype=dtype)
 
         if nested is not None:
@@ -207,9 +185,9 @@ def _binary_field(*, nested: int | None = None) -> ParserElement:
 
         return ret  # type: ignore[return-value]
 
-    count = common.integer.copy().add_parse_action(process_count)
-
-    return (count + binary_field).add_parse_action(to_array)
+    return (
+        common.integer.copy().add_parse_action(process_count) + list_
+    ).add_parse_action(to_array)
 
 
 def _list_of(entry: ParserElement) -> ParserElement:
@@ -337,15 +315,22 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
             Opt(
                 Literal("List") + Literal("<") + Literal("scalar") + Literal(">")
             ).suppress()
-            + (_numeric_list(force_float=True, ignore=_COMMENT) | _binary_field())
+            + (
+                _ascii_numeric_list(dtype=float, ignore=_COMMENT, empty_ok=True)
+                | _binary_numeric_list(dtype=np.float64, empty_ok=True)
+                | _binary_numeric_list(dtype=np.float32, empty_ok=True)
+            )
         )
         | (
             Opt(
                 Literal("List") + Literal("<") + Literal("vector") + Literal(">")
             ).suppress()
             + (
-                _numeric_list(nested=3, force_float=True, ignore=_COMMENT)
-                | _binary_field(nested=3)
+                _ascii_numeric_list(
+                    dtype=float, nested=3, ignore=_COMMENT, empty_ok=True
+                )
+                | _binary_numeric_list(np.float64, nested=3, empty_ok=True)
+                | _binary_numeric_list(np.float32, nested=3, empty_ok=True)
             )
         )
         | (
@@ -353,12 +338,11 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("List") + Literal("<") + Literal("symmTensor") + Literal(">")
             ).suppress()
             + (
-                _numeric_list(
-                    nested=6,
-                    force_float=True,
-                    ignore=_COMMENT,
+                _ascii_numeric_list(
+                    dtype=float, nested=6, ignore=_COMMENT, empty_ok=True
                 )
-                | _binary_field(nested=6)
+                | _binary_numeric_list(np.float64, nested=6, empty_ok=True)
+                | _binary_numeric_list(np.float32, nested=6, empty_ok=True)
             )
         )
         | (
@@ -366,8 +350,11 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("List") + Literal("<") + Literal("tensor") + Literal(">")
             ).suppress()
             + (
-                _numeric_list(nested=9, force_float=True, ignore=_COMMENT)
-                | _binary_field(nested=9)
+                _ascii_numeric_list(
+                    dtype=float, nested=9, ignore=_COMMENT, empty_ok=True
+                )
+                | _binary_numeric_list(np.float64, nested=9, empty_ok=True)
+                | _binary_numeric_list(np.float32, nested=9, empty_ok=True)
             )
         )
     )
@@ -380,12 +367,7 @@ _KEYWORD_ENTRY = _keyword_entry_of(_TOKEN | _list_of(_IDENTIFIER), _DATA)
 _DICT = _dict_of(_TOKEN, _DATA)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
-_LIST = (
-    _numeric_list(ignore=_COMMENT)
-    | _numeric_list(nested=3, ignore=_COMMENT)
-    | _numeric_list(nested=4, ignore=_COMMENT)
-    | _list_of(_LIST_ENTRY)
-)
+_LIST = _list_of(_LIST_ENTRY)
 _NUMBER = (
     common.number
     | CaselessKeyword("nan").set_parse_action(lambda: np.nan)
@@ -421,7 +403,19 @@ _LOCATED_DICTIONARY = Group(
         located=True,
     )
 )[...]
-_LOCATED_DATA = Group(Located(_DATA.copy().add_parse_action(lambda tks: ["", tks[0]])))
+_LOCATED_DATA = Group(
+    Located(
+        (
+            _ascii_numeric_list(dtype=int, ignore=_COMMENT)
+            | _binary_numeric_list(dtype=np.int64)
+            | _binary_numeric_list(dtype=np.int32)
+            | _ascii_numeric_list(dtype=float, nested=3, ignore=_COMMENT)
+            | _binary_numeric_list(dtype=np.float64, nested=3)
+            | _binary_numeric_list(dtype=np.float32, nested=3)
+            | _DATA
+        ).add_parse_action(lambda tks: ["", tks[0]])
+    )
+)
 
 _FILE = (
     Dict(_LOCATED_DICTIONARY + Opt(_LOCATED_DATA) + _LOCATED_DICTIONARY)

@@ -1,6 +1,7 @@
 import numpy as np
 from foamlib import FoamFile
 from foamlib._files._parsing import Parsed
+from foamlib._files._types import is_sequence
 
 
 def test_parse_value() -> None:
@@ -18,13 +19,9 @@ def test_parse_value() -> None:
     assert Parsed(b"uniform 1.0e-3")[()] == 1.0e-3
     assert Parsed(b"(word word)")[()] == ["word", "word"]
     lst = Parsed(b"(1 2 3)")[()]
-    assert isinstance(lst, np.ndarray)
-    assert lst.dtype == np.int64
-    assert np.array_equal(lst, [1, 2, 3])
+    assert np.array_equal(lst, [1, 2, 3])  # type: ignore[arg-type]
     lst = Parsed(b"(1.0 2 3)")[()]
-    assert isinstance(lst, np.ndarray)
-    assert lst.dtype == np.float64
-    assert np.array_equal(lst, [1.0, 2.0, 3.0])
+    assert np.array_equal(lst, [1.0, 2.0, 3.0])  # type: ignore[arg-type]
     assert Parsed(b"()")[()] == []
     field = Parsed(b"uniform (1 2 3)")[()]
     assert isinstance(field, np.ndarray)
@@ -109,16 +106,13 @@ def test_parse_value() -> None:
     assert isinstance(tpl, tuple)
     assert len(tpl) == 5
     assert tpl[0] == "hex"
-    assert isinstance(tpl[1], np.ndarray)
-    assert tpl[1].dtype == np.int64
-    assert np.array_equal(tpl[1], [0, 1, 2, 3, 4, 5, 6, 7])
-    assert isinstance(tpl[2], np.ndarray)
-    assert tpl[2].dtype == np.int64
-    assert np.array_equal(tpl[2], [1, 1, 1])
+    assert is_sequence(tpl[1])
+    assert np.array_equal(tpl[1], [0, 1, 2, 3, 4, 5, 6, 7])  # type: ignore[arg-type]
+    assert is_sequence(tpl[2])
+    assert np.array_equal(tpl[2], [1, 1, 1])  # type: ignore[arg-type]
     assert tpl[3] == "simpleGrading"
-    assert isinstance(tpl[4], np.ndarray)
-    assert tpl[4].dtype == np.int64
-    assert np.array_equal(tpl[4], [1, 1, 1])
+    assert is_sequence(tpl[4])
+    assert np.array_equal(tpl[4], [1, 1, 1])  # type: ignore[arg-type]
     assert Parsed(b"(a b; c d;)")[()] == [("a", "b"), ("c", "d")]
     assert Parsed(b"(a {b c;} d {e g;})")[()] == [
         ("a", {"b": "c"}),
