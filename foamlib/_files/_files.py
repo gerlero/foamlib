@@ -17,7 +17,7 @@ else:
 import numpy as np
 
 from ._io import FoamFileIO
-from ._serialization import Kind, dumps, normalize
+from ._serialization import dumps, normalize_data, normalize_keyword
 from ._types import (
     Data,
     Dict_,
@@ -261,7 +261,7 @@ class FoamFile(
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        if keywords and not isinstance(normalize(keywords[-1], kind=Kind.KEYWORD), str):
+        if keywords and not isinstance(normalize_keyword(keywords[-1]), str):
             msg = f"Invalid keyword: {keywords[-1]}"
             raise ValueError(msg)
 
@@ -283,24 +283,17 @@ class FoamFile(
                     self.path.stem if self.path.suffix == ".gz" else self.path.name
                 )
 
-            kind = Kind.DEFAULT
-            if keywords == ("internalField",) or (
-                len(keywords) == 3
-                and keywords[0] == "boundaryField"
-                and (
-                    keywords[2] in ("value", "gradient")
-                    or keywords[2].endswith("Value")
-                    or keywords[2].endswith("Gradient")
-                )
-            ):
-                kind = (
-                    Kind.BINARY_FIELD if self.format == "binary" else Kind.ASCII_FIELD
-                )
-            elif keywords == ("dimensions",):
-                kind = Kind.DIMENSIONS
-
             if (
-                kind in (Kind.ASCII_FIELD, Kind.BINARY_FIELD)
+                keywords == ("internalField",)
+                or (
+                    len(keywords) == 3
+                    and keywords[0] == "boundaryField"
+                    and (
+                        keywords[2] == "value"
+                        or keywords[2] == "gradient"
+                        or keywords[2].endswith(("Value", "Gradient"))
+                    )
+                )
             ) and self.class_ == "dictionary":
                 try:
                     shape = np.shape(data)  # type: ignore [arg-type]
@@ -324,11 +317,6 @@ class FoamFile(
                             self.class_ = "volSymmTensorField"
                         elif shape[1] == 9:
                             self.class_ = "volTensorField"
-
-            if kind == Kind.ASCII_FIELD and self.class_.endswith("scalarField"):
-                kind = Kind.SCALAR_ASCII_FIELD
-            elif kind == Kind.BINARY_FIELD and self.class_.endswith("scalarField"):
-                kind = Kind.SCALAR_BINARY_FIELD
 
             parsed = self._get_parsed(missing_ok=True)
 
@@ -360,7 +348,7 @@ class FoamFile(
                     ...,
                     before
                     + indentation
-                    + dumps(keywords[-1])
+                    + dumps(normalize_keyword(keywords[-1]))
                     + b"\n"
                     + indentation
                     + b"{\n"
@@ -373,23 +361,37 @@ class FoamFile(
                     self[(*keywords, k)] = v
 
             elif keywords:
-                val = dumps(data, kind=kind)
+                header = self.get("FoamFile", None)
+                assert header is None or isinstance(header, FoamFile.SubDict)
+                val = dumps(
+                    data,
+                    keywords=keywords,
+                    header=header,
+                )
                 parsed.put(
                     keywords,
-                    normalize(data, kind=kind),
+                    normalize_data(data, keywords=keywords),
                     before
                     + indentation
-                    + dumps(keywords[-1])
+                    + dumps(normalize_keyword(keywords[-1]))
                     + ((b" " + val) if val else b"")
                     + (b";" if not keywords[-1].startswith("#") else b"")
                     + after,
                 )
 
             else:
+                header = self.get("FoamFile", None)
+                assert header is None or isinstance(header, FoamFile.SubDict)
                 parsed.put(
                     (),
-                    normalize(data, kind=kind),
-                    before + dumps(data, kind=kind) + after,
+                    normalize_data(data, keywords=keywords),
+                    before
+                    + dumps(
+                        data,
+                        keywords=(),
+                        header=header,
+                    )
+                    + after,
                 )
 
     def __delitem__(self, keywords: str | tuple[str, ...] | None) -> None:
