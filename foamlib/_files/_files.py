@@ -32,6 +32,32 @@ from ._types import (
 )
 
 
+def _tensor_kind_for_field(
+    field: FieldLike,
+) -> str:
+    shape = np.shape(field)  # type: ignore [arg-type]
+    if not shape:
+        return "scalar"
+    if shape == (3,):
+        return "vector"
+    if shape == (6,):
+        return "symmTensor"
+    if shape == (9,):
+        return "tensor"
+    if len(shape) == 1:
+        return "scalar"
+    if len(shape) == 2:
+        if shape[1] == 3:
+            return "vector"
+        if shape[1] == 6:
+            return "symmTensor"
+        if shape[1] == 9:
+            return "tensor"
+
+    msg = f"Invalid field shape: {shape}"
+    raise ValueError(msg)
+
+
 class FoamFile(
     MutableMapping[
         Optional[Union[str, Tuple[str, ...]]],
@@ -297,27 +323,13 @@ class FoamFile(
                 )
             ) and self.class_ == "dictionary":
                 try:
-                    shape = np.shape(data)  # type: ignore [arg-type]
+                    tensor_kind = _tensor_kind_for_field(data)  # type: ignore [arg-type]
                 except ValueError:
                     pass
                 else:
-                    if not shape:
-                        self.class_ = "volScalarField"
-                    elif shape == (3,):
-                        self.class_ = "volVectorField"
-                    elif shape == (6,):
-                        self.class_ = "volSymmTensorField"
-                    elif shape == (9,):
-                        self.class_ = "volTensorField"
-                    elif len(shape) == 1:
-                        self.class_ = "volScalarField"
-                    elif len(shape) == 2:
-                        if shape[1] == 3:
-                            self.class_ = "volVectorField"
-                        elif shape[1] == 6:
-                            self.class_ = "volSymmTensorField"
-                        elif shape[1] == 9:
-                            self.class_ = "volTensorField"
+                    self.class_ = (
+                        "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
+                    )
 
             parsed = self._get_parsed(missing_ok=True)
 
@@ -448,7 +460,9 @@ class FoamFile(
     @staticmethod
     def dumps(file: File | DataLike, *, ensure_header: bool = True) -> bytes:
         """
-        Serialize Python objects to the OpenFOAM format.
+        Standalone serializer function.
+
+        Serialize Python objects to the OpenFOAM FoamFile format.
 
         :param file: The Python object to serialize. This can be a dictionary, list,
             or any other object that can be serialized to the OpenFOAM format.
@@ -476,27 +490,11 @@ class FoamFile(
             class_ = "dictionary"
             if isinstance(file, Mapping) and "internalField" in file:
                 try:
-                    shape = np.shape(file["internalField"])  # type: ignore [arg-type]
-                except ValueError:
+                    tensor_kind = _tensor_kind_for_field(file["internalField"])  # type: ignore [arg-type]
+                except (ValueError, TypeError):
                     pass
                 else:
-                    if not shape:
-                        class_ = "volScalarField"
-                    elif shape == (3,):
-                        class_ = "volVectorField"
-                    elif shape == (6,):
-                        class_ = "volSymmTensorField"
-                    elif shape == (9,):
-                        class_ = "volTensorField"
-                    elif len(shape) == 1:
-                        class_ = "volScalarField"
-                    elif len(shape) == 2:
-                        if shape[1] == 3:
-                            class_ = "volVectorField"
-                        elif shape[1] == 6:
-                            class_ = "volSymmTensorField"
-                        elif shape[1] == 9:
-                            class_ = "volTensorField"
+                    class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
 
             header = {"version": 2.0, "format": "ascii", "class": class_}
 
