@@ -18,6 +18,7 @@ def test_loads() -> None:
     assert FoamFile.loads("word word") == ("word", "word")
     assert FoamFile.loads('"a string"') == '"a string"'
     assert FoamFile.loads("(word word)") == ["word", "word"]
+    assert FoamFile.loads("keyword value;") == {"keyword": "value"}
     assert FoamFile.loads("uniform 1") == 1
     assert FoamFile.loads("uniform 1.0") == 1.0
     assert FoamFile.loads("uniform 1.0e-3") == 1.0e-3
@@ -69,3 +70,4 @@ def test_loads() -> None:
     assert dimensioned.name is None
     assert FoamFile.loads("a {b c; d e;}") == {"a": {"b": "c", "d": "e"}}
     assert FoamFile.loads("(a b; c d;)") == [("a", "b"), ("c", "d")]
+    assert FoamFile.loads("keyword;") == {"keyword": ""}
