@@ -10,7 +10,7 @@ else:
 
 import numpy as np
 
-from ._parsing import parse_data
+from ._parsing import loads
 from ._types import (
     Data,
     DataLike,
@@ -102,7 +102,9 @@ def normalize_data(
         return [normalize_data(d) for d in data]
 
     if isinstance(data, str):
-        return parse_data(data)
+        s = loads(data)
+        if isinstance(s, (str, tuple, bool)):
+            return s
 
     if isinstance(
         data,

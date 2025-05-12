@@ -17,6 +17,7 @@ else:
 import numpy as np
 
 from ._io import FoamFileIO
+from ._parsing import loads
 from ._serialization import dumps, normalize_data, normalize_keyword
 from ._types import (
     Data,
@@ -458,9 +459,36 @@ class FoamFile(
         return deepcopy(d)
 
     @staticmethod
+    def loads(
+        s: bytes | str,
+        *,
+        include_header: bool = False,
+    ) -> File | Data:
+        """
+        Standalone deserializing function.
+
+        Deserialize the OpenFOAM FoamFile format to Python objects.
+
+        :param s: The string to deserialize. This can be a dictionary, list, or any
+            other object that can be serialized to the OpenFOAM format.
+        :param include_header: Whether to include the "FoamFile" header in the output.
+            If `True`, the header will be included if it is present in the input object.
+        """
+        ret = loads(s)
+
+        if not include_header and isinstance(ret, Mapping) and "FoamFile" in ret:
+            del ret["FoamFile"]
+            if len(ret) == 1 and None in ret:
+                val = ret[None]
+                assert not isinstance(val, Mapping)
+                return val
+
+        return ret
+
+    @staticmethod
     def dumps(file: File | DataLike, *, ensure_header: bool = True) -> bytes:
         """
-        Standalone serializer function.
+        Standalone serializing function.
 
         Serialize Python objects to the OpenFOAM FoamFile format.
 

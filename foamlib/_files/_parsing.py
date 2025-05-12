@@ -380,21 +380,41 @@ _NUMBER = (
 )
 _DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | _TOKEN
 
-_DATA <<= (
-    _DATA_ENTRY[1, ...]
-    .set_parse_action(lambda tks: [tuple(tks)] if len(tks) > 1 else [tks[0]])
+_DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
+    lambda tks: [tuple(tks)] if len(tks) > 1 else [tks[0]]
+)
+
+_STANDALONE_DATA = (
+    _ascii_numeric_list(dtype=int, ignore=_COMMENT)
+    | _binary_numeric_list(dtype=np.int64)
+    | _binary_numeric_list(dtype=np.int32)
+    | _ascii_numeric_list(dtype=float, nested=3, ignore=_COMMENT)
+    | _binary_numeric_list(dtype=np.float64, nested=3)
+    | _binary_numeric_list(dtype=np.float32, nested=3)
+    | _DATA
+).add_parse_action(lambda tks: [None, tks[0]])
+
+
+_FILE = (
+    Dict(_KEYWORD_ENTRY[...] + Opt(Group(_STANDALONE_DATA)) + _KEYWORD_ENTRY[...])
     .ignore(_COMMENT)
     .parse_with_tabs()
 )
 
 
-def parse_data(s: str) -> Data:
-    if not s.strip():
-        return ""
-    return cast("Data", _DATA.parse_string(s, parse_all=True)[0])
+def loads(s: bytes | str) -> File | Data:
+    if isinstance(s, bytes):
+        s = s.decode("latin-1")
+
+    file = _FILE.parse_string(s, parse_all=True).as_dict()
+
+    if len(file) == 1 and None in file:
+        return file[None]  # type: ignore[no-any-return]
+
+    return file
 
 
-_LOCATED_DICTIONARY = Group(
+_LOCATED_KEYWORD_ENTRIES = Group(
     _keyword_entry_of(
         _TOKEN,
         Opt(_DATA, default=""),
@@ -403,22 +423,14 @@ _LOCATED_DICTIONARY = Group(
         located=True,
     )
 )[...]
-_LOCATED_DATA = Group(
-    Located(
-        (
-            _ascii_numeric_list(dtype=int, ignore=_COMMENT)
-            | _binary_numeric_list(dtype=np.int64)
-            | _binary_numeric_list(dtype=np.int32)
-            | _ascii_numeric_list(dtype=float, nested=3, ignore=_COMMENT)
-            | _binary_numeric_list(dtype=np.float64, nested=3)
-            | _binary_numeric_list(dtype=np.float32, nested=3)
-            | _DATA
-        ).add_parse_action(lambda tks: ["", tks[0]])
-    )
-)
+_LOCATED_STANDALONE_DATA = Group(Located(_STANDALONE_DATA))
 
-_FILE = (
-    Dict(_LOCATED_DICTIONARY + Opt(_LOCATED_DATA) + _LOCATED_DICTIONARY)
+_LOCATED_FILE = (
+    Dict(
+        _LOCATED_KEYWORD_ENTRIES
+        + Opt(_LOCATED_STANDALONE_DATA)
+        + _LOCATED_KEYWORD_ENTRIES
+    )
     .ignore(_COMMENT)
     .parse_with_tabs()
 )
@@ -430,7 +442,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, EllipsisType]]):
             tuple[str, ...],
             tuple[int, Data | EllipsisType, int],
         ] = {}
-        for parse_result in _FILE.parse_string(
+        for parse_result in _LOCATED_FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
         ):
             self._parsed.update(self._flatten_result(parse_result))
@@ -453,8 +465,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, EllipsisType]]):
         end = parse_result.locn_end
         assert isinstance(end, int)
         keyword, *data = item
-        assert isinstance(keyword, str)
-        if not keyword:
+        if keyword is None:
             assert not _keywords
             assert len(data) == 1
             assert not isinstance(data[0], ParseResults)

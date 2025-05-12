@@ -6,6 +6,7 @@ from foamlib._files._types import is_sequence
 
 def test_parse_value() -> None:
     assert Parsed(b"1")[()] == 1
+    assert Parsed(b"1")[()] == 1
     assert Parsed(b"1.0")[()] == 1.0
     assert Parsed(b"1.0e-3")[()] == 1.0e-3
     assert Parsed(b"yes")[()] is True
