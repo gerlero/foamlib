@@ -95,14 +95,16 @@ def test_parse_value() -> None:
     assert Parsed(b"[1 1 -2 0 0 0 0]")[()] == FoamFile.DimensionSet(
         mass=1, length=1, time=-2
     )
-    assert Parsed(b"g [1 1 -2 0 0 0 0] (0 0 -9.81)")[()] == FoamFile.Dimensioned(
-        name="g",
-        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2),
-        value=[0, 0, -9.81],
-    )
-    assert Parsed(b"[1 1 -2 0 0 0 0] 9.81")[()] == FoamFile.Dimensioned(
-        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2), value=9.81
-    )
+    dimensioned = Parsed(b"g [1 1 -2 0 0 0 0] (0 0 -9.81)")[()]
+    assert isinstance(dimensioned, FoamFile.Dimensioned)
+    assert dimensioned.dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert np.array_equal(dimensioned.value, [0, 0, -9.81])
+    assert dimensioned.name == "g"
+    dimensioned = Parsed(b"[1 1 -2 0 0 0 0] 9.81")[()]
+    assert isinstance(dimensioned, FoamFile.Dimensioned)
+    assert dimensioned.dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert dimensioned.value == 9.81
+    assert dimensioned.name is None
     tpl = Parsed(b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")[()]
     assert isinstance(tpl, tuple)
     assert len(tpl) == 5

@@ -57,13 +57,15 @@ def test_loads() -> None:
     assert FoamFile.loads("[1 1 -2 0 0 0 0]") == FoamFile.DimensionSet(
         mass=1, length=1, time=-2
     )
-    assert FoamFile.loads("g [1 1 -2 0 0 0 0] (0 0 -9.81)") == FoamFile.Dimensioned(
-        name="g",
-        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2),
-        value=[0, 0, -9.81],
-    )
-    assert FoamFile.loads("[1 1 -2 0 0 0 0] 9.81") == FoamFile.Dimensioned(
-        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2), value=9.81
-    )
+    dimensioned = FoamFile.loads("g [1 1 -2 0 0 0 0] (0 0 -9.81)")
+    assert isinstance(dimensioned, FoamFile.Dimensioned)
+    assert dimensioned.dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert np.array_equal(dimensioned.value, [0, 0, -9.81])
+    assert dimensioned.name == "g"
+    dimensioned = FoamFile.loads("[1 1 -2 0 0 0 0] 9.81")
+    assert isinstance(dimensioned, FoamFile.Dimensioned)
+    assert dimensioned.dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert dimensioned.value == 9.81
+    assert dimensioned.name is None
     assert FoamFile.loads("a {b c; d e;}") == {"a": {"b": "c", "d": "e"}}
     assert FoamFile.loads("(a b; c d;)") == [("a", "b"), ("c", "d")]
