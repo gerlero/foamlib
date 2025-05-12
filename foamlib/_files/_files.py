@@ -20,6 +20,7 @@ from ._io import FoamFileIO
 from ._serialization import dumps, normalize_data, normalize_keyword
 from ._types import (
     Data,
+    DataLike,
     Dict_,
     Dimensioned,
     DimensionSet,
@@ -443,6 +444,72 @@ class FoamFile(
         if not include_header:
             d.pop("FoamFile", None)
         return deepcopy(d)
+
+    @staticmethod
+    def dumps(file: File | DataLike, *, ensure_header: bool = True) -> bytes:
+        """
+        Serialize Python objects to the OpenFOAM format.
+
+        :param file: The Python object to serialize. This can be a dictionary, list,
+            or any other object that can be serialized to the OpenFOAM format.
+        :param ensure_header: Whether to include the "FoamFile" header in the output.
+            If `True`, a header will be included if it is not already present in the
+            input object.
+        """
+        if isinstance(file, Mapping):
+            header = file.get("FoamFile", None)
+            assert isinstance(header, FoamFile.SubDict) or header is None
+            entries: list[bytes] = []
+            for k, v in file.items():
+                if k is not None:
+                    entries.append(
+                        dumps((k, v), keywords=(), header=header, is_item=True)
+                    )
+                else:
+                    entries.append(dumps(v, keywords=(), header=header, is_item=True))
+            ret = b" ".join(entries)
+        else:
+            header = None
+            ret = dumps(file)
+
+        if header is None and ensure_header:
+            class_ = "dictionary"
+            if isinstance(file, Mapping) and "internalField" in file:
+                try:
+                    shape = np.shape(file["internalField"])  # type: ignore [arg-type]
+                except ValueError:
+                    pass
+                else:
+                    if not shape:
+                        class_ = "volScalarField"
+                    elif shape == (3,):
+                        class_ = "volVectorField"
+                    elif shape == (6,):
+                        class_ = "volSymmTensorField"
+                    elif shape == (9,):
+                        class_ = "volTensorField"
+                    elif len(shape) == 1:
+                        class_ = "volScalarField"
+                    elif len(shape) == 2:
+                        if shape[1] == 3:
+                            class_ = "volVectorField"
+                        elif shape[1] == 6:
+                            class_ = "volSymmTensorField"
+                        elif shape[1] == 9:
+                            class_ = "volTensorField"
+
+            header = {"version": 2.0, "format": "ascii", "class": class_}
+
+            ret = (
+                dumps(
+                    {"FoamFile": header},
+                    keywords=(),
+                )
+                + b" "
+                + ret
+            )
+
+        return ret
 
 
 class FoamFieldFile(FoamFile):
