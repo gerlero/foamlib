@@ -95,3 +95,19 @@ def test_serialize_data() -> None:
     assert dumps([{"a": "b", "c": "d"}, {"e": "g"}]) == b"({a b; c d;} {e g;})"
     assert dumps(["water", "oil", "mercury", "air"]) == b"(water oil mercury air)"
     assert dumps("div(phi,U)") == b"div(phi,U)"
+
+
+def test_serialize_file() -> None:
+    assert FoamFile.dumps(1.0, ensure_header=False) == b"1.0"
+    assert (
+        FoamFile.dumps(1.0)
+        == b"{FoamFile {version 2.0; format ascii; class dictionary;}} 1.0"
+    )
+    assert (
+        FoamFile.dumps([{"a": "b", "c": "d"}, {"e": "g"}])
+        == b"{FoamFile {version 2.0; format ascii; class dictionary;}} ({a b; c d;} {e g;})"
+    )
+    assert (
+        FoamFile.dumps({"internalField": [[1, 2, 3], [4, 5, 6]]})
+        == b"{FoamFile {version 2.0; format ascii; class volVectorField;}} internalField nonuniform List<vector> 2((1.0 2.0 3.0) (4.0 5.0 6.0));"
+    )

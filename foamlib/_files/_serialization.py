@@ -136,26 +136,33 @@ def dumps(
     *,
     keywords: tuple[str, ...] | None = None,
     header: Mapping[str, Entry] | None = None,
+    is_item: bool = False,
 ) -> bytes:
+    data = normalize_data(data, keywords=keywords)
+
     if isinstance(data, Mapping):
         return (
             b"{"
             + b" ".join(
                 dumps(
                     (k, v),
-                    keywords=(*keywords, k) if keywords is not None else None,
+                    keywords=keywords,
+                    is_item=True,
                 )
                 for k, v in data.items()
             )
             + b"}"
         )
 
-    data = normalize_data(data, keywords=keywords)
-
-    if keywords is None and isinstance(data, tuple) and len(data) == 2:
+    if is_item and isinstance(data, tuple) and len(data) == 2:
         k, v = data
         ret = dumps(k)
-        val = dumps(v)
+        val = dumps(
+            v,
+            keywords=(*keywords, k)
+            if keywords is not None and isinstance(k, str)
+            else None,
+        )
         if val:
             ret += b" " + val
         if not isinstance(v, Mapping):
@@ -185,7 +192,7 @@ def dumps(
 
         shape = np.shape(data)
         if not shape or (not scalar and shape in ((3,), (6,), (9,))):
-            return b"uniform " + dumps(data)
+            return b"uniform " + dumps(data, is_item=True)
 
         assert isinstance(data, np.ndarray)
         ndim = np.ndim(data)
@@ -201,36 +208,46 @@ def dumps(
             elif shape[1] == 9:
                 tensor_kind = b"tensor"
             else:
-                return dumps(data)
+                return dumps(data, is_item=True)
 
         else:
             return dumps(data)
 
         binary = (header.get("format", "") if header else "") == "binary"
 
-        contents = b"(" + data.tobytes() + b")" if binary else dumps(data)
+        contents = b"(" + data.tobytes() + b")" if binary else dumps(data, is_item=True)
 
-        return b"nonuniform List<" + tensor_kind + b"> " + dumps(len(data)) + contents
+        return (
+            b"nonuniform List<"
+            + tensor_kind
+            + b"> "
+            + dumps(len(data), is_item=True)
+            + contents
+        )
 
     if isinstance(data, DimensionSet):
-        return b"[" + b" ".join(dumps(v) for v in data) + b"]"
+        return b"[" + b" ".join(dumps(v, is_item=True) for v in data) + b"]"
 
     if isinstance(data, Dimensioned):
         if data.name is not None:
             return (
-                dumps(data.name)
+                dumps(data.name, is_item=True)
                 + b" "
-                + dumps(data.dimensions)
+                + dumps(data.dimensions, is_item=True)
                 + b" "
-                + dumps(data.value)
+                + dumps(data.value, is_item=True)
             )
-        return dumps(data.dimensions) + b" " + dumps(data.value)
+        return (
+            dumps(data.dimensions, is_item=True)
+            + b" "
+            + dumps(data.value, is_item=True)
+        )
 
     if isinstance(data, tuple):
-        return b" ".join(dumps(v) for v in data)
+        return b" ".join(dumps(v, is_item=True) for v in data)
 
     if is_sequence(data) and not isinstance(data, tuple):
-        return b"(" + b" ".join(dumps(v) for v in data) + b")"
+        return b"(" + b" ".join(dumps(v, is_item=True) for v in data) + b")"
 
     if data is True:
         return b"yes"
