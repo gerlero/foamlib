@@ -363,7 +363,9 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
 _DIRECTIVE = Word("#", _IDENTBODYCHARS)
 _TOKEN = dbl_quoted_string | _DIRECTIVE | _IDENTIFIER
 _DATA = Forward()
-_KEYWORD_ENTRY = _keyword_entry_of(_TOKEN | _list_of(_IDENTIFIER), _DATA)
+_KEYWORD_ENTRY = _keyword_entry_of(
+    _TOKEN | _list_of(_IDENTIFIER), Opt(_DATA, default="")
+)
 _DICT = _dict_of(_TOKEN, _DATA)
 _DATA_ENTRY = Forward()
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
