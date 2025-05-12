@@ -463,10 +463,10 @@ class FoamFile(
             for k, v in file.items():
                 if k is not None:
                     entries.append(
-                        dumps((k, v), keywords=(), header=header, is_item=True)
+                        dumps((k, v), keywords=(), header=header, tuple_is_entry=True)
                     )
                 else:
-                    entries.append(dumps(v, keywords=(), header=header, is_item=True))
+                    entries.append(dumps(v, keywords=(), header=header))
             ret = b" ".join(entries)
         else:
             header = None

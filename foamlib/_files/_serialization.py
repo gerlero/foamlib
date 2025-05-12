@@ -69,7 +69,7 @@ def normalize_data(
         return normalize_data(data)
 
     if isinstance(data, Mapping):
-        return {normalize_keyword(k): normalize_data(v) for k, v in data.items()}
+        return {normalize_keyword(k): normalize_data(v) for k, v in data.items()}  # type: ignore [misc]
 
     if isinstance(data, np.ndarray):
         ret = data.tolist()
@@ -114,14 +114,6 @@ def normalize_data(
     raise TypeError(msg)
 
 
-@overload
-def normalize_keyword(data: str) -> str: ...
-
-
-@overload
-def normalize_keyword(data: DataLike) -> Data: ...
-
-
 def normalize_keyword(data: DataLike) -> Data:
     ret = normalize_data(data)
 
@@ -136,7 +128,7 @@ def dumps(
     *,
     keywords: tuple[str, ...] | None = None,
     header: Mapping[str, Entry] | None = None,
-    is_item: bool = False,
+    tuple_is_entry: bool = False,
 ) -> bytes:
     data = normalize_data(data, keywords=keywords)
 
@@ -147,27 +139,12 @@ def dumps(
                 dumps(
                     (k, v),
                     keywords=keywords,
-                    is_item=True,
+                    tuple_is_entry=True,
                 )
                 for k, v in data.items()
             )
             + b"}"
         )
-
-    if is_item and isinstance(data, tuple) and len(data) == 2:
-        k, v = data
-        ret = dumps(k)
-        val = dumps(
-            v,
-            keywords=(*keywords, k)
-            if keywords is not None and isinstance(k, str)
-            else None,
-        )
-        if val:
-            ret += b" " + val
-        if not isinstance(v, Mapping):
-            ret += b";"
-        return ret
 
     if (
         keywords is not None
@@ -192,7 +169,7 @@ def dumps(
 
         shape = np.shape(data)
         if not shape or (not scalar and shape in ((3,), (6,), (9,))):
-            return b"uniform " + dumps(data, is_item=True)
+            return b"uniform " + dumps(data)
 
         assert isinstance(data, np.ndarray)
         ndim = np.ndim(data)
@@ -208,46 +185,51 @@ def dumps(
             elif shape[1] == 9:
                 tensor_kind = b"tensor"
             else:
-                return dumps(data, is_item=True)
+                return dumps(data)
 
         else:
             return dumps(data)
 
         binary = (header.get("format", "") if header else "") == "binary"
 
-        contents = b"(" + data.tobytes() + b")" if binary else dumps(data, is_item=True)
+        contents = b"(" + data.tobytes() + b")" if binary else dumps(data)
 
-        return (
-            b"nonuniform List<"
-            + tensor_kind
-            + b"> "
-            + dumps(len(data), is_item=True)
-            + contents
-        )
+        return b"nonuniform List<" + tensor_kind + b"> " + dumps(len(data)) + contents
 
     if isinstance(data, DimensionSet):
-        return b"[" + b" ".join(dumps(v, is_item=True) for v in data) + b"]"
+        return b"[" + b" ".join(dumps(v) for v in data) + b"]"
 
     if isinstance(data, Dimensioned):
         if data.name is not None:
             return (
-                dumps(data.name, is_item=True)
+                dumps(data.name)
                 + b" "
-                + dumps(data.dimensions, is_item=True)
+                + dumps(data.dimensions)
                 + b" "
-                + dumps(data.value, is_item=True)
+                + dumps(data.value)
             )
-        return (
-            dumps(data.dimensions, is_item=True)
-            + b" "
-            + dumps(data.value, is_item=True)
-        )
+        return dumps(data.dimensions) + b" " + dumps(data.value)
 
     if isinstance(data, tuple):
-        return b" ".join(dumps(v, is_item=True) for v in data)
+        if tuple_is_entry:
+            k, v = data
+            ret = dumps(k)
+            val = dumps(
+                v,
+                keywords=(*keywords, k)
+                if keywords is not None and isinstance(k, str)
+                else None,
+            )
+            if val:
+                ret += b" " + val
+            if not isinstance(v, Mapping):
+                ret += b";"
+            return ret
 
-    if is_sequence(data) and not isinstance(data, tuple):
-        return b"(" + b" ".join(dumps(v, is_item=True) for v in data) + b")"
+        return b" ".join(dumps(v) for v in data)
+
+    if is_sequence(data):
+        return b"(" + b" ".join(dumps(v, tuple_is_entry=True) for v in data) + b")"
 
     if data is True:
         return b"yes"
