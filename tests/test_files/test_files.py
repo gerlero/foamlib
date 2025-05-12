@@ -78,13 +78,12 @@ def test_write_read(tmp_path: Path) -> None:
     assert sd["nestedList"] == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
     sd["g"] = FoamFile.Dimensioned(
-        name="g", dimensions=[1, 1, -2, 0, 0, 0, 0], value=[0, 0, -9.81]
+        name="g", dimensions=[0, 1, -2, 0, 0, 0, 0], value=[0, 0, -9.81]
     )
-    assert sd["g"] == FoamFile.Dimensioned(
-        name="g",
-        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2),
-        value=[0, 0, -9.81],
-    )
+    assert isinstance(sd["g"], FoamFile.Dimensioned)
+    assert sd["g"].name == "g"
+    assert sd["g"].dimensions == FoamFile.DimensionSet(length=1, time=-2)
+    assert np.array_equal(sd["g"].value, [0, 0, -9.81])
 
     sd["n"] = 1
     sd["y"] = 2

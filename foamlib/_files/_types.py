@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Dict, NamedTuple, Optional, Union
+from typing import Any, Dict, NamedTuple, Optional, Union
 
 import numpy as np
 
@@ -27,6 +27,47 @@ class DimensionSet(NamedTuple):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({', '.join(f'{n}={v}' for n, v in zip(self._fields, self) if v != 0)})"
+
+    def __add__(self, other: DimensionSet) -> DimensionSet:  # type: ignore[override]
+        if not isinstance(other, DimensionSet):
+            return NotImplemented
+
+        if self != other:
+            msg = f"Cannot add DimensionSet with different dimensions: {self} + {other}"
+            raise ValueError(msg)
+
+        return self
+
+    def __sub__(self, other: DimensionSet) -> DimensionSet:
+        if not isinstance(other, DimensionSet):
+            return NotImplemented
+
+        if self != other:
+            msg = f"Cannot subtract DimensionSet with different dimensions: {self} - {other}"
+            raise ValueError(msg)
+
+        return self
+
+    def __mul__(self, other: DimensionSet) -> DimensionSet:  # type: ignore[override]
+        if not isinstance(other, DimensionSet):
+            return NotImplemented
+
+        return DimensionSet(*(a + b for a, b in zip(self, other)))
+
+    def __truediv__(self, other: DimensionSet) -> DimensionSet:
+        if not isinstance(other, DimensionSet):
+            return NotImplemented
+
+        return DimensionSet(*(a - b for a, b in zip(self, other)))
+
+    def __pow__(self, exponent: float) -> DimensionSet:
+        if not isinstance(exponent, (int, float)):
+            return NotImplemented
+
+        return DimensionSet(*(a * exponent for a in self))
+
+    def __bool__(self) -> bool:
+        return any(v != 0 for v in self)
 
 
 Tensor = Union[
@@ -61,15 +102,90 @@ class Dimensioned:
 
         self.name = name
 
-    def __eq__(self, other: object) -> bool:
+    def __repr__(self) -> str:
+        if self.name is not None:
+            return (
+                f"{type(self).__name__}({self.value}, {self.dimensions}, {self.name})"
+            )
+        return f"{type(self).__name__}({self.value}, {self.dimensions})"
+
+    def __add__(self, other: Dimensioned | Tensor) -> Dimensioned:
         if not isinstance(other, Dimensioned):
+            other = Dimensioned(other, DimensionSet())
+
+        return Dimensioned(
+            self.value + other.value,  # type: ignore [arg-type]
+            self.dimensions + other.dimensions,
+            f"{self.name} + {other.name}"
+            if self.name is not None and other.name is not None
+            else None,
+        )
+
+    def __sub__(self, other: Dimensioned | Tensor) -> Dimensioned:
+        if not isinstance(other, Dimensioned):
+            other = Dimensioned(other, DimensionSet())
+
+        return Dimensioned(
+            self.value - other.value,  # type: ignore [arg-type]
+            self.dimensions - other.dimensions,
+            f"{self.name} - {other.name}"
+            if self.name is not None and other.name is not None
+            else None,
+        )
+
+    def __mul__(self, other: Dimensioned | Tensor) -> Dimensioned:
+        if not isinstance(other, Dimensioned):
+            other = Dimensioned(other, DimensionSet())
+
+        return Dimensioned(
+            self.value * other.value,  # type: ignore [arg-type]
+            self.dimensions * other.dimensions,
+            f"{self.name} * {other.name}"
+            if self.name is not None and other.name is not None
+            else None,
+        )
+
+    def __truediv__(self, other: Dimensioned | Tensor) -> Dimensioned:
+        if not isinstance(other, Dimensioned):
+            other = Dimensioned(other, DimensionSet())
+
+        return Dimensioned(
+            self.value / other.value,  # type: ignore [arg-type]
+            self.dimensions / other.dimensions,
+            f"{self.name} / {other.name}"
+            if self.name is not None and other.name is not None
+            else None,
+        )
+
+    def __pow__(self, exponent: float) -> Dimensioned:
+        if not isinstance(exponent, (int, float)):
             return NotImplemented
 
-        return (
-            self.dimensions == other.dimensions
-            and np.array_equal(self.value, other.value)
-            and self.name == other.name
+        return Dimensioned(
+            self.value**exponent,  # type: ignore [arg-type]
+            self.dimensions**exponent,
+            f"{self.name} ** {exponent}" if self.name is not None else None,
         )
+
+    def __float__(self) -> float:
+        if self.dimensions:
+            msg = f"Cannot convert non-dimensionless Dimensioned object to float: {self.dimensions}"
+            raise ValueError(msg)
+        return float(self.value)
+
+    def __int__(self) -> int:
+        if self.dimensions:
+            msg = f"Cannot convert non-dimensionless Dimensioned object to int: {self.dimensions}"
+            raise ValueError(msg)
+        return int(self.value)
+
+    def __array__(
+        self, dtype: Any = None, *, copy: Any = None
+    ) -> np.ndarray[tuple[()] | tuple[int], np.dtype[np.float64]]:
+        if self.dimensions:
+            msg = f"Cannot convert non-dimensionless Dimensioned object to array: {self.dimensions}"
+            raise ValueError(msg)
+        return np.array(self.value, dtype=dtype, copy=copy)
 
 
 Field = Union[
