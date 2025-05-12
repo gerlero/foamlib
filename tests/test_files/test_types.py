@@ -30,27 +30,27 @@ def test_dimensioned() -> None:
     result = dimensioned + dimensioned
     assert result.value == 9.81 * 2
     assert result.dimensions == FoamFile.DimensionSet(length=1, time=-2)
-    assert result.name == "g + g"
+    assert result.name == "g+g"
 
     result = dimensioned - dimensioned
     assert result.value == 0.0
     assert result.dimensions == FoamFile.DimensionSet(length=1, time=-2)
-    assert result.name == "g - g"
+    assert result.name == "g-g"
 
     result = dimensioned * dimensioned
     assert result.value == 9.81**2
     assert result.dimensions == FoamFile.DimensionSet(length=2, time=-4)
-    assert result.name == "g * g"
+    assert result.name == "g*g"
 
     result = dimensioned / dimensioned
     assert result.value == 1.0
     assert result.dimensions == FoamFile.DimensionSet()
-    assert result.name == "g / g"
+    assert result.name == "g/g"
 
     result = dimensioned**2
     assert result.value == 9.81**2
     assert result.dimensions == FoamFile.DimensionSet(length=2, time=-4)
-    assert result.name == "g ** 2"
+    assert result.name == "pow(g,2)"
 
     with pytest.raises(ValueError, match="dimension"):
         dimensioned + 1

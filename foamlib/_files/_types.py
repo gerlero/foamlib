@@ -116,7 +116,7 @@ class Dimensioned:
         return Dimensioned(
             self.value + other.value,  # type: ignore [arg-type]
             self.dimensions + other.dimensions,
-            f"{self.name} + {other.name}"
+            f"{self.name}+{other.name}"
             if self.name is not None and other.name is not None
             else None,
         )
@@ -128,7 +128,7 @@ class Dimensioned:
         return Dimensioned(
             self.value - other.value,  # type: ignore [arg-type]
             self.dimensions - other.dimensions,
-            f"{self.name} - {other.name}"
+            f"{self.name}-{other.name}"
             if self.name is not None and other.name is not None
             else None,
         )
@@ -140,7 +140,7 @@ class Dimensioned:
         return Dimensioned(
             self.value * other.value,  # type: ignore [arg-type]
             self.dimensions * other.dimensions,
-            f"{self.name} * {other.name}"
+            f"{self.name}*{other.name}"
             if self.name is not None and other.name is not None
             else None,
         )
@@ -152,7 +152,7 @@ class Dimensioned:
         return Dimensioned(
             self.value / other.value,  # type: ignore [arg-type]
             self.dimensions / other.dimensions,
-            f"{self.name} / {other.name}"
+            f"{self.name}/{other.name}"
             if self.name is not None and other.name is not None
             else None,
         )
@@ -164,7 +164,7 @@ class Dimensioned:
         return Dimensioned(
             self.value**exponent,  # type: ignore [arg-type]
             self.dimensions**exponent,
-            f"{self.name} ** {exponent}" if self.name is not None else None,
+            f"pow({self.name},{exponent})" if self.name is not None else None,
         )
 
     def __float__(self) -> float:
