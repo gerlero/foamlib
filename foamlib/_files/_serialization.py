@@ -87,7 +87,7 @@ def normalize_data(
                 if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] in (3, 6, 9)):
                     return arr  # type: ignore [return-value]
 
-            return [normalize_data(d) for d in data]  # type: ignore [arg-type]
+            return [normalize_data(d) for d in data]  # type: ignore [arg-type, misc]
 
         if isinstance(data, int):
             return float(data)
@@ -112,7 +112,7 @@ def normalize_data(
     if keywords is None and isinstance(data, tuple) and len(data) == 2:
         k, v = data
         assert not isinstance(k, Mapping)
-        return (
+        return (  # type: ignore [return-value]
             normalize_keyword(k),  # type: ignore [arg-type]
             normalize_data(v) if not isinstance(v, Mapping) else v,  # type: ignore [arg-type, misc]
         )
@@ -122,10 +122,10 @@ def normalize_data(
         and not isinstance(data, DimensionSet)
         and not isinstance(data, tuple)
     ):
-        return [normalize_data(d) for d in data]  # type: ignore [arg-type]
+        return [normalize_data(d) for d in data]  # type: ignore [arg-type, misc]
 
     if isinstance(data, tuple) and not isinstance(data, DimensionSet):
-        return tuple(normalize_data(d) for d in data)
+        return tuple(normalize_data(d) for d in data)  # type: ignore [misc]
 
     if isinstance(data, str):
         s = loads(data)
