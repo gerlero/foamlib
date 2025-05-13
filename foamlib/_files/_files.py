@@ -505,9 +505,7 @@ class FoamFile(
         """
         header: SubDict | None
         if isinstance(file, Mapping):
-            h = file.get("FoamFile", None)
-            assert isinstance(h, FoamFile.SubDict) or h is None
-            header = h
+            header = file.get("FoamFile", None)  # type: ignore [assignment]
 
             entries: list[bytes] = []
             for k, v in file.items():
@@ -521,7 +519,7 @@ class FoamFile(
             ret = b" ".join(entries)
         else:
             header = None
-            ret = dumps(file)
+            ret = dumps(file, keywords=(), header=header)
 
         if header is None and ensure_header:
             class_ = "dictionary"
