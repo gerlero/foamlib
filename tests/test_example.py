@@ -82,7 +82,7 @@ def test_example(tmp_path: Path) -> None:
             [1, 1, 1],
         ]
         f["edges"] = []
-        f["boundary"] = [
+        boundary: list[tuple[str, dict[str, str | list[list[int]]]]] = [
             ("inletUp", {"type": "patch", "faces": [[5, 4, 10, 11]]}),
             ("inletDown", {"type": "patch", "faces": [[0, 5, 11, 6]]}),
             ("outletUp", {"type": "patch", "faces": [[2, 3, 9, 8]]}),
@@ -101,6 +101,7 @@ def test_example(tmp_path: Path) -> None:
                 },
             ),
         ]
+        f["boundary"] = boundary
         f["mergePatchPairs"] = []
 
     with case.transport_properties as f:

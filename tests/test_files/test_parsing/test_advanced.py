@@ -280,7 +280,8 @@ def test_assignment_strange_name() -> None:
     assert isinstance(parsed[("equations", '"(U|e|k|epsilon).*"')], tuple)
     assert parsed[("equations", '"(U|e|k|epsilon).*"')][0] == "table"
     assert np.array_equal(
-        parsed[("equations", '"(U|e|k|epsilon).*"')][1], [[0, 0.4], [0.5, 0.7]]
+        parsed[("equations", '"(U|e|k|epsilon).*"')][1],  # type: ignore[arg-type]
+        [[0, 0.4], [0.5, 0.7]],
     )
 
 

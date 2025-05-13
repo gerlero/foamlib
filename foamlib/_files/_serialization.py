@@ -16,8 +16,8 @@ from ._types import (
     DataLike,
     Dimensioned,
     DimensionSet,
-    Entry,
-    EntryLike,
+    SubDict,
+    SubDictLike,
     is_sequence,
 )
 
@@ -30,13 +30,16 @@ def normalize_data(
 
 @overload
 def normalize_data(
-    data: EntryLike, *, keywords: tuple[str, ...] | None = None
-) -> Entry: ...
+    data: SubDictLike, *, keywords: tuple[str, ...] | None = None
+) -> SubDict: ...
 
 
 def normalize_data(
-    data: EntryLike, *, keywords: tuple[str, ...] | None = None
-) -> Entry:
+    data: DataLike | SubDictLike, *, keywords: tuple[str, ...] | None = None
+) -> Data | SubDict:
+    if isinstance(data, Mapping):
+        return {normalize_keyword(k): normalize_data(v) for k, v in data.items()}  # type: ignore [arg-type, misc]
+
     if keywords is not None and (
         keywords == ("internalField",)
         or (
@@ -61,15 +64,12 @@ def normalize_data(
                 if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] in (3, 6, 9)):
                     return arr  # type: ignore [return-value]
 
-            return [normalize_data(d) for d in data]
+            return [normalize_data(d) for d in data]  # type: ignore [arg-type]
 
         if isinstance(data, int):
             return float(data)
 
         return normalize_data(data)
-
-    if isinstance(data, Mapping):
-        return {normalize_keyword(k): normalize_data(v) for k, v in data.items()}  # type: ignore [misc]
 
     if isinstance(data, np.ndarray):
         ret = data.tolist()
@@ -90,16 +90,19 @@ def normalize_data(
         k, v = data
         assert not isinstance(k, Mapping)
         return (
-            normalize_keyword(k),
-            normalize_data(v) if not isinstance(v, Mapping) else v,
-        )  # type: ignore [return-value]
+            normalize_keyword(k),  # type: ignore [arg-type]
+            normalize_data(v) if not isinstance(v, Mapping) else v,  # type: ignore [arg-type, misc]
+        )
 
     if (
         is_sequence(data)
         and not isinstance(data, DimensionSet)
-        and (keywords is None or not isinstance(data, tuple))
+        and not isinstance(data, tuple)
     ):
-        return [normalize_data(d) for d in data]
+        return [normalize_data(d) for d in data]  # type: ignore [arg-type]
+
+    if isinstance(data, tuple) and not isinstance(data, DimensionSet):
+        return tuple(normalize_data(d) for d in data)
 
     if isinstance(data, str):
         s = loads(data)
@@ -108,7 +111,7 @@ def normalize_data(
 
     if isinstance(
         data,
-        (int, float, bool, tuple, DimensionSet, Dimensioned),
+        (int, float, bool, DimensionSet, Dimensioned),
     ):
         return data
 
@@ -126,13 +129,13 @@ def normalize_keyword(data: DataLike) -> Data:
 
 
 def dumps(
-    data: EntryLike,
+    data: DataLike | SubDictLike,
     *,
     keywords: tuple[str, ...] | None = None,
-    header: Mapping[str, Entry] | None = None,
+    header: SubDictLike | None = None,
     tuple_is_entry: bool = False,
 ) -> bytes:
-    data = normalize_data(data, keywords=keywords)
+    data = normalize_data(data, keywords=keywords)  # type: ignore [arg-type, misc]
 
     if isinstance(data, Mapping):
         return (
@@ -231,7 +234,7 @@ def dumps(
         return b" ".join(dumps(v) for v in data)
 
     if is_sequence(data):
-        return b"(" + b" ".join(dumps(v, tuple_is_entry=True) for v in data) + b")"
+        return b"(" + b" ".join(dumps(v, tuple_is_entry=True) for v in data) + b")"  # type: ignore [arg-type]
 
     if data is True:
         return b"yes"
