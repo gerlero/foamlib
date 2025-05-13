@@ -393,6 +393,8 @@ _STANDALONE_DATA = (
     | _ascii_numeric_list(dtype=float, nested=3, ignore=_COMMENT)
     | _binary_numeric_list(dtype=np.float64, nested=3)
     | _binary_numeric_list(dtype=np.float32, nested=3)
+    | _ascii_numeric_list(dtype=float, nested=6, ignore=_COMMENT)
+    | _binary_numeric_list(dtype=np.float64, nested=6)
     | _DATA
 ).add_parse_action(lambda tks: [None, tks[0]])
 

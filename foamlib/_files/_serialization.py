@@ -16,6 +16,8 @@ from ._types import (
     DataLike,
     Dimensioned,
     DimensionSet,
+    StandaloneData,
+    StandaloneDataLike,
     SubDict,
     SubDictLike,
     is_sequence,
@@ -30,13 +32,21 @@ def normalize_data(
 
 @overload
 def normalize_data(
+    data: StandaloneDataLike, *, keywords: tuple[str, ...] | None = None
+) -> StandaloneData: ...
+
+
+@overload
+def normalize_data(
     data: SubDictLike, *, keywords: tuple[str, ...] | None = None
 ) -> SubDict: ...
 
 
 def normalize_data(
-    data: DataLike | SubDictLike, *, keywords: tuple[str, ...] | None = None
-) -> Data | SubDict:
+    data: DataLike | StandaloneDataLike | SubDictLike,
+    *,
+    keywords: tuple[str, ...] | None = None,
+) -> Data | StandaloneData | SubDict:
     if isinstance(data, Mapping):
         return {normalize_keyword(k): normalize_data(v) for k, v in data.items()}  # type: ignore [arg-type, misc]
 
@@ -74,7 +84,7 @@ def normalize_data(
     if isinstance(data, np.ndarray):
         ret = data.tolist()
         assert isinstance(ret, (int, float, list))
-        return ret
+        return ret  # type: ignore [return-value]
 
     if (
         not isinstance(data, DimensionSet)
@@ -129,7 +139,7 @@ def normalize_keyword(data: DataLike) -> Data:
 
 
 def dumps(
-    data: DataLike | SubDictLike,
+    data: DataLike | StandaloneDataLike | SubDictLike,
     *,
     keywords: tuple[str, ...] | None = None,
     header: SubDictLike | None = None,

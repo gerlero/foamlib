@@ -29,6 +29,8 @@ from ._types import (
     File,
     FileLike,
     MutableSubDict,
+    StandaloneData,
+    StandaloneDataLike,
     SubDict,
     SubDictLike,
 )
@@ -464,7 +466,7 @@ class FoamFile(
         s: bytes | str,
         *,
         include_header: bool = False,
-    ) -> File | Data:
+    ) -> File | StandaloneData:
         """
         Standalone deserializing function.
 
@@ -487,7 +489,9 @@ class FoamFile(
         return ret
 
     @staticmethod
-    def dumps(file: FileLike | DataLike, *, ensure_header: bool = True) -> bytes:
+    def dumps(
+        file: FileLike | StandaloneDataLike, *, ensure_header: bool = True
+    ) -> bytes:
         """
         Standalone serializing function.
 
