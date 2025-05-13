@@ -161,7 +161,8 @@ def test_internal_field(cavity: FoamCase) -> None:
     blocks = cavity.block_mesh_dict["blocks"]
     assert isinstance(blocks, list)
     sizes = blocks[2]
-    size = np.prod(sizes)
+    assert isinstance(sizes, list)
+    size = np.prod(sizes)  # type: ignore [arg-type]
 
     p_arr = np.zeros(size)
     U_arr = np.zeros((size, 3))

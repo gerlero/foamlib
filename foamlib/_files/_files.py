@@ -22,14 +22,15 @@ from ._serialization import dumps, normalize_data, normalize_keyword
 from ._types import (
     Data,
     DataLike,
-    Dict_,
     Dimensioned,
     DimensionSet,
-    EntryLike,
     Field,
     FieldLike,
     File,
-    MutableEntry,
+    FileLike,
+    MutableSubDict,
+    SubDict,
+    SubDictLike,
 )
 
 
@@ -62,7 +63,7 @@ def _tensor_kind_for_field(
 class FoamFile(
     MutableMapping[
         Optional[Union[str, Tuple[str, ...]]],
-        MutableEntry,
+        Union[Data, MutableSubDict],
     ],
     FoamFileIO,
 ):
@@ -115,7 +116,7 @@ class FoamFile(
     DimensionSet = DimensionSet
 
     class SubDict(
-        MutableMapping[str, MutableEntry],
+        MutableMapping[str, Union[Data, MutableSubDict]],
     ):
         """
         An OpenFOAM sub-dictionary within a file.
@@ -154,7 +155,7 @@ class FoamFile(
         def __setitem__(
             self,
             keyword: str,
-            data: EntryLike,
+            data: DataLike | SubDictLike,
         ) -> None:
             self._file[(*self._keywords, keyword)] = data
 
@@ -183,7 +184,7 @@ class FoamFile(
         def __repr__(self) -> str:
             return f"{type(self).__qualname__}('{self._file}', {self._keywords})"
 
-        def as_dict(self) -> Dict_:
+        def as_dict(self) -> SubDict:
             """Return a nested dict representation of the sub-dictionary."""
             ret = self._file.as_dict(include_header=True)
 
@@ -193,7 +194,7 @@ class FoamFile(
                 assert isinstance(v, dict)
                 ret = cast("File", v)
 
-            return cast("Dict_", ret)
+            return cast("SubDict", ret)
 
     @property
     def version(self) -> float:
@@ -282,7 +283,7 @@ class FoamFile(
         return deepcopy(value)
 
     def __setitem__(
-        self, keywords: str | tuple[str, ...] | None, data: EntryLike
+        self, keywords: str | tuple[str, ...] | None, data: DataLike | SubDictLike
     ) -> None:
         if not keywords:
             keywords = ()
@@ -486,7 +487,7 @@ class FoamFile(
         return ret
 
     @staticmethod
-    def dumps(file: File | DataLike, *, ensure_header: bool = True) -> bytes:
+    def dumps(file: FileLike | DataLike, *, ensure_header: bool = True) -> bytes:
         """
         Standalone serializing function.
 
@@ -498,16 +499,20 @@ class FoamFile(
             If `True`, a header will be included if it is not already present in the
             input object.
         """
+        header: SubDict | None
         if isinstance(file, Mapping):
-            header = file.get("FoamFile", None)
-            assert isinstance(header, FoamFile.SubDict) or header is None
+            h = file.get("FoamFile", None)
+            assert isinstance(h, FoamFile.SubDict) or h is None
+            header = h
+
             entries: list[bytes] = []
             for k, v in file.items():
                 if k is not None:
                     entries.append(
-                        dumps((k, v), keywords=(), header=header, tuple_is_entry=True)
+                        dumps((k, v), keywords=(), header=header, tuple_is_entry=True)  # type: ignore [arg-type]
                     )
                 else:
+                    assert not isinstance(v, Mapping)
                     entries.append(dumps(v, keywords=(), header=header))
             ret = b" ".join(entries)
         else:
@@ -670,5 +675,5 @@ class FoamFieldFile(FoamFile):
         return ret
 
     @boundary_field.setter
-    def boundary_field(self, value: Mapping[str, Dict_]) -> None:
+    def boundary_field(self, value: Mapping[str, SubDict]) -> None:
         self["boundaryField"] = value

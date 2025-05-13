@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Dict, NamedTuple, Optional, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
 import numpy as np
 
@@ -76,9 +76,8 @@ Tensor = Union[
 ]
 
 TensorLike = Union[
-    Sequence[float],
-    "np.ndarray[tuple[()], np.dtype[np.float64]]",
     Tensor,
+    Sequence[float],
 ]
 
 
@@ -194,10 +193,9 @@ Field = Union[
 ]
 
 FieldLike = Union[
+    Field,
     TensorLike,
     Sequence[TensorLike],
-    Sequence[Sequence[TensorLike]],
-    Field,
 ]
 
 
@@ -208,34 +206,27 @@ Data = Union[
     bool,
     Dimensioned,
     DimensionSet,
-    Sequence["Entry"],
+    Tuple["Data", ...],
+    List[Union["Data", Tuple["Data", Union["Data", "SubDict"]]]],
     Field,
 ]
 
-Entry = Union[
+DataLike = Union[
     Data,
-    Mapping[str, "Entry"],
+    Tuple["DataLike", ...],
+    Sequence[Union["DataLike", Tuple["DataLike", Union["DataLike", "SubDictLike"]]]],
+    FieldLike,
 ]
+
 """
 A value that can be stored in an OpenFOAM file.
 """
 
-DataLike = Union[
-    FieldLike,
-    Sequence["EntryLike"],
-    Data,
-]
-
-EntryLike = Union[
-    DataLike,
-    Mapping[str, "EntryLike"],
-]
-
 
 def is_sequence(
-    value: EntryLike,
+    value: DataLike | SubDictLike,
 ) -> TypeGuard[
-    Sequence[EntryLike]
+    Sequence[DataLike | tuple[DataLike, DataLike | SubDictLike]]
     | np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]
 ]:
     return (isinstance(value, Sequence) and not isinstance(value, str)) or (
@@ -243,10 +234,9 @@ def is_sequence(
     )
 
 
-MutableEntry = Union[
-    Data,
-    MutableMapping[str, "MutableEntry"],
-]
+SubDict = Dict[str, Union[Data, "SubDict"]]
+SubDictLike = Mapping[str, Union[DataLike, "SubDictLike"]]
+MutableSubDict = MutableMapping[str, Union[Data, "MutableSubDict"]]
 
-Dict_ = Dict[str, Union["Entry", "Dict_"]]
-File = Dict[Optional[str], Union["Entry", "Dict_"]]
+File = Dict[Optional[str], Union[Data, "SubDict"]]
+FileLike = Mapping[Optional[str], Union[DataLike, "FileLike"]]
