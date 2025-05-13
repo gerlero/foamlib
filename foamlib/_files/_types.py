@@ -199,23 +199,36 @@ FieldLike = Union[
 ]
 
 
-Data = Union[
+DataEntry = Union[
     str,
     int,
     float,
     bool,
     Dimensioned,
     DimensionSet,
-    Tuple["Data", ...],
-    List[Union["Data", Tuple["Data", Union["Data", "SubDict"]]]],
+    List[Union["DataEntry", Tuple["DataEntry", Union["DataEntry", "SubDict"]]]],
     Field,
 ]
 
-DataLike = Union[
-    Data,
-    Tuple["DataLike", ...],
-    Sequence[Union["DataLike", Tuple["DataLike", Union["DataLike", "SubDictLike"]]]],
+DataEntryLike = Union[
+    DataEntry,
+    Sequence[
+        Union[
+            "DataEntryLike",
+            Tuple["DataEntryLike", Union["DataEntryLike", "SubDictLike"]],
+        ]
+    ],
     FieldLike,
+]
+
+Data = Union[
+    DataEntry,
+    Tuple[DataEntry, ...],
+]
+
+DataLike = Union[
+    DataEntryLike,
+    Tuple["DataEntryLike", ...],
 ]
 
 StandaloneData = Union[
