@@ -144,13 +144,13 @@ Examples of `foamlib` usage are provided in the [README file](https://github.com
 
 ## Type hints
 
-`foamlib` is fully typed using Python's type hints, which makes it easier to understand and use the library, as well as enabling automatics checks for type errors using tools like mypy [@mypy].
+`foamlib` is fully typed using Python's type hints, which makes it easier to understand and use the library, as well as enabling automatic checks for type errors using tools like mypy [@mypy].
 
 ## Parsing
 
 `foamlib` contains a full parser for OpenFOAM files, which is able to understand and write to the different types of files used by OpenFOAM. The parser is implemented using the `pyparsing` [@pyparsing] library, which provides a powerful and flexible way to define parsing grammars.
 
-A special case parser is internally used for non-uniform OpenFOAM fields, which can commonly contain very large amounts of data in either ASCII or binary formats. The specialized parser uses the regular expressions to extract these data, which results in greatly improved parsing performance—a more than 25x speedup versus PyFoam, as measured on a MacBook Air (Apple Inc., Cupertino, Calif., USA) with an M1 processor and 8 GB of system RAM—, while not sacrificing any of the generality of the parsing grammar. For extra efficiency and convenience, these fields map to NumPy arrays in Python.
+A special case parser is internally used for non-uniform OpenFOAM fields, which can commonly contain very large amounts of data in either ASCII or binary formats. The specialized parser uses regular expressions to extract these data, which results in greatly improved parsing performance—a more than 25x speedup versus PyFoam, as measured on a MacBook Air (Apple Inc., Cupertino, Calif., USA) with an M1 processor and 8 GB of system RAM—, while not sacrificing any of the generality of the parsing grammar. For extra efficiency and convenience, these fields map to NumPy arrays in Python.
 
 ## Asynchronous support
 
