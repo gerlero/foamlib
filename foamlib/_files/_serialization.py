@@ -247,7 +247,8 @@ def dumps(
     if isinstance(data, tuple):
         if tuple_is_entry:
             k, v = data
-            ret = dumps(k)
+            ret = b"\n" if isinstance(k, str) and k[0] == "#" else b""
+            ret += dumps(k)
             val = dumps(
                 v,
                 keywords=(*keywords, k)
@@ -256,7 +257,9 @@ def dumps(
             )
             if val:
                 ret += b" " + val
-            if not isinstance(v, Mapping):
+            if isinstance(k, str) and k[0] == "#":
+                ret += b"\n"
+            elif not isinstance(v, Mapping):
                 ret += b";"
             return ret
 

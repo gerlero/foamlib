@@ -125,3 +125,7 @@ def test_serialize_file() -> None:
         )
         == b"FoamFile {format binary;} 3(\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00)"
     )
+    assert (
+        FoamFile.dumps({"#include": "$FOAM_CASE/simControls"}, ensure_header=False)
+        == b"\n#include $FOAM_CASE/simControls\n"
+    )
