@@ -50,6 +50,19 @@ def normalize_data(
     if isinstance(data, Mapping):
         return {normalize_keyword(k): normalize_data(v) for k, v in data.items()}  # type: ignore [arg-type, misc]
 
+    if keywords == () and is_sequence(data) and not isinstance(data, tuple):
+        try:
+            arr = np.asarray(data)
+        except ValueError:
+            pass
+        else:
+            if np.issubdtype(arr.dtype, np.integer) and arr.ndim == 1:
+                return arr  # type: ignore [return-value]
+            if arr.ndim == 2 and arr.shape[1] == 3:
+                if not np.issubdtype(arr.dtype, np.floating):
+                    arr = arr.astype(float)
+                return arr  # type: ignore [return-value]
+
     if keywords is not None and (
         keywords == ("internalField",)
         or (
@@ -62,7 +75,7 @@ def normalize_data(
             )
         )
     ):
-        if is_sequence(data):
+        if is_sequence(data) and not isinstance(data, tuple):
             try:
                 arr = np.asarray(data)
             except ValueError:
@@ -160,6 +173,12 @@ def dumps(
             )
             + b"}"
         )
+
+    if keywords == () and isinstance(data, np.ndarray):
+        if (header.get("format", "") if header else "") == "binary":
+            return dumps(len(data)) + b"(" + data.tobytes() + b")"
+
+        return dumps(data.tolist())
 
     if (
         keywords is not None

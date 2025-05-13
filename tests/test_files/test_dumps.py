@@ -110,3 +110,18 @@ def test_serialize_file() -> None:
         FoamFile.dumps({"internalField": [[1, 2, 3], [4, 5, 6]]})
         == b"{FoamFile {version 2.0; format ascii; class volVectorField;}} internalField nonuniform List<vector> 2((1.0 2.0 3.0) (4.0 5.0 6.0));"
     )
+    assert (
+        FoamFile.dumps([[1, 2, 3], [4, 5, 6]])
+        == b"{FoamFile {version 2.0; format ascii; class dictionary;}} ((1.0 2.0 3.0) (4.0 5.0 6.0))"
+    )
+    assert FoamFile.dumps([1, 2, 3], ensure_header=False) == b"(1 2 3)"
+    assert (
+        FoamFile.dumps(
+            {
+                "FoamFile": {"format": "binary"},
+                None: np.array([1, 2, 3], dtype=np.int32),  # type: ignore[dict-item]
+            },
+            ensure_header=False,
+        )
+        == b"FoamFile {format binary;} 3(\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00)"
+    )
