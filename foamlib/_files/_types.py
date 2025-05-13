@@ -218,13 +218,21 @@ DataLike = Union[
     FieldLike,
 ]
 
-"""
-A value that can be stored in an OpenFOAM file.
-"""
+StandaloneData = Union[
+    Data,
+    "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
+    "np.ndarray[tuple[int], np.dtype[np.float64 | np.float32]]",
+]
+
+StandaloneDataLike = Union[
+    DataLike,
+    "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
+    "np.ndarray[tuple[int], np.dtype[np.float64 | np.float32]]",
+]
 
 
 def is_sequence(
-    value: DataLike | SubDictLike,
+    value: DataLike | StandaloneDataLike | SubDictLike,
 ) -> TypeGuard[
     Sequence[DataLike | tuple[DataLike, DataLike | SubDictLike]]
     | np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]
@@ -238,5 +246,5 @@ SubDict = Dict[str, Union[Data, "SubDict"]]
 SubDictLike = Mapping[str, Union[DataLike, "SubDictLike"]]
 MutableSubDict = MutableMapping[str, Union[Data, "MutableSubDict"]]
 
-File = Dict[Optional[str], Union[Data, "SubDict"]]
-FileLike = Mapping[Optional[str], Union[DataLike, "FileLike"]]
+File = Dict[Optional[str], Union[StandaloneData, Data, "SubDict"]]
+FileLike = Mapping[Optional[str], Union[StandaloneDataLike, DataLike, "FileLike"]]
