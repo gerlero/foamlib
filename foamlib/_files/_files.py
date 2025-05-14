@@ -72,30 +72,31 @@ class FoamFile(
     """
     An OpenFOAM data file.
 
-    `FoamFile` supports most OpenFOAM data and configuration files (i.e., files with a
+    :class:`FoamFile` supports most OpenFOAM data and configuration files (i.e., files with a
     "FoamFile" header), including those with regular expressions and #-based directives.
     Notable exceptions are FoamFiles with #codeStreams and those multiple #-directives
     with the same name, which are currently not supported. Non-FoamFile output files are
     also not suppored by this class. Regular expressions and #-based directives can be
     accessed and modified, but they are not evaluated or expanded by this library.
 
-    Use `FoamFile` as a mutable mapping (i.e., like a `dict`) to access and modify
+    Use :class:`FoamFile` as a mutable mapping (i.e., like a :class:`dict`) to access and modify
     entries. When accessing a sub-dictionary, the returned value will be a
-    `FoamFile.SubDict` object, that allows for further access and modification of nested
-    dictionaries within the `FoamFile` in a single operation.
+    :class:`FoamFile.SubDict` object, that allows for further access and modification of nested
+    dictionaries within the :class:`FoamFile` in a single operation.
 
-    If the `FoamFile` does not store a dictionary, the main stored value can be accessed
-    and modified by passing `None` as the key (e.g., `file[None]`).
+    If the :class:`FoamFile` does not store a dictionary, the main stored value can be accessed
+    and modified by passing ``None`` as the key (e.g., ``file[None]``).
 
-    You can also use the `FoamFile` as a context manager (i.e., within a `with` block)
+    You can also use the :class:`FoamFile` as a context manager (i.e., within a ``with`` block)
     to make multiple changes to the file while saving any and all changes only once at
     the end.
 
     :param path: The path to the file. If the file does not exist, it will be created
         when the first change is made. However, if an attempt is made to access entries
-        in a non-existent file, a `FileNotFoundError` will be raised.
+        in a non-existent file, a :class:`FileNotFoundError` will be raised.
 
     Example usage: ::
+
         from foamlib import FoamFile
 
         file = FoamFile("path/to/case/system/controlDict") # Load a controlDict file
@@ -104,6 +105,7 @@ class FoamFile(
         file["writeFormat"] = "binary" # Set the write format to binary
 
     or (better): ::
+
         from foamlib import FoamCase
 
         case = FoamCase("path/to/case")
@@ -123,14 +125,15 @@ class FoamFile(
         """
         An OpenFOAM sub-dictionary within a file.
 
-        `FoamFile.SubDict` is a mutable mapping that allows for accessing and modifying
-        nested dictionaries within a `FoamFile` in a single operation. It behaves like a
-        `dict` and can be used to access and modify entries in the sub-dictionary.
+        :class:`FoamFile.SubDict` is a mutable mapping that allows for accessing and modifying
+        nested dictionaries within a :class:`FoamFile` in a single operation. It behaves like a
+        :class:`dict` and can be used to access and modify entries in the sub-dictionary.
 
-        To obtain a `FoamFile.SubDict` object, access a sub-dictionary in a `FoamFile`
-        object (e.g., `file["subDict"]`).
+        To obtain a :class:`FoamFile.SubDict` object, access a sub-dictionary in a :class:`FoamFile`
+        object (e.g., ``file["subDict"]``).
 
         Example usage: ::
+
             from foamlib import FoamFile
 
             file = FoamFile("path/to/case/system/fvSchemes") # Load an fvSchemes file
@@ -138,6 +141,7 @@ class FoamFile(
             file["ddtSchemes"]["default"] = "Euler" # Set the default ddt scheme
 
         or (better): ::
+
             from foamlib import FoamCase
 
             case = FoamCase("path/to/case")
@@ -200,7 +204,7 @@ class FoamFile(
 
     @property
     def version(self) -> float:
-        """Alias of `self["FoamFile", "version"]`."""
+        """Alias of ``self["FoamFile"]["version"]``."""
         ret = self["FoamFile", "version"]
         if not isinstance(ret, (int, float)):
             msg = "version is not a number"
@@ -213,7 +217,7 @@ class FoamFile(
 
     @property
     def format(self) -> Literal["ascii", "binary"]:
-        """Alias of `self["FoamFile", "format"]`."""
+        """Alias of ``self["FoamFile"]["format"]``."""
         ret = self["FoamFile", "format"]
         if not isinstance(ret, str):
             msg = "format is not a string"
@@ -229,7 +233,7 @@ class FoamFile(
 
     @property
     def class_(self) -> str:
-        """Alias of `self["FoamFile", "class"]`."""
+        """Alias of ``self["FoamFile"]["class"]``."""
         ret = self["FoamFile", "class"]
         if not isinstance(ret, str):
             msg = "class is not a string"
@@ -242,7 +246,7 @@ class FoamFile(
 
     @property
     def location(self) -> str:
-        """Alias of `self["FoamFile", "location"]`."""
+        """Alias of ``self["FoamFile"]["location"]``."""
         ret = self["FoamFile", "location"]
         if not isinstance(ret, str):
             msg = "location is not a string"
@@ -255,7 +259,7 @@ class FoamFile(
 
     @property
     def object_(self) -> str:
-        """Alias of `self["FoamFile", "object"]`."""
+        """Alias of ``self["FoamFile"]["object"]``."""
         ret = self["FoamFile", "object"]
         if not isinstance(ret, str):
             msg = "object is not a string"
@@ -500,7 +504,7 @@ class FoamFile(
         :param file: The Python object to serialize. This can be a dictionary, list,
             or any other object that can be serialized to the OpenFOAM format.
         :param ensure_header: Whether to include the "FoamFile" header in the output.
-            If `True`, a header will be included if it is not already present in the
+            If ``True``, a header will be included if it is not already present in the
             input object.
         """
         header: SubDict | None
@@ -547,20 +551,21 @@ class FoamFile(
 
 class FoamFieldFile(FoamFile):
     """
-    Subclass of `FoamFile` for representing OpenFOAM field files specifically.
+    Subclass of :class:`FoamFile` for representing OpenFOAM field files specifically.
 
-    The difference between `FoamFieldFile` and `FoamFile` is that `FoamFieldFile` has
-    the additional properties `dimensions`, `internal_field`, and `boundary_field` that
+    The difference between :class:`FoamFieldFile` and :class:`FoamFile` is that :class:`FoamFieldFile` has
+    the additional properties :attr:`dimensions`, :attr:`internal_field`, and :attr:`boundary_field` that
     are commonly found in OpenFOAM field files. Note that these are only a shorthand for
     accessing the corresponding entries in the file.
 
-    See `FoamFile` for more information on how to read and edit OpenFOAM files.
+    See :class:`FoamFile` for more information on how to read and edit OpenFOAM files.
 
     :param path: The path to the file. If the file does not exist, it will be created
         when the first change is made. However, if an attempt is made to access entries
-        in a non-existent file, a `FileNotFoundError` will be raised.
+        in a non-existent file, a :class:`FileNotFoundError` will be raised.
 
     Example usage: ::
+
         from foamlib import FoamFieldFile
 
         field = FoamFieldFile("path/to/case/0/U") # Load a field
@@ -569,6 +574,7 @@ class FoamFieldFile(FoamFile):
         field.internal_field = [0, 0, 0] # Set the internal field
 
     or (better): ::
+
         from foamlib import FoamCase
 
         case = FoamCase("path/to/case")
@@ -591,7 +597,7 @@ class FoamFieldFile(FoamFile):
 
         @property
         def type(self) -> str:
-            """Alias of `self["type"]`."""
+            """Alias of ``self["type"]``."""
             ret = self["type"]
             if not isinstance(ret, str):
                 msg = "type is not a string"
@@ -606,7 +612,7 @@ class FoamFieldFile(FoamFile):
         def value(
             self,
         ) -> Field:
-            """Alias of `self["value"]`."""
+            """Alias of ``self["value"]``."""
             return cast(
                 "Field",
                 self["value"],
@@ -641,7 +647,7 @@ class FoamFieldFile(FoamFile):
 
     @property
     def dimensions(self) -> DimensionSet | Sequence[float]:
-        """Alias of `self["dimensions"]`."""
+        """Alias of ``self["dimensions"]``."""
         ret = self["dimensions"]
         if not isinstance(ret, DimensionSet):
             msg = "dimensions is not a DimensionSet"
@@ -656,7 +662,7 @@ class FoamFieldFile(FoamFile):
     def internal_field(
         self,
     ) -> Field:
-        """Alias of `self["internalField"]`."""
+        """Alias of ``self["internalField"]``."""
         return cast("Field", self["internalField"])
 
     @internal_field.setter
@@ -668,7 +674,7 @@ class FoamFieldFile(FoamFile):
 
     @property
     def boundary_field(self) -> FoamFieldFile.BoundariesSubDict:
-        """Alias of `self["boundaryField"]`."""
+        """Alias of ``self["boundaryField"]``."""
         ret = self["boundaryField"]
         if not isinstance(ret, FoamFieldFile.BoundariesSubDict):
             assert not isinstance(ret, FoamFile.SubDict)

@@ -297,9 +297,9 @@ for time in case[1:]:
 </details>
 
 
-## 📘 API documentation
+## 📘 Documentation
 
-For more information on how to use **foamlibs**'s classes and methods, check out the [documentation](https://foamlib.readthedocs.io/).
+For details on how to use **foamlib**, check out the [documentation](https://foamlib.readthedocs.io/).
 
 ## 🙋 Support
 

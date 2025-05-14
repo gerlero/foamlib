@@ -20,9 +20,9 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
     """
     An asynchronous OpenFOAM case that launches jobs on a Slurm cluster.
 
-    `AsyncSlurmFoamCase` is a subclass of `AsyncFoamCase`. It provides the same interface,
-    as the latter, except that it will launch jobs on a Slurm cluster (using `salloc` and
-    `srun`) on the user's behalf when running a case or command.
+    :class:`AsyncSlurmFoamCase` is a subclass of :class:`AsyncFoamCase`. It provides the same interface,
+    as the latter, except that it will launch jobs on a Slurm cluster (using ``salloc`` and
+    ``srun``) on the user's behalf when running a case or command.
 
     :param path: The path to the case directory. Defaults to the current working
         directory.
@@ -64,12 +64,12 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
         """
         Run this case, or a specified command in the context of this case.
 
-        :param cmd: The command to run. If None, run the case. If a sequence, the first element is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
-        :param parallel: If True, run in parallel using MPI. If None, autodetect whether to run in parallel.
-        :param cpus: The number of CPUs to use. If None, autodetect according to the case. If 0, run locally.
-        :param check: If True, raise a CalledProcessError if any command returns a non-zero exit code.
-        :param log: If True, log the command output to a file.
-        :param fallback: If True, fall back to running the command locally if Slurm is not available.
+        :param cmd: The command to run. If ``None``, run the case. If a sequence, the first element is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
+        :param parallel: If ``True``, run in parallel using MPI. If ``None``, autodetect whether to run in parallel.
+        :param cpus: The number of CPUs to use. If ``None``, autodetect according to the case. If ``0``, run locally.
+        :param check: If ``True``, raise a :class:`CalledProcessError` if any command returns a non-zero exit code.
+        :param log: If ``True``, log the command output to a file.
+        :param fallback: If ``True``, fall back to running the command locally if Slurm is not available.
         """
         for coro in self._run_calls(
             cmd=cmd,

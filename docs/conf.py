@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "foamlib"
-copyright = "2024, Gabriel S. Gerlero"
+copyright = "2024-2025, Gabriel S. Gerlero"
 author = "Gabriel S. Gerlero"
 
 # -- General configuration ---------------------------------------------------

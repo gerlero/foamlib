@@ -47,9 +47,9 @@ if TYPE_CHECKING:
 
 class FoamCaseRunBase(FoamCaseBase):
     """
-    Abstract base class of `FoamCase` and `AsyncFoamCase`.
+    Abstract base class of :class:`FoamCase` and :class:`AsyncFoamCase`.
 
-    Do not use this class directly: use `FoamCase` or `AsyncFoamCase` instead.
+    Do not use this class directly: use :class:`FoamCase` or :class:`AsyncFoamCase` instead.
     """
 
     class TimeDirectory(FoamCaseBase.TimeDirectory):

@@ -23,10 +23,10 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
     Provides methods for accessing files and time directories in the case, but does not
     provide methods for running the case or any commands. Users are encouraged to use
-    `FoamCase` or `AsyncFoamCase` instead of this class.
+    :class:`FoamCase` or :class:`AsyncFoamCase` instead of this class.
 
-    Access the time directories of the case as a sequence, e.g. `case[0]` or `case[-1]`.
-    These will return `FoamCaseBase.TimeDirectory` objects.
+    Access the time directories of the case as a sequence, e.g. ``case[0]`` or ``case[-1]``.
+    These will return class:`FoamCaseBase.TimeDirectory` objects.
 
     :param path: The path to the case directory. Defaults to the current working
         directory.
@@ -39,11 +39,11 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         """
         A time directory in an OpenFOAM case.
 
-        Use to access field files in the directory (e.g. `time["U"]`). These will be
-        returned as `FoamFieldFile` objects.
+        Use to access field files in the directory (e.g. ``time["U"]``). These will be
+        returned as :class:`FoamFieldFile` objects.
 
-        It also behaves as a set of `FoamFieldFile` objects (e.g. it can be
-        iterated over with `for field in time: ...`).
+        It also behaves as a set of :class:`FoamFieldFile` objects (e.g. it can be
+        iterated over with ``for field in time: ...``).
         """
 
         def __init__(self, path: os.PathLike[str] | str) -> None:
@@ -154,7 +154,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
     @property
     def _nsubdomains(self) -> int | None:
-        """Return the number of subdomains as set in the decomposeParDict, or None if no decomposeParDict is found."""
+        """Return the number of subdomains as set in the decomposeParDict, or ``None`` if no decomposeParDict is found."""
         try:
             nsubdomains = self.decompose_par_dict["numberOfSubdomains"]
             if not isinstance(nsubdomains, int):
