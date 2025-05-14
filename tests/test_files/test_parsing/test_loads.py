@@ -74,3 +74,14 @@ def test_loads() -> None:
     assert FoamFile.loads("#include $FOAM_CASE/simControls") == {
         "#include": "$FOAM_CASE/simControls"
     }
+    faces = FoamFile.loads("2(3(1 2 3) 4(4 5 6 7))")
+    assert isinstance(faces, FoamFile.FaceList)
+    assert faces == [
+        [1, 2, 3],
+        [4, 5, 6, 7],
+    ]
+    faces = FoamFile.loads(
+        b"3\n(\x00\x00\x00\x00\x03\x00\x00\x00\x07\x00\x00\x00)\n7\n(h\xcb\r\x00\x1f\xcd\r\x00\x08\x1b\x0e\x00\xd7\xa85\x00\xda\xa85\x00\xd9\xa85\x00\xd8\xa85\x00)"
+    )
+    assert isinstance(faces, FoamFile.FaceList)
+    assert faces == [[904040, 904479, 924424], [3516631, 3516634, 3516633, 3516632]]

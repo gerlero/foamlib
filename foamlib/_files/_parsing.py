@@ -38,7 +38,7 @@ from pyparsing import (
     printables,
 )
 
-from ._types import Data, Dimensioned, DimensionSet, File
+from ._types import Data, Dimensioned, DimensionSet, FaceList, File
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -188,6 +188,72 @@ def _binary_numeric_list(
     return (
         common.integer.copy().add_parse_action(process_count) + list_
     ).add_parse_action(to_array)
+
+
+def _ascii_face_list(dtype: DTypeLike, *, ignore: Regex | None = None) -> ParserElement:
+    dtype = np.dtype(dtype)
+    assert np.issubdtype(dtype, np.integer)
+
+    element_pattern = r"(?:-?\d+)"
+    spacing_pattern = (
+        rf"(?:(?:\s|{ignore.re.pattern})+)" if ignore is not None else r"(?:\s+)"
+    )
+
+    element_pattern = rf"(?:(?:3{spacing_pattern}?\((?:{element_pattern}{spacing_pattern}){{2}}{element_pattern}{spacing_pattern}?\))|(?:4{spacing_pattern}?\((?:{element_pattern}{spacing_pattern}){{3}}{element_pattern}{spacing_pattern}?\)))"
+
+    list_ = Forward()
+
+    def process_count(tks: ParseResults) -> None:
+        nonlocal list_
+        if not tks:
+            count = None
+        else:
+            (count,) = tks
+            assert isinstance(count, int)
+
+        if count is None:
+            list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern})*{element_pattern}{spacing_pattern}?\)"
+
+        elif count == 0:
+            list_ <<= NoMatch()
+            return
+
+        else:
+            list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern}){{{count - 1}}}{element_pattern}{spacing_pattern}?\)"
+
+        list_ <<= Regex(list_pattern).add_parse_action(to_face_list)
+
+    def to_face_list(
+        tks: ParseResults,
+    ) -> FaceList[np.int64] | FaceList[np.int32]:
+        (s,) = tks
+        assert s.startswith("(")
+        assert s.endswith(")")
+        if ignore is not None:
+            s = re.sub(ignore.re, " ", s)
+        s = s.replace("(", " ").replace(")", " ")
+
+        raw = np.fromstring(s, sep=" ", dtype=dtype)
+
+        values: (
+            list[np.ndarray[tuple[int], np.dtype[np.int64]]]
+            | list[np.ndarray[tuple[int], np.dtype[np.int32]]]
+        ) = []
+        i = 0
+        while i < raw.size:
+            assert raw[i] in (3, 4)
+            values.append(raw[i + 1 : i + raw[i] + 1])  # type: ignore[arg-type]
+            i += raw[i] + 1
+
+        return FaceList(values)
+
+    return Opt(common.integer).add_parse_action(process_count).suppress() + list_
+
+
+def _binary_face_list(dtype: DTypeLike) -> ParserElement:
+    return _binary_numeric_list(dtype)[2].add_parse_action(  # type: ignore[no-any-return]
+        lambda tks: FaceList(*reversed(tks))
+    )
 
 
 def _list_of(entry: ParserElement) -> ParserElement:
@@ -390,7 +456,10 @@ _DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
 )
 
 _STANDALONE_DATA = (
-    _ascii_numeric_list(dtype=int, ignore=_COMMENT)
+    _ascii_face_list(dtype=np.int64, ignore=_COMMENT)
+    | _binary_face_list(dtype=np.int64)
+    | _binary_face_list(dtype=np.int32)
+    | _ascii_numeric_list(dtype=int, ignore=_COMMENT)
     | _binary_numeric_list(dtype=np.int64)
     | _binary_numeric_list(dtype=np.int32)
     | _ascii_numeric_list(dtype=float, nested=3, ignore=_COMMENT)

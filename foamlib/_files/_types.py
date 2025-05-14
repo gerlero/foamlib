@@ -1,14 +1,25 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    List,
+    NamedTuple,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Mapping, MutableMapping, Sequence
+    from collections.abc import Iterator, Mapping, MutableMapping, Sequence
 else:
-    from typing import Mapping, MutableMapping, Sequence
+    from typing import Iterator, Mapping, MutableMapping, Sequence
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
@@ -231,10 +242,109 @@ DataLike = Union[
     Tuple["DataEntryLike", ...],
 ]
 
+
+T = TypeVar("T", np.int64, np.int32)
+
+
+class FaceList(Generic[T], Sequence["np.ndarray[tuple[int], np.dtype[T]]"]):
+    indices: np.ndarray[tuple[int], np.dtype[T]]
+    values: np.ndarray[tuple[int], np.dtype[T]]
+
+    @overload
+    def __init__(
+        self,
+        values: np.ndarray[tuple[int], np.dtype[T]] | Sequence[T | int],
+        indices: np.ndarray[tuple[int], np.dtype[T]] | Sequence[T | int],
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        values: np.ndarray[tuple[int, int], np.dtype[T]]
+        | Sequence[np.ndarray[tuple[int], np.dtype[T]] | Sequence[T | int]],
+    ) -> None: ...
+
+    def __init__(
+        self,
+        values: np.ndarray[tuple[int], np.dtype[T]]
+        | Sequence[T | int]
+        | np.ndarray[tuple[int, int], np.dtype[T]]
+        | Sequence[Sequence[T | int] | np.ndarray[tuple[int], np.dtype[T]]],
+        indices: np.ndarray[tuple[int], np.dtype[T]] | Sequence[T | int] | None = None,
+    ) -> None:
+        if indices is None:
+            dtype = values.dtype if isinstance(values, np.ndarray) else np.int64
+            self.indices = np.empty(len(values) + 1, dtype=dtype)
+            self.indices[0] = 0
+            self.indices[1:] = np.cumsum([len(v) for v in values])  # type: ignore [arg-type]
+            self.values = np.concatenate(values)  # type: ignore [arg-type, assignment]
+        else:
+            self.values = np.array(values)  # type: ignore [assignment]
+            self.indices = np.array(indices, dtype=self.values.dtype)  # type: ignore [assignment]
+
+    @overload
+    def __getitem__(self, index: int) -> np.ndarray[tuple[int], np.dtype[T]]: ...
+
+    @overload
+    def __getitem__(
+        self, index: slice
+    ) -> Sequence[np.ndarray[tuple[int], np.dtype[T]]]: ...
+
+    def __getitem__(
+        self, index: int | slice
+    ) -> (
+        np.ndarray[tuple[int], np.dtype[T]]
+        | Sequence[np.ndarray[tuple[int], np.dtype[T]]]
+    ):
+        if isinstance(index, slice):
+            msg = "Slicing FaceList is not yet implemented."
+            raise NotImplementedError(msg)
+
+        if index < 0:
+            index += len(self)
+        if index < 0 or index >= len(self):
+            msg = f"Index {index} out of range for FaceList of length {len(self)}"
+            raise IndexError(msg)
+        start = self.indices[index]
+        end = self.indices[index + 1]
+        return self.values[start:end]  # type: ignore [return-value]
+
+    def __len__(self) -> int:
+        return len(self.indices) - 1
+
+    def __iter__(self) -> Iterator[np.ndarray[tuple[int], np.dtype[T]]]:
+        for i in range(len(self)):
+            yield self[i]
+
+    def __eq__(
+        self,
+        other: object,
+    ) -> bool:
+        if isinstance(other, FaceList):
+            return np.array_equal(self.values, other.values) and np.array_equal(
+                self.indices, other.indices
+            )
+
+        if isinstance(other, Sequence):
+            if len(self) != len(other):
+                return False
+            return all(np.array_equal(a, b) for a, b in zip(self, other))
+
+        return NotImplemented
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.values}, {self.indices})"
+
+    def tolist(self) -> list[list[int]]:
+        return [self[i].tolist() for i in range(len(self))]
+
+
 StandaloneData = Union[
     Data,
     "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
     "np.ndarray[tuple[int], np.dtype[np.float64 | np.float32]]",
+    FaceList[np.int64],
+    FaceList[np.int32],
 ]
 
 StandaloneDataLike = Union[

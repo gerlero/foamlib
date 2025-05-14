@@ -24,6 +24,7 @@ from ._types import (
     DataLike,
     Dimensioned,
     DimensionSet,
+    FaceList,
     Field,
     FieldLike,
     File,
@@ -118,6 +119,7 @@ class FoamFile(
 
     Dimensioned = Dimensioned
     DimensionSet = DimensionSet
+    FaceList = FaceList
 
     class SubDict(
         MutableMapping[str, Union[Data, MutableSubDict]],
