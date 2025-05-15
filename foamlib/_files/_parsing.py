@@ -391,9 +391,9 @@ _DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
 
 _STANDALONE_DATA = (
     _ascii_numeric_list(dtype=int, ignore=_COMMENT)
+    | _ascii_numeric_list(dtype=float, nested=3, ignore=_COMMENT)
     | _binary_numeric_list(dtype=np.int64)
     | _binary_numeric_list(dtype=np.int32)
-    | _ascii_numeric_list(dtype=float, nested=3, ignore=_COMMENT)
     | _binary_numeric_list(dtype=np.float64, nested=3)
     | _binary_numeric_list(dtype=np.float32, nested=3)
     | _DATA
