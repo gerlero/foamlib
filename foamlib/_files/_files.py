@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from copy import deepcopy
-from typing import Any, Optional, Tuple, Union, cast
+from typing import Any, Optional, Tuple, Union, cast, overload
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -65,7 +65,7 @@ def _tensor_kind_for_field(
 class FoamFile(
     MutableMapping[
         Optional[Union[str, Tuple[str, ...]]],
-        Union[Data, MutableSubDict],
+        Union[Data, StandaloneData, MutableSubDict],
     ],
     FoamFileIO,
 ):
@@ -156,7 +156,7 @@ class FoamFile(
             self._keywords = _keywords
 
         def __getitem__(self, keyword: str) -> Data | FoamFile.SubDict:
-            return self._file[(*self._keywords, keyword)]
+            return self._file[(*self._keywords, keyword)]  # type: ignore [return-value]
 
         def __setitem__(
             self,
@@ -270,10 +270,21 @@ class FoamFile(
     def object_(self, value: str) -> None:
         self["FoamFile", "object"] = value
 
+    @overload  # type: ignore [override]
+    def __getitem__(self, keywords: None | tuple[()]) -> StandaloneData: ...
+
+    @overload
+    def __getitem__(self, keywords: str) -> Data | FoamFile.SubDict: ...
+
+    @overload
+    def __getitem__(
+        self, keywords: tuple[str, ...]
+    ) -> Data | StandaloneData | FoamFile.SubDict: ...
+
     def __getitem__(
         self, keywords: str | tuple[str, ...] | None
-    ) -> Data | FoamFile.SubDict:
-        if not keywords:
+    ) -> Data | StandaloneData | FoamFile.SubDict:
+        if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
@@ -288,10 +299,27 @@ class FoamFile(
             return FoamFile.SubDict(self, keywords)
         return deepcopy(value)
 
+    @overload  # type: ignore [override]
     def __setitem__(
-        self, keywords: str | tuple[str, ...] | None, data: DataLike | SubDictLike
+        self, keywords: None | tuple[()], data: StandaloneDataLike
+    ) -> None: ...
+
+    @overload
+    def __setitem__(self, keywords: str, data: DataLike | SubDictLike) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[str, ...],
+        data: DataLike | StandaloneDataLike | SubDictLike,
+    ) -> None: ...
+
+    def __setitem__(
+        self,
+        keywords: str | tuple[str, ...] | None,
+        data: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
-        if not keywords:
+        if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
@@ -416,7 +444,7 @@ class FoamFile(
                 )
 
     def __delitem__(self, keywords: str | tuple[str, ...] | None) -> None:
-        if not keywords:
+        if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
@@ -433,7 +461,7 @@ class FoamFile(
         yield from (k for k in self._iter() if k != "FoamFile")
 
     def __contains__(self, keywords: object) -> bool:
-        if not keywords:
+        if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
@@ -507,20 +535,23 @@ class FoamFile(
             If ``True``, a header will be included if it is not already present in the
             input object.
         """
-        header: SubDict | None
+        header: SubDictLike | None
         if isinstance(file, Mapping):
-            header = file.get("FoamFile", None)  # type: ignore [assignment]
+            h = file.get("FoamFile", None)
+            assert h is None or isinstance(h, Mapping)
+            header = h
 
             entries: list[bytes] = []
             for k, v in file.items():
                 if k is not None:
+                    v = cast("Union[Data, SubDict]", v)
                     entries.append(
                         dumps(
                             (k, v),
                             keywords=(),
                             header=header,
                             tuple_is_keyword_entry=True,
-                        )  # type: ignore [arg-type]
+                        )
                     )
                 else:
                     assert not isinstance(v, Mapping)
@@ -634,10 +665,21 @@ class FoamFieldFile(FoamFile):
         def value(self) -> None:
             del self["value"]
 
+    @overload  # type: ignore [override]
+    def __getitem__(self, keywords: None | tuple[()]) -> StandaloneData: ...
+
+    @overload
+    def __getitem__(self, keywords: str) -> Data | FoamFieldFile.SubDict: ...
+
+    @overload
+    def __getitem__(
+        self, keywords: tuple[str, ...]
+    ) -> Data | StandaloneData | FoamFieldFile.SubDict: ...
+
     def __getitem__(
         self, keywords: str | tuple[str, ...] | None
-    ) -> Data | FoamFile.SubDict:
-        if not keywords:
+    ) -> Data | StandaloneData | FoamFile.SubDict:
+        if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)

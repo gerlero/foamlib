@@ -16,6 +16,7 @@ from ._types import (
     DataLike,
     Dimensioned,
     DimensionSet,
+    KeywordEntryLike,
     StandaloneData,
     StandaloneDataLike,
     SubDict,
@@ -152,7 +153,7 @@ def normalize_keyword(data: DataLike) -> Data:
 
 
 def dumps(
-    data: DataLike | StandaloneDataLike | SubDictLike,
+    data: DataLike | StandaloneDataLike | KeywordEntryLike | SubDictLike,
     *,
     keywords: tuple[str, ...] | None = None,
     header: SubDictLike | None = None,
@@ -268,7 +269,7 @@ def dumps(
     if is_sequence(data):
         return (
             b"(" + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data) + b")"
-        )  # type: ignore [arg-type]
+        )
 
     if data is True:
         return b"yes"

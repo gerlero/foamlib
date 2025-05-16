@@ -459,11 +459,11 @@ _LOCATED_FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[Data, EllipsisType]]):
+class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
     def __init__(self, contents: bytes) -> None:
         self._parsed: MutableMapping[
             tuple[str, ...],
-            tuple[int, Data | EllipsisType, int],
+            tuple[int, Data | StandaloneData | EllipsisType, int],
         ] = {}
         for parse_result in _LOCATED_FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
@@ -476,10 +476,12 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, EllipsisType]]):
     @staticmethod
     def _flatten_result(
         parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
-    ) -> Mapping[tuple[str, ...], tuple[int, Data | EllipsisType, int]]:
+    ) -> Mapping[
+        tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]
+    ]:
         ret: MutableMapping[
             tuple[str, ...],
-            tuple[int, Data | EllipsisType, int],
+            tuple[int, Data | StandaloneData | EllipsisType, int],
         ] = {}
         start = parse_result.locn_start
         assert isinstance(start, int)
@@ -505,14 +507,16 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, EllipsisType]]):
                     ret[(*_keywords, keyword)] = (start, d, end)
         return ret
 
-    def __getitem__(self, keywords: tuple[str, ...]) -> Data | EllipsisType:
+    def __getitem__(
+        self, keywords: tuple[str, ...]
+    ) -> Data | StandaloneData | EllipsisType:
         _, data, _ = self._parsed[keywords]
         return data
 
     def put(
         self,
         keywords: tuple[str, ...],
-        data: Data | EllipsisType,
+        data: Data | StandaloneData | EllipsisType,
         content: bytes,
     ) -> None:
         start, end = self.entry_location(keywords, missing_ok=True)
