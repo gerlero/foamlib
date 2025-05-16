@@ -198,6 +198,8 @@ FieldLike = Union[
     Sequence[TensorLike],
 ]
 
+KeywordEntry = Tuple["DataEntry", Union["DataEntry", "SubDict"]]
+KeywordEntryLike = Tuple["DataEntryLike", Union["DataEntryLike", "SubDictLike"]]
 
 DataEntry = Union[
     str,
@@ -206,16 +208,15 @@ DataEntry = Union[
     bool,
     Dimensioned,
     DimensionSet,
-    List[Union["DataEntry", Tuple["DataEntry", Union["DataEntry", "SubDict"]]]],
+    List[Union["DataEntry", KeywordEntry]],
     Field,
 ]
-
 DataEntryLike = Union[
     DataEntry,
     Sequence[
         Union[
             "DataEntryLike",
-            Tuple["DataEntryLike", Union["DataEntryLike", "SubDictLike"]],
+            "KeywordEntryLike",
         ]
     ],
     FieldLike,
@@ -225,7 +226,6 @@ Data = Union[
     DataEntry,
     Tuple[DataEntry, ...],
 ]
-
 DataLike = Union[
     DataEntryLike,
     Tuple["DataEntryLike", ...],
@@ -236,7 +236,6 @@ StandaloneData = Union[
     "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
     "np.ndarray[tuple[int], np.dtype[np.float64 | np.float32]]",
 ]
-
 StandaloneDataLike = Union[
     DataLike,
     "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
@@ -259,5 +258,6 @@ SubDict = Dict[str, Union[Data, "SubDict"]]
 SubDictLike = Mapping[str, Union[DataLike, "SubDictLike"]]
 MutableSubDict = MutableMapping[str, Union[Data, "MutableSubDict"]]
 
-File = Dict[Optional[str], Union[StandaloneData, Data, "SubDict"]]
-FileLike = Mapping[Optional[str], Union[StandaloneDataLike, DataLike, "FileLike"]]
+
+File = Dict[Optional[str], Union[StandaloneData, Data, SubDict]]
+FileLike = Mapping[Optional[str], Union[StandaloneDataLike, DataLike, SubDictLike]]
