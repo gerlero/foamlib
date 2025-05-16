@@ -481,7 +481,7 @@ class FoamFile(
         :param include_header: Whether to include the "FoamFile" header in the output.
             If `True`, the header will be included if it is present in the input object.
         """
-        ret = loads(s)
+        ret = loads(s, keywords=())
 
         if not include_header and isinstance(ret, Mapping) and "FoamFile" in ret:
             del ret["FoamFile"]

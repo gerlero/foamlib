@@ -128,7 +128,7 @@ def normalize_data(
         return tuple(normalize_data(d) for d in data)  # type: ignore [misc]
 
     if isinstance(data, str):
-        s = loads(data)
+        s = loads(data, keywords=keywords)
         if isinstance(s, (str, tuple, bool)):
             return s
 
