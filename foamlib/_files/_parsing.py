@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
-from typing import TYPE_CHECKING, Tuple, Union, cast
+from typing import TYPE_CHECKING, Tuple, Union, cast, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Iterator, Mapping, MutableMapping, Sequence
@@ -38,7 +38,7 @@ from pyparsing import (
     printables,
 )
 
-from ._types import Data, Dimensioned, DimensionSet, File
+from ._types import Data, Dimensioned, DimensionSet, File, StandaloneData, SubDict
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -370,7 +370,7 @@ _KEYWORD_ENTRY = _keyword_entry_of(
     directive=_DIRECTIVE,
     data_entry=_DATA_ENTRY,
 )
-_DICT = _dict_of(_TOKEN, _DATA)
+_DICT = _dict_of(_TOKEN, Opt(_DATA, default=""))
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = _list_of(_LIST_ENTRY)
 _NUMBER = (
@@ -406,17 +406,35 @@ _FILE = (
     .parse_with_tabs()
 )
 
+_DATA_OR_DICT = (_DATA | _DICT).ignore(_COMMENT).parse_with_tabs()
 
-def loads(s: bytes | str) -> File | Data:
+
+@overload
+def loads(s: bytes | str, *, keywords: tuple[()]) -> File | StandaloneData: ...
+
+
+@overload
+def loads(
+    s: bytes | str, *, keywords: tuple[str, ...] | None = None
+) -> File | StandaloneData | Data | SubDict: ...
+
+
+def loads(
+    s: bytes | str, *, keywords: tuple[str, ...] | None = None
+) -> File | StandaloneData | Data | SubDict:
     if isinstance(s, bytes):
         s = s.decode("latin-1")
 
-    file = _FILE.parse_string(s, parse_all=True).as_dict()
+    if keywords == ():
+        data = _FILE.parse_string(s, parse_all=True).as_dict()
 
-    if len(file) == 1 and None in file:
-        return file[None]  # type: ignore[no-any-return]
+        if len(data) == 1 and None in data:
+            data = data[None]
 
-    return file
+    else:
+        data = _DATA_OR_DICT.parse_string(s, parse_all=True)[0]
+
+    return data
 
 
 _LOCATED_KEYWORD_ENTRIES = Group(
