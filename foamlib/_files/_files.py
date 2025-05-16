@@ -515,7 +515,12 @@ class FoamFile(
             for k, v in file.items():
                 if k is not None:
                     entries.append(
-                        dumps((k, v), keywords=(), header=header, tuple_is_entry=True)  # type: ignore [arg-type]
+                        dumps(
+                            (k, v),
+                            keywords=(),
+                            header=header,
+                            tuple_is_keyword_entry=True,
+                        )  # type: ignore [arg-type]
                     )
                 else:
                     assert not isinstance(v, Mapping)

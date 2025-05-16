@@ -156,7 +156,7 @@ def dumps(
     *,
     keywords: tuple[str, ...] | None = None,
     header: SubDictLike | None = None,
-    tuple_is_entry: bool = False,
+    tuple_is_keyword_entry: bool = False,
 ) -> bytes:
     data = normalize_data(data, keywords=keywords)  # type: ignore [arg-type, misc]
 
@@ -167,7 +167,7 @@ def dumps(
                 dumps(
                     (k, v),
                     keywords=keywords,
-                    tuple_is_entry=True,
+                    tuple_is_keyword_entry=True,
                 )
                 for k, v in data.items()
             )
@@ -245,7 +245,7 @@ def dumps(
         return dumps(data.dimensions) + b" " + dumps(data.value)
 
     if isinstance(data, tuple):
-        if tuple_is_entry:
+        if tuple_is_keyword_entry:
             k, v = data
             ret = b"\n" if isinstance(k, str) and k[0] == "#" else b""
             ret += dumps(k)
@@ -266,7 +266,9 @@ def dumps(
         return b" ".join(dumps(v) for v in data)
 
     if is_sequence(data):
-        return b"(" + b" ".join(dumps(v, tuple_is_entry=True) for v in data) + b")"  # type: ignore [arg-type]
+        return (
+            b"(" + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data) + b")"
+        )  # type: ignore [arg-type]
 
     if data is True:
         return b"yes"
