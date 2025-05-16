@@ -91,11 +91,13 @@ def test_write_read(tmp_path: Path) -> None:
     assert sd["y"] == 2
 
     with d:
-        lst = d["subdict", "list"]
+        sd = d["subdict"]
+        assert isinstance(sd, FoamFile.SubDict)
+        lst = sd["list"]
         assert isinstance(lst, list)
         lst[0] = 0
         assert lst == [0, 2, 3]
-        assert d["subdict", "list"] == [1, 2, 3]
+        assert sd["list"] == [1, 2, 3]
 
 
 def test_new_field(tmp_path: Path) -> None:

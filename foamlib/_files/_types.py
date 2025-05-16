@@ -234,12 +234,19 @@ DataLike = Union[
 StandaloneData = Union[
     Data,
     "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
-    "np.ndarray[tuple[int], np.dtype[np.float64 | np.float32]]",
+    "np.ndarray[tuple[int, int], np.dtype[np.float64 | np.float32]]",
+    List["np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]"],
+    Tuple[
+        "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
+        "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
+    ],
 ]
 StandaloneDataLike = Union[
+    StandaloneData,
     DataLike,
-    "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
-    "np.ndarray[tuple[int], np.dtype[np.float64 | np.float32]]",
+    Sequence["np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]"],
+    Sequence[Sequence[int]],
+    Tuple[Sequence[int], Sequence[int]],
 ]
 
 

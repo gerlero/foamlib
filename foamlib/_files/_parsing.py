@@ -190,6 +190,60 @@ def _binary_numeric_list(
     ).add_parse_action(to_array)
 
 
+def _ascii_face_list(*, ignore: Regex | None = None) -> ParserElement:
+    element_pattern = r"(?:-?\d+)"
+    spacing_pattern = (
+        rf"(?:(?:\s|{ignore.re.pattern})+)" if ignore is not None else r"(?:\s+)"
+    )
+
+    element_pattern = rf"(?:(?:3{spacing_pattern}?\((?:{element_pattern}{spacing_pattern}){{2}}{element_pattern}{spacing_pattern}?\))|(?:4{spacing_pattern}?\((?:{element_pattern}{spacing_pattern}){{3}}{element_pattern}{spacing_pattern}?\)))"
+
+    list_ = Forward()
+
+    def process_count(tks: ParseResults) -> None:
+        nonlocal list_
+        if not tks:
+            count = None
+        else:
+            (count,) = tks
+            assert isinstance(count, int)
+
+        if count is None:
+            list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern})*{element_pattern}{spacing_pattern}?\)"
+
+        elif count == 0:
+            list_ <<= NoMatch()
+            return
+
+        else:
+            list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern}){{{count - 1}}}{element_pattern}{spacing_pattern}?\)"
+
+        list_ <<= Regex(list_pattern).add_parse_action(to_face_list)
+
+    def to_face_list(
+        tks: ParseResults,
+    ) -> list[list[np.ndarray[tuple[int], np.dtype[np.int64]]]]:
+        (s,) = tks
+        assert s.startswith("(")
+        assert s.endswith(")")
+        if ignore is not None:
+            s = re.sub(ignore.re, " ", s)
+        s = s.replace("(", " ").replace(")", " ")
+
+        raw = np.fromstring(s, sep=" ", dtype=int)
+
+        values: list[np.ndarray[tuple[int], np.dtype[np.int64]]] = []
+        i = 0
+        while i < raw.size:
+            assert raw[i] in (3, 4)
+            values.append(raw[i + 1 : i + raw[i] + 1])  # type: ignore[arg-type]
+            i += raw[i] + 1
+
+        return [values]
+
+    return Opt(common.integer).add_parse_action(process_count).suppress() + list_
+
+
 def _list_of(entry: ParserElement) -> ParserElement:
     return (
         (
@@ -391,9 +445,14 @@ _DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
 
 _STANDALONE_DATA = (
     _ascii_numeric_list(dtype=int, ignore=_COMMENT)
+    | _ascii_face_list(ignore=_COMMENT)
     | _ascii_numeric_list(dtype=float, nested=3, ignore=_COMMENT)
-    | _binary_numeric_list(dtype=np.int64)
-    | _binary_numeric_list(dtype=np.int32)
+    | (
+        _binary_numeric_list(dtype=np.int64) + Opt(_binary_numeric_list(dtype=np.int64))
+    ).add_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else tks[0])
+    | (
+        _binary_numeric_list(dtype=np.int32) + Opt(_binary_numeric_list(dtype=np.int32))
+    ).add_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else tks[0])
     | _binary_numeric_list(dtype=np.float64, nested=3)
     | _binary_numeric_list(dtype=np.float32, nested=3)
     | _DATA
