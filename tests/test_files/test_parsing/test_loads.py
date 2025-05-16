@@ -74,3 +74,29 @@ def test_loads() -> None:
     assert FoamFile.loads("#include $FOAM_CASE/simControls") == {
         "#include": "$FOAM_CASE/simControls"
     }
+    faces = FoamFile.loads("2(3(1 2 3) 4(4 5 6 7))")
+    assert isinstance(faces, list)
+    assert len(faces) == 2
+    assert isinstance(faces[0], np.ndarray)
+    assert faces[0].shape == (3,)
+    assert faces[0].dtype == np.int64
+    assert isinstance(faces[1], np.ndarray)
+    assert faces[1].shape == (4,)
+    assert faces[1].dtype == np.int64
+    assert np.array_equal(faces[0], [1, 2, 3])
+    assert np.array_equal(faces[1], [4, 5, 6, 7])
+    faces = FoamFile.loads(
+        b"3\n(\x00\x00\x00\x00\x03\x00\x00\x00\x07\x00\x00\x00)\n7\n(h\xcb\r\x00\x1f\xcd\r\x00\x08\x1b\x0e\x00\xd7\xa85\x00\xda\xa85\x00\xd9\xa85\x00\xd8\xa85\x00)"
+    )
+    assert isinstance(faces, tuple)
+    assert len(faces) == 2
+    assert isinstance(faces[0], np.ndarray)
+    assert faces[0].shape == (3,)
+    assert faces[0].dtype == np.int32
+    assert isinstance(faces[1], np.ndarray)
+    assert faces[1].shape == (7,)
+    assert faces[1].dtype == np.int32
+    assert np.array_equal(faces[1][faces[0][0] : faces[0][1]], [904040, 904479, 924424])
+    assert np.array_equal(
+        faces[1][faces[0][1] : faces[0][2]], [3516631, 3516634, 3516633, 3516632]
+    )

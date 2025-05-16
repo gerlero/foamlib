@@ -88,7 +88,7 @@ def normalize_data(
                 if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] in (3, 6, 9)):
                     return arr  # type: ignore [return-value]
 
-            return [normalize_data(d) for d in data]  # type: ignore [arg-type, misc]
+            return [normalize_data(d) for d in data]  # type: ignore [arg-type, return-value]
 
         if isinstance(data, int):
             return float(data)
@@ -115,7 +115,7 @@ def normalize_data(
         assert not isinstance(k, Mapping)
         return (  # type: ignore [return-value]
             normalize_keyword(k),  # type: ignore [arg-type]
-            normalize_data(v) if not isinstance(v, Mapping) else v,  # type: ignore [arg-type, misc]
+            normalize_data(v) if not isinstance(v, Mapping) else v,  # type: ignore [arg-type]
         )
 
     if (
@@ -123,10 +123,10 @@ def normalize_data(
         and not isinstance(data, DimensionSet)
         and not isinstance(data, tuple)
     ):
-        return [normalize_data(d) for d in data]  # type: ignore [arg-type, misc]
+        return [normalize_data(d) for d in data]  # type: ignore [arg-type, return-value]
 
     if isinstance(data, tuple) and not isinstance(data, DimensionSet):
-        return tuple(normalize_data(d) for d in data)  # type: ignore [misc]
+        return tuple(normalize_data(d, keywords=keywords) for d in data)  # type: ignore [misc]
 
     if isinstance(data, str):
         s = loads(data, keywords=keywords)
@@ -264,7 +264,7 @@ def dumps(
                 ret += b";"
             return ret
 
-        return b" ".join(dumps(v) for v in data)
+        return b" ".join(dumps(v, keywords=keywords, header=header) for v in data)
 
     if is_sequence(data):
         return (

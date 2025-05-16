@@ -129,3 +129,14 @@ def test_serialize_file() -> None:
         FoamFile.dumps({"#include": "$FOAM_CASE/simControls"}, ensure_header=False)
         == b"\n#include $FOAM_CASE/simControls\n"
     )
+    indices = np.array([0, 3, 7], dtype=np.int32)
+    values = np.array(
+        [904040, 904479, 924424, 3516631, 3516634, 3516633, 3516632], dtype=np.int32
+    )
+    assert (
+        FoamFile.dumps(
+            {"FoamFile": {"format": "binary"}, None: (indices, values)},  # type: ignore[dict-item]
+            ensure_header=False,
+        )
+        == b"FoamFile {format binary;} 3(\x00\x00\x00\x00\x03\x00\x00\x00\x07\x00\x00\x00) 7(h\xcb\r\x00\x1f\xcd\r\x00\x08\x1b\x0e\x00\xd7\xa85\x00\xda\xa85\x00\xd9\xa85\x00\xd8\xa85\x00)"
+    )
