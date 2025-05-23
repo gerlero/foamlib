@@ -13,6 +13,8 @@
 ![OpenFOAM](https://img.shields.io/badge/openfoam-.com%20|%20.org-informational)
 [![Docker](https://github.com/gerlero/foamlib/actions/workflows/docker.yml/badge.svg)](https://github.com/gerlero/foamlib/actions/workflows/docker.yml)
 [![Docker image](https://img.shields.io/badge/docker%20image-microfluidica%2Ffoamlib-0085a0)](https://hub.docker.com/r/microfluidica/foamlib/)
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.07633/status.svg)](https://doi.org/10.21105/joss.07633)
+
 
 **foamlib** provides a simple, modern, ergonomic and fast Python interface for interacting with [OpenFOAM](https://www.openfoam.com).
 
@@ -172,6 +174,39 @@ If you believe you have found a bug in **foamlib**, please open an [issue](https
 
 You're welcome to contribute to **foamlib**! Check out the [contributing guidelines](CONTRIBUTING.md) for more information.
 
-## Footnotes
+## 🖋️Citation
+
+If you find **foamlib** useful for your work, don't forget to cite it!
+
+Citations help us a lot. You may find the following snippets useful:
+
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@article{foamlib,
+    author = {Gerlero, Gabriel S. and Kler, Pablo A.},
+    doi = {10.21105/joss.07633},
+    journal = {Journal of Open Source Software},
+    month = may,
+    number = {109},
+    pages = {7633},
+    title = {{foamlib: A modern Python package for working with OpenFOAM}},
+    url = {https://joss.theoj.org/papers/10.21105/joss.07633},
+    volume = {10},
+    year = {2025}
+}
+```
+
+</details>
+
+<details>
+<summary>APA</summary>
+
+Gerlero, G. S., & Kler, P. A. (2025). foamlib: A modern Python package for working with OpenFOAM. Journal of Open Source Software, 10(109), 7633. https://doi.org/10.21105/joss.07633
+
+</details>
+
+## 👟 Footnotes
 
 <a id="benchmark">[1]</a> foamlib 0.8.1 vs PyFoam 2023.7 on a MacBook Air (2020, M1) with 8 GB of RAM. [Benchmark script](benchmark/benchmark.py).
