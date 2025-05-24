@@ -56,6 +56,12 @@ Compared to [PyFoam](https://openfoamwiki.net/index.php/Contrib/PyFoam) and othe
     conda install -c conda-forge foamlib
     ```
 
+* With [Homebrew](https://brew.sh):
+
+    ```bash
+    brew install gerlero/openfoam/foamlib
+    ```
+
 ### 🐑 Clone a case
 
 ```python
