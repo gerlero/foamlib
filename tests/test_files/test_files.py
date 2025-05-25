@@ -3,9 +3,9 @@ import sys
 from pathlib import Path
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Generator, Sequence
+    from collections.abc import Generator
 else:
-    from typing import Generator, Sequence
+    from typing import Generator
 
 import numpy as np
 import pytest
@@ -78,20 +78,26 @@ def test_write_read(tmp_path: Path) -> None:
     assert sd["nestedList"] == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
     sd["g"] = FoamFile.Dimensioned(
-        name="g", dimensions=[1, 1, -2, 0, 0, 0, 0], value=[0, 0, -9.81]
+        name="g", dimensions=[0, 1, -2, 0, 0, 0, 0], value=[0, 0, -9.81]
     )
-    assert sd["g"] == FoamFile.Dimensioned(
-        name="g",
-        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2),
-        value=[0, 0, -9.81],
-    )
+    assert isinstance(sd["g"], FoamFile.Dimensioned)
+    assert sd["g"].name == "g"
+    assert sd["g"].dimensions == FoamFile.DimensionSet(length=1, time=-2)
+    assert np.array_equal(sd["g"].value, [0, 0, -9.81])
+
+    sd["n"] = 1
+    sd["y"] = 2
+    assert sd["n"] == 1
+    assert sd["y"] == 2
 
     with d:
-        lst = d["subdict", "list"]
+        sd = d["subdict"]
+        assert isinstance(sd, FoamFile.SubDict)
+        lst = sd["list"]
         assert isinstance(lst, list)
         lst[0] = 0
         assert lst == [0, 2, 3]
-        assert d["subdict", "list"] == [1, 2, 3]
+        assert sd["list"] == [1, 2, 3]
 
 
 def test_new_field(tmp_path: Path) -> None:
@@ -148,9 +154,9 @@ def test_mesh(cavity: FoamCase) -> None:
 
     points = file[None]
 
-    assert isinstance(points, Sequence)
-    assert isinstance(points[0], Sequence)
-    assert len(points[0]) == 3
+    assert isinstance(points, np.ndarray)
+    assert points.ndim == 2
+    assert points.shape[-1] == 3
 
 
 def test_internal_field(cavity: FoamCase) -> None:
@@ -158,7 +164,7 @@ def test_internal_field(cavity: FoamCase) -> None:
     assert isinstance(blocks, list)
     sizes = blocks[2]
     assert isinstance(sizes, list)
-    size = np.prod(sizes)
+    size = np.prod(sizes)  # type: ignore [arg-type]
 
     p_arr = np.zeros(size)
     U_arr = np.zeros((size, 3))

@@ -3,6 +3,7 @@
 from pathlib import Path
 from textwrap import dedent
 
+import numpy as np
 from foamlib import FoamFile
 
 
@@ -43,9 +44,9 @@ def test_simple(tmp_path: Path) -> None:
 
     assert decompose_par_dict["numberOfSubdomains"] == 8
     assert decompose_par_dict["method"] == "simple"
-    assert decompose_par_dict["coeffs"]["n"] == [4, 2, 1]
-    assert decompose_par_dict["coeffs"]["order"] == "xyz"
-    assert decompose_par_dict["coeffs"]["delta"] == 0.001
+    assert np.array_equal(decompose_par_dict["coeffs", "n"], [4, 2, 1])  # type: ignore[arg-type]
+    assert decompose_par_dict["coeffs", "order"] == "xyz"
+    assert decompose_par_dict["coeffs", "delta"] == 0.001
 
 
 def test_scotch(tmp_path: Path) -> None:

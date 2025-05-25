@@ -1,9 +1,11 @@
 import numpy as np
 from foamlib import FoamFile
 from foamlib._files._parsing import Parsed
+from foamlib._files._types import is_sequence
 
 
 def test_parse_value() -> None:
+    assert Parsed(b"1")[()] == 1
     assert Parsed(b"1")[()] == 1
     assert Parsed(b"1.0")[()] == 1.0
     assert Parsed(b"1.0e-3")[()] == 1.0e-3
@@ -16,7 +18,12 @@ def test_parse_value() -> None:
     assert Parsed(b"uniform 1")[()] == 1
     assert Parsed(b"uniform 1.0")[()] == 1.0
     assert Parsed(b"uniform 1.0e-3")[()] == 1.0e-3
-    assert Parsed(b"(1.0 2.0 3.0)")[()] == [1.0, 2.0, 3.0]
+    assert Parsed(b"(word word)")[()] == ["word", "word"]
+    lst = Parsed(b"(1 2 3)")[()]
+    assert np.array_equal(lst, [1, 2, 3])  # type: ignore[arg-type]
+    lst = Parsed(b"(1.0 2 3)")[()]
+    assert np.array_equal(lst, [1.0, 2.0, 3.0])  # type: ignore[arg-type]
+    assert Parsed(b"()")[()] == []
     field = Parsed(b"uniform (1 2 3)")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(field, [1, 2, 3])
@@ -26,15 +33,34 @@ def test_parse_value() -> None:
     field = Parsed(b"nonuniform List<scalar> 2{1}")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(field, [1, 1])
-    assert Parsed(b"3(1 2 3)")[()] == [1, 2, 3]
-    assert Parsed(b"2((1 2 3) (4 5 6))")[()] == [
-        [1, 2, 3],
-        [4, 5, 6],
-    ]
-    assert Parsed(b"2{(1 2 3)}")[()] == [
-        [1, 2, 3],
-        [1, 2, 3],
-    ]
+    field = Parsed(b"nonuniform List<symmTensor> 0()")[()]
+    assert isinstance(field, np.ndarray)
+    assert field.shape == (0, 6)
+    field = Parsed(b"nonuniform List<tensor> ()")[()]
+    assert isinstance(field, np.ndarray)
+    assert field.shape == (0, 9)
+    lst = Parsed(b"3(1 2 3)")[()]
+    assert isinstance(lst, np.ndarray)
+    assert np.array_equal(lst, [1, 2, 3])
+    lst = Parsed(b"2((1 2 3) (4 5 6))")[()]
+    assert isinstance(lst, np.ndarray)
+    assert np.array_equal(
+        lst,
+        [
+            [1, 2, 3],
+            [4, 5, 6],
+        ],
+    )
+    lst = Parsed(b"2{(1 2 3)}")[()]
+    assert isinstance(lst, np.ndarray)
+    assert np.array_equal(
+        lst,
+        [
+            [1, 2, 3],
+            [1, 2, 3],
+        ],
+    )
+    assert Parsed(b"0()")[()] == []
     field = Parsed(b"nonuniform List<vector> 2((1 2 3) (4 5 6))")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(
@@ -69,27 +95,33 @@ def test_parse_value() -> None:
     assert Parsed(b"[1 1 -2 0 0 0 0]")[()] == FoamFile.DimensionSet(
         mass=1, length=1, time=-2
     )
-    assert Parsed(b"g [1 1 -2 0 0 0 0] (0 0 -9.81)")[()] == FoamFile.Dimensioned(
-        name="g",
-        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2),
-        value=[0, 0, -9.81],
-    )
-    assert Parsed(b"[1 1 -2 0 0 0 0] 9.81")[()] == FoamFile.Dimensioned(
-        dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2), value=9.81
-    )
-    assert Parsed(b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")[()] == (
-        "hex",
-        [0, 1, 2, 3, 4, 5, 6, 7],
-        [1, 1, 1],
-        "simpleGrading",
-        [1, 1, 1],
-    )
+    dimensioned = Parsed(b"g [1 1 -2 0 0 0 0] (0 0 -9.81)")[()]
+    assert isinstance(dimensioned, FoamFile.Dimensioned)
+    assert dimensioned.dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert np.array_equal(dimensioned.value, [0, 0, -9.81])
+    assert dimensioned.name == "g"
+    dimensioned = Parsed(b"[1 1 -2 0 0 0 0] 9.81")[()]
+    assert isinstance(dimensioned, FoamFile.Dimensioned)
+    assert dimensioned.dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert dimensioned.value == 9.81
+    assert dimensioned.name is None
+    tpl = Parsed(b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")[()]
+    assert isinstance(tpl, tuple)
+    assert len(tpl) == 5
+    assert tpl[0] == "hex"
+    assert is_sequence(tpl[1])
+    assert np.array_equal(tpl[1], [0, 1, 2, 3, 4, 5, 6, 7])  # type: ignore[arg-type]
+    assert is_sequence(tpl[2])
+    assert np.array_equal(tpl[2], [1, 1, 1])  # type: ignore[arg-type]
+    assert tpl[3] == "simpleGrading"
+    assert is_sequence(tpl[4])
+    assert np.array_equal(tpl[4], [1, 1, 1])  # type: ignore[arg-type]
     assert Parsed(b"(a b; c d;)")[()] == [("a", "b"), ("c", "d")]
     assert Parsed(b"(a {b c;} d {e g;})")[()] == [
         ("a", {"b": "c"}),
         ("d", {"e": "g"}),
     ]
-    assert Parsed(b"(a (0 1 2); b {})")[()] == [("a", [0, 1, 2]), ("b", {})]
+    assert Parsed(b"(a (b c d); e {})")[()] == [("a", ["b", "c", "d"]), ("e", {})]
     assert Parsed(b"({a b; c d;} {e g;})")[()] == [{"a": "b", "c": "d"}, {"e": "g"}]
     assert Parsed(b"(water oil mercury air)")[()] == ["water", "oil", "mercury", "air"]
     assert Parsed(b"div(phi,U)")[()] == "div(phi,U)"

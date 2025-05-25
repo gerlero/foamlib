@@ -1,0 +1,36 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Gerlero
+  given-names: Gabriel S.
+  orcid: "https://orcid.org/0000-0002-5138-0328"
+- family-names: Kler
+  given-names: Pablo A.
+  orcid: "https://orcid.org/0000-0003-4217-698X"
+contact:
+- family-names: Gerlero
+  given-names: Gabriel S.
+  orcid: "https://orcid.org/0000-0002-5138-0328"
+doi: 10.5281/zenodo.15442960
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Gerlero
+    given-names: Gabriel S.
+    orcid: "https://orcid.org/0000-0002-5138-0328"
+  - family-names: Kler
+    given-names: Pablo A.
+    orcid: "https://orcid.org/0000-0003-4217-698X"
+  date-published: 2025-05-23
+  doi: 10.21105/joss.07633
+  issn: 2475-9066
+  issue: 109
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 7633
+  title: "foamlib: A modern Python package for working with OpenFOAM"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.07633"
+  volume: 10
+title: "foamlib: A modern Python package for working with OpenFOAM"

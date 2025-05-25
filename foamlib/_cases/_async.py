@@ -44,13 +44,14 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     Provides methods for running and cleaning cases, as well as accessing files.
 
-    Access the time directories of the case as a sequence, e.g. `case[0]` or `case[-1]`.
-    These will return `AsyncFoamCase.TimeDirectory` objects.
+    Access the time directories of the case as a sequence, e.g. ``case[0]`` or ``case[-1]``.
+    These will return :class:`AsyncFoamCase.TimeDirectory` objects.
 
     :param path: The path to the case directory. Defaults to the current working
         directory.
 
     Example usage: ::
+
         from foamlib import AsyncFoamCase
 
         case = AsyncFoamCase("path/to/case") # Load an OpenFOAM case
@@ -82,7 +83,7 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     max_cpus = multiprocessing.cpu_count()
     """
-    Maximum number of CPUs to use for running instances of `AsyncFoamCase` concurrently.
+    Maximum number of CPUs to use for running instances of :class:`AsyncFoamCase` concurrently.
 
     Defaults to the number of CPUs on the system.
     """
@@ -143,19 +144,23 @@ class AsyncFoamCase(FoamCaseRunBase):
         """
         Clean this case.
 
-        If a `clean` or `Allclean` script is present in the case directory, it will be invoked.
+        If a ``clean`` or ``Allclean`` script is present in the case directory, it will be invoked.
         Otherwise, the case directory will be cleaned using these rules:
 
-        - All time directories except `0` will be deleted.
-        - The `0` time directory will be deleted if `0.orig` exists.
-        - `processor*` directories will be deleted if a `system/decomposeParDict` file is present.
-        - `constant/polyMesh` will be deleted if a `system/blockMeshDict` file is present.
-        - All `log.*` files will be deleted.
+        - All time directories except ``0`` will be deleted.
+
+        - The ``0`` time directory will be deleted if ``0.orig`` exists.
+
+        - ``processor*`` directories will be deleted if a ``system/decomposeParDict`` file is present.
+
+        - ``constant/polyMesh`` will be deleted if a ``system/blockMeshDict`` file is present.
+
+        - All ``log.*`` files will be deleted.
 
         If this behavior is not appropriate for a case, it is recommended to write a custom
-        `clean` script.
+        ``clean`` script.
 
-        :param check: If True, raise a `CalledProcessError` if the clean script returns a
+        :param check: If True, raise a :class:`CalledProcessError` if the clean script returns a
             non-zero exit code.
         """
         for coro in self._clean_calls(check=check):
@@ -191,35 +196,40 @@ class AsyncFoamCase(FoamCaseRunBase):
         """
         Run this case, or a specified command in the context of this case.
 
-        If `cmd` is given, this method will run the given command in the context of the case.
+        If ``cmd`` is given, this method will run the given command in the context of the case.
 
-        If `cmd` is `None`, a series of heuristic rules will be used to run the case. This works as
+        If ``cmd`` is ``None``, a series of heuristic rules will be used to run the case. This works as
         follows:
 
-        - If a `run`, `Allrun` or `Allrun-parallel` script is present in the case directory,
-        it will be invoked. If both `run` and `Allrun` are present, `Allrun` will be used. If
-        both `Allrun` and `Allrun-parallel` are present and `parallel` is `None`, an error will
-        be raised.
-        - If no run script is present but an `Allrun.pre` script exists, it will be invoked.
-        - Otherwise, if a `system/blockMeshDict` file is present, the method will call
-        `self.block_mesh()`.
-        - Then, if a `0.orig` directory is present, it will call `self.restore_0_dir()`.
-        - Then, if the case is to be run in parallel (see the `parallel` option) and no
-        `processor*` directories exist but a`system/decomposeParDict` file is present, it will
-        call `self.decompose_par()`.
+        - If a ``run``, ``Allrun`` or ``Allrun-parallel`` script is present in the case directory,
+          it will be invoked. If both ``run`` and ``Allrun`` are present, ``Allrun`` will be used. If
+          both ``Allrun`` and ``Allrun-parallel`` are present and ``parallel`` is ``None``, an error will
+          be raised.
+
+        - If no run script is present but an ``Allrun.pre`` script exists, it will be invoked.
+
+        - Otherwise, if a ``system/blockMeshDict`` file is present, the method will call
+          :meth:`block_mesh()`.
+
+        - Then, if a ``0.orig`` directory is present, it will call :meth:`restore_0_dir()`.
+
+        - Then, if the case is to be run in parallel (see the ``parallel`` option) and no
+          ``processor*`` directories exist but a ``system/decomposeParDict`` file is present, it will
+          call :meth:`decompose_par()`.
+
         - Then, it will run the case using the application specified in the `controlDict` file.
 
         If this behavior is not appropriate for a case, it is recommended to write a custom
-        `run`, `Allrun`, `Allrun-parallel` or `Allrun.pre` script.
+        ``run``, ``Allrun``, ``Allrun-parallel`` or ``Allrun.pre`` script.
 
-        :param cmd: The command to run. If `None`, run the case. If a sequence, the first element
-            is the command and the rest are arguments. If a string, `cmd` is executed in a shell.
-        :param parallel: If `True`, run in parallel using MPI. If None, autodetect whether to run
+        :param cmd: The command to run. If ``None``, run the case. If a sequence, the first element
+            is the command and the rest are arguments. If a string, ``cmd`` is executed in a shell.
+        :param parallel: If ``True``, run in parallel using MPI. If None, autodetect whether to run
             in parallel.
-        :param cpus: The number of CPUs to use. If `None`, autodetect from to the case.
-        :param check: If `True`, raise a `CalledProcessError` if any command returns a non-zero
+        :param cpus: The number of CPUs to use. If ``None``, autodetect from to the case.
+        :param check: If ``True``, raise a :class:`CalledProcessError` if any command returns a non-zero
             exit code.
-        :param log: If `True`, log the command output to `log.*` files in the case directory.
+        :param log: If ``True``, log the command output to ``log.*`` files in the case directory.
         """
         for coro in self._run_calls(
             cmd=cmd, parallel=parallel, cpus=cpus, check=check, log=log
@@ -262,6 +272,7 @@ class AsyncFoamCase(FoamCaseRunBase):
         :return: The copy of the case.
 
         Example usage: ::
+
             import os
             from pathlib import Path
             from foamlib import AsyncFoamCase
@@ -298,6 +309,7 @@ class AsyncFoamCase(FoamCaseRunBase):
         :return: The clone of the case.
 
         Example usage: ::
+
             import os
             from pathlib import Path
             from foamlib import AsyncFoamCase

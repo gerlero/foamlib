@@ -1,8 +1,8 @@
 # Based on https://foss.heptapod.net/fluiddyn/fluidsimfoam/-/blob/branch/default/tests/test_polymesh.py
 
-
 from pathlib import Path
 
+import numpy as np
 from foamlib import FoamFile
 
 contents = r"""
@@ -47,20 +47,23 @@ def test_get_cells_coords(tmp_path: Path) -> None:
     path = tmp_path / "points"
     path.write_text(contents)
 
-    points = FoamFile(path)
+    file = FoamFile(path)
 
-    assert points[None][0] == [0, 0, 0]
-    assert points[None][1] == [0.15707963268, 0, 0]
-    assert points[None][2] == [0.314159265359, 0, 0]
-    assert points[None][3] == [0.471238898038, 0, 0]
-    assert points[None][4] == [0.628318530718, 0, 0]
-    assert points[None][5] == [0, 0, 0]
-    assert points[None][6] == [0.15707963268, 0, 0]
-    assert points[None][7] == [0.314159265359, 0, 0]
-    assert points[None][8] == [0.471238898038, 0, 0]
-    assert points[None][9] == [0.628318530718, 0, 0]
+    points = file[None]
+    assert isinstance(points, np.ndarray)
 
-    assert len(points[None]) == 10
+    assert np.array_equal(points[0], [0, 0, 0])
+    assert np.array_equal(points[1], [0.15707963268, 0, 0])
+    assert np.array_equal(points[2], [0.314159265359, 0, 0])
+    assert np.array_equal(points[3], [0.471238898038, 0, 0])
+    assert np.array_equal(points[4], [0.628318530718, 0, 0])
+    assert np.array_equal(points[5], [0, 0, 0])
+    assert np.array_equal(points[6], [0.15707963268, 0, 0])
+    assert np.array_equal(points[7], [0.314159265359, 0, 0])
+    assert np.array_equal(points[8], [0.471238898038, 0, 0])
+    assert np.array_equal(points[9], [0.628318530718, 0, 0])
 
-    assert list(points) == [None]
-    assert "FoamFile" in points
+    assert len(points) == 10
+
+    assert list(file) == [None]
+    assert "FoamFile" in file
