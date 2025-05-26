@@ -1,12 +1,15 @@
 from __future__ import annotations
-from typing import Any, Optional
-from foamlib import FoamFile
+
 from pathlib import Path
-from pydantic import BaseModel, Field
+from typing import Any, Optional
+
+from pydantic import BaseModel
+
+from foamlib import FoamFile
 
 
 class FileKey(BaseModel):
-    file_name: Path 
+    file_name: Path
     keys: list[str]
 
     def get_value(self) -> Any:

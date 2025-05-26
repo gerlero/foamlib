@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 from pathlib import Path
+
 from pydantic import BaseModel
 
 from foamlib import FoamCase
-from foamlib.preprocessing._ofDict import FileKey, KeyValuePair
+from foamlib.preprocessing._ofDict import KeyValuePair
+
 
 class CaseIdentifier(BaseModel):
     category: str
@@ -27,7 +30,7 @@ class CaseModifier(BaseModel):
         of_case.clone(dst=self.output_case)
 
         return of_case
-    
+
     def modify_case(self) -> FoamCase:
         of_case = FoamCase(path=self.output_case)
 

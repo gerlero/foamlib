@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 from pathlib import Path
 
 import pandas as pd
 from pydantic import BaseModel
+
 from foamlib import FoamFile
-from foamlib.preprocessing._caseModifier import CaseModifier, CaseIdentifier
+from foamlib.preprocessing._caseModifier import CaseIdentifier, CaseModifier
 from foamlib.preprocessing._ofDict import FileKey, KeyValuePair
 
 
@@ -45,8 +47,8 @@ def csv_generator(
             ],
             case_identifier=[
                 CaseIdentifier(category=key, name=of_case[key])
-                for key in category_keys
-                if key in of_case
+                for key, value in of_case.items()
+                if key in category_keys
             ],
         )
         cases.append(case_mod)

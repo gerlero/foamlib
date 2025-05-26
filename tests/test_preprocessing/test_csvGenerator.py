@@ -1,6 +1,7 @@
-from pathlib import Path
-import pytest
 import shutil
+from pathlib import Path
+
+import pytest
 from foamlib.preprocessing.parameterStudy import csv_generator
 
 CSV_FILE = "tests/test_preprocessing/test_parastudy.csv"

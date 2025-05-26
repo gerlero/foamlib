@@ -1,9 +1,10 @@
 import shutil
-import pytest
 from pathlib import Path
+
+import pytest
 from foamlib import FoamCase
+from foamlib.preprocessing._caseModifier import CaseIdentifier, CaseModifier
 from foamlib.preprocessing._ofDict import FileKey, KeyValuePair
-from foamlib.preprocessing._caseModifier import CaseModifier, CaseIdentifier
 
 OUTPUT_CASE = "tests/test_preprocessing/modifiedCase"
 

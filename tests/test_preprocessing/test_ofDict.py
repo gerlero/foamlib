@@ -1,7 +1,7 @@
 from pathlib import Path
+
 from foamlib import FoamFile
 from foamlib.preprocessing._ofDict import FileKey, KeyValuePair
-
 
 DICT_FILE = "tests/test_preprocessing/dictionaries/testDictionary"
 
