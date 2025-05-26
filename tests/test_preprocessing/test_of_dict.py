@@ -25,12 +25,10 @@ def test_file_subkey() -> None:
     assert file_key_test1.file_name == Path(DICT_FILE)
     assert file_key_test1.keys == ["subDict", "subSubDict", "test1"]
 
-
     assert file_key_test1.get_value() == 3
 
 
 def test_file_subkey_value() -> None:
-
     value_pair = KeyValuePair(
         instruction=FileKey(
             file_name=DICT_FILE, keys=["subDict", "subSubDict", "test1"]

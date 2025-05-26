@@ -43,7 +43,9 @@ class TableReader:
         """Initialize the TableReader instance."""
 
     @classmethod
-    def register(cls, extension: str) -> Callable[
+    def register(
+        cls, extension: str
+    ) -> Callable[
         [Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame]],
         Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame],
     ]:

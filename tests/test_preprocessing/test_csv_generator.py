@@ -9,6 +9,7 @@ from foamlib.preprocessing.parameter_study import csv_generator
 CSV_FILE = "tests/test_preprocessing/test_parastudy.csv"
 OUTPUT_FOLDER = "tests/test_preprocessing/Cases/"
 
+
 @pytest.fixture
 def output_folder() -> Path:
     """Fixture to clean up the output case folder after the test."""

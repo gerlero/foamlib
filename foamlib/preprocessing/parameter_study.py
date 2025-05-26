@@ -1,4 +1,5 @@
 """Parameter study module for generating multiple cases based on parameter combinations."""
+
 from __future__ import annotations
 
 from pathlib import Path
