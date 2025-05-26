@@ -18,18 +18,19 @@ FoamFile
 test1      1;
 test2      2.0;
 test3      "test3";
-test5      test5
+test5      test5;
 
-subDict{
-    test5sub1   1;
-    test5sub2   2.0;
-    test5sub3  "test5sub3";
+subDict
+{
+    test1  2;
+    test2   4.0;
+    test3  "test5sub3";
     
     subSubDict
     {
-        subSub1  1;
-        subSub2  2.0;
-        subSub3  "subSub3";
+        test1 3;
+        test2  6.0;
+        test3  "subSub3";
     }
 }
 
