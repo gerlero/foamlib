@@ -1,16 +1,18 @@
+from __future__ import annotations
+
 import shutil
 from pathlib import Path
 
 import pytest
 from foamlib import FoamCase
-from foamlib.preprocessing._caseModifier import CaseIdentifier, CaseModifier
-from foamlib.preprocessing._ofDict import FileKey, KeyValuePair
+from foamlib.preprocessing._case_modifier import CaseIdentifier, CaseModifier
+from foamlib.preprocessing._of_dict import FileKey, KeyValuePair
 
 OUTPUT_CASE = "tests/test_preprocessing/modifiedCase"
 
 
 @pytest.fixture
-def output_case():
+def output_case() -> Path:
     """Fixture to clean up the output case folder after the test."""
     output_case = Path(OUTPUT_CASE)
     yield output_case  # Provide the folder path to the test
@@ -18,7 +20,7 @@ def output_case():
         shutil.rmtree(output_case)  # Remove the folder after the test
 
 
-def test_case_modifier(output_case) -> None:
+def test_case_modifier(output_case: Path) -> None:
     """Test the CaseModifier model."""
     template_case = Path("tests/test_preprocessing/templates/damBreak")
     key_value_pairs = [

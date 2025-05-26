@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 import shutil
 from pathlib import Path
 
 import pytest
-from foamlib.preprocessing.parameterStudy import csv_generator
+from foamlib.preprocessing.parameter_study import csv_generator
 
 CSV_FILE = "tests/test_preprocessing/test_parastudy.csv"
 OUTPUT_FOLDER = "tests/test_preprocessing/Cases/"
 
 @pytest.fixture
-def output_folder():
+def output_folder() -> Path:
     """Fixture to clean up the output case folder after the test."""
     output_cases = Path(OUTPUT_FOLDER)
     yield output_cases  # Provide the folder path to the test
@@ -16,7 +18,7 @@ def output_folder():
         shutil.rmtree(output_cases)  # Remove the folder after the test
 
 
-def test_csv_generator(output_folder) -> None:
+def test_csv_generator(output_folder: Path) -> None:
     """Test the CSVGenerator model."""
     template_case = Path("tests/test_preprocessing/templates/damBreak")
 

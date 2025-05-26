@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 from foamlib import FoamFile
 
@@ -31,7 +34,8 @@ class KeyValuePair(BaseModel):
         if case_path is not None:
             of_file = case_path / of_file
         if not of_file.exists():
-            raise FileNotFoundError(f"The file {of_file} does not exist.")
+            err_msg = f"The file {of_file} does not exist."
+            raise FileNotFoundError(err_msg)
         of_dict = FoamFile(of_file)
         current_dict = of_dict
         for key in self.instruction.keys[:-1]:

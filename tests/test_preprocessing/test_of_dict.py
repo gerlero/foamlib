@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 from foamlib import FoamFile
-from foamlib.preprocessing._ofDict import FileKey, KeyValuePair
+from foamlib.preprocessing._of_dict import FileKey, KeyValuePair
 
 DICT_FILE = "tests/test_preprocessing/dictionaries/testDictionary"
 
@@ -11,8 +13,6 @@ def test_file_key() -> None:
     file_key_test1 = FileKey(file_name=DICT_FILE, keys=["test1"])
     assert file_key_test1.file_name == Path(DICT_FILE)
     assert file_key_test1.keys == ["test1"]
-
-    ofDict = FoamFile(file_key_test1.file_name)
 
     assert file_key_test1.get_value() == 1
 
@@ -25,7 +25,6 @@ def test_file_subkey() -> None:
     assert file_key_test1.file_name == Path(DICT_FILE)
     assert file_key_test1.keys == ["subDict", "subSubDict", "test1"]
 
-    ofDict = FoamFile(file_key_test1.file_name)
 
     assert file_key_test1.get_value() == 3
 

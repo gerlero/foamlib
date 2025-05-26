@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
 from foamlib import FoamCase
-from foamlib.preprocessing._ofDict import KeyValuePair
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from foamlib.preprocessing._of_dict import KeyValuePair
 
 
 class CaseIdentifier(BaseModel):
@@ -18,12 +22,12 @@ class CaseIdentifier(BaseModel):
     def __repr__(self) -> str:
         return self.__str__()
 
+
 class CaseModifier(BaseModel):
     template_case: Path
     output_case: Path
     key_value_pairs: list[KeyValuePair]
     case_identifier: list[CaseIdentifier]
-
 
     def create_case(self) -> FoamCase:
         of_case = FoamCase(path=self.template_case)

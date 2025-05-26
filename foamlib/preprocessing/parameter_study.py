@@ -1,3 +1,4 @@
+"""Parameter study module for generating multiple cases based on parameter combinations."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,11 +7,13 @@ import pandas as pd
 from pydantic import BaseModel
 
 from foamlib import FoamFile
-from foamlib.preprocessing._caseModifier import CaseIdentifier, CaseModifier
-from foamlib.preprocessing._ofDict import FileKey, KeyValuePair
+from foamlib.preprocessing._case_modifier import CaseIdentifier, CaseModifier
+from foamlib.preprocessing._of_dict import FileKey, KeyValuePair
 
 
 class ParameterStudy(BaseModel):
+    """Class to handle a parameter study by creating multiple cases based on parameter combinations."""
+
     cases: list[CaseModifier]
 
     def create_study(self) -> None:
