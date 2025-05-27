@@ -21,7 +21,7 @@ class CaseModifier(BaseModel):
 
     def create_case(self) -> FoamCase:
         of_case = FoamCase(path=self.template_case)
-        of_case.clone(dst=self.output_case)
+        of_case.copy(dst=self.output_case)
 
         return of_case
 
