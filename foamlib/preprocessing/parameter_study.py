@@ -8,7 +8,7 @@ import pandas as pd
 from pydantic import BaseModel
 
 from foamlib import FoamFile
-from foamlib.preprocessing._case_modifier import CaseIdentifier, CaseModifier
+from foamlib.preprocessing._case_modifier import CaseModifier, CaseParameter
 from foamlib.preprocessing._of_dict import FileKey, KeyValuePair
 
 
@@ -49,8 +49,8 @@ def csv_generator(
                 for key, value in of_case.items()
                 if key in parameter_keys
             ],
-            case_identifier=[
-                CaseIdentifier(category=key, name=of_case[key])
+            case_parameters=[
+                CaseParameter(category=key, name=of_case[key])
                 for key, value in of_case.items()
                 if key in category_keys
             ],

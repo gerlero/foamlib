@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 from foamlib import FoamCase
-from foamlib.preprocessing._case_modifier import CaseIdentifier, CaseModifier
+from foamlib.preprocessing._case_modifier import CaseModifier, CaseParameter
 from foamlib.preprocessing._of_dict import FileKey, KeyValuePair
 
 OUTPUT_CASE = "tests/test_preprocessing/modifiedCase"
@@ -41,8 +41,8 @@ def test_case_modifier(output_case: Path) -> None:
         template_case=template_case,
         key_value_pairs=key_value_pairs,
         output_case=output_case,
-        case_identifier=[
-            CaseIdentifier(
+        case_parameters=[
+            CaseParameter(
                 category="testCategory",
                 name="testName",
             )
@@ -68,8 +68,8 @@ def test_case_modifier(output_case: Path) -> None:
         "transportModel",
     ]
     assert case_modifier.key_value_pairs[1].value == "asdf"
-    assert case_modifier.case_identifier[0].category == "testCategory"
-    assert case_modifier.case_identifier[0].name == "testName"
+    assert case_modifier.case_parameters[0].category == "testCategory"
+    assert case_modifier.case_parameters[0].name == "testName"
 
     case_modifier.modify_case()
     assert Path(case_modifier.output_case / "case.json").exists()

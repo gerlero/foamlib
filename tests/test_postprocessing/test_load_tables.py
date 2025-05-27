@@ -9,13 +9,18 @@ from foamlib.postprocessing.load_tables import (
 )
 
 
-def max_height_filter(table: pd.DataFrame, parameters: dict[str, str]) -> pd.DataFrame:
+def max_height_filter(
+    table: pd.DataFrame, parameters: list[dict[str, str]]
+) -> pd.DataFrame:
     d = {
         "x": [table["x"].max()],
         "y": [table["y"].max()],
         "z": [table["z"].max()],
     }
-    d.update(parameters)
+    for parameter in parameters:
+        category = parameter["category"]
+        name = parameter["name"]
+        d[category] = name
     return pd.DataFrame(d)
 
 
@@ -53,7 +58,7 @@ def test_load_tables_surface() -> None:
     assert sorted(table.columns.tolist()) == sorted(
         ["x", "y", "z", "grid", "initHeight", "timeValue"]
     )
-    assert sorted(table["timeValue"].unique()) == [0.1, 0.2, 0.4]
+    assert sorted(table["timeValue"].unique()) == ["0.1", "0.2", "0.4"]
     assert sorted(table["grid"].unique()) == sorted(["res1", "res2", "res3"])
     assert sorted(table["initHeight"].unique()) == sorted(["height_02", "height_03"])
     assert table.shape == (9, 6)

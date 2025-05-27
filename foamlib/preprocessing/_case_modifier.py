@@ -1,33 +1,23 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from pydantic import BaseModel
 
 from foamlib import FoamCase
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from foamlib.preprocessing._of_dict import KeyValuePair
+from foamlib.preprocessing._of_dict import KeyValuePair
 
 
-class CaseIdentifier(BaseModel):
+class CaseParameter(BaseModel):
     category: str
     name: str
-
-    def __str__(self) -> str:
-        return f"CaseIdentifier(template_case={self.template_case}, output_case={self.output_case})"
-
-    def __repr__(self) -> str:
-        return self.__str__()
 
 
 class CaseModifier(BaseModel):
     template_case: Path
     output_case: Path
     key_value_pairs: list[KeyValuePair]
-    case_identifier: list[CaseIdentifier]
+    case_parameters: list[CaseParameter]
 
     def create_case(self) -> FoamCase:
         of_case = FoamCase(path=self.template_case)

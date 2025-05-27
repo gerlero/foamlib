@@ -134,16 +134,19 @@ def load_tables(
             if file_path.exists():
                 reader = TableReader()
                 table = reader.read(file_path)
-                json_path = Path(case_path) / "parameters.json"
+                json_path = Path(case_path) / "case.json"
 
                 with open(json_path) as f:
                     json_data = json.load(f)
-                    parameters = json_data.get("parameters", {})
+                    parameters = json_data.get("case_parameters", {})
                     if len(output_file.times) > 1:
-                        parameters["timeValue"] = float(time_value)
+                        parameters.append({"category": "timeValue", "name": time_value})
+
                     # add parameters as columns
-                    for key, value in parameters.items():
-                        table[key] = value
+                    for parameter in parameters:
+                        category = parameter["category"]
+                        name = parameter["name"]
+                        table[category] = name
                 if filter_table is not None:
                     table = filter_table(table, parameters)
                 all_tables.append(table)
