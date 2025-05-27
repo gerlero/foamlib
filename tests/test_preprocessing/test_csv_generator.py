@@ -59,7 +59,7 @@ def test_post_processing(output_folder: Path) -> None:
 
     forces = load_tables(
         output_file=OutputFile(file_name="force.dat", folder="forces"),
-        dir_name=OUTPUT_FOLDER,
+        dir_name=output_folder,
     )
     assert forces.columns.tolist() == [
         "Time",
