@@ -1,10 +1,7 @@
 # %%
-import json
+
 from pathlib import Path
 
-import pandas as pd
-
-from foamlib import FoamCase, FoamFile
 from foamlib.preprocessing.parameter_study import csv_generator
 
 # damBreak
