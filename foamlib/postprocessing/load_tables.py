@@ -1,6 +1,6 @@
 """Load OpenFOAM post-processing tables."""
 
-from __future__ import annotations  # Add this import at the top of the file
+from __future__ import annotations
 
 import json
 import os

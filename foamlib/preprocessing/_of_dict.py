@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import List
 from pathlib import Path
 from typing import Any, Optional
 
@@ -10,7 +11,7 @@ from foamlib import FoamFile
 
 class FileKey(BaseModel):
     file_name: Path
-    keys: list[str]
+    keys: List[str]
 
     def get_value(self) -> Any:
         of_dict = FoamFile(self.file_name)

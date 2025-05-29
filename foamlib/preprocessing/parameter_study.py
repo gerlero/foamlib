@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 from pydantic import BaseModel
+from typing import List
 
 from foamlib import FoamFile
 from foamlib.preprocessing._case_modifier import CaseModifier, CaseParameter
@@ -15,7 +16,7 @@ from foamlib.preprocessing._of_dict import FileKey, KeyValuePair
 class ParameterStudy(BaseModel):
     """Class to handle a parameter study by creating multiple cases based on parameter combinations."""
 
-    cases: list[CaseModifier]
+    cases: List[CaseModifier]
 
     def create_study(self) -> None:
         """Create multiple cases based on the parameter combinations."""

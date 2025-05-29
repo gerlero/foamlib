@@ -1,6 +1,6 @@
 """This module provides a utility class for reading tabular data from files with various extensions."""
 
-from __future__ import annotations  # Add this import at the top of the file
+from __future__ import annotations
 
 from itertools import islice
 from pathlib import Path

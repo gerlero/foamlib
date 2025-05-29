@@ -4,6 +4,8 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from typing import List
+
 from foamlib import FoamCase
 from foamlib.preprocessing._of_dict import KeyValuePair
 
@@ -16,8 +18,8 @@ class CaseParameter(BaseModel):
 class CaseModifier(BaseModel):
     template_case: Path
     output_case: Path
-    key_value_pairs: list[KeyValuePair]
-    case_parameters: list[CaseParameter]
+    key_value_pairs: List[KeyValuePair]
+    case_parameters: List[CaseParameter]
 
     def create_case(self) -> FoamCase:
         of_case = FoamCase(path=self.template_case)
