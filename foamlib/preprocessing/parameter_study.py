@@ -1,12 +1,13 @@
 """Parameter study module for generating multiple cases based on parameter combinations."""
 
+# ruff: noqa: UP006
 from __future__ import annotations
 
 from pathlib import Path
+from typing import List
 
 import pandas as pd
 from pydantic import BaseModel
-from typing import List
 
 from foamlib import FoamFile
 from foamlib.preprocessing._case_modifier import CaseModifier, CaseParameter

@@ -1,8 +1,8 @@
+# ruff: noqa: UP006
 from __future__ import annotations
 
-from typing import List
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel
 

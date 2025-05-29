@@ -1,10 +1,10 @@
+# ruff: noqa: UP006
 from __future__ import annotations
 
 from pathlib import Path
+from typing import List
 
 from pydantic import BaseModel
-
-from typing import List
 
 from foamlib import FoamCase
 from foamlib.preprocessing._of_dict import KeyValuePair
