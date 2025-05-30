@@ -24,6 +24,7 @@ def output_folder() -> Generator[Path, None, None]:
     yield output_cases  # Provide the folder path to the test
     if output_cases.exists():
         shutil.rmtree(output_cases)  # Remove the folder after the test
+        Path(output_folder.parent / "parameter_study.json").unlink(missing_ok=True)
 
 
 def test_csv_generator(output_folder: Path) -> None:
@@ -36,7 +37,9 @@ def test_csv_generator(output_folder: Path) -> None:
 
     assert len(study.cases) == 2  # Assuming the CSV has 3 cases
 
-    study.create_study()
+    study.create_study(study_base_folder=output_folder.parent)
+
+    assert Path(output_folder.parent / "parameter_study.json").exists()
 
     for case in study.cases:
         assert case.output_case.exists()
@@ -57,7 +60,7 @@ def test_post_processing(output_folder: Path) -> None:
 
     assert len(study.cases) == 2  # Assuming the CSV has 2 cases
 
-    study.create_study()
+    study.create_study(study_base_folder=output_folder.parent)
 
     for case in study.cases:
         assert case.output_case.exists()

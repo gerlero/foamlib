@@ -19,8 +19,11 @@ class ParameterStudy(BaseModel):
 
     cases: List[CaseModifier]
 
-    def create_study(self) -> None:
+    def create_study(self, study_base_folder: Path = Path()) -> None:
         """Create multiple cases based on the parameter combinations."""
+        with open(study_base_folder / "parameter_study.json", "w") as json_file:
+            json_file.write(self.model_dump_json(indent=2))
+
         for of_case in self.cases:
             of_case.create_case()
             of_case.modify_case()
