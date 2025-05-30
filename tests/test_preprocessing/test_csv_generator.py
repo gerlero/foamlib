@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from pathlib import Path
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Generator
+else:
+    from typing import Generator
 
 import pytest
 from foamlib.postprocessing.load_tables import OutputFile, load_tables
@@ -12,7 +18,7 @@ OUTPUT_FOLDER = "tests/test_preprocessing/Cases/"
 
 
 @pytest.fixture
-def output_folder() -> Path:
+def output_folder() -> Generator[Path, None, None]:
     """Fixture to clean up the output case folder after the test."""
     output_cases = Path(OUTPUT_FOLDER)
     yield output_cases  # Provide the folder path to the test
@@ -61,6 +67,7 @@ def test_post_processing(output_folder: Path) -> None:
         output_file=OutputFile(file_name="force.dat", folder="forces"),
         dir_name=output_folder,
     )
+    assert forces is not None
     assert forces.columns.tolist() == [
         "Time",
         "total_x",
@@ -76,5 +83,6 @@ def test_post_processing(output_folder: Path) -> None:
         "initHeight",
     ]
 
+    assert forces is not None
     assert forces["grid"].unique().tolist() == ["res1"]
     assert sorted(forces["initHeight"].unique().tolist()) == ["height_02", "height_03"]

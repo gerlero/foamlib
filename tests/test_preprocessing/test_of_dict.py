@@ -5,7 +5,7 @@ from pathlib import Path
 from foamlib import FoamFile
 from foamlib.preprocessing._of_dict import FileKey, KeyValuePair
 
-DICT_FILE = "tests/test_preprocessing/dictionaries/testDictionary"
+DICT_FILE = Path("tests/test_preprocessing/dictionaries/testDictionary")
 
 
 def test_file_key() -> None:
@@ -41,9 +41,9 @@ def test_file_subkey_value() -> None:
 
     updated_ofDict = value_pair.set_value()
 
-    assert updated_ofDict.get("subDict").get("subSubDict").get("test1") == 123
+    assert updated_ofDict.get(("subDict", "subSubDict", "test1")) == 123
 
     reset = FoamFile(DICT_FILE)
-    reset["subDict"]["subSubDict"]["test1"] = 3
+    reset[("subDict", "subSubDict", "test1")] = 3
 
-    assert reset.get("subDict").get("subSubDict").get("test1") == 3
+    assert reset.get(("subDict", "subSubDict", "test1")) == 3

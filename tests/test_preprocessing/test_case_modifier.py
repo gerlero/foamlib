@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from pathlib import Path
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Generator
+else:
+    from typing import Generator
 
 import pytest
 from foamlib import FoamCase
@@ -12,7 +18,7 @@ OUTPUT_CASE = "tests/test_preprocessing/modifiedCase"
 
 
 @pytest.fixture
-def output_case() -> Path:
+def output_case() -> Generator[Path, None, None]:
     """Fixture to clean up the output case folder after the test."""
     output_case = Path(OUTPUT_CASE)
     yield output_case  # Provide the folder path to the test
@@ -25,12 +31,12 @@ def test_case_modifier(output_case: Path) -> None:
     template_case = Path("tests/test_preprocessing/templates/damBreak")
     key_value_pairs = [
         KeyValuePair(
-            instruction=FileKey(file_name="system/controlDict", keys=["endTime"]),
+            instruction=FileKey(file_name=Path("system/controlDict"), keys=["endTime"]),
             value=42,
         ),
         KeyValuePair(
             instruction=FileKey(
-                file_name="constant/transportProperties",
+                file_name=Path("constant/transportProperties"),
                 keys=["water", "transportModel"],
             ),
             value="asdf",
@@ -81,4 +87,4 @@ def test_case_modifier(output_case: Path) -> None:
 
     of_case = FoamCase(path=case_modifier.output_case)
     assert of_case.control_dict.get("endTime") == 42
-    assert of_case.transport_properties.get("water").get("transportModel") == "asdf"
+    assert of_case.transport_properties.get(("water", "transportModel")) == "asdf"

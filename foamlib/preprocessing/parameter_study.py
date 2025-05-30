@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 from pydantic import BaseModel
@@ -27,11 +27,15 @@ class ParameterStudy(BaseModel):
 
 
 def csv_generator(
-    csv_file: str, template_case: Path, output_folder: Path = "Cases"
+    csv_file: str,
+    template_case: Union[str, Path],
+    output_folder: Union[str, Path] = Path("Cases"),
 ) -> ParameterStudy:
     """Generate a parameter study from a CSV file."""
     parastudy = pd.read_csv(csv_file).to_dict(orient="records")
-    parameter = FoamFile(template_case / "system" / "simulationsParameters").as_dict()
+    parameter = FoamFile(
+        Path(template_case) / "system" / "simulationsParameters"
+    ).as_dict()
     parameter_keys = set(parameter.keys())
     case_keys = set(parastudy[0].keys())
     category_keys = case_keys - parameter_keys - {"case_name"}
@@ -39,12 +43,12 @@ def csv_generator(
     cases = []
     for of_case in parastudy:
         case_mod = CaseModifier(
-            template_case=template_case,
-            output_case=output_folder / of_case["case_name"],
+            template_case=Path(template_case),
+            output_case=Path(output_folder) / of_case["case_name"],
             key_value_pairs=[
                 KeyValuePair(
                     instruction=FileKey(
-                        file_name=Path("system/simulationsParameters"), keys=[key]
+                        file_name=Path("system/simulationsParameters"), keys=[str(key)]
                     ),
                     value=value,
                 )
@@ -52,7 +56,7 @@ def csv_generator(
                 if key in parameter_keys
             ],
             case_parameters=[
-                CaseParameter(category=key, name=of_case[key])
+                CaseParameter(category=str(key), name=of_case[str(key)])
                 for key, value in of_case.items()
                 if key in category_keys
             ],

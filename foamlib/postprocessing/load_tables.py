@@ -30,7 +30,7 @@ def _of_case(dirnames: list[str]) -> bool:
     return has_constant and has_system
 
 
-def of_cases(dir_name: str) -> list[str]:
+def of_cases(dir_name: Union[str, Path]) -> list[str]:
     """List all OpenFOAM cases in folder.
 
     Parameters
@@ -92,9 +92,9 @@ class OutputFile:
 
 def load_tables(
     output_file: OutputFile,
-    dir_name: str,
+    dir_name: Union[str, Path],
     filter_table: Optional[
-        Callable[[pd.DataFrame, dict[str, str]], pd.DataFrame]
+        Callable[[pd.DataFrame, list[dict[str, str]]], pd.DataFrame]
     ] = None,
 ) -> Optional[pd.DataFrame]:
     """
@@ -104,7 +104,7 @@ def load_tables(
     ----------
     output_file : OutputFile
         OutputFile object containing file name, time steps, and folder
-    dir_name : str
+    dir_name : Union[str, Path]
         Root directory where OpenFOAM cases are stored
 
     Returns

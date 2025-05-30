@@ -20,7 +20,7 @@ def max_height_filter(
     for parameter in parameters:
         category = parameter["category"]
         name = parameter["name"]
-        d[category] = name
+        d[category] = [name]
     return pd.DataFrame(d)
 
 
@@ -38,6 +38,7 @@ def test_load_tables_forces() -> None:
 
     table = load_tables(output_file=file, dir_name="tests/test_postprocessing/Cases")
 
+    assert table is not None
     assert sorted(table.columns.tolist()[-2:]) == sorted(["grid", "initHeight"])
     assert sorted(table["grid"].unique()) == sorted(["res1", "res2", "res3"])
     assert sorted(table["initHeight"].unique()) == sorted(["height_02", "height_03"])
@@ -55,6 +56,7 @@ def test_load_tables_surface() -> None:
         filter_table=max_height_filter,
     )
 
+    assert table is not None
     assert sorted(table.columns.tolist()) == sorted(
         ["x", "y", "z", "grid", "initHeight", "timeValue"]
     )
