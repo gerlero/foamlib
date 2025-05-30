@@ -1,0 +1,144 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  plus                                  |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     compressibleInterFoam;
+
+startFrom       startTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         0.4;
+
+deltaT          0.001;
+
+writeControl    adjustableRunTime;
+
+writeInterval   0.05;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  6;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable yes;
+
+adjustTimeStep  yes;
+
+maxCo           1;
+maxAlphaCo      1;
+
+maxDeltaT       1;
+
+functions
+{
+    probes
+    {
+        // Where to load it from
+        libs            ("libsampling.so");
+
+        type            probes;
+
+        // Name of the directory for probe data
+        name            probes;
+
+        // Write at same frequency as fields
+        writeControl    timeStep;
+        writeInterval   1;
+
+        // Fields to be probed
+        fields          (p U T);
+
+        probeLocations
+        (
+            ( 0.29 0.5 0.0073 )        // at top
+
+        );
+    }
+
+    freeSurface
+    {
+
+
+        type            surfaces;
+        libs            ("libsampling.so");
+        writeControl    writeTime;
+
+        surfaceFormat   raw;
+        fields          (p U);
+
+        interpolationScheme cellPoint;
+
+        surfaces
+        (
+
+            freeSurface
+            {
+                type            isoSurfaceCell;
+                isoField        alpha.water;
+                isoValue        0.5;
+                interpolate     true;
+            }
+
+        );
+
+    }
+
+    sample1
+    {
+        type            sets;
+        libs            ("libsampling.so");
+        writeControl    outputTime;
+        fields          (T);
+        interpolationScheme cellPoint;
+        setFormat       raw;
+
+        sets
+        (
+            centreLine
+            {
+                type        uniform;
+                axis        x;
+                start       ( 0 0.29 0.0073 ) ;
+                end         ( 0.534 0.29 0.0073 ) ;
+                nPoints     100;
+            }
+        );
+    }
+
+    forces
+    {
+        type            forces;
+        libs            ("libforces.so");
+        patches         (lowerWall);
+        log             on;
+        writeControl    timeStep;
+        writeInterval   1;
+        CofR            (2.929541 0 0.2);
+    }
+}
+
+
+// ************************************************************************* //
