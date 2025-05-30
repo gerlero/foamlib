@@ -35,7 +35,7 @@ jobs:
         python-version-file: pyproject.toml
     - name: Check types with mypy
       run: |
-        uv run mypy --install-types
+        uv run mypy --install-types --non-interactive
         uv run mypy
 
   test:
