@@ -99,6 +99,3 @@ case_name   NX    NY    someModel   Resolution    Model
 case_001    100   200   modelA      coarse        k-epsilon
 case_002    150   300   modelB      fine          Spalart-Allmaras
 ==========  ====  ====  ==========  ============  ===================
-
-
-

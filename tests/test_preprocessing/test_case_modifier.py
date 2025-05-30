@@ -12,7 +12,7 @@ else:
 import pytest
 from foamlib import FoamCase
 from foamlib.preprocessing._case_modifier import CaseModifier, CaseParameter
-from foamlib.preprocessing._of_dict import FileKey, KeyValuePair
+from foamlib.preprocessing._of_dict import FoamDictAssignment, FoamDictInstruction
 
 OUTPUT_CASE = "tests/test_preprocessing/modifiedCase"
 
@@ -30,12 +30,14 @@ def test_case_modifier(output_case: Path) -> None:
     """Test the CaseModifier model."""
     template_case = Path("tests/test_preprocessing/templates/damBreak")
     key_value_pairs = [
-        KeyValuePair(
-            instruction=FileKey(file_name=Path("system/controlDict"), keys=["endTime"]),
+        FoamDictAssignment(
+            instruction=FoamDictInstruction(
+                file_name=Path("system/controlDict"), keys=["endTime"]
+            ),
             value=42,
         ),
-        KeyValuePair(
-            instruction=FileKey(
+        FoamDictAssignment(
+            instruction=FoamDictInstruction(
                 file_name=Path("constant/transportProperties"),
                 keys=["water", "transportModel"],
             ),

@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from foamlib import FoamFile
 from foamlib.preprocessing._case_modifier import CaseModifier, CaseParameter
-from foamlib.preprocessing._of_dict import FileKey, KeyValuePair
+from foamlib.preprocessing._of_dict import FoamDictAssignment, FoamDictInstruction
 
 
 class ParameterStudy(BaseModel):
@@ -46,8 +46,8 @@ def csv_generator(
             template_case=Path(template_case),
             output_case=Path(output_folder) / of_case["case_name"],
             key_value_pairs=[
-                KeyValuePair(
-                    instruction=FileKey(
+                FoamDictAssignment(
+                    instruction=FoamDictInstruction(
                         file_name=Path("system/simulationsParameters"), keys=[str(key)]
                     ),
                     value=value,

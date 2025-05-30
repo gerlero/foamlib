@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from foamlib import FoamFile
 
 
-class FileKey(BaseModel):
+class FoamDictInstruction(BaseModel):
     file_name: Union[str, Path]
     keys: List[str]
 
@@ -18,8 +18,8 @@ class FileKey(BaseModel):
         return of_dict.get(tuple(self.keys))
 
 
-class KeyValuePair(BaseModel):
-    instruction: FileKey
+class FoamDictAssignment(BaseModel):
+    instruction: FoamDictInstruction
     value: Any
 
     def set_value(self, case_path: Optional[Path] = None) -> FoamFile:

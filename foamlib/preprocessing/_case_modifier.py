@@ -7,7 +7,7 @@ from typing import List
 from pydantic import BaseModel
 
 from foamlib import FoamCase
-from foamlib.preprocessing._of_dict import KeyValuePair
+from foamlib.preprocessing._of_dict import FoamDictAssignment
 
 
 class CaseParameter(BaseModel):
@@ -18,7 +18,7 @@ class CaseParameter(BaseModel):
 class CaseModifier(BaseModel):
     template_case: Path
     output_case: Path
-    key_value_pairs: List[KeyValuePair]
+    key_value_pairs: List[FoamDictAssignment]
     case_parameters: List[CaseParameter]
 
     def create_case(self) -> FoamCase:

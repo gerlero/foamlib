@@ -3,14 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from foamlib import FoamFile
-from foamlib.preprocessing._of_dict import FileKey, KeyValuePair
+from foamlib.preprocessing._of_dict import FoamDictAssignment, FoamDictInstruction
 
 DICT_FILE = Path("tests/test_preprocessing/dictionaries/testDictionary")
 
 
 def test_file_key() -> None:
     """Test the FileKey model."""
-    file_key_test1 = FileKey(file_name=DICT_FILE, keys=["test1"])
+    file_key_test1 = FoamDictInstruction(file_name=DICT_FILE, keys=["test1"])
     assert file_key_test1.file_name == Path(DICT_FILE)
     assert file_key_test1.keys == ["test1"]
 
@@ -19,7 +19,7 @@ def test_file_key() -> None:
 
 def test_file_subkey() -> None:
     """Test the FileKey model."""
-    file_key_test1 = FileKey(
+    file_key_test1 = FoamDictInstruction(
         file_name=DICT_FILE, keys=["subDict", "subSubDict", "test1"]
     )
     assert file_key_test1.file_name == Path(DICT_FILE)
@@ -29,8 +29,8 @@ def test_file_subkey() -> None:
 
 
 def test_file_subkey_value() -> None:
-    value_pair = KeyValuePair(
-        instruction=FileKey(
+    value_pair = FoamDictAssignment(
+        instruction=FoamDictInstruction(
             file_name=DICT_FILE, keys=["subDict", "subSubDict", "test1"]
         ),
         value=123,
