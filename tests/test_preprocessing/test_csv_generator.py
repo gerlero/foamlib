@@ -24,7 +24,7 @@ def output_folder() -> Generator[Path, None, None]:
     yield output_cases  # Provide the folder path to the test
     if output_cases.exists():
         shutil.rmtree(output_cases)  # Remove the folder after the test
-        Path(output_folder.parent / "parameter_study.json").unlink(missing_ok=True)
+        Path(output_cases.parent / "parameter_study.json").unlink(missing_ok=True)
 
 
 def test_csv_generator(output_folder: Path) -> None:

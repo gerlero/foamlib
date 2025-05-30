@@ -164,9 +164,7 @@ def _is_float(s: str) -> bool:
     return True
 
 
-def _outputfiles(
-    file_map: dict[str, OutputFile], case_path_str: str, postproc_root: Path
-) -> None:
+def _outputfiles(file_map: dict[str, OutputFile], postproc_root: Path) -> None:
     for dirpath, _, filenames in os.walk(postproc_root):
         base = Path(dirpath).name
 
@@ -210,6 +208,6 @@ def list_outputfiles(cases_folder: str = "Cases") -> dict[str, OutputFile]:
         if not postproc_root.exists():
             continue
 
-        _outputfiles(file_map, case_path_str, postproc_root)
+        _outputfiles(file_map, postproc_root)
 
     return file_map

@@ -3,6 +3,7 @@
 # ruff: noqa: UP006
 from __future__ import annotations
 
+import itertools
 from pathlib import Path
 from typing import List, Union
 
@@ -11,6 +12,7 @@ from pydantic import BaseModel
 
 from foamlib import FoamFile
 from foamlib.preprocessing._case_modifier import CaseModifier, CaseParameter
+from foamlib.preprocessing._grid_parameter_sweep import GridParameter
 from foamlib.preprocessing._of_dict import FoamDictAssignment, FoamDictInstruction
 
 
@@ -62,6 +64,44 @@ def csv_generator(
                 CaseParameter(category=str(key), name=of_case[str(key)])
                 for key, value in of_case.items()
                 if key in category_keys
+            ],
+        )
+        cases.append(case_mod)
+
+    return ParameterStudy(cases=cases)
+
+
+def grid_generator(
+    parameters: List[GridParameter],
+    template_case: Union[str, Path],
+    output_folder: Union[str, Path] = Path("Cases"),
+) -> ParameterStudy:
+    """Generate a parameter study based on grid parameters."""
+    cases = []
+
+    categories = [param.parameter_name for param in parameters]
+    case_instructions = [ins for param in parameters for ins in param.modify_dict]
+    case_parameters = itertools.product(*[param.parameters for param in parameters])
+
+    for case_parameter in case_parameters:
+        flattened_parameters = list(
+            itertools.chain.from_iterable(val.values for val in case_parameter)  # noqa: PD011
+        )
+        case_name = [val.name for val in case_parameter]
+        case_modifications = [
+            FoamDictAssignment(
+                instruction=case_instructions[i],
+                value=flattened_parameters[i],
+            )
+            for i in range(len(case_instructions))
+        ]
+        case_mod = CaseModifier(
+            template_case=Path(template_case),
+            output_case=Path(output_folder) / "_".join(case_name),
+            key_value_pairs=case_modifications,
+            case_parameters=[
+                CaseParameter(category=categories[i], name=str(case_parameter[i].name))
+                for i in range(len(case_parameter))
             ],
         )
         cases.append(case_mod)
