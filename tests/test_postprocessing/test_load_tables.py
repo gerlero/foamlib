@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+from pathlib import Path
 from foamlib.postprocessing.load_tables import (
     OutputFile,
     list_outputfiles,
@@ -86,18 +87,48 @@ def test_output_files() -> None:
             "sample2",
         ]
     )
-
-    files = [key.split("--")[1] for key in output_files]
+    files = [output_files[key].file_name for key in output_files]
     assert sorted(files) == sorted(
         [
             "U_freeSurface.raw",
             "p_freeSurface.raw",
-            "T",
             "U",
             "p",
+            "T",
             "force.dat",
             "moment.dat",
             "centreLine_T.xy",
             "centreLine_U.csv",
         ]
     )
+
+    folders = [output_files[key].folder for key in output_files]
+
+    assert sorted(folders) == sorted(
+        [
+            Path("freeSurface"),
+            Path("freeSurface"),
+            Path("probes"),
+            Path("probes"),
+            Path("probes"),
+            Path("forces"),
+            Path("forces"),
+            Path("sample1"),
+            Path("sample2"),
+        ]
+    )
+
+    # files = [key.split("--")[1] for key in output_files]
+    # assert sorted(files) == sorted(
+    #     [
+    #         "U_freeSurface.raw",
+    #         "p_freeSurface.raw",
+    #         "T",
+    #         "U",
+    #         "p",
+    #         "force.dat",
+    #         "moment.dat",
+    #         "centreLine_T.xy",
+    #         "centreLine_U.csv",
+    #     ]
+    # )

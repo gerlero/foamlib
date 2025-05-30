@@ -182,10 +182,9 @@ def _outputfiles(
 
         for fname in filenames:
             key = f"{folder_str}--{fname}"
-            full_folder = Path(case_path_str) / "postProcessing" / folder
 
             if key not in file_map:
-                file_map[key] = OutputFile(file_name=fname, folder=full_folder)
+                file_map[key] = OutputFile(file_name=fname, folder=folder)
 
             file_map[key].add_time(time)
 
