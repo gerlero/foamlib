@@ -31,16 +31,18 @@ classifiers = [
 dependencies = [
     "aioshutil>=1,<2",
     "numpy>=1,<3",
-    "pandas>=1,<3",
     "pyparsing>=3.1.2,<4",
     "rich>=13,<15",
     "typing-extensions>=4,<5; python_version<'3.11'",
-    "pydantic>=2.0.0,<3",
 ]
 
 dynamic = ["version"]
 
 [dependency-groups]
+parameter_sweep = [
+    "pandas>=1,<3",
+    "pydantic>=2.0.0,<3",
+]
 lint = ["ruff"]
 typing = [
     "mypy>=1,<2",
@@ -59,6 +61,7 @@ docs = [
     "sphinxcontrib-mermaid"
 ]
 dev = [
+    {include-group = "parameter_sweep"},
     {include-group = "lint"},
     {include-group = "typing"},
     {include-group = "test"},
