@@ -1,12 +1,14 @@
 from pathlib import Path
 
-from foamlib.preprocessing._grid_parameter_sweep import CaseParameter, GridParameter
-from foamlib.preprocessing._of_dict import FoamDictInstruction
+from foamlib.preprocessing.grid_parameter_sweep import CaseParameter, GridParameter
+from foamlib.preprocessing.of_dict import FoamDictInstruction
 from foamlib.preprocessing.parameter_study import grid_generator
+from foamlib.preprocessing.system import simulationParameters
 
 # damBreak
 root = Path(__file__).parent
 template_case = root / "damBreak"
+
 
 def grid_parameters(scale) -> list[int]:
     return [
@@ -21,43 +23,26 @@ def grid_parameters(scale) -> list[int]:
 grid = GridParameter(
     parameter_name="grid",
     # generate 5 instructions in system/simulationsParameters with the key1..5
-    modify_dict=[
-        FoamDictInstruction(
-            file_name=Path("system/simulationsParameters"),
-            keys=[f"res{i}"],
-        )
-        for i in range(1, 6)
-    ],
+    # This is simulationParameters is identical to the following:
+    # FoamDictInstruction(
+    #     file_name=Path("system/simulationsParameters"),
+    #     keys=[f"res{i}"],
+    # )
+    modify_dict=[simulationParameters(keys=[f"res{i}"]) for i in range(1, 6)],
     parameters=[
-        CaseParameter(
-            name="coarse", values=grid_parameters(1)
-        ),
-        CaseParameter(
-            name="mid", values=grid_parameters(2)
-        ),
-        CaseParameter(
-            name="fine", values=grid_parameters(4)
-        )]
+        CaseParameter(name="coarse", values=grid_parameters(1)),
+        CaseParameter(name="mid", values=grid_parameters(2)),
+        CaseParameter(name="fine", values=grid_parameters(4)),
+    ],
 )
 
 init_height = GridParameter(
     parameter_name="initHeight",
-    modify_dict=[
-        FoamDictInstruction(
-            file_name=Path("system/simulationsParameters"),
-            keys=["initHeight"],
-        )
-    ],
+    modify_dict=[simulationParameters(keys=["initHeight"])],
     parameters=[
-        CaseParameter(
-            name="height_02", values=[0.2]
-        ),
-        CaseParameter(
-            name="height_03", values=[0.3]
-        ),
-        CaseParameter(
-            name="height_04", values=[0.4]
-        )
+        CaseParameter(name="height_02", values=[0.2]),
+        CaseParameter(name="height_03", values=[0.3]),
+        CaseParameter(name="height_04", values=[0.4]),
     ],
 )
 

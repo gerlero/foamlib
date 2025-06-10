@@ -11,9 +11,9 @@ import pandas as pd
 from pydantic import BaseModel
 
 from foamlib import FoamFile
-from foamlib.preprocessing._case_modifier import CaseModifier, CaseParameter
-from foamlib.preprocessing._grid_parameter_sweep import GridParameter
-from foamlib.preprocessing._of_dict import FoamDictAssignment, FoamDictInstruction
+from foamlib.preprocessing.case_modifier import CaseModifier, CaseParameter
+from foamlib.preprocessing.grid_parameter_sweep import GridParameter
+from foamlib.preprocessing.of_dict import FoamDictAssignment, FoamDictInstruction
 
 
 class ParameterStudy(BaseModel):

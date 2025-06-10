@@ -1,3 +1,4 @@
+# ruff: noqa: ERA001
 from __future__ import annotations
 
 import shutil
@@ -10,9 +11,10 @@ else:
     from typing import Generator
 
 import pytest
-from foamlib.preprocessing._grid_parameter_sweep import CaseParameter, GridParameter
-from foamlib.preprocessing._of_dict import FoamDictInstruction
+from foamlib.preprocessing.grid_parameter_sweep import CaseParameter, GridParameter
+from foamlib.preprocessing.of_dict import FoamDictInstruction
 from foamlib.preprocessing.parameter_study import grid_generator
+from foamlib.preprocessing.system import simulationParameters
 
 CSV_FILE = "tests/test_preprocessing/test_parastudy.csv"
 OUTPUT_FOLDER = "tests/test_preprocessing/Cases/"
@@ -25,7 +27,7 @@ def output_folder() -> Generator[Path, None, None]:
     yield output_cases  # Provide the folder path to the test
     if output_cases.exists():
         shutil.rmtree(output_cases)  # Remove the folder after the test
-        Path(output_cases.parent / "parameter_study.json").unlink(missing_ok=True)
+        Path(output_cases.parent / "parameter_study.json").unlink()
 
 
 def grid_parameters(scale: float) -> list[int]:
@@ -42,13 +44,12 @@ def test_grid_parameter() -> None:
     grid = GridParameter(
         parameter_name="grid",
         # generate 5 instructions in system/simulationsParameters with the key1..5
-        modify_dict=[
-            FoamDictInstruction(
-                file_name=Path("system/simulationsParameters"),
-                keys=[f"res{i}"],
-            )
-            for i in range(1, 6)
-        ],
+        # This is simulationParameters is identical to the following:
+        #      FoamDictInstruction(
+        #         file_name=Path("system/simulationsParameters"),
+        #         keys=[f"res{i}"],
+        #      )
+        modify_dict=[simulationParameters(keys=[f"res{i}"]) for i in range(1, 6)],
         parameters=[
             CaseParameter(name="coarse", values=grid_parameters(1)),
             CaseParameter(name="mid", values=grid_parameters(2)),

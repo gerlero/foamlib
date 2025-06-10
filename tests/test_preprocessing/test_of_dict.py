@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from foamlib import FoamFile
-from foamlib.preprocessing._of_dict import FoamDictAssignment, FoamDictInstruction
+from foamlib.preprocessing.of_dict import FoamDictAssignment, FoamDictInstruction
 
 DICT_FILE = Path("tests/test_preprocessing/dictionaries/testDictionary")
 
