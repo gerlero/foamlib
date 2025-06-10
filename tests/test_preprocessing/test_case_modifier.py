@@ -11,8 +11,8 @@ else:
 
 import pytest
 from foamlib import FoamCase
-from foamlib.preprocessing._case_modifier import CaseModifier, CaseParameter
-from foamlib.preprocessing._of_dict import FoamDictAssignment, FoamDictInstruction
+from foamlib.preprocessing.case_modifier import CaseModifier, CaseParameter
+from foamlib.preprocessing.of_dict import FoamDictAssignment, FoamDictInstruction
 
 OUTPUT_CASE = "tests/test_preprocessing/modifiedCase"
 
