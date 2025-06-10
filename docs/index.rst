@@ -12,9 +12,9 @@ Documentation
 .. toctree::
    :maxdepth: 2
 
+   example
    parametricstudy
    postprocessing
-   example
    cases
    files
 

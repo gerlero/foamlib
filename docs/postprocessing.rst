@@ -20,7 +20,7 @@ The post-processing module can be used to extract data from the post-processing 
 The main idea is to gather all the post-processing files from different cases into a single dataframe that stores the data in a long format. This allows for easy manipulation and visualization of the data using libraries like seaborn, ploty.express or altair or numerous other plotting libraries.
 
 time series data
-================
+----------------
 
 
 .. code-block:: python
@@ -46,7 +46,7 @@ The OutputFile class is used to specify the file name and folder where the post-
 Only the folder and file_name are required, the timeName is optional and can be used to specify a specific time folder. If not specified, the post-processing module will look for the file in all time folders.
 
 list outputfiles
-================
+----------------
 
 The `list_outputfiles` function can be used to list all the output files in a given directory, and the `load_tables` function can be used to load the data from the output files into a dataframe. The resulting dataframe will have columns for the case name, time, and force components (fx, fy, fz, ..) and the case category specified in the case.json file that gets automatically generated when creating a case with FoamLib pre-processing module.
 
@@ -60,7 +60,7 @@ The `list_outputfiles` function can be used to list all the output files in a gi
     )
 
 spatial data (surfaces, sets, ...)
-==================================
+----------------------------------
 
 
 The post-processing module also supports loading spatial data from OpenFOAM cases, such as surface data or sets. OpenFOAM stores for each time name a new file with the same name that contains the spatial data. These data can be loaded into a dataframe using the `load_tables` function, which will automatically handle the parsing of the data and return it in a long format.
