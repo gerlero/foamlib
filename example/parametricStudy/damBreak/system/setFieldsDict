@@ -15,7 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#include "<system>/simulationsParameters"
+#include "<system>/simulationParameters"
 
 defaultFieldValues
 (

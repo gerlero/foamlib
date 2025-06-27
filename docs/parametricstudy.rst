@@ -48,7 +48,7 @@ The csv generator create the parametric study based on a CSV file that contains 
         output_folder="path/to/output/folder"
     ).create_study()
 
-This simple generator specifies the above requirements in the csv file, where the instruction (file and key name (here: NX,NY and someModel)) is defined in the `system/simulationsParameters` file. The case_name  and the category will be defined as additional columns in the CSV file.
+This simple generator specifies the above requirements in the csv file, where the instruction (file and key name (here: NX,NY and someModel)) is defined in the `system/simulationParameters` file. The case_name  and the category will be defined as additional columns in the CSV file.
 
 
 .. code-block:: c++
@@ -66,7 +66,7 @@ This simple generator specifies the above requirements in the csv file, where th
         format      ascii;
         class       dictionary;
         location    "system";
-        object      simulationsParameters;
+        object      simulationParameters;
     }
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -82,7 +82,7 @@ The file can be included in every openfoam dictionary by adding the following li
 
 .. code-block:: c++
 
-    #include "system/simulationsParameters"
+    #include "system/simulationParameters"
 
     blocks
     (
@@ -128,10 +128,10 @@ The most important class for the grid generator is the `GridParameter`. This cla
 
     grid = GridParameter(
         parameter_name="grid",
-        # generate 5 instructions in system/simulationsParameters with the key1..5
+        # generate 5 instructions in system/simulationParameters with the key1..5
         modify_dict=[
             FoamDictInstruction(
-                file_name=Path("system/simulationsParameters"),
+                file_name=Path("system/simulationParameters"),
                 keys=[f"res{i}"],
             )
             for i in range(1, 6)
@@ -158,7 +158,7 @@ The modify_dict varaible stores the instructions for the OpenFOAM dictionary tha
         parameter_name="initHeight",
         modify_dict=[
             FoamDictInstruction(
-                file_name=Path("system/simulationsParameters"),
+                file_name=Path("system/simulationParameters"),
                 keys=["initHeight"],
             )
         ],

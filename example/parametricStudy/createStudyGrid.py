@@ -22,10 +22,10 @@ def grid_parameters(scale) -> list[int]:
 
 grid = GridParameter(
     parameter_name="grid",
-    # generate 5 instructions in system/simulationsParameters with the key1..5
+    # generate 5 instructions in system/simulationParameters with the key1..5
     # This is simulationParameters is identical to the following:
     # FoamDictInstruction(
-    #     file_name=Path("system/simulationsParameters"),
+    #     file_name=Path("system/simulationParameters"),
     #     keys=[f"res{i}"],
     # )
     modify_dict=[simulationParameters(keys=[f"res{i}"]) for i in range(1, 6)],

@@ -39,7 +39,7 @@ def csv_generator(
     """Generate a parameter study from a CSV file."""
     parastudy = pd.read_csv(csv_file).to_dict(orient="records")
     parameter = FoamFile(
-        Path(template_case) / "system" / "simulationsParameters"
+        Path(template_case) / "system" / "simulationParameters"
     ).as_dict()
     parameter_keys = set(parameter.keys())
     case_keys = set(parastudy[0].keys())
@@ -53,7 +53,7 @@ def csv_generator(
             key_value_pairs=[
                 FoamDictAssignment(
                     instruction=FoamDictInstruction(
-                        file_name=Path("system/simulationsParameters"), keys=[str(key)]
+                        file_name=Path("system/simulationParameters"), keys=[str(key)]
                     ),
                     value=value,
                 )

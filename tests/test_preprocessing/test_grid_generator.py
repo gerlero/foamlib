@@ -43,10 +43,10 @@ def grid_parameters(scale: float) -> list[int]:
 def test_grid_parameter() -> None:
     grid = GridParameter(
         parameter_name="grid",
-        # generate 5 instructions in system/simulationsParameters with the key1..5
+        # generate 5 instructions in system/simulationParameters with the key1..5
         # This is simulationParameters is identical to the following:
         #      FoamDictInstruction(
-        #         file_name=Path("system/simulationsParameters"),
+        #         file_name=Path("system/simulationParameters"),
         #         keys=[f"res{i}"],
         #      )
         modify_dict=[simulationParameters(keys=[f"res{i}"]) for i in range(1, 6)],
@@ -60,7 +60,7 @@ def test_grid_parameter() -> None:
     assert grid.parameter_name == "grid"
     assert grid.case_names() == ["coarse", "mid", "fine"]
     assert len(grid.modify_dict) == 5
-    assert grid.modify_dict[0].file_name == Path("system/simulationsParameters")
+    assert grid.modify_dict[0].file_name == Path("system/simulationParameters")
     assert grid.modify_dict[0].keys == ["res1"]
     assert grid.parameters[0].values == grid_parameters(1)
     assert grid.parameters[0].name == "coarse"
@@ -70,7 +70,7 @@ def test_grid_parameter() -> None:
         parameter_name="initHeight",
         modify_dict=[
             FoamDictInstruction(
-                file_name=Path("system/simulationsParameters"),
+                file_name=Path("system/simulationParameters"),
                 keys=["initHeight"],
             )
         ],
@@ -83,7 +83,7 @@ def test_grid_parameter() -> None:
     assert init_height.parameter_name == "initHeight"
     assert init_height.case_names() == ["height_02", "height_03"]
     assert len(init_height.modify_dict) == 1
-    assert init_height.modify_dict[0].file_name == Path("system/simulationsParameters")
+    assert init_height.modify_dict[0].file_name == Path("system/simulationParameters")
     assert init_height.modify_dict[0].keys == ["initHeight"]
     assert init_height.parameters[0].values == [0.2]
     assert init_height.parameters[0].name == "height_02"
@@ -95,10 +95,10 @@ def test_grid_generator(output_folder: Path) -> None:
 
     grid = GridParameter(
         parameter_name="grid",
-        # generate 5 instructions in system/simulationsParameters with the key1..5
+        # generate 5 instructions in system/simulationParameters with the key1..5
         modify_dict=[
             FoamDictInstruction(
-                file_name=Path("system/simulationsParameters"),
+                file_name=Path("system/simulationParameters"),
                 keys=[f"res{i}"],
             )
             for i in range(1, 6)
@@ -114,7 +114,7 @@ def test_grid_generator(output_folder: Path) -> None:
         parameter_name="initHeight",
         modify_dict=[
             FoamDictInstruction(
-                file_name=Path("system/simulationsParameters"),
+                file_name=Path("system/simulationParameters"),
                 keys=["initHeight"],
             )
         ],

@@ -9,7 +9,7 @@ from foamlib.preprocessing.of_dict import FoamDictInstruction
 def simulationParameters(keys: list[str]) -> FoamDictInstruction:
     """Return the FoamDictInstruction for simulationParameters."""
     return FoamDictInstruction(
-        file_name=Path("system/simulationsParameters"),
+        file_name=Path("system/simulationParameters"),
         keys=keys,
     )
 
