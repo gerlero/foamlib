@@ -30,6 +30,9 @@ class ParameterStudy(BaseModel):
             of_case.create_case()
             of_case.modify_case()
 
+    def __add__(self, other: ParameterStudy) -> ParameterStudy:
+        return ParameterStudy(cases=self.cases + other.cases)
+
 
 def csv_generator(
     csv_file: str,
@@ -85,7 +88,7 @@ def grid_generator(
 
     for case_parameter in case_parameters:
         flattened_parameters = list(
-            itertools.chain.from_iterable(val.values for val in case_parameter)  # noqa: PD011
+            itertools.chain.from_iterable(val.values for val in case_parameter)
         )
         case_name = [val.name for val in case_parameter]
         case_modifications = [
