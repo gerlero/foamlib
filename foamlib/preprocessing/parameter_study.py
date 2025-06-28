@@ -89,7 +89,7 @@ def grid_generator(
 
     for case_parameter in case_parameters:
         flattened_parameters = list(
-            itertools.chain.from_iterable(val.values for val in case_parameter) # noqa: PD011
+            itertools.chain.from_iterable(val.values for val in case_parameter)  # noqa: PD011
         )
         case_name = [val.name for val in case_parameter]
         case_modifications = [
