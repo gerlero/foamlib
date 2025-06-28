@@ -169,7 +169,7 @@ def test_internal_field(cavity: FoamCase) -> None:
     p_arr = np.zeros(size)
     U_arr = np.zeros((size, 3))
 
-    cavity[0]["p"].internal_field = p_arr # type: ignore [assignment]
+    cavity[0]["p"].internal_field = p_arr  # type: ignore [assignment]
     cavity[0]["U"].internal_field = U_arr  # type: ignore [assignment]
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
@@ -180,11 +180,11 @@ def test_internal_field(cavity: FoamCase) -> None:
     p_arr = np.arange(size) * 1e-6  # type: ignore [assignment]
     U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
 
-    cavity[0]["p"].internal_field = p_arr # type: ignore [assignment]
+    cavity[0]["p"].internal_field = p_arr  # type: ignore [assignment]
     cavity[0]["U"].internal_field = U_arr  # type: ignore [assignment]
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
-    U = cavity[0]["U"].internal_field # type: ignore [assignment]
+    U = cavity[0]["U"].internal_field  # type: ignore [assignment]
     assert isinstance(U, np.ndarray)
     assert U_arr == pytest.approx(U)
 
