@@ -31,6 +31,7 @@ class ParameterStudy(BaseModel):
             of_case.modify_case()
 
     def __add__(self, other: ParameterStudy) -> ParameterStudy:
+        """Combine two ParameterStudy instances."""
         return ParameterStudy(cases=self.cases + other.cases)
 
 
@@ -88,7 +89,7 @@ def grid_generator(
 
     for case_parameter in case_parameters:
         flattened_parameters = list(
-            itertools.chain.from_iterable(val.values for val in case_parameter)
+            itertools.chain.from_iterable(val.values for val in case_parameter) # noqa: PD011
         )
         case_name = [val.name for val in case_parameter]
         case_modifications = [

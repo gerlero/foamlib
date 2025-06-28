@@ -10,7 +10,7 @@ else:
     from typing import Generator
 
 import pytest
-from foamlib.postprocessing.load_tables import functionObject, load_tables
+from foamlib.postprocessing.load_tables import functionobject, load_tables
 from foamlib.preprocessing.parameter_study import csv_generator
 
 CSV_FILE = "tests/test_preprocessing/test_parastudy.csv"
@@ -67,7 +67,7 @@ def test_post_processing(output_folder: Path) -> None:
         assert len(case.key_value_pairs) > 0
 
     forces = load_tables(
-        source=functionObject(file_name="force.dat", folder="forces"),
+        source=functionobject(file_name="force.dat", folder="forces"),
         dir_name=output_folder,
     )
     assert forces is not None

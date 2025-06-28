@@ -1,4 +1,4 @@
-# ruff: noqa: UP006, D100
+# ruff: noqa: UP006, D100, UP045
 from __future__ import annotations
 
 from pathlib import Path

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 from foamlib.postprocessing.load_tables import (
-    functionObject,
+    functionobject,
     list_function_objects,
     load_tables,
     of_cases,
@@ -34,7 +34,7 @@ def test_is_of_case() -> None:
 def test_load_tables_forces() -> None:
     """Test if the load_tables function works correctly."""
 
-    file = functionObject(file_name="force.dat", folder="forces")
+    file = functionobject(file_name="force.dat", folder="forces")
 
     table = load_tables(source=file, dir_name="tests/test_postprocessing/Cases")
 
@@ -48,7 +48,7 @@ def test_load_tables_forces() -> None:
 def test_load_tables_surface() -> None:
     """Test if the load_tables function works correctly."""
 
-    file = functionObject(file_name="U_freeSurface.raw", folder="freeSurface")
+    file = functionobject(file_name="U_freeSurface.raw", folder="freeSurface")
 
     table = load_tables(
         source=file,

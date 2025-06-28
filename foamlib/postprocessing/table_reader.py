@@ -1,3 +1,4 @@
+# ruff: noqa: UP045
 """This module provides a utility class for reading tabular data from files with various extensions."""
 
 from __future__ import annotations

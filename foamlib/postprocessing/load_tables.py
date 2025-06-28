@@ -1,3 +1,4 @@
+# ruff: noqa: UP045
 """Load OpenFOAM post-processing tables."""
 
 from __future__ import annotations
@@ -115,11 +116,10 @@ class DataSource:
         base = self.postproc_folder(case_path)
         if self.time_resolved:
             return [base / t / self.file_name for t in self.times]
-        else:
-            return [base / self.file_name]
+        return [base / self.file_name]
 
 
-def functionObject(file_name: str, folder: Union[str, Path]) -> DataSource:
+def functionobject(file_name: str, folder: Union[str, Path]) -> DataSource:
     """
     Create a DataTarget for a standard OpenFOAM function object.
 
@@ -142,8 +142,8 @@ def functionObject(file_name: str, folder: Union[str, Path]) -> DataSource:
     )
 
 
-def dataFile(
-    file_name: str, folder: Union[str, Path], time_resolved: bool = False
+def datafile(
+    file_name: str, folder: Union[str, Path], *, time_resolved: bool = False
 ) -> DataSource:
     """
     Create a DataTarget for a custom or non-OpenFOAM output file.
@@ -197,7 +197,6 @@ def load_tables(
     pd.DataFrame or None
         Concatenated dataframe of all found data, or None if nothing was found.
     """
-
     all_tables = []
     reader_fn = reader_fn or TableReader().read
 
@@ -205,12 +204,15 @@ def load_tables(
         case_path = Path(case)
         target_folder = source.postproc_folder(case_path)
 
+        # Skip if the target folder does not exist
+        if not target_folder.exists():
+            continue
+
         # Discover time steps if needed
         if source.time_resolved and not source.times:
-            if target_folder.exists():
-                for item in target_folder.iterdir():
-                    if item.is_dir() and _is_float(item.name):
-                        source.add_time(item.name)
+            for item in target_folder.iterdir():
+                if item.is_dir() and _is_float(item.name):
+                    source.add_time(item.name)
 
         for file_path in source.resolve_paths(case_path):
             if not file_path.exists():
@@ -258,7 +260,9 @@ def _is_float(s: str) -> bool:
     return True
 
 
-def _discover_function_objects(file_map: dict[str, DataSource], postproc_root: Path) -> None:
+def _discover_function_objects(
+    file_map: dict[str, DataSource], postproc_root: Path
+) -> None:
     for dirpath, _, filenames in os.walk(postproc_root):
         base = Path(dirpath).name
 
@@ -276,7 +280,7 @@ def _discover_function_objects(file_map: dict[str, DataSource], postproc_root: P
             key = f"{folder_str}--{fname}"
 
             if key not in file_map:
-                file_map[key] = functionObject(file_name=fname, folder=folder)
+                file_map[key] = functionobject(file_name=fname, folder=folder)
 
             file_map[key].add_time(time)
 
