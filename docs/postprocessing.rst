@@ -28,7 +28,7 @@ time series data
     from foamlib.postprocessing.load_tables import OutputFile, list_outputfiles, load_tables
 
     forces = load_tables(
-        output_file=OutputFile(file_name="force.dat", folder="forces"), dir_name="Cases"
+        source=OutputFile(file_name="force.dat", folder="forces"), dir_name="Cases"
     )
     forces.to_csv(
         results / "forces.csv",
@@ -56,7 +56,7 @@ The `list_outputfiles` function can be used to list all the output files in a gi
     out_files = list_outputfiles(root / "Cases")
 
     forces = load_tables(
-        output_file=out_files["forces--force.dat"], dir_name=root / "Cases"
+        source=out_files["forces--force.dat"], dir_name=root / "Cases"
     )
 
 spatial data (surfaces, sets, ...)
@@ -84,7 +84,7 @@ However, the resulting dataframe may contain a lot of data, so these dataframe c
 
     file = OutputFile(file_name="U_freeSurface.raw", folder="freeSurface")
     surface_heights = load_tables(
-        output_file=file, dir_name=root / "Cases", filter_table=max_height_filter
+        source=file, dir_name=root / "Cases", filter_table=max_height_filter
     )
     surface_heights.to_csv(
         results / "surface_heights.csv",

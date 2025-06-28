@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pandas as pd
 from foamlib.postprocessing.load_tables import (
-    OutputFile,
-    list_outputfiles,
+    functionObject,
+    list_function_objects,
     load_tables,
     of_cases,
 )
@@ -34,9 +34,9 @@ def test_is_of_case() -> None:
 def test_load_tables_forces() -> None:
     """Test if the load_tables function works correctly."""
 
-    file = OutputFile(file_name="force.dat", folder="forces")
+    file = functionObject(file_name="force.dat", folder="forces")
 
-    table = load_tables(output_file=file, dir_name="tests/test_postprocessing/Cases")
+    table = load_tables(source=file, dir_name="tests/test_postprocessing/Cases")
 
     assert table is not None
     assert sorted(table.columns.tolist()[-2:]) == sorted(["grid", "initHeight"])
@@ -48,10 +48,10 @@ def test_load_tables_forces() -> None:
 def test_load_tables_surface() -> None:
     """Test if the load_tables function works correctly."""
 
-    file = OutputFile(file_name="U_freeSurface.raw", folder="freeSurface")
+    file = functionObject(file_name="U_freeSurface.raw", folder="freeSurface")
 
     table = load_tables(
-        output_file=file,
+        source=file,
         dir_name="tests/test_postprocessing/Cases",
         filter_table=max_height_filter,
     )
@@ -69,7 +69,7 @@ def test_load_tables_surface() -> None:
 def test_output_files() -> None:
     """Test if the output_files function works correctly."""
 
-    output_files = list_outputfiles("tests/test_postprocessing/Cases")
+    output_files = list_function_objects("tests/test_postprocessing/Cases")
     # output_files is a dictionary with keys as file names and values as OutputFile objects
 
     folders = [key.split("--")[0] for key in output_files]

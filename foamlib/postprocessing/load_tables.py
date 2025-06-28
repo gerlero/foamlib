@@ -51,25 +51,30 @@ def of_cases(dir_name: Union[str, Path]) -> list[str]:
 
 
 @dataclass
-class OutputFile:
-    """Class to represent an output file in OpenFOAM post-processing.
+class DataSource:
+    """
+    Describes a location of simulation output data inside a case directory.
 
     Attributes
     ----------
     file_name : str
-        Name of the output file.
-    folder : str or Path
-        Path to the folder containing the output file.
-    _times : set[str]
-        Set of time steps for the output file.
+        The name of the file to be read (e.g., 'forces.dat').
+    folder : Union[str, Path]
+        The subdirectory where the file is located, relative to case path.
+    time_resolved : bool
+        Whether data is stored in time-specific subdirectories.
+    postproc_prefix : str
+        Prefix for the post-processing directory, typically 'postProcessing'.
     """
 
     file_name: str
     folder: Union[str, Path]
+    postproc_prefix: str
+    time_resolved: bool = True
     _times: set[str] = field(default_factory=set, init=False, repr=False)
 
     def add_time(self, t: str) -> None:
-        """Add a time step to the output file.
+        """Add a time step to the data source.
 
         Parameters
         ----------
@@ -89,70 +94,159 @@ class OutputFile:
         """
         return sorted(self._times)
 
+    def postproc_folder(self, case_path: Path) -> Path:
+        """Return the path to the target's base directory under postProcessing/."""
+        return case_path / self.postproc_prefix / self.folder
+
+    def resolve_paths(self, case_path: Path) -> list[Path]:
+        """
+        Compute full file paths for this target inside the given case.
+
+        Parameters
+        ----------
+        case_path : Path
+            Root path of the case directory.
+
+        Returns
+        -------
+        list[Path]
+            List of resolved file paths to load.
+        """
+        base = self.postproc_folder(case_path)
+        if self.time_resolved:
+            return [base / t / self.file_name for t in self.times]
+        else:
+            return [base / self.file_name]
+
+
+def functionObject(file_name: str, folder: Union[str, Path]) -> DataSource:
+    """
+    Create a DataTarget for a standard OpenFOAM function object.
+
+    Parameters
+    ----------
+    name : str
+        The function object name (and default folder).
+    file_name : str, optional
+        The file name to look for (defaults to '<name>.dat').
+
+    Returns
+    -------
+    DataTarget
+    """
+    return DataSource(
+        file_name=file_name,
+        folder=folder,
+        time_resolved=True,
+        postproc_prefix="postProcessing",
+    )
+
+
+def dataFile(
+    file_name: str, folder: Union[str, Path], time_resolved: bool = False
+) -> DataSource:
+    """
+    Create a DataTarget for a custom or non-OpenFOAM output file.
+
+    Parameters
+    ----------
+    file_name : str
+        Name of the file (e.g., 'output.xml').
+    folder : str or Path
+        Subdirectory where the file is located (relative to 'postProcessing/').
+    time_resolved : bool
+        Whether the data is organized by time subfolders.
+
+    Returns
+    -------
+    DataTarget
+    """
+    return DataSource(
+        file_name=file_name,
+        folder=folder,
+        time_resolved=time_resolved,
+        postproc_prefix=".",
+    )
+
 
 def load_tables(
-    output_file: OutputFile,
+    source: DataSource,
     dir_name: Union[str, Path],
     filter_table: Optional[
         Callable[[pd.DataFrame, list[dict[str, str]]], pd.DataFrame]
     ] = None,
+    reader_fn: Optional[Callable[[Path], Optional[pd.DataFrame]]] = None,
 ) -> Optional[pd.DataFrame]:
     """
-    Load and concatenate all available dataframes for an OutputFile across time steps.
+    Load and concatenate all available dataframes for a DataTarget across cases and time steps.
 
     Parameters
     ----------
-    output_file : OutputFile
-        OutputFile object containing file name, time steps, and folder
-    dir_name : Union[str, Path]
-        Root directory where OpenFOAM cases are stored
+    source : DataSource
+        source data descriptor for resolving output paths.
+    dir_name : str or Path
+        Root directory where OpenFOAM cases are stored.
+    filter_table : callable, optional
+        Function to filter or modify the dataframe after reading.
+    reader_fn : callable, optional
+        Function to read a file into a DataFrame. Defaults to TableReader().read.
+        that considers the specific file format
 
     Returns
     -------
     pd.DataFrame or None
-        Concatenated dataframe of all available time steps, or None if nothing found
+        Concatenated dataframe of all found data, or None if nothing was found.
     """
+
     all_tables = []
+    reader_fn = reader_fn or TableReader().read
 
     for case in of_cases(dir_name):
         case_path = Path(case)
-        postproc_root = case_path / "postProcessing"
+        target_folder = source.postproc_folder(case_path)
 
-        if not postproc_root.exists():
-            continue
+        # Discover time steps if needed
+        if source.time_resolved and not source.times:
+            if target_folder.exists():
+                for item in target_folder.iterdir():
+                    if item.is_dir() and _is_float(item.name):
+                        source.add_time(item.name)
 
-        postproc_folder = postproc_root / output_file.folder
+        for file_path in source.resolve_paths(case_path):
+            if not file_path.exists():
+                continue
 
-        if not output_file.times:
-            for time in postproc_folder.iterdir():
-                if time.is_dir() and _is_float(time.name):
-                    output_file.add_time(time.name)
+            table = reader_fn(file_path)
+            if table is None:
+                continue
 
-        for time_value in output_file.times:
-            file_path = postproc_folder / time_value / output_file.file_name
-
-            if file_path.exists():
-                reader = TableReader()
-                table = reader.read(file_path)
-                json_path = Path(case_path) / "case.json"
-
+            # Load case metadata
+            json_path = case_path / "case.json"
+            parameters = []
+            if json_path.exists():
                 with open(json_path) as f:
                     json_data = json.load(f)
-                    parameters = json_data.get("case_parameters", {})
-                    if len(output_file.times) > 1:
-                        parameters.append({"category": "timeValue", "name": time_value})
+                    parameters = json_data.get("case_parameters", [])
 
-                    # add parameters as columns
-                    for parameter in parameters:
-                        category = parameter["category"]
-                        name = parameter["name"]
-                        table[category] = name
-                if filter_table is not None:
-                    table = filter_table(table, parameters)
-                all_tables.append(table)
+            # Add time value if applicable
+            if source.time_resolved and len(source.times) > 1:
+                time_str = file_path.parent.name
+                parameters.append({"category": "timeValue", "name": time_str})
+
+            # add parameters as columns
+            for parameter in parameters:
+                category = parameter["category"]
+                name = parameter["name"]
+                table[category] = name
+
+            if filter_table:
+                table = filter_table(table, parameters)
+
+            all_tables.append(table)
 
     if all_tables:
         return pd.concat(all_tables, ignore_index=True)
+
     return None
 
 
@@ -164,7 +258,7 @@ def _is_float(s: str) -> bool:
     return True
 
 
-def _outputfiles(file_map: dict[str, OutputFile], postproc_root: Path) -> None:
+def _discover_function_objects(file_map: dict[str, DataSource], postproc_root: Path) -> None:
     for dirpath, _, filenames in os.walk(postproc_root):
         base = Path(dirpath).name
 
@@ -182,12 +276,12 @@ def _outputfiles(file_map: dict[str, OutputFile], postproc_root: Path) -> None:
             key = f"{folder_str}--{fname}"
 
             if key not in file_map:
-                file_map[key] = OutputFile(file_name=fname, folder=folder)
+                file_map[key] = functionObject(file_name=fname, folder=folder)
 
             file_map[key].add_time(time)
 
 
-def list_outputfiles(cases_folder: str = "Cases") -> dict[str, OutputFile]:
+def list_function_objects(cases_folder: str = "Cases") -> dict[str, DataSource]:
     """List all output files in OpenFOAM cases.
 
     Parameters
@@ -200,7 +294,7 @@ def list_outputfiles(cases_folder: str = "Cases") -> dict[str, OutputFile]:
     file_map : dict[str, list[OutputFile]]
         Dictionary with keys as file names and values as OutputFile objects.
     """
-    file_map: dict[str, OutputFile] = {}
+    file_map: dict[str, DataSource] = {}
 
     for case_path_str in of_cases(cases_folder):
         case_path = Path(case_path_str)
@@ -208,6 +302,6 @@ def list_outputfiles(cases_folder: str = "Cases") -> dict[str, OutputFile]:
         if not postproc_root.exists():
             continue
 
-        _outputfiles(file_map, postproc_root)
+        _discover_function_objects(file_map, postproc_root)
 
     return file_map
