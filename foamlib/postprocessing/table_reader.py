@@ -6,7 +6,6 @@ from __future__ import annotations
 from itertools import islice
 from pathlib import Path
 from typing import Callable, ClassVar, Optional, Union
-import xml.etree.ElementTree as ET
 
 import pandas as pd
 
@@ -258,51 +257,58 @@ def read_csv(
 def read_catch2_benchmark(
     filepath: Union[str, Path], column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
-    tree = ET.parse(filepath)
+    """Read a Catch2 XML benchmark results file and return a DataFrame."""
+    import xml.etree.ElementTree as ET
+
+    from defusedxml.ElementTree import parse
+
+    tree = parse(filepath)
     root = tree.getroot()
 
     records = []
 
-    def parse_sections(sections, test_case_name, section_path):
+    def _parse_sections(
+        sections: list[ET.Element], test_case_name: str, section_path: list[str]
+    ) -> None:
         for section in sections:
             name = section.attrib.get("name", "")
-            new_path = section_path + [name]
+            new_path = [*section_path, name]
 
             subsections = section.findall("Section")
             if subsections:
-                parse_sections(subsections, test_case_name, new_path)
+                _parse_sections(subsections, test_case_name, new_path)
             else:
                 benchmark = section.find("BenchmarkResults")
                 if benchmark is not None:
                     mean = benchmark.find("mean")
-                    stddev = benchmark.find("standardDeviation")
-                    outliers = benchmark.find("outliers")
 
-                    record = {
-                        "test_case": test_case_name,
-                        "benchmark_name": benchmark.attrib.get("name"),
-                        "avg_runtime": float(mean.attrib.get("value", 0))
-                    }
+                    if mean is not None:
+                        record = {
+                            "test_case": test_case_name,
+                            "benchmark_name": benchmark.attrib.get("name"),
+                            "avg_runtime": float(mean.attrib.get("value", 0)),
+                        }
 
-                    # Add dynamic section depth fields
-                    for i, sec_name in enumerate(new_path):
-                        record[f"section{i + 1}"] = sec_name
+                        # Add dynamic section depth fields
+                        for i, sec_name in enumerate(new_path):
+                            record[f"section{i + 1}"] = sec_name
 
-                    records.append(record)
+                        records.append(record)
 
     for testcase in root.findall("TestCase"):
         test_case_name = testcase.attrib.get("name")
-        parse_sections(testcase.findall("Section"), test_case_name, [])
+        if test_case_name:
+            _parse_sections(testcase.findall("Section"), str(test_case_name), [])
 
-    df = pd.DataFrame(records)
+    table = pd.DataFrame(records)
 
     # Fill missing sectionN columns with empty string (not NaN)
     max_sections = max((len(r) - 18 for r in records), default=0)
     for i in range(1, max_sections + 1):
         col = f"section{i}"
-        if col not in df.columns:
-            df[col] = ""
+        if col not in table.columns:
+            table[col] = ""
 
     if column_names:
-        df = df[column_names]
-    return df
+        table = table[column_names]
+    return table
