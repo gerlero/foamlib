@@ -1,0 +1,634 @@
+{
+  "cases": [
+    {
+      "template_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/damBreak",
+      "output_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/Cases/coarse_height_02",
+      "key_value_pairs": [
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res1"
+            ]
+          },
+          "value": 23
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res2"
+            ]
+          },
+          "value": 8
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res3"
+            ]
+          },
+          "value": 19
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res4"
+            ]
+          },
+          "value": 42
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res5"
+            ]
+          },
+          "value": 4
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "initHeight"
+            ]
+          },
+          "value": 0.2
+        }
+      ],
+      "case_parameters": [
+        {
+          "category": "grid",
+          "name": "coarse"
+        },
+        {
+          "category": "initHeight",
+          "name": "height_02"
+        }
+      ]
+    },
+    {
+      "template_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/damBreak",
+      "output_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/Cases/coarse_height_03",
+      "key_value_pairs": [
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res1"
+            ]
+          },
+          "value": 23
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res2"
+            ]
+          },
+          "value": 8
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res3"
+            ]
+          },
+          "value": 19
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res4"
+            ]
+          },
+          "value": 42
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res5"
+            ]
+          },
+          "value": 4
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "initHeight"
+            ]
+          },
+          "value": 0.3
+        }
+      ],
+      "case_parameters": [
+        {
+          "category": "grid",
+          "name": "coarse"
+        },
+        {
+          "category": "initHeight",
+          "name": "height_03"
+        }
+      ]
+    },
+    {
+      "template_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/damBreak",
+      "output_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/Cases/coarse_height_04",
+      "key_value_pairs": [
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res1"
+            ]
+          },
+          "value": 23
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res2"
+            ]
+          },
+          "value": 8
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res3"
+            ]
+          },
+          "value": 19
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res4"
+            ]
+          },
+          "value": 42
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res5"
+            ]
+          },
+          "value": 4
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "initHeight"
+            ]
+          },
+          "value": 0.4
+        }
+      ],
+      "case_parameters": [
+        {
+          "category": "grid",
+          "name": "coarse"
+        },
+        {
+          "category": "initHeight",
+          "name": "height_04"
+        }
+      ]
+    },
+    {
+      "template_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/damBreak",
+      "output_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/Cases/mid_height_02",
+      "key_value_pairs": [
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res1"
+            ]
+          },
+          "value": 46
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res2"
+            ]
+          },
+          "value": 16
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res3"
+            ]
+          },
+          "value": 38
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res4"
+            ]
+          },
+          "value": 84
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res5"
+            ]
+          },
+          "value": 8
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "initHeight"
+            ]
+          },
+          "value": 0.2
+        }
+      ],
+      "case_parameters": [
+        {
+          "category": "grid",
+          "name": "mid"
+        },
+        {
+          "category": "initHeight",
+          "name": "height_02"
+        }
+      ]
+    },
+    {
+      "template_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/damBreak",
+      "output_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/Cases/mid_height_03",
+      "key_value_pairs": [
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res1"
+            ]
+          },
+          "value": 46
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res2"
+            ]
+          },
+          "value": 16
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res3"
+            ]
+          },
+          "value": 38
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res4"
+            ]
+          },
+          "value": 84
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res5"
+            ]
+          },
+          "value": 8
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "initHeight"
+            ]
+          },
+          "value": 0.3
+        }
+      ],
+      "case_parameters": [
+        {
+          "category": "grid",
+          "name": "mid"
+        },
+        {
+          "category": "initHeight",
+          "name": "height_03"
+        }
+      ]
+    },
+    {
+      "template_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/damBreak",
+      "output_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/Cases/mid_height_04",
+      "key_value_pairs": [
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res1"
+            ]
+          },
+          "value": 46
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res2"
+            ]
+          },
+          "value": 16
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res3"
+            ]
+          },
+          "value": 38
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res4"
+            ]
+          },
+          "value": 84
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res5"
+            ]
+          },
+          "value": 8
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "initHeight"
+            ]
+          },
+          "value": 0.4
+        }
+      ],
+      "case_parameters": [
+        {
+          "category": "grid",
+          "name": "mid"
+        },
+        {
+          "category": "initHeight",
+          "name": "height_04"
+        }
+      ]
+    },
+    {
+      "template_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/damBreak",
+      "output_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/Cases/fine_height_02",
+      "key_value_pairs": [
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res1"
+            ]
+          },
+          "value": 92
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res2"
+            ]
+          },
+          "value": 32
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res3"
+            ]
+          },
+          "value": 76
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res4"
+            ]
+          },
+          "value": 168
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res5"
+            ]
+          },
+          "value": 16
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "initHeight"
+            ]
+          },
+          "value": 0.2
+        }
+      ],
+      "case_parameters": [
+        {
+          "category": "grid",
+          "name": "fine"
+        },
+        {
+          "category": "initHeight",
+          "name": "height_02"
+        }
+      ]
+    },
+    {
+      "template_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/damBreak",
+      "output_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/Cases/fine_height_03",
+      "key_value_pairs": [
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res1"
+            ]
+          },
+          "value": 92
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res2"
+            ]
+          },
+          "value": 32
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res3"
+            ]
+          },
+          "value": 76
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res4"
+            ]
+          },
+          "value": 168
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res5"
+            ]
+          },
+          "value": 16
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "initHeight"
+            ]
+          },
+          "value": 0.3
+        }
+      ],
+      "case_parameters": [
+        {
+          "category": "grid",
+          "name": "fine"
+        },
+        {
+          "category": "initHeight",
+          "name": "height_03"
+        }
+      ]
+    },
+    {
+      "template_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/damBreak",
+      "output_case": "/home/henning/libsAndApps/foamlib/example/parametricStudy/Cases/fine_height_04",
+      "key_value_pairs": [
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res1"
+            ]
+          },
+          "value": 92
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res2"
+            ]
+          },
+          "value": 32
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res3"
+            ]
+          },
+          "value": 76
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res4"
+            ]
+          },
+          "value": 168
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "res5"
+            ]
+          },
+          "value": 16
+        },
+        {
+          "instruction": {
+            "file_name": "system/simulationParameters",
+            "keys": [
+              "initHeight"
+            ]
+          },
+          "value": 0.4
+        }
+      ],
+      "case_parameters": [
+        {
+          "category": "grid",
+          "name": "fine"
+        },
+        {
+          "category": "initHeight",
+          "name": "height_04"
+        }
+      ]
+    }
+  ]
+}

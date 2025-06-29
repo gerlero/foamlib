@@ -1,0 +1,3 @@
+case_name,res1,res2,res3,res4,res5,fluidHeight,grid,initHeight
+case_1,23,8,19,42,4,0.3,res1,height_03
+case_2,23,8,19,42,4,0.2,res1,height_02
