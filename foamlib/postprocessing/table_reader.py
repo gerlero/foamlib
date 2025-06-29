@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 from itertools import islice
 from pathlib import Path
 from typing import Callable, ClassVar, Optional, Union
 
 import pandas as pd
+from defusedxml.ElementTree import parse
 
 
 class ReaderNotRegisteredError(Exception):
@@ -258,12 +260,11 @@ def read_catch2_benchmark(
     filepath: Union[str, Path], column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """Read a Catch2 XML benchmark results file and return a DataFrame."""
-    import xml.etree.ElementTree as ET
-
-    from defusedxml.ElementTree import parse
-
     tree = parse(filepath)
     root = tree.getroot()
+    if root is None:
+        err_msg = f"Unable to parse XML file: {filepath}"
+        raise ValueError(err_msg)
 
     records = []
 
