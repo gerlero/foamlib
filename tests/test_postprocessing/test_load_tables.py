@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import pandas as pd
 from foamlib.postprocessing.load_tables import (
+    datafile,
     functionobject,
     list_function_objects,
     load_tables,
     of_cases,
 )
+from foamlib.postprocessing.table_reader import read_catch2_benchmark
 
 
 def max_height_filter(
@@ -116,3 +118,30 @@ def test_output_files() -> None:
             "sample2",
         ]
     )
+
+
+def test_load_catch2_benchmarks() -> None:
+    """Test if the load_tables function works correctly for catch2 benchmarks."""
+
+    file = datafile(file_name="explicitOperators.xml", folder=".")
+    table = load_tables(
+        source=file,
+        dir_name="tests/test_postprocessing/Cases",
+        reader_fn=read_catch2_benchmark,
+    )
+
+    assert table is not None
+    assert sorted(table.columns.tolist()) == sorted(
+        [
+            "test_case",
+            "benchmark_name",
+            "avg_runtime",
+            "section1",
+            "section2",
+            "grid",
+            "initHeight",
+        ]
+    )
+    assert sorted(table["grid"].unique()) == sorted(["res1", "res2", "res3"])
+    assert sorted(table["initHeight"].unique()) == sorted(["height_02", "height_03"])
+    assert table.shape == (105, 7)

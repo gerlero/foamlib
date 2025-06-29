@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="bench_explicitOperators" rng-seed="3095221063" xml-format-version="3" catch2-version="3.4.0">
+  <TestCase name="DivOperator" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="22">
+    <Section name="OpenFOAM" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="27">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="48">
+        <BenchmarkResults name="OpenFOAM" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="4.5599e+06">
+          <!-- All values in nano seconds -->
+          <mean value="46083.6" lowerBound="45812.4" upperBound="46715.5" ci="0.95"/>
+          <standardDeviation value="1997.33" lowerBound="1090.33" upperBound="3970.62" ci="0.95"/>
+          <outliers variance="0.41462" lowMild="0" lowSevere="0" highMild="0" highSevere="8"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="61">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="93">
+        <BenchmarkResults name="SerialExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="9.4726e+06">
+          <!-- All values in nano seconds -->
+          <mean value="92109.5" lowerBound="91685.7" upperBound="92741.2" ci="0.95"/>
+          <standardDeviation value="2610.13" lowerBound="1936.86" upperBound="3928.39" ci="0.95"/>
+          <outliers variance="0.228792" lowMild="1" lowSevere="0" highMild="8" highSevere="8"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="61">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="106">
+        <BenchmarkResults name="SerialExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="7.3248e+06">
+          <!-- All values in nano seconds -->
+          <mean value="71083.6" lowerBound="70270.9" upperBound="73956.6" ci="0.95"/>
+          <standardDeviation value="6905" lowerBound="2048.91" upperBound="15624.4" ci="0.95"/>
+          <outliers variance="0.779666" lowMild="0" lowSevere="0" highMild="4" highSevere="9"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="61">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="93">
+        <BenchmarkResults name="CPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="7.4306e+06">
+          <!-- All values in nano seconds -->
+          <mean value="72575.5" lowerBound="71873.6" upperBound="74386.9" ci="0.95"/>
+          <standardDeviation value="5337.59" lowerBound="2303.43" upperBound="10847.3" ci="0.95"/>
+          <outliers variance="0.666642" lowMild="1" lowSevere="0" highMild="2" highSevere="8"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="61">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="106">
+        <BenchmarkResults name="CPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="4.8752e+06">
+          <!-- All values in nano seconds -->
+          <mean value="47713.5" lowerBound="47346.8" upperBound="48482.3" ci="0.95"/>
+          <standardDeviation value="2591.81" lowerBound="1452.15" upperBound="4547.87" ci="0.95"/>
+          <outliers variance="0.524559" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="61">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="93">
+        <BenchmarkResults name="GPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="4.16079e+07">
+          <!-- All values in nano seconds -->
+          <mean value="409182" lowerBound="408077" upperBound="411566" ci="0.95"/>
+          <standardDeviation value="7874.83" lowerBound="4577.09" upperBound="15655.5" ci="0.95"/>
+          <outliers variance="0.122871" lowMild="0" lowSevere="0" highMild="1" highSevere="1"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="61">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="106">
+        <BenchmarkResults name="GPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="2.71412e+07">
+          <!-- All values in nano seconds -->
+          <mean value="264267" lowerBound="240228" upperBound="313238" ci="0.95"/>
+          <standardDeviation value="168361" lowerBound="91744.6" upperBound="278105" ci="0.95"/>
+          <outliers variance="0.989623" lowMild="0" lowSevere="0" highMild="1" highSevere="11"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+Create mesh for time = 0
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="LaplacianOperator" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="130">
+    <Section name="OpenFOAM" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="135">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="153">
+        <BenchmarkResults name="OpenFOAM" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="5.6303e+06">
+          <!-- All values in nano seconds -->
+          <mean value="49908.9" lowerBound="49616.4" upperBound="50657.2" ci="0.95"/>
+          <standardDeviation value="2233.32" lowerBound="1102.19" upperBound="4667.8" ci="0.95"/>
+          <outliers variance="0.424893" lowMild="0" lowSevere="0" highMild="5" highSevere="1"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="166">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="192">
+        <BenchmarkResults name="SerialExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="1.86586e+07">
+          <!-- All values in nano seconds -->
+          <mean value="177604" lowerBound="176993" upperBound="178444" ci="0.95"/>
+          <standardDeviation value="3621.35" lowerBound="2823.02" upperBound="5641.64" ci="0.95"/>
+          <outliers variance="0.132634" lowMild="0" lowSevere="0" highMild="5" highSevere="1"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="166">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="205">
+        <BenchmarkResults name="SerialExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="1.5251e+07">
+          <!-- All values in nano seconds -->
+          <mean value="149878" lowerBound="149429" upperBound="150473" ci="0.95"/>
+          <standardDeviation value="2608.68" lowerBound="2103.94" upperBound="3730" ci="0.95"/>
+          <outliers variance="0.103759" lowMild="0" lowSevere="0" highMild="7" highSevere="2"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="166">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="192">
+        <BenchmarkResults name="CPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="8.0947e+06">
+          <!-- All values in nano seconds -->
+          <mean value="78546.5" lowerBound="78100.1" upperBound="79491" ci="0.95"/>
+          <standardDeviation value="3147.59" lowerBound="1802.74" upperBound="5825.92" ci="0.95"/>
+          <outliers variance="0.3752" lowMild="1" lowSevere="0" highMild="7" highSevere="6"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="166">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="205">
+        <BenchmarkResults name="CPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="5.2191e+06">
+          <!-- All values in nano seconds -->
+          <mean value="51332.6" lowerBound="50895.6" upperBound="52165.6" ci="0.95"/>
+          <standardDeviation value="2977.55" lowerBound="1802.02" upperBound="5115.63" ci="0.95"/>
+          <outliers variance="0.554912" lowMild="0" lowSevere="0" highMild="4" highSevere="9"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="166">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="192">
+        <BenchmarkResults name="GPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="4.1669e+07">
+          <!-- All values in nano seconds -->
+          <mean value="414229" lowerBound="412724" upperBound="416773" ci="0.95"/>
+          <standardDeviation value="9712.99" lowerBound="6357.16" upperBound="15260.1" ci="0.95"/>
+          <outliers variance="0.170793" lowMild="0" lowSevere="0" highMild="1" highSevere="3"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="166">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="205">
+        <BenchmarkResults name="GPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="2.1372e+07">
+          <!-- All values in nano seconds -->
+          <mean value="213801" lowerBound="212549" upperBound="215999" ci="0.95"/>
+          <standardDeviation value="8247.18" lowerBound="4990.56" upperBound="13109.5" ci="0.95"/>
+          <outliers variance="0.355624" lowMild="0" lowSevere="0" highMild="4" highSevere="3"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+Create mesh for time = 0
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="GradOperator" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="228">
+    <Section name="OpenFOAM" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="233">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="240">
+        <BenchmarkResults name="OpenFOAM" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="7.8258e+06">
+          <!-- All values in nano seconds -->
+          <mean value="74517.2" lowerBound="74091.4" upperBound="75064.5" ci="0.95"/>
+          <standardDeviation value="2445.93" lowerBound="1918.49" upperBound="3181.99" ci="0.95"/>
+          <outliers variance="0.286948" lowMild="0" lowSevere="0" highMild="3" highSevere="4"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="253">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="266">
+        <BenchmarkResults name="SerialExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="2.81809e+07">
+          <!-- All values in nano seconds -->
+          <mean value="284990" lowerBound="282064" upperBound="289102" ci="0.95"/>
+          <standardDeviation value="17471.1" lowerBound="13411.4" upperBound="22787.2" ci="0.95"/>
+          <outliers variance="0.585033" lowMild="0" lowSevere="0" highMild="5" highSevere="13"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="253">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="278">
+        <BenchmarkResults name="SerialExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="2.51885e+07">
+          <!-- All values in nano seconds -->
+          <mean value="245042" lowerBound="244369" upperBound="246239" ci="0.95"/>
+          <standardDeviation value="4444.52" lowerBound="2883.91" upperBound="7368.88" ci="0.95"/>
+          <outliers variance="0.113161" lowMild="0" lowSevere="0" highMild="1" highSevere="3"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="253">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="266">
+        <BenchmarkResults name="CPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="9.5349e+06">
+          <!-- All values in nano seconds -->
+          <mean value="93977.6" lowerBound="92433" upperBound="96450" ci="0.95"/>
+          <standardDeviation value="9838.65" lowerBound="6750.09" upperBound="13299.7" ci="0.95"/>
+          <outliers variance="0.810414" lowMild="0" lowSevere="0" highMild="1" highSevere="7"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="253">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="278">
+        <BenchmarkResults name="CPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="6.5832e+06">
+          <!-- All values in nano seconds -->
+          <mean value="63232.7" lowerBound="62842.3" upperBound="63958.5" ci="0.95"/>
+          <standardDeviation value="2639.41" lowerBound="1710.77" upperBound="4789.1" ci="0.95"/>
+          <outliers variance="0.394925" lowMild="0" lowSevere="0" highMild="6" highSevere="5"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="253">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="266">
+        <BenchmarkResults name="GPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="4.34869e+07">
+          <!-- All values in nano seconds -->
+          <mean value="439160" lowerBound="434307" upperBound="445924" ci="0.95"/>
+          <standardDeviation value="29018.5" lowerBound="22240.6" upperBound="41033.4" ci="0.95"/>
+          <outliers variance="0.625342" lowMild="0" lowSevere="0" highMild="1" highSevere="1"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="253">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="278">
+        <BenchmarkResults name="GPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="2.20457e+07">
+          <!-- All values in nano seconds -->
+          <mean value="279586" lowerBound="257485" upperBound="329580" ci="0.95"/>
+          <standardDeviation value="160155" lowerBound="73450.7" upperBound="272629" ci="0.95"/>
+          <outliers variance="0.989533" lowMild="0" lowSevere="0" highMild="0" highSevere="6"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+Create mesh for time = 0
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="FaceInterpolation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="300">
+    <Section name="OpenFOAM" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="305">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="327">
+        <BenchmarkResults name="OpenFOAM" samples="100" resamples="100000" iterations="2" clockResolution="22.9865" estimatedDuration="2.7174e+06">
+          <!-- All values in nano seconds -->
+          <mean value="12314.4" lowerBound="12221.7" upperBound="12553.3" ci="0.95"/>
+          <standardDeviation value="704.551" lowerBound="333.154" upperBound="1454.3" ci="0.95"/>
+          <outliers variance="0.554491" lowMild="0" lowSevere="0" highMild="2" highSevere="11"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="339">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="370">
+        <BenchmarkResults name="SerialExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="4.3791e+06">
+          <!-- All values in nano seconds -->
+          <mean value="42087.9" lowerBound="41081" upperBound="44397.2" ci="0.95"/>
+          <standardDeviation value="7380.24" lowerBound="3804.53" upperBound="13619.1" ci="0.95"/>
+          <outliers variance="0.925605" lowMild="0" lowSevere="0" highMild="2" highSevere="13"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="339">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="382">
+        <BenchmarkResults name="SerialExecutor" samples="100" resamples="100000" iterations="2" clockResolution="22.9865" estimatedDuration="3.9554e+06">
+          <!-- All values in nano seconds -->
+          <mean value="17278.8" lowerBound="17176.5" upperBound="17411" ci="0.95"/>
+          <standardDeviation value="591.831" lowerBound="476.651" upperBound="761.091" ci="0.95"/>
+          <outliers variance="0.306362" lowMild="0" lowSevere="0" highMild="2" highSevere="0"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="339">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="370">
+        <BenchmarkResults name="CPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="3.3666e+06">
+          <!-- All values in nano seconds -->
+          <mean value="29778.4" lowerBound="29403.4" upperBound="30706" ci="0.95"/>
+          <standardDeviation value="2769.13" lowerBound="804.449" upperBound="4909.6" ci="0.95"/>
+          <outliers variance="0.769007" lowMild="0" lowSevere="0" highMild="3" highSevere="7"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="339">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="382">
+        <BenchmarkResults name="CPUExecutor" samples="100" resamples="100000" iterations="4" clockResolution="22.9865" estimatedDuration="2.6064e+06">
+          <!-- All values in nano seconds -->
+          <mean value="6161.34" lowerBound="5995.29" upperBound="6410.13" ci="0.95"/>
+          <standardDeviation value="1019.82" lowerBound="741.749" upperBound="1484.77" ci="0.95"/>
+          <outliers variance="0.915173" lowMild="0" lowSevere="0" highMild="2" highSevere="2"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="339">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="370">
+        <BenchmarkResults name="GPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="2.13973e+07">
+          <!-- All values in nano seconds -->
+          <mean value="205567" lowerBound="203424" upperBound="211729" ci="0.95"/>
+          <standardDeviation value="17027.1" lowerBound="7200.58" upperBound="36767.3" ci="0.95"/>
+          <outliers variance="0.717864" lowMild="0" lowSevere="0" highMild="5" highSevere="6"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="339">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="382">
+        <BenchmarkResults name="GPUExecutor" samples="100" resamples="100000" iterations="3" clockResolution="22.9865" estimatedDuration="2.8416e+06">
+          <!-- All values in nano seconds -->
+          <mean value="9559.17" lowerBound="9286.52" upperBound="10571.8" ci="0.95"/>
+          <standardDeviation value="2376.31" lowerBound="602.3" upperBound="5489.37" ci="0.95"/>
+          <outliers variance="0.967621" lowMild="0" lowSevere="0" highMild="2" highSevere="16"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+Create mesh for time = 0
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="FaceNormalGradient" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="408">
+    <Section name="OpenFOAM" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="413">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="420">
+        <BenchmarkResults name="OpenFOAM" samples="100" resamples="100000" iterations="2" clockResolution="22.9865" estimatedDuration="2.7958e+06">
+          <!-- All values in nano seconds -->
+          <mean value="12555.9" lowerBound="12448.3" upperBound="12771.1" ci="0.95"/>
+          <standardDeviation value="744.513" lowerBound="446.916" upperBound="1301.62" ci="0.95"/>
+          <outliers variance="0.565051" lowMild="0" lowSevere="0" highMild="4" highSevere="5"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="433">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="446">
+        <BenchmarkResults name="SerialExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="4.5786e+06">
+          <!-- All values in nano seconds -->
+          <mean value="66656" lowerBound="65943.5" upperBound="68662.4" ci="0.95"/>
+          <standardDeviation value="5644.44" lowerBound="2452.21" upperBound="12022.3" ci="0.95"/>
+          <outliers variance="0.728068" lowMild="0" lowSevere="0" highMild="11" highSevere="4"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="433">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="457">
+        <BenchmarkResults name="SerialExecutor" samples="100" resamples="100000" iterations="2" clockResolution="22.9865" estimatedDuration="3.2114e+06">
+          <!-- All values in nano seconds -->
+          <mean value="14807.7" lowerBound="14739.4" upperBound="14916.5" ci="0.95"/>
+          <standardDeviation value="432.122" lowerBound="299.486" upperBound="588.68" ci="0.95"/>
+          <outliers variance="0.238533" lowMild="0" lowSevere="0" highMild="0" highSevere="7"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="433">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="446">
+        <BenchmarkResults name="CPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="3.1892e+06">
+          <!-- All values in nano seconds -->
+          <mean value="32235.6" lowerBound="31769" upperBound="33013.7" ci="0.95"/>
+          <standardDeviation value="3008.12" lowerBound="1963.83" upperBound="4618" ci="0.95"/>
+          <outliers variance="0.769083" lowMild="0" lowSevere="0" highMild="1" highSevere="2"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="433">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="457">
+        <BenchmarkResults name="CPUExecutor" samples="100" resamples="100000" iterations="4" clockResolution="22.9865" estimatedDuration="2.5576e+06">
+          <!-- All values in nano seconds -->
+          <mean value="5803.16" lowerBound="5759.84" upperBound="5884.42" ci="0.95"/>
+          <standardDeviation value="294.218" lowerBound="178.703" upperBound="486.416" ci="0.95"/>
+          <outliers variance="0.484803" lowMild="0" lowSevere="0" highMild="1" highSevere="4"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="433">
+      <Section name="with Allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="446">
+        <BenchmarkResults name="GPUExecutor" samples="100" resamples="100000" iterations="1" clockResolution="22.9865" estimatedDuration="2.05675e+07">
+          <!-- All values in nano seconds -->
+          <mean value="205142" lowerBound="203683" upperBound="207196" ci="0.95"/>
+          <standardDeviation value="8745.35" lowerBound="6936.44" upperBound="12233.2" ci="0.95"/>
+          <outliers variance="0.404834" lowMild="0" lowSevere="0" highMild="8" highSevere="4"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="NeoN" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="433">
+      <Section name="No allocation" filename="/home/henning/libsAndApps/FoamAdapter/benchmarks/bench_explicitOperators.cpp" line="457">
+        <BenchmarkResults name="GPUExecutor" samples="100" resamples="100000" iterations="3" clockResolution="22.9865" estimatedDuration="3.3732e+06">
+          <!-- All values in nano seconds -->
+          <mean value="12812.3" lowerBound="11188.1" upperBound="17970.3" ci="0.95"/>
+          <standardDeviation value="12573.8" lowerBound="909.002" upperBound="27716.8" ci="0.95"/>
+          <outliers variance="0.989841" lowMild="0" lowSevere="0" highMild="0" highSevere="2"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+Create mesh for time = 0
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="5" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>
