@@ -109,8 +109,8 @@ def test_example(tmp_path: Path) -> None:
 
     with case[0]["U"] as f:
         f.dimensions = f.DimensionSet(length=1, time=-1)
-        f.internal_field = [1, 0, 0]  # type: ignore [assignment]
-        f.boundary_field = {  # type: ignore [assignment]
+        f.internal_field = [1, 0, 0]
+        f.boundary_field = {
             "inletUp": {"type": "fixedValue", "value": [1, 0, 0]},
             "inletDown": {"type": "fixedValue", "value": [1, 0, 0]},
             "outletUp": {"type": "zeroGradient"},
@@ -122,7 +122,7 @@ def test_example(tmp_path: Path) -> None:
     with case[0]["T"] as f:
         f.dimensions = f.DimensionSet(temperature=1)
         f.internal_field = 0
-        f.boundary_field = {  # type: ignore [assignment]
+        f.boundary_field = {
             "inletUp": {"type": "fixedValue", "value": 0},
             "inletDown": {"type": "fixedValue", "value": 1},
             "outletUp": {"type": "zeroGradient"},
