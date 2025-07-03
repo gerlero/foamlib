@@ -55,7 +55,7 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            np.array([1, 2], dtype=np.float32),  # type: ignore[arg-type]
+            np.array([1, 2], dtype=np.float32),
             keywords=("internalField",),
             header={"format": "binary"},
         )
@@ -119,7 +119,7 @@ def test_serialize_file() -> None:
         FoamFile.dumps(
             {
                 "FoamFile": {"format": "binary"},
-                None: np.array([1, 2, 3], dtype=np.int32),  # type: ignore[dict-item]
+                None: np.array([1, 2, 3], dtype=np.int32),
             },
             ensure_header=False,
         )
@@ -135,7 +135,7 @@ def test_serialize_file() -> None:
     )
     assert (
         FoamFile.dumps(
-            {"FoamFile": {"format": "binary"}, None: (indices, values)},  # type: ignore[dict-item]
+            {"FoamFile": {"format": "binary"}, None: (indices, values)},
             ensure_header=False,
         )
         == b"FoamFile {format binary;} 3(\x00\x00\x00\x00\x03\x00\x00\x00\x07\x00\x00\x00) 7(h\xcb\r\x00\x1f\xcd\r\x00\x08\x1b\x0e\x00\xd7\xa85\x00\xda\xa85\x00\xd9\xa85\x00\xd8\xa85\x00)"
