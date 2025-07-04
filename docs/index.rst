@@ -13,6 +13,8 @@ Documentation
    :maxdepth: 2
 
    example
+   parametricstudy
+   postprocessing
    cases
    files
 
