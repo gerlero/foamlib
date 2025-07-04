@@ -120,7 +120,7 @@ def _ascii_numeric_list(
 
         ret: np.ndarray[
             tuple[int] | tuple[int, int], np.dtype[np.integer | np.floating]
-        ] = np.fromstring(s, sep=" ", dtype=dtype)  # type: ignore[assignment]
+        ] = np.fromstring(s, sep=" ", dtype=dtype)
 
         if nested is not None:
             ret = ret.reshape(-1, nested)
@@ -183,7 +183,7 @@ def _binary_numeric_list(
         if nested is not None:
             ret = ret.reshape(-1, nested)
 
-        return ret  # type: ignore[return-value]
+        return ret
 
     return (
         common.integer.copy().add_parse_action(process_count) + list_
@@ -236,7 +236,7 @@ def _ascii_face_list(*, ignore: Regex | None = None) -> ParserElement:
         i = 0
         while i < raw.size:
             assert raw[i] in (3, 4)
-            values.append(raw[i + 1 : i + raw[i] + 1])  # type: ignore[arg-type]
+            values.append(raw[i + 1 : i + raw[i] + 1])
             i += raw[i] + 1
 
         return [values]

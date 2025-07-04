@@ -103,7 +103,7 @@ def test_write_read(tmp_path: Path) -> None:
 def test_new_field(tmp_path: Path) -> None:
     Path(tmp_path / "testField").touch()
     f = FoamFieldFile(tmp_path / "testField")
-    f.internal_field = [1, 2, 3]  # type: ignore [assignment]
+    f.internal_field = [1, 2, 3]
     field = f.internal_field
     assert isinstance(field, np.ndarray)
     assert np.array_equal(f.internal_field, [1, 2, 3])
@@ -169,8 +169,8 @@ def test_internal_field(cavity: FoamCase) -> None:
     p_arr = np.zeros(size)
     U_arr = np.zeros((size, 3))
 
-    cavity[0]["p"].internal_field = p_arr  # type: ignore [assignment]
-    cavity[0]["U"].internal_field = U_arr  # type: ignore [assignment]
+    cavity[0]["p"].internal_field = p_arr
+    cavity[0]["U"].internal_field = U_arr
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
     U = cavity[0]["U"].internal_field
@@ -180,8 +180,8 @@ def test_internal_field(cavity: FoamCase) -> None:
     p_arr = np.arange(size) * 1e-6  # type: ignore [assignment]
     U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
 
-    cavity[0]["p"].internal_field = p_arr  # type: ignore [assignment]
-    cavity[0]["U"].internal_field = U_arr  # type: ignore [assignment]
+    cavity[0]["p"].internal_field = p_arr
+    cavity[0]["U"].internal_field = U_arr
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
     U = cavity[0]["U"].internal_field  # type: ignore [assignment]
@@ -216,7 +216,7 @@ def test_binary_field(cavity: FoamCase) -> None:
     p_arr = np.arange(len(p_bin)) * 1e-6
     U_arr = np.full_like(U_bin, [-1e-6, 1e-6, 0]) * np.arange(len(U_bin))[:, np.newaxis]
 
-    cavity[0]["p"].internal_field = p_arr  # type: ignore [assignment]
+    cavity[0]["p"].internal_field = p_arr
     cavity[0]["U"].internal_field = U_arr
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
@@ -243,7 +243,7 @@ def test_compressed_field(cavity: FoamCase) -> None:
     p_arr = np.arange(len(p_bin)) * 1e-6
     U_arr = np.full_like(U_bin, [-1e-6, 1e-6, 0]) * np.arange(len(U_bin))[:, np.newaxis]
 
-    cavity[0]["p"].internal_field = p_arr  # type: ignore [assignment]
+    cavity[0]["p"].internal_field = p_arr
     cavity[0]["U"].internal_field = U_arr
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
