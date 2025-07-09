@@ -89,7 +89,7 @@ def test_serialize_data() -> None:
         )
         == b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
-    assert dumps([("a", "b"), ("c", "d")]) == b"(a b; c d;)"
+    assert dumps([("a", "b"), ("c", "d"), ("n", "no"), ("y", "yes")]) == b"(a b; c d; n no; y yes;)"
     assert dumps([("a", {"b": "c"}), ("d", {"e": "g"})]) == b"(a {b c;} d {e g;})"
     assert dumps([("a", [0, 1, 2]), ("b", {})]) == b"(a (0 1 2); b {})"
     assert dumps(["water", "oil", "mercury", "air"]) == b"(water oil mercury air)"
@@ -103,8 +103,8 @@ def test_serialize_file() -> None:
         == b"{FoamFile {version 2.0; format ascii; class dictionary;}} 1.0"
     )
     assert (
-        FoamFile.dumps({"a": "b", "c": "d"})
-        == b"{FoamFile {version 2.0; format ascii; class dictionary;}} a b; c d;"
+        FoamFile.dumps({"a": "b", "c": "d", "n": "no", "y": "yes"})
+        == b"{FoamFile {version 2.0; format ascii; class dictionary;}} a b; c d; n no; y yes;"
     )
     assert (
         FoamFile.dumps({"internalField": [[1, 2, 3], [4, 5, 6]]})
