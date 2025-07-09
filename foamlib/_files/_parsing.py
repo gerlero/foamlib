@@ -334,14 +334,10 @@ _SWITCH = (
     Keyword("yes", _IDENTBODYCHARS)
     | Keyword("true", _IDENTBODYCHARS)
     | Keyword("on", _IDENTBODYCHARS)
-    | Keyword("y", _IDENTBODYCHARS)
-    | Keyword("t", _IDENTBODYCHARS)
 ).set_parse_action(lambda: True) | (
     Keyword("no", _IDENTBODYCHARS)
     | Keyword("false", _IDENTBODYCHARS)
     | Keyword("off", _IDENTBODYCHARS)
-    | Keyword("n", _IDENTBODYCHARS)
-    | Keyword("f", _IDENTBODYCHARS)
 ).set_parse_action(lambda: False)
 _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
