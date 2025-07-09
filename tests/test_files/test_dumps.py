@@ -89,7 +89,10 @@ def test_serialize_data() -> None:
         )
         == b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
-    assert dumps([("a", "b"), ("c", "d"), ("n", "no"), ("y", "yes")]) == b"(a b; c d; n no; y yes;)"
+    assert (
+        dumps([("a", "b"), ("c", "d"), ("n", "no"), ("y", "yes")])
+        == b"(a b; c d; n no; y yes;)"
+    )
     assert dumps([("a", {"b": "c"}), ("d", {"e": "g"})]) == b"(a {b c;} d {e g;})"
     assert dumps([("a", [0, 1, 2]), ("b", {})]) == b"(a (0 1 2); b {})"
     assert dumps(["water", "oil", "mercury", "air"]) == b"(water oil mercury air)"
