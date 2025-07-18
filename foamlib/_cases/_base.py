@@ -174,12 +174,21 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
     @property
     def application(self) -> str:
-        """The application name as set in the controlDict."""
-        application = self.control_dict["application"]
-        if not isinstance(application, str):
-            msg = f"application in {self.control_dict} is not a string"
-            raise TypeError(msg)
-        return application
+        """The application name."""
+        control_dict = self.control_dict
+        try:
+            ret = control_dict["application"]
+        except KeyError:
+            if "solver" in control_dict:
+                return "foamRun"
+            if "regionSolvers" in control_dict:
+                return "foamMultiRun"
+            raise
+        else:
+            if not isinstance(ret, str):
+                msg = f"application in {control_dict} is not a string: {ret}"
+                raise TypeError(msg)
+            return ret
 
     @property
     def control_dict(self) -> FoamFile:

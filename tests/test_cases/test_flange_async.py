@@ -73,9 +73,9 @@ async def test_run_cmd(flange: AsyncFoamCase) -> None:
     )
 
     if isinstance(flange, AsyncSlurmFoamCase):
-        await flange.run([flange.application], fallback=True)
+        await flange.run(["laplacianFoam"], fallback=True)
     else:
-        await flange.run([flange.application])
+        await flange.run(["laplacianFoam"])
 
 
 @pytest.mark.asyncio
@@ -92,9 +92,9 @@ async def test_run_cmd_shell(flange: AsyncFoamCase) -> None:
         await flange.run('ansysToFoam "flange.ans" -scale 0.001', cpus=0)
 
     if isinstance(flange, AsyncSlurmFoamCase):
-        await flange.run(flange.application, fallback=True)
+        await flange.run("laplacianFoam", fallback=True)
     else:
-        await flange.run(flange.application)
+        await flange.run("laplacianFoam")
 
 
 def test_path(flange: AsyncFoamCase) -> None:
