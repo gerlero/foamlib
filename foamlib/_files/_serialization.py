@@ -126,7 +126,7 @@ def normalize_data(
         return [normalize_data(d) for d in data]  # type: ignore [arg-type, return-value]
 
     if isinstance(data, tuple) and not isinstance(data, DimensionSet):
-        return tuple(normalize_data(d, keywords=keywords) for d in data)  # type: ignore [misc]
+        return tuple(normalize_data(d, keywords=keywords) for d in data)  # type: ignore [arg-type]
 
     if isinstance(data, str):
         s = loads(data, keywords=keywords)
