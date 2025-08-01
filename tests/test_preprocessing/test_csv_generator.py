@@ -14,6 +14,7 @@ from foamlib.postprocessing.load_tables import functionobject, load_tables
 from foamlib.preprocessing.parameter_study import csv_generator
 
 CSV_FILE = "tests/test_preprocessing/test_parastudy.csv"
+CSV_FILE2 = "tests/test_preprocessing/test_parastudy2.csv"
 OUTPUT_FOLDER = "tests/test_preprocessing/Cases/"
 
 
@@ -27,15 +28,30 @@ def output_folder() -> Generator[Path, None, None]:
         Path(output_cases.parent / "parameter_study.json").unlink()
 
 
-def test_csv_generator(output_folder: Path) -> None:
-    """Test the CSVGenerator model."""
+@pytest.mark.parametrize(
+    "csv_file,expected_heights",
+    [
+        (
+            f"{CSV_FILE}",
+            ["height_02", "height_03"],
+        ),
+        (
+            f"{CSV_FILE2}",
+            ["0.3", "0.2"],
+        ),
+    ],
+)
+def test_csv_generator(
+    output_folder: Path, csv_file: str, expected_heights: list[str]
+) -> None:
+    """Test the CSVGenerator model with different CSV files."""
     template_case = Path("tests/test_preprocessing/templates/damBreak")
 
     study = csv_generator(
-        csv_file=CSV_FILE, template_case=template_case, output_folder=output_folder
+        csv_file=csv_file, template_case=template_case, output_folder=output_folder
     )
 
-    assert len(study.cases) == 2  # Assuming the CSV has 3 cases
+    assert len(study.cases) == 2
 
     study.create_study(study_base_folder=output_folder.parent)
 
@@ -47,7 +63,7 @@ def test_csv_generator(output_folder: Path) -> None:
         assert case.case_parameters[0].category == "grid"
         assert case.case_parameters[1].category == "initHeight"
         assert case.case_parameters[0].name in ["res1"]
-        assert case.case_parameters[1].name in ["height_02", "height_03"]
+        assert case.case_parameters[1].name in expected_heights
 
 
 def test_post_processing(output_folder: Path) -> None:

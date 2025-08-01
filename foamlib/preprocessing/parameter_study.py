@@ -65,7 +65,7 @@ def csv_generator(
                 if key in parameter_keys
             ],
             case_parameters=[
-                CaseParameter(category=str(key), name=of_case[str(key)])
+                CaseParameter(category=str(key), name=str(of_case[str(key)]))
                 for key, value in of_case.items()
                 if key in category_keys
             ],
