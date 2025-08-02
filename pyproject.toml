@@ -69,7 +69,7 @@ docs = [
 ]
 dev = [
     {include-group = "parameter_sweep"},
-    {include-group = "dashboard"}
+    {include-group = "dashboard"},
     {include-group = "lint"},
     {include-group = "typing"},
     {include-group = "test"},
