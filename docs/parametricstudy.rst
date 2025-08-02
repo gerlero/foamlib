@@ -33,7 +33,7 @@ The general concept of the parametric study is that template cases are copied to
 Multiple parammetric study generators are avaible and describe below in detail.
 
 CSV Generator
-~~~~~~~~~~~~~
+-------------
 
 The csv generator create the parametric study based on a CSV file that contains the parameters to be varied. This generator reads the CSV file, extracts the parameters, and generates multiple case variants by modifying the specified fields in the template case.
 
@@ -48,7 +48,7 @@ The csv generator create the parametric study based on a CSV file that contains 
         output_folder="path/to/output/folder"
     ).create_study()
 
-This simple generator specifies the above requirements in the csv file, where the instruction (file and key name (here: NX,NY and someModel)) is defined in the `system/simulationsParameters` file. The case_name  and the category will be defined as additional columns in the CSV file.
+This simple generator specifies the above requirements in the csv file, where the instruction (file and key name (here: NX,NY and someModel)) is defined in the `system/simulationParameters` file. The case_name  and the category will be defined as additional columns in the CSV file.
 
 
 .. code-block:: c++
@@ -66,7 +66,7 @@ This simple generator specifies the above requirements in the csv file, where th
         format      ascii;
         class       dictionary;
         location    "system";
-        object      simulationsParameters;
+        object      simulationParameters;
     }
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -82,7 +82,7 @@ The file can be included in every openfoam dictionary by adding the following li
 
 .. code-block:: c++
 
-    #include "system/simulationsParameters"
+    #include "system/simulationParameters"
 
     blocks
     (
@@ -101,4 +101,95 @@ case_002    150   300   modelB      fine          Spalart-Allmaras
 ==========  ====  ====  ==========  ============  ===================
 
 
+Grid Parameter sweep
+--------------------
+
+The grid parameter sweep generator allows users to define a set of parameters and creates all combinations of these parameters to generate multiple cases. 
+In the example below, the grid resolution and initial height are varied across multiple cases. 
+
+The most important class for the grid generator is the `GridParameter`. This class encapsulates both the `FoamDictInstruction` and the `CaseParameter`. The `FoamDictInstruction` class is used to specify which files and keys in the OpenFOAM case should be modified.
+
+
+.. code-block:: python
+
+    from foamlib.preprocessing.grid_parameter_sweep import CaseParameter, GridParameter
+    from foamlib.preprocessing.of_dict import FoamDictInstruction
+
+    # helper function
+    def grid_parameters(scale) -> list[int]:
+        return [
+            int(23 * scale),
+            int(8 * scale),
+            int(19 * scale),
+            int(42 * scale),
+            int(4 * scale),
+        ]
+
+
+    grid = GridParameter(
+        parameter_name="grid",
+        # generate 5 instructions in system/simulationParameters with the key1..5
+        modify_dict=[
+            FoamDictInstruction(
+                file_name=Path("system/simulationParameters"),
+                keys=[f"res{i}"],
+            )
+            for i in range(1, 6)
+        ],
+        parameters=[
+            CaseParameter(
+                name="coarse", values=grid_parameters(1) # return [23, 8, 19, 42, 4]
+            ),
+            CaseParameter(
+                name="mid", values=grid_parameters(2) # return [46, 16, 38, 84, 8]
+            ),
+            CaseParameter(
+                name="fine", values=grid_parameters(4) # return [92, 32, 76, 168, 16]
+            )]
+    )
+
+The modify_dict varaible stores the instructions for the OpenFOAM dictionary that will be modified. The `keys` parameter specifies the keys in the dictionary that will be modified. The `parameters` variable stores the parameters that will be used to modify the keys in the dictionary. Each `CaseParameter` contains a name and a list of values that will be used to modify the keys in the dictionary.
+
+.. code-block:: python
+
+    from foamlib.preprocessing.grid_parameter_sweep import grid_generator
+
+    init_height = GridParameter(
+        parameter_name="initHeight",
+        modify_dict=[
+            FoamDictInstruction(
+                file_name=Path("system/simulationParameters"),
+                keys=["initHeight"],
+            )
+        ],
+        parameters=[
+            CaseParameter(
+                name="height_02", values=[0.2]
+            ),
+            CaseParameter(
+                name="height_03", values=[0.3]
+            ),
+            CaseParameter(
+                name="height_04", values=[0.4]
+            )
+        ],
+    )
+
+    study = grid_generator(
+        parameters=[grid, init_height],
+        template_case=template_case,
+        output_folder=root / "Cases",
+    )
+
+    study.create_study(study_base_folder=root)
+
+This code creates a parametric study that varies the grid resolution and initial height across multiple cases. The `grid_generator` function takes a list of `GridParameter` objects, which define the parameters to be varied, and generates all combinations of these parameters to create multiple cases. So, 3 times 3 cases will be generated, resulting in 9 cases in total. Each case will have a unique name based on the parameters used.
+
+Convenience Functions for FoamDictInstruction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section provides a reference to all functions available in the `foamlib.preprocessing.system` module.
+
+.. automodule:: foamlib.preprocessing.system
+    :members:
 

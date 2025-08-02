@@ -58,11 +58,11 @@ def normalize_data(
             pass
         else:
             if np.issubdtype(arr.dtype, np.integer) and arr.ndim == 1:
-                return arr  # type: ignore [return-value]
+                return arr
             if arr.ndim == 2 and arr.shape[1] == 3:
                 if not np.issubdtype(arr.dtype, np.floating):
                     arr = arr.astype(float)
-                return arr  # type: ignore [return-value]
+                return arr
 
     if keywords is not None and (
         keywords == ("internalField",)
@@ -86,7 +86,7 @@ def normalize_data(
                     arr = arr.astype(float)
 
                 if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] in (3, 6, 9)):
-                    return arr  # type: ignore [return-value]
+                    return arr
 
             return [normalize_data(d) for d in data]  # type: ignore [arg-type, return-value]
 
@@ -126,7 +126,7 @@ def normalize_data(
         return [normalize_data(d) for d in data]  # type: ignore [arg-type, return-value]
 
     if isinstance(data, tuple) and not isinstance(data, DimensionSet):
-        return tuple(normalize_data(d, keywords=keywords) for d in data)  # type: ignore [misc]
+        return tuple(normalize_data(d, keywords=keywords) for d in data)  # type: ignore [arg-type]
 
     if isinstance(data, str):
         s = loads(data, keywords=keywords)
@@ -197,7 +197,7 @@ def dumps(
         )
         and isinstance(data, (int, float, np.ndarray))
     ):
-        data = np.asarray(data)  # type: ignore [assignment]
+        data = np.asarray(data)
         class_ = header.get("class", "") if header else ""
         assert isinstance(class_, str)
         scalar = "Scalar" in class_

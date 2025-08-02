@@ -55,7 +55,7 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            np.array([1, 2], dtype=np.float32),  # type: ignore[arg-type]
+            np.array([1, 2], dtype=np.float32),
             keywords=("internalField",),
             header={"format": "binary"},
         )
@@ -89,7 +89,10 @@ def test_serialize_data() -> None:
         )
         == b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
-    assert dumps([("a", "b"), ("c", "d")]) == b"(a b; c d;)"
+    assert (
+        dumps([("a", "b"), ("c", "d"), ("n", "no"), ("y", "yes")])
+        == b"(a b; c d; n no; y yes;)"
+    )
     assert dumps([("a", {"b": "c"}), ("d", {"e": "g"})]) == b"(a {b c;} d {e g;})"
     assert dumps([("a", [0, 1, 2]), ("b", {})]) == b"(a (0 1 2); b {})"
     assert dumps(["water", "oil", "mercury", "air"]) == b"(water oil mercury air)"
@@ -103,8 +106,8 @@ def test_serialize_file() -> None:
         == b"{FoamFile {version 2.0; format ascii; class dictionary;}} 1.0"
     )
     assert (
-        FoamFile.dumps({"a": "b", "c": "d"})
-        == b"{FoamFile {version 2.0; format ascii; class dictionary;}} a b; c d;"
+        FoamFile.dumps({"a": "b", "c": "d", "n": "no", "y": "yes"})
+        == b"{FoamFile {version 2.0; format ascii; class dictionary;}} a b; c d; n no; y yes;"
     )
     assert (
         FoamFile.dumps({"internalField": [[1, 2, 3], [4, 5, 6]]})
@@ -119,7 +122,7 @@ def test_serialize_file() -> None:
         FoamFile.dumps(
             {
                 "FoamFile": {"format": "binary"},
-                None: np.array([1, 2, 3], dtype=np.int32),  # type: ignore[dict-item]
+                None: np.array([1, 2, 3], dtype=np.int32),
             },
             ensure_header=False,
         )
@@ -135,7 +138,7 @@ def test_serialize_file() -> None:
     )
     assert (
         FoamFile.dumps(
-            {"FoamFile": {"format": "binary"}, None: (indices, values)},  # type: ignore[dict-item]
+            {"FoamFile": {"format": "binary"}, None: (indices, values)},
             ensure_header=False,
         )
         == b"FoamFile {format binary;} 3(\x00\x00\x00\x00\x03\x00\x00\x00\x07\x00\x00\x00) 7(h\xcb\r\x00\x1f\xcd\r\x00\x08\x1b\x0e\x00\xd7\xa85\x00\xda\xa85\x00\xd9\xa85\x00\xd8\xa85\x00)"

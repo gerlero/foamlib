@@ -16,7 +16,7 @@ FoamFile
 
 convertToMeters 0.146;
 
-#include "<system>/simulationsParameters"
+#include "<system>/simulationParameters"
 
 vertices
 (

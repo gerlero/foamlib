@@ -89,7 +89,7 @@ class Dimensioned:
         name: str | None = None,
     ) -> None:
         if is_sequence(value):
-            self.value: Tensor = np.array(value, dtype=float)  # type: ignore [assignment]
+            self.value: Tensor = np.array(value, dtype=float)
         else:
             assert isinstance(value, (int, float, np.ndarray))
             self.value = float(value)
@@ -113,7 +113,7 @@ class Dimensioned:
             other = Dimensioned(other, DimensionSet())
 
         return Dimensioned(
-            self.value + other.value,  # type: ignore [arg-type]
+            self.value + other.value,
             self.dimensions + other.dimensions,
             f"{self.name}+{other.name}"
             if self.name is not None and other.name is not None
@@ -125,7 +125,7 @@ class Dimensioned:
             other = Dimensioned(other, DimensionSet())
 
         return Dimensioned(
-            self.value - other.value,  # type: ignore [arg-type]
+            self.value - other.value,
             self.dimensions - other.dimensions,
             f"{self.name}-{other.name}"
             if self.name is not None and other.name is not None
@@ -137,7 +137,7 @@ class Dimensioned:
             other = Dimensioned(other, DimensionSet())
 
         return Dimensioned(
-            self.value * other.value,  # type: ignore [arg-type]
+            self.value * other.value,
             self.dimensions * other.dimensions,
             f"{self.name}*{other.name}"
             if self.name is not None and other.name is not None
@@ -149,7 +149,7 @@ class Dimensioned:
             other = Dimensioned(other, DimensionSet())
 
         return Dimensioned(
-            self.value / other.value,  # type: ignore [arg-type]
+            self.value / other.value,
             self.dimensions / other.dimensions,
             f"{self.name}/{other.name}"
             if self.name is not None and other.name is not None
@@ -161,7 +161,7 @@ class Dimensioned:
             return NotImplemented
 
         return Dimensioned(
-            self.value**exponent,  # type: ignore [arg-type]
+            self.value**exponent,
             self.dimensions**exponent,
             f"pow({self.name},{exponent})" if self.name is not None else None,
         )

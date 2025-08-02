@@ -15,7 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#include "<system>/simulationsParameters"
+#include "<system>/simulationParameters"
 
 defaultFieldValues
 (
@@ -27,7 +27,7 @@ regions
 (
     boxToCell
     {
-        box (0 0 -1) (0.1461 $fluidHeight 1);
+        box (0 0 -1) (0.1461 $initHeight 1);
         fieldValues
         (
             volScalarFieldValue alpha.water 1

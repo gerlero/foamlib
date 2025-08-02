@@ -1,12 +1,15 @@
+# ruff: noqa: UP045
 """This module provides a utility class for reading tabular data from files with various extensions."""
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 from itertools import islice
 from pathlib import Path
 from typing import Callable, ClassVar, Optional, Union
 
 import pandas as pd
+from defusedxml.ElementTree import parse
 
 
 class ReaderNotRegisteredError(Exception):
@@ -250,4 +253,63 @@ def read_csv(
     else:
         table = pd.read_csv(filepath, comment="#", header=None)
     update_column_names(table, column_names)
+    return table
+
+
+def read_catch2_benchmark(
+    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+) -> pd.DataFrame:
+    """Read a Catch2 XML benchmark results file and return a DataFrame."""
+    tree = parse(filepath)
+    root = tree.getroot()
+    if root is None:
+        err_msg = f"Unable to parse XML file: {filepath}"
+        raise ValueError(err_msg)
+
+    records = []
+
+    def _parse_sections(
+        sections: list[ET.Element], test_case_name: str, section_path: list[str]
+    ) -> None:
+        for section in sections:
+            name = section.attrib.get("name", "")
+            new_path = [*section_path, name]
+
+            subsections = section.findall("Section")
+            if subsections:
+                _parse_sections(subsections, test_case_name, new_path)
+            else:
+                benchmark = section.find("BenchmarkResults")
+                if benchmark is not None:
+                    mean = benchmark.find("mean")
+
+                    if mean is not None:
+                        record = {
+                            "test_case": test_case_name,
+                            "benchmark_name": benchmark.attrib.get("name"),
+                            "avg_runtime": float(mean.attrib.get("value", 0)),
+                        }
+
+                        # Add dynamic section depth fields
+                        for i, sec_name in enumerate(new_path):
+                            record[f"section{i + 1}"] = sec_name
+
+                        records.append(record)
+
+    for testcase in root.findall("TestCase"):
+        test_case_name = testcase.attrib.get("name")
+        if test_case_name:
+            _parse_sections(testcase.findall("Section"), str(test_case_name), [])
+
+    table = pd.DataFrame(records)
+
+    # Fill missing sectionN columns with empty string (not NaN)
+    max_sections = max((len(r) - 18 for r in records), default=0)
+    for i in range(1, max_sections + 1):
+        col = f"section{i}"
+        if col not in table.columns:
+            table[col] = ""
+
+    if column_names:
+        table = table[column_names]
     return table

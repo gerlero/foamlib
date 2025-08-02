@@ -35,6 +35,7 @@ jobs:
         python-version-file: pyproject.toml
     - name: Check types with mypy
       run: |
+        uv add pip
         uv run mypy --install-types --non-interactive
         uv run mypy
 
@@ -50,14 +51,14 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     strategy:
       matrix:
-        openfoam-version: [2412, 2006, 12, 9]
+        openfoam-version: [2506, 2006, 13, 9]
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
         slurm: [false]
         include:
-          - openfoam-version: 2412
+          - openfoam-version: 2506
             python-version: '3.13'
             slurm: true
-          - openfoam-version: 12
+          - openfoam-version: 13
             python-version: '3.13'
             slurm: true
           - openfoam-version: 2006

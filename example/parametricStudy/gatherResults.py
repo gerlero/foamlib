@@ -5,14 +5,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from foamlib.postprocessing.load_tables import OutputFile, list_outputfiles, load_tables
+from foamlib.postprocessing.load_tables import DataSource, list_function_objects, load_tables
 
 # damBreak
 root = Path(__file__).parent
 results = root / "results"
 results.mkdir(exist_ok=True)
 # %%
-out_files = list_outputfiles(root / "Cases")
+out_files = list_function_objects(root / "Cases")
 
 
 def max_height_filter(table: pd.DataFrame, parameters: dict[str, str]) -> pd.DataFrame:
@@ -28,7 +28,7 @@ def max_height_filter(table: pd.DataFrame, parameters: dict[str, str]) -> pd.Dat
 
 # %%
 forces = load_tables(
-    output_file=out_files["forces--force.dat"], dir_name=root / "Cases"
+    source=out_files["forces--force.dat"], dir_name=root / "Cases"
 )
 # %%
 forces.to_csv(
@@ -36,15 +36,15 @@ forces.to_csv(
     index=False,
 )
 
-probe_u = load_tables(output_file=out_files["probes--U"], dir_name=root / "Cases")
+probe_u = load_tables(source=out_files["probes--U"], dir_name=root / "Cases")
 probe_u.to_csv(
     results / "probe_u.csv",
     index=False,
 )
 
-file = OutputFile(file_name="U_freeSurface.raw", folder="freeSurface")
+file = DataSource(file_name="U_freeSurface.raw", folder="freeSurface")
 surface_heights = load_tables(
-    output_file=file, dir_name=root / "Cases", filter_table=max_height_filter
+    source=file, dir_name=root / "Cases", filter_table=max_height_filter
 )
 surface_heights.to_csv(
     results / "surface_heights.csv",

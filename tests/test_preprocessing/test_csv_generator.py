@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from pathlib import Path
 
+if sys.version_info >= (3, 9):
+    from collections.abc import Generator
+else:
+    from typing import Generator
+
 import pytest
-from foamlib.postprocessing.load_tables import OutputFile, load_tables
+from foamlib.postprocessing.load_tables import functionobject, load_tables
 from foamlib.preprocessing.parameter_study import csv_generator
 
 CSV_FILE = "tests/test_preprocessing/test_parastudy.csv"
@@ -12,12 +18,13 @@ OUTPUT_FOLDER = "tests/test_preprocessing/Cases/"
 
 
 @pytest.fixture
-def output_folder() -> Path:
+def output_folder() -> Generator[Path, None, None]:
     """Fixture to clean up the output case folder after the test."""
     output_cases = Path(OUTPUT_FOLDER)
     yield output_cases  # Provide the folder path to the test
     if output_cases.exists():
         shutil.rmtree(output_cases)  # Remove the folder after the test
+        Path(output_cases.parent / "parameter_study.json").unlink()
 
 
 def test_csv_generator(output_folder: Path) -> None:
@@ -30,7 +37,9 @@ def test_csv_generator(output_folder: Path) -> None:
 
     assert len(study.cases) == 2  # Assuming the CSV has 3 cases
 
-    study.create_study()
+    study.create_study(study_base_folder=output_folder.parent)
+
+    assert Path(output_folder.parent / "parameter_study.json").exists()
 
     for case in study.cases:
         assert case.output_case.exists()
@@ -51,16 +60,17 @@ def test_post_processing(output_folder: Path) -> None:
 
     assert len(study.cases) == 2  # Assuming the CSV has 2 cases
 
-    study.create_study()
+    study.create_study(study_base_folder=output_folder.parent)
 
     for case in study.cases:
         assert case.output_case.exists()
         assert len(case.key_value_pairs) > 0
 
     forces = load_tables(
-        output_file=OutputFile(file_name="force.dat", folder="forces"),
+        source=functionobject(file_name="force.dat", folder="forces"),
         dir_name=output_folder,
     )
+    assert forces is not None
     assert forces.columns.tolist() == [
         "Time",
         "total_x",
@@ -76,5 +86,6 @@ def test_post_processing(output_folder: Path) -> None:
         "initHeight",
     ]
 
+    assert forces is not None
     assert forces["grid"].unique().tolist() == ["res1"]
     assert sorted(forces["initHeight"].unique().tolist()) == ["height_02", "height_03"]

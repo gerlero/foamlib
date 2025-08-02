@@ -57,7 +57,7 @@ def test_run_cmd(flange: FoamCase) -> None:
             "0.001",
         ],
     )
-    flange.run([flange.application])
+    flange.run(["laplacianFoam"])
 
 
 def test_run_cmd_shell(flange: FoamCase) -> None:
@@ -71,7 +71,7 @@ def test_run_cmd_shell(flange: FoamCase) -> None:
     except CalledProcessError:
         flange.run('ansysToFoam "flange.ans" -scale 0.001')
 
-    flange.run(flange.application)
+    flange.run("laplacianFoam")
 
 
 def test_path(flange: FoamCase) -> None:
