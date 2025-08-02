@@ -32,11 +32,11 @@ def output_folder() -> Generator[Path, None, None]:
     "csv_file,expected_heights",
     [
         (
-            f"{CSV_FILE}",
+            CSV_FILE,
             ["height_02", "height_03"],
         ),
         (
-            f"{CSV_FILE2}",
+            CSV_FILE2,
             ["0.3", "0.2"],
         ),
     ],
