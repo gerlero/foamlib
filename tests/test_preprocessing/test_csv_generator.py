@@ -29,7 +29,7 @@ def output_folder() -> Generator[Path, None, None]:
 
 
 @pytest.mark.parametrize(
-    "csv_file,expected_heights",
+    ("csv_file", "expected_heights"),
     [
         (
             CSV_FILE,
