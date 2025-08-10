@@ -578,10 +578,12 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
 
         diff = len(content) - (end - start)
         for k, (s, d, e) in self._parsed.items():
-            if s > end:
+            if s >= end:
                 self._parsed[k] = (s + diff, d, e + diff)
-            elif e > start:
+            elif s > start:
                 self._parsed[k] = (s, d, e + diff)
+            elif e > start:
+                self._parsed[k] = (s, d, end + diff)
 
         self._parsed[keywords] = (start, data, end + diff)
 
