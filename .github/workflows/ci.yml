@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Lint with Ruff
       uses: astral-sh/ruff-action@v3
     - name: Format with Ruff
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Install uv
       uses: astral-sh/setup-uv@v6
     - name: Set up Python
@@ -70,7 +70,7 @@ jobs:
       fail-fast: false
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Set up OpenFOAM
       uses: gerlero/setup-openfoam@v1
       with:
@@ -103,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Install uv
       uses: astral-sh/setup-uv@v6
     - name: Check package build
