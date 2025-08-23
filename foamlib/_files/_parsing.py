@@ -17,6 +17,7 @@ else:
 import numpy as np
 from pyparsing import (
     CaselessKeyword,
+    CharsNotIn,
     Combine,
     Dict,
     Forward,
@@ -347,12 +348,13 @@ _TENSOR = common.ieee_float | (
     + Group(common.ieee_float[3] | common.ieee_float[6] | common.ieee_float[9])
     + Literal(")").suppress()
 ).add_parse_action(lambda tks: np.array(tks[0], dtype=float))
-# Match balanced parentheses with any content inside
-_PARENTHESIZED = Forward()
-_balanced = Forward()
-_balanced <<= Regex(r"[^()]*") + Opt(Literal("(") + _balanced + Literal(")") + _balanced)
-_PARENTHESIZED <<= Combine(Literal("(") + _balanced + Literal(")"))
-_IDENTIFIER = Combine(Word(_IDENTCHARS, _IDENTBODYCHARS) + Opt(_PARENTHESIZED))
+_BALANCED = Forward()
+_BALANCED <<= Opt(CharsNotIn("()")) + Opt(
+    Literal("(") + _BALANCED + Literal(")") + _BALANCED
+)
+_IDENTIFIER = Combine(
+    Word(_IDENTCHARS, _IDENTBODYCHARS) + Opt(Literal("(") + _BALANCED + Literal(")"))
+)
 
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
     lambda tks: Dimensioned(*reversed(tks.as_list()))
