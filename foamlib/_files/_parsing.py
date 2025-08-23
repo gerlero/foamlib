@@ -339,9 +339,20 @@ _SWITCH = (
     | Keyword("false", _IDENTBODYCHARS)
     | Keyword("off", _IDENTBODYCHARS)
 ).set_parse_action(lambda: False)
+
+# Parser for string-based dimension units (e.g., Pa, mm^2, s^-2)
+_UNIT_CHARS = printables.replace("[", "").replace("]", "").replace(";", "")
+_UNIT_STRING = (
+    Word(_UNIT_CHARS)[1, ...].set_parse_action(lambda tks: " ".join(tks))
+)
+
 _DIMENSIONS = (
-    Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
-).set_parse_action(lambda tks: DimensionSet(*tks))
+    # Numeric dimensions: [1 -1 -2 0 0 0 0]
+    (Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()).set_parse_action(lambda tks: DimensionSet(*tks))
+    |
+    # String-based units: [ Pa ] or [Pa mm^2 s^-2]
+    (Literal("[").suppress() + _UNIT_STRING + Literal("]").suppress()).set_parse_action(lambda tks: tks[0])
+)
 _TENSOR = common.ieee_float | (
     Literal("(").suppress()
     + Group(common.ieee_float[3] | common.ieee_float[6] | common.ieee_float[9])

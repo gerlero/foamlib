@@ -81,11 +81,29 @@ TensorLike = Union[
 ]
 
 
+class StringDimensionSet:
+    """Represents string-based dimensions like 'Pa', 'mm^2 s^-2', etc."""
+    
+    def __init__(self, units: str) -> None:
+        self.units = units
+    
+    def __repr__(self) -> str:
+        return f"StringDimensionSet('{self.units}')"
+    
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, StringDimensionSet):
+            return self.units == other.units
+        return False
+    
+    def __str__(self) -> str:
+        return self.units
+
+
 class Dimensioned:
     def __init__(
         self,
         value: TensorLike,
-        dimensions: DimensionSet | Sequence[float],
+        dimensions: DimensionSet | StringDimensionSet | Sequence[float] | str,
         name: str | None = None,
     ) -> None:
         if is_sequence(value):
@@ -94,10 +112,12 @@ class Dimensioned:
             assert isinstance(value, (int, float, np.ndarray))
             self.value = float(value)
 
-        if not isinstance(dimensions, DimensionSet):
-            self.dimensions = DimensionSet(*dimensions)
-        else:
+        if isinstance(dimensions, str):
+            self.dimensions = StringDimensionSet(dimensions)
+        elif isinstance(dimensions, (DimensionSet, StringDimensionSet)):
             self.dimensions = dimensions
+        else:
+            self.dimensions = DimensionSet(*dimensions)
 
         self.name = name
 
