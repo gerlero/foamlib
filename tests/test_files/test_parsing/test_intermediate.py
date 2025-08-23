@@ -32,7 +32,6 @@ def test_var_multiple() -> None:
     assert parsed[("c",)] == "d"
 
 
-@pytest.mark.xfail(reason="Not currently supported")
 def test_strange_names() -> None:
     parsed = Parsed(b"""
         "(U|k|epsilon|R)Final"
@@ -55,7 +54,8 @@ def test_strange_names() -> None:
         }
 
     """)
-    assert parsed[("(U|k|epsilon|R)Final", "$U")] == ""
+    # Note: quoted strings include the quotes in the key
+    assert parsed[('"(U|k|epsilon|R)Final"', "$U")] == ""
     assert parsed[("thermalPhaseChange:dmdtf",)] == 1.0
     assert parsed[("thermo:rho", "solver")] == "PCG"
     assert parsed[("alpha.water", "solver")] == "PCG"
