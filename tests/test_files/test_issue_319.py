@@ -4,6 +4,8 @@ Test case for issue #319: FoamFile.update() inserts new line before updated entr
 This test ensures that repeated updates to sub-dictionary entries don't accumulate blank lines.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 
 from foamlib import FoamFile
@@ -49,7 +51,7 @@ subDict
         initial_lines = (tmp_path / "file").read_text().split("\n")
 
         initial_blank_count = 0
-        second_line_idx = None
+        second_line_idx: int | None = None
         for i, line in enumerate(initial_lines):
             if "second_line" in line and "second_val" in line:
                 second_line_idx = i
@@ -66,7 +68,7 @@ subDict
         )
 
         # Perform multiple updates and ensure blank lines don't accumulate
-        blank_line_counts = []
+        blank_line_counts: list[int] = []
 
         for i in range(5):
             testDict = FoamFile(tmp_path / "file")
@@ -76,8 +78,7 @@ subDict
             testDict["subDict"].update(updateDict)
 
             # Count blank lines before second_line after update
-            with open(tmp_path / "file") as f:
-                lines = f.read().split("\n")
+            lines = (tmp_path / "file").read_text().split("\n")
 
             blank_count = 0
             for j, line in enumerate(lines):
@@ -150,7 +151,7 @@ FoamFile
 
     try:
         # Perform multiple direct assignments
-        blank_line_counts = []
+        blank_line_counts: list[int] = []
 
         for i in range(3):
             testDict = FoamFile(tmp_path / "file")
