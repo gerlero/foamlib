@@ -32,7 +32,6 @@ def test_var_multiple() -> None:
     assert parsed[("c",)] == "d"
 
 
-@pytest.mark.xfail(reason="Not currently supported")
 def test_strange_names() -> None:
     parsed = Parsed(b"""
         "(U|k|epsilon|R)Final"

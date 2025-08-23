@@ -31,6 +31,7 @@ from pyparsing import (
     ParseResults,
     Regex,
     Word,
+    ZeroOrMore,
     common,
     counted_array,
     dbl_quoted_string,
@@ -351,7 +352,7 @@ _PARENTHESIZED = Forward()
 _IDENTIFIER = Combine(Word(_IDENTCHARS, _IDENTBODYCHARS) + Opt(_PARENTHESIZED))
 _PARENTHESIZED <<= Combine(
     Literal("(")
-    + (_PARENTHESIZED | Word(_IDENTBODYCHARS) + Opt(_PARENTHESIZED))
+    + ZeroOrMore(_PARENTHESIZED | Word(_IDENTBODYCHARS + ","))
     + Literal(")")
 )
 
