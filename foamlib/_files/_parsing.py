@@ -347,14 +347,11 @@ _TENSOR = common.ieee_float | (
     + Group(common.ieee_float[3] | common.ieee_float[6] | common.ieee_float[9])
     + Literal(")").suppress()
 ).add_parse_action(lambda tks: np.array(tks[0], dtype=float))
-def _balanced_parens() -> ParserElement:
-    """Match balanced parentheses with any content inside."""
-    content = Regex(r"[^()]*")
-    balanced = Forward()
-    balanced <<= content + Opt(Literal("(") + balanced + Literal(")") + balanced)
-    return Combine(Literal("(") + balanced + Literal(")"))
-
-_PARENTHESIZED = _balanced_parens()
+# Match balanced parentheses with any content inside
+_PARENTHESIZED = Forward()
+_balanced = Forward()
+_balanced <<= Regex(r"[^()]*") + Opt(Literal("(") + _balanced + Literal(")") + _balanced)
+_PARENTHESIZED <<= Combine(Literal("(") + _balanced + Literal(")"))
 _IDENTIFIER = Combine(Word(_IDENTCHARS, _IDENTBODYCHARS) + Opt(_PARENTHESIZED))
 
 _DIMENSIONED = (Opt(_IDENTIFIER) + _DIMENSIONS + _TENSOR).set_parse_action(
