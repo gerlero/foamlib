@@ -75,7 +75,9 @@ subDict
 
             # Update using the update() method (as mentioned in the issue)
             updateDict = {"second_line": f"update_val_{i + 1}"}
-            testDict["subDict"].update(updateDict)
+            subdict = testDict["subDict"]
+            assert isinstance(subdict, FoamFile.SubDict)
+            subdict.update(updateDict)
 
             # Count blank lines before second_line after update
             lines = (tmp_path / "file").read_text().split("\n")
@@ -157,7 +159,9 @@ FoamFile
             testDict = FoamFile(tmp_path / "file")
 
             # Direct assignment (alternative method)
-            testDict["subDict"]["second_line"] = f"direct_update_{i + 1}"
+            subdict = testDict["subDict"]
+            assert isinstance(subdict, FoamFile.SubDict)
+            subdict["second_line"] = f"direct_update_{i + 1}"
 
             # Count blank lines before second_line
             lines = (tmp_path / "file").read_text().split("\n")
