@@ -373,7 +373,7 @@ class FoamFile(
 
             # Check if this is an update to an existing entry
             is_update = keywords in parsed
-            
+
             # For updates to existing sub-dictionary entries, preserve existing spacing
             # to avoid accumulating blank lines
             if is_update and len(keywords) > 1:
@@ -383,12 +383,11 @@ class FoamFile(
                 if existing_content.startswith(b"\n"):
                     # Entry already has leading newlines, preserve them exactly
                     before = b""
+                # If the existing entry doesn't start with newlines, add appropriate spacing
+                elif parsed.contents[:start].endswith(b"\n"):
+                    before = b""  # Already have a newline before
                 else:
-                    # If the existing entry doesn't start with newlines, add appropriate spacing
-                    if parsed.contents[:start].endswith(b"\n"):
-                        before = b""  # Already have a newline before
-                    else:
-                        before = b"\n"  # Need to add a newline
+                    before = b"\n"  # Need to add a newline
             elif start and not parsed.contents[:start].endswith(b"\n\n"):
                 if parsed.contents[:start].endswith(b"\n"):
                     before = b"\n" if len(keywords) <= 1 else b""
