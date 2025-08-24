@@ -302,7 +302,7 @@ class FoamCaseRunBase(FoamCaseBase):
             end_time = None
 
         # Import here to avoid circular imports
-        from ._log_monitor import LogFileMonitor  # noqa: PLC0415
+        from ._subprocess import LogFileMonitor  # noqa: PLC0415
 
         with self.__progress as progress:
             task = progress.add_task(
@@ -321,12 +321,12 @@ class FoamCaseRunBase(FoamCaseBase):
                     progress.update(task)
 
             # Set up log file monitoring
-            log_monitor = LogFileMonitor(self.path, process_stdout)
+            with LogFileMonitor(self.path, process_stdout) as log_monitor:
 
-            yield process_stdout
+                yield process_stdout
 
-            # Check for any final progress updates from log files
-            log_monitor.monitor_once()
+                # Check for any final progress updates from log files
+                log_monitor.monitor_once()
 
             progress.update(task, completed=1, total=1)
 
