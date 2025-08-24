@@ -5,14 +5,24 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import sys
 import time
 from pathlib import Path
-from typing import Callable, Pattern
 
-if hasattr(os, 'PathLike'):
+if sys.version_info >= (3, 9):
+    from collections.abc import Callable
+    from typing import Pattern, Union
     PathLike = os.PathLike[str]
 else:
-    PathLike = str
+    from typing import Callable, Dict, List, Pattern, Union
+    if hasattr(os, 'PathLike'):
+        try:
+            PathLike = os.PathLike[str]
+        except TypeError:
+            # Python 3.7/3.8 - os.PathLike not subscriptable
+            PathLike = os.PathLike
+    else:
+        PathLike = str
 
 
 class LogFileMonitor:
@@ -24,7 +34,7 @@ class LogFileMonitor:
     def __init__(
         self, 
         case_path: PathLike, 
-        process_line: Callable[[str], None] | None = None
+        process_line: Union[Callable[[str], None], None] = None
     ):
         """
         Initialize log file monitor.
@@ -35,14 +45,16 @@ class LogFileMonitor:
         """
         self.case_path = Path(case_path)
         self.process_line = process_line or (lambda _: None)
-        self._monitored_files: dict[Path, int] = {}
+        # Use Dict for compatibility with Python 3.7/3.8
+        from typing import Dict
+        self._monitored_files: Dict[Path, int] = {}
         self._monitoring = False
     
-    def _find_log_files(self) -> list[Path]:
+    def _find_log_files(self):
         """Find all log files in the case directory."""
         return list(self.case_path.glob("log.*"))
     
-    def _read_new_lines(self, log_file: Path) -> list[str]:
+    def _read_new_lines(self, log_file: Path):
         """Read new lines from a log file since last check."""
         try:
             current_size = log_file.stat().st_size
@@ -90,10 +102,11 @@ class AsyncLogFileMonitor(LogFileMonitor):
     def __init__(
         self, 
         case_path: PathLike, 
-        process_line: Callable[[str], None] | None = None
+        process_line: Union[Callable[[str], None], None] = None
     ):
         super().__init__(case_path, process_line)
-        self._monitor_task: asyncio.Task[None] | None = None
+        # Use Union for compatibility with Python 3.7/3.8
+        self._monitor_task: Union[asyncio.Task, None] = None
     
     async def monitor_once_async(self) -> None:
         """Async version of monitor_once."""
@@ -112,7 +125,7 @@ class AsyncLogFileMonitor(LogFileMonitor):
             self._monitoring = False
             raise
     
-    def start_background_monitoring(self, interval: float = 0.5) -> asyncio.Task[None]:
+    def start_background_monitoring(self, interval: float = 0.5):
         """Start monitoring in the background as an asyncio task."""
         if self._monitor_task is not None and not self._monitor_task.done():
             self._monitor_task.cancel()
@@ -129,7 +142,7 @@ class AsyncLogFileMonitor(LogFileMonitor):
             self._monitor_task.cancel()
 
 
-def should_monitor_log_files(cmd: list[str] | str) -> bool:
+def should_monitor_log_files(cmd):
     """
     Determine if a command is likely to redirect output to log files.
     
