@@ -556,11 +556,41 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
             ret[(*_keywords, keyword)] = (start, ..., end)
             for d in data:
                 if isinstance(d, ParseResults):
-                    ret.update(
-                        Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
-                    )
+                    # Recursively flatten nested results
+                    nested_results = Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
+                    for nested_key, nested_value in nested_results.items():
+                        if nested_key in ret:
+                            # Handle duplicate keys by creating lists
+                            _, existing_data, _ = ret[nested_key]
+                            if existing_data is ...:
+                                # First occurrence of this directive - replace Ellipsis with actual value
+                                ret[nested_key] = (ret[nested_key][0], nested_value[1], nested_value[2])
+                            elif isinstance(existing_data, list):
+                                # Already a list - append new value  
+                                existing_data.append(nested_value[1])
+                                ret[nested_key] = (ret[nested_key][0], existing_data, nested_value[2])
+                            else:
+                                # Second occurrence - convert to list
+                                ret[nested_key] = (ret[nested_key][0], [existing_data, nested_value[1]], nested_value[2])
+                        else:
+                            ret[nested_key] = nested_value
                 else:
-                    ret[(*_keywords, keyword)] = (start, d, end)
+                    key = (*_keywords, keyword)
+                    if key in ret:
+                        # Handle duplicate keys by creating lists  
+                        _, existing_data, _ = ret[key]
+                        if existing_data is ...:
+                            # First occurrence of this directive - replace Ellipsis with actual value
+                            ret[key] = (ret[key][0], d, end)
+                        elif isinstance(existing_data, list):
+                            # Already a list - append new value
+                            existing_data.append(d)
+                            ret[key] = (ret[key][0], existing_data, end)
+                        else:
+                            # Second occurrence - convert to list
+                            ret[key] = (ret[key][0], [existing_data, d], end)
+                    else:
+                        ret[key] = (start, d, end)
         return ret
 
     def __getitem__(
