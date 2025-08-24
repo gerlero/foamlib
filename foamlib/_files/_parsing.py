@@ -579,6 +579,18 @@ _LOCATED_FILE = (
 
 
 class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
+    """Parser for OpenFOAM data files with support for multiple directives.
+    
+    This class parses OpenFOAM files and preserves multiple #-directives with
+    the same keyword (e.g., multiple #includeFunc entries), maintaining their
+    order and relative positions within the file.
+    
+    Key features:
+    - Preserves multiple directives with same keyword using multidict-like behavior
+    - Maintains backward compatibility: single access returns first value
+    - New getall() method returns all values for a key in order
+    - Custom OrderedMultiDict internal storage preserves exact parsing order
+    """
     def __init__(self, contents: bytes) -> None:
         # Use OrderedMultiDict to preserve order and allow duplicate keys
         self._parsed: OrderedMultiDict = OrderedMultiDict()
@@ -643,7 +655,38 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
     def getall(
         self, keywords: tuple[str, ...]
     ) -> list[Data | StandaloneData | EllipsisType]:
-        """Get all values for the given keywords, preserving order."""
+        """Get all values for the given keywords, preserving order.
+        
+        This method is particularly useful for accessing multiple #-directives
+        with the same keyword (e.g., multiple #includeFunc entries), which 
+        were previously overwritten by the parsing system.
+        
+        Args:
+            keywords: Tuple of keywords identifying the entry
+            
+        Returns:
+            List of all values for the keywords, preserving their order of
+            appearance in the original file
+            
+        Raises:
+            KeyError: If the keywords are not found
+            
+        Example:
+            >>> p = Parsed(b'''
+            ... functions
+            ... {
+            ...     #includeFunc first
+            ...     #includeFunc second
+            ...     #includeFunc third
+            ... }
+            ... ''')
+            >>> p.getall(('functions', '#includeFunc'))
+            ['first', 'second', 'third']
+            >>> p[('functions', '#includeFunc')]  # Single access returns first
+            'first'
+        """
+        if keywords not in self._parsed:
+            raise KeyError(keywords)
         values = []
         for _, data, _ in self._parsed.getall(keywords):
             if data is not ...:  # Skip placeholder entries
