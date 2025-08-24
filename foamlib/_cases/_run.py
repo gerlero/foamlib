@@ -39,7 +39,7 @@ else:
     from typing_extensions import Self
 
 from ._base import FoamCaseBase
-from ._subprocess import DEVNULL, STDOUT
+from ._subprocess import DEVNULL, STDOUT, LogFileMonitor
 
 if TYPE_CHECKING:
     from .._files import FoamFieldFile
@@ -317,7 +317,13 @@ class FoamCaseRunBase(FoamCaseBase):
                 else:
                     progress.update(task)
 
-            yield process_stdout
+            # Set up log file monitoring
+            with LogFileMonitor(self.path, process_stdout) as log_monitor:
+                yield process_stdout
+
+                # Check for any final progress updates from log files
+                log_monitor.monitor_once()
+
             progress.update(task, completed=1, total=1)
 
     def __mkrundir(self) -> Path:
