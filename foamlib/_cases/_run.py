@@ -301,6 +301,9 @@ class FoamCaseRunBase(FoamCaseBase):
         except (KeyError, FileNotFoundError):
             end_time = None
 
+        # Import here to avoid circular imports
+        from ._log_monitor import LogFileMonitor, should_monitor_log_files
+
         with self.__progress as progress:
             task = progress.add_task(
                 f"({self.name}) Running {self.__cmd_name(cmd)}...", total=None
@@ -317,7 +320,17 @@ class FoamCaseRunBase(FoamCaseBase):
                 else:
                     progress.update(task)
 
+            # Set up log file monitoring if needed
+            log_monitor = None
+            if should_monitor_log_files(cmd):
+                log_monitor = LogFileMonitor(self.path, process_stdout)
+
             yield process_stdout
+
+            # If we have a log monitor, check for any final progress updates
+            if log_monitor is not None:
+                log_monitor.monitor_once()
+            
             progress.update(task, completed=1, total=1)
 
     def __mkrundir(self) -> Path:

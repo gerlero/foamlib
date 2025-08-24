@@ -57,6 +57,14 @@ def run_sync(
     if sys.version_info < (3, 8):
         cmd = [str(arg) for arg in cmd]
 
+    # Import here to avoid circular imports
+    from ._log_monitor import LogFileMonitor, should_monitor_log_files
+    
+    # Set up log file monitoring if needed
+    log_monitor = None
+    if should_monitor_log_files(cmd):
+        log_monitor = LogFileMonitor(case, process_stdout)
+
     with subprocess.Popen(
         cmd,
         cwd=case,
@@ -79,7 +87,11 @@ def run_sync(
             selector.register(proc.stderr, selectors.EVENT_READ)
             open_streams = {proc.stdout, proc.stderr}
             while open_streams:
-                for key, _ in selector.select():
+                # Check for new log file content if monitoring
+                if log_monitor is not None:
+                    log_monitor.monitor_once()
+                
+                for key, _ in selector.select(timeout=0.1):  # Small timeout to allow log monitoring
                     assert key.fileobj in open_streams
                     line = key.fileobj.readline()  # type: ignore [union-attr]
                     if not line:
@@ -98,6 +110,10 @@ def run_sync(
                         if stderr not in (DEVNULL, PIPE):
                             assert not isinstance(stderr, int)
                             stderr.write(line)
+
+    # Final check for log file content
+    if log_monitor is not None:
+        log_monitor.monitor_once()
 
     assert proc.returncode is not None
 
@@ -129,60 +145,84 @@ async def run_async(
     if sys.version_info < (3, 8):
         cmd = [str(arg) for arg in cmd]
 
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        cwd=case,
-        env=_env(case),
-        stdout=PIPE,
-        stderr=PIPE,
-    )
+    # Import here to avoid circular imports
+    from ._log_monitor import AsyncLogFileMonitor, should_monitor_log_files
 
-    if stderr is STDOUT:
-        stderr = stdout
+    # Set up log file monitoring if needed
+    log_monitor = None
+    monitor_task = None
+    if should_monitor_log_files(cmd):
+        log_monitor = AsyncLogFileMonitor(case, process_stdout)
+        monitor_task = log_monitor.start_background_monitoring()
 
-    output = StringIO() if stdout is PIPE else None
-    error = StringIO()
-
-    async def tee_stdout() -> None:
-        while True:
-            assert proc.stdout is not None
-            line = (await proc.stdout.readline()).decode()
-            if not line:
-                break
-            process_stdout(line)
-            if output is not None:
-                output.write(line)
-            if stdout not in (DEVNULL, PIPE):
-                assert not isinstance(stdout, int)
-                stdout.write(line)
-
-    async def tee_stderr() -> None:
-        while True:
-            assert proc.stderr is not None
-            line = (await proc.stderr.readline()).decode()
-            if not line:
-                break
-            error.write(line)
-            if stderr not in (DEVNULL, PIPE):
-                assert not isinstance(stderr, int)
-                stderr.write(line)
-
-    await asyncio.gather(tee_stdout(), tee_stderr())
-
-    await proc.wait()
-    assert proc.returncode is not None
-
-    if check and proc.returncode != 0:
-        raise CalledProcessError(
-            returncode=proc.returncode,
-            cmd=cmd,
-            output=output.getvalue() if output is not None else None,
-            stderr=error.getvalue(),
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            cwd=case,
+            env=_env(case),
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
-    return CompletedProcess(
-        cmd,
-        returncode=proc.returncode,
-        stdout=output.getvalue() if output is not None else None,
-        stderr=error.getvalue(),
-    )
+        if stderr is STDOUT:
+            stderr = stdout
+
+        output = StringIO() if stdout is PIPE else None
+        error = StringIO()
+
+        async def tee_stdout() -> None:
+            while True:
+                assert proc.stdout is not None
+                line = (await proc.stdout.readline()).decode()
+                if not line:
+                    break
+                process_stdout(line)
+                if output is not None:
+                    output.write(line)
+                if stdout not in (DEVNULL, PIPE):
+                    assert not isinstance(stdout, int)
+                    stdout.write(line)
+
+        async def tee_stderr() -> None:
+            while True:
+                assert proc.stderr is not None
+                line = (await proc.stderr.readline()).decode()
+                if not line:
+                    break
+                error.write(line)
+                if stderr not in (DEVNULL, PIPE):
+                    assert not isinstance(stderr, int)
+                    stderr.write(line)
+
+        await asyncio.gather(tee_stdout(), tee_stderr())
+
+        await proc.wait()
+        assert proc.returncode is not None
+
+        # Final check for log file content
+        if log_monitor is not None:
+            await log_monitor.monitor_once_async()
+
+        if check and proc.returncode != 0:
+            raise CalledProcessError(
+                returncode=proc.returncode,
+                cmd=cmd,
+                output=output.getvalue() if output is not None else None,
+                stderr=error.getvalue(),
+            )
+
+        return CompletedProcess(
+            cmd,
+            returncode=proc.returncode,
+            stdout=output.getvalue() if output is not None else None,
+            stderr=error.getvalue(),
+        )
+    
+    finally:
+        # Stop monitoring when done
+        if monitor_task is not None:
+            monitor_task.cancel()
+            try:
+                await monitor_task
+            except asyncio.CancelledError:
+                pass
