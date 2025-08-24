@@ -15,6 +15,7 @@ else:
     EllipsisType = type(...)
 
 import numpy as np
+from multidict import MultiDict
 from pyparsing import (
     CaselessKeyword,
     CharsNotIn,
@@ -43,69 +44,6 @@ from ._types import Data, Dimensioned, DimensionSet, File, StandaloneData, SubDi
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
-
-
-class OrderedMultiDict:
-    """A MultiDict-like structure that preserves order and allows duplicate keys."""
-    
-    def __init__(self) -> None:
-        self._items: list[tuple[tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]]] = []
-    
-    def add(self, key: tuple[str, ...], value: tuple[int, Data | StandaloneData | EllipsisType, int]) -> None:
-        """Add a key-value pair, preserving order and allowing duplicates."""
-        self._items.append((key, value))
-    
-    def __getitem__(self, key: tuple[str, ...]) -> tuple[int, Data | StandaloneData | EllipsisType, int]:
-        """Get the first value for the given key."""
-        for k, v in self._items:
-            if k == key:
-                return v
-        raise KeyError(key)
-    
-    def __setitem__(self, key: tuple[str, ...], value: tuple[int, Data | StandaloneData | EllipsisType, int]) -> None:
-        """Set the value for a key, replacing the first occurrence or adding if not found."""
-        for i, (k, v) in enumerate(self._items):
-            if k == key:
-                self._items[i] = (key, value)
-                return
-        # If key not found, add it
-        self._items.append((key, value))
-    
-    def __delitem__(self, key: tuple[str, ...]) -> None:
-        """Delete all occurrences of the key."""
-        self._items = [(k, v) for k, v in self._items if k != key]
-    
-    def getall(self, key: tuple[str, ...]) -> list[tuple[int, Data | StandaloneData | EllipsisType, int]]:
-        """Get all values for the given key, preserving order."""
-        return [v for k, v in self._items if k == key]
-    
-    def __contains__(self, key: tuple[str, ...]) -> bool:
-        """Check if key exists."""
-        return any(k == key for k, v in self._items)
-    
-    def __iter__(self) -> Iterator[tuple[str, ...]]:
-        """Iterate over unique keys in order of first occurrence."""
-        seen = set()
-        for k, v in self._items:
-            if k not in seen:
-                seen.add(k)
-                yield k
-    
-    def __len__(self) -> int:
-        """Return number of unique keys."""
-        return len(set(k for k, v in self._items))
-    
-    def items(self) -> Iterator[tuple[tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]]]:
-        """Iterate over all key-value pairs, preserving order and duplicates."""
-        return iter(self._items)
-    
-    def keys(self) -> Iterator[tuple[str, ...]]:
-        """Iterate over all keys, preserving order and duplicates."""
-        return (k for k, v in self._items)
-    
-    def values(self) -> Iterator[tuple[int, Data | StandaloneData | EllipsisType, int]]:
-        """Iterate over all values, preserving order."""
-        return (v for k, v in self._items)
 
 
 def _ascii_numeric_list(
@@ -529,23 +467,40 @@ _DATA_OR_DICT = (_DATA | _DICT).ignore(_COMMENT).parse_with_tabs()
 
 
 @overload
-def loads(s: bytes | str, *, keywords: tuple[()]) -> File | StandaloneData: ...
+def loads(s: bytes | str, *, keywords: tuple[()]) -> Union[File, MultiDict, StandaloneData]: ...
 
 
 @overload
 def loads(
     s: bytes | str, *, keywords: tuple[str, ...] | None = None
-) -> File | StandaloneData | Data | SubDict: ...
+) -> Union[File, MultiDict, StandaloneData, Data, SubDict]: ...
 
 
 def loads(
     s: bytes | str, *, keywords: tuple[str, ...] | None = None
-) -> File | StandaloneData | Data | SubDict:
+) -> Union[File, MultiDict, StandaloneData, Data, SubDict]:
     if isinstance(s, bytes):
         s = s.decode("latin-1")
 
     if keywords == ():
-        data = _FILE.parse_string(s, parse_all=True).as_dict()
+        # Try the original approach first
+        try:
+            data = _FILE.parse_string(s, parse_all=True).as_dict()
+        except Exception:
+            # If that fails, fall back to Parsed
+            parsed = Parsed(s.encode("latin-1"))
+            data = parsed.as_dict()
+        else:
+            # Check if we might have lost duplicates by parsing with Parsed too
+            parsed = Parsed(s.encode("latin-1"))
+            parsed_data = parsed.as_dict()
+            
+            # If the Parsed version has MultiDict but original doesn't, use Parsed version
+            if isinstance(parsed_data, dict):
+                for v in parsed_data.values():
+                    if isinstance(v, MultiDict):
+                        data = parsed_data
+                        break
 
         if len(data) == 1 and None in data:
             data = data[None]
@@ -584,22 +539,23 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
     This class parses OpenFOAM files and preserves multiple #-directives with
     the same keyword (e.g., multiple #includeFunc entries), maintaining their
     order and relative positions within the file.
-    
-    Key features:
-    - Preserves multiple directives with same keyword using multidict-like behavior
-    - Maintains backward compatibility: single access returns first value
-    - New getall() method returns all values for a key in order
-    - Custom OrderedMultiDict internal storage preserves exact parsing order
     """
     def __init__(self, contents: bytes) -> None:
-        # Use OrderedMultiDict to preserve order and allow duplicate keys
-        self._parsed: OrderedMultiDict = OrderedMultiDict()
+        # Store all key-value pairs in order, allowing duplicates
+        self._items: list[tuple[tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]]] = []
+        
         for parse_result in _LOCATED_FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
         ):
-            # Get all key-value pairs from this parse result
+            # Get all key-value pairs from this parse result  
             for key, value in self._flatten_result(parse_result):
-                self._parsed.add(key, value)
+                self._items.append((key, value))
+        
+        # Build a lookup for unique keys
+        self._unique_keys: dict[tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]] = {}
+        for key, value in self._items:
+            if key not in self._unique_keys:
+                self._unique_keys[key] = value
 
         self.contents = contents
         self.modified = False
@@ -643,13 +599,18 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
     def __getitem__(
         self, keywords: tuple[str, ...]
     ) -> Data | StandaloneData | EllipsisType:
+        """Get the first value for the given keywords (backward compatibility)."""
+        if keywords not in self._unique_keys:
+            raise KeyError(keywords)
+        
         # For backward compatibility, return the first non-ellipsis value if available
-        all_values = self._parsed.getall(keywords)
-        for _, data, _ in all_values:
-            if data is not ...:
-                return data
+        for key, (_, data, _) in self._items:
+            if key == keywords:
+                if data is not ...:
+                    return data
+        
         # If no non-ellipsis values found, return the first value (could be ellipsis)
-        _, data, _ = self._parsed[keywords]
+        _, data, _ = self._unique_keys[keywords]
         return data
 
     def getall(
@@ -685,11 +646,13 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
             >>> p[('functions', '#includeFunc')]  # Single access returns first
             'first'
         """
-        if keywords not in self._parsed:
+        if keywords not in self._unique_keys:
             raise KeyError(keywords)
+        
+        # Get all values for this key in order
         values = []
-        for _, data, _ in self._parsed.getall(keywords):
-            if data is not ...:  # Skip placeholder entries
+        for key, (_, data, _) in self._items:
+            if key == keywords and data is not ...:  # Skip placeholder entries
                 values.append(data)
         return values
 
@@ -702,53 +665,94 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         start, end = self.entry_location(keywords, missing_ok=True)
 
         diff = len(content) - (end - start)
-        for k, (s, d, e) in self._parsed.items():
+        
+        # Update all items positions
+        updated_items = []
+        for key, (s, d, e) in self._items:
             if s >= end:
-                self._parsed[k] = (s + diff, d, e + diff)
+                updated_items.append((key, (s + diff, d, e + diff)))
             elif e > start:
-                self._parsed[k] = (s, d, e + diff)
-
-        self._parsed[keywords] = (start, data, end + diff)
+                updated_items.append((key, (s, d, e + diff)))
+            else:
+                updated_items.append((key, (s, d, e)))
+        
+        # Add the new entry
+        updated_items.append((keywords, (start, data, end + diff)))
+        self._items = updated_items
+        
+        # Update unique keys lookup
+        self._unique_keys[keywords] = (start, data, end + diff)
 
         self.contents = self.contents[:start] + content + self.contents[end:]
         self.modified = True
 
-        for k in list(self._parsed):
-            if keywords != k and keywords == k[: len(keywords)]:
-                del self._parsed[k]
+        # Remove nested entries
+        keys_to_remove = []
+        for key, _ in self._items:
+            if keywords != key and keywords == key[: len(keywords)]:
+                keys_to_remove.append(key)
+        
+        for key in keys_to_remove:
+            self._items = [(k, v) for k, v in self._items if k != key]
+            if key in self._unique_keys:
+                del self._unique_keys[key]
 
     def __delitem__(self, keywords: tuple[str, ...]) -> None:
         start, end = self.entry_location(keywords)
-        del self._parsed[keywords]
+        
+        # Remove from unique keys
+        del self._unique_keys[keywords]
+        
+        # Remove all occurrences from items
+        self._items = [(k, v) for k, v in self._items if k != keywords]
 
-        for k in list(self._parsed):
-            if keywords == k[: len(keywords)]:
-                del self._parsed[k]
+        # Remove nested entries
+        keys_to_remove = []
+        for key, _ in self._items:
+            if keywords == key[: len(keywords)]:
+                keys_to_remove.append(key)
+        
+        for key in keys_to_remove:
+            self._items = [(k, v) for k, v in self._items if k != key]
+            if key in self._unique_keys:
+                del self._unique_keys[key]
 
         diff = end - start
-        for k, (s, d, e) in self._parsed.items():
+        # Update all items positions
+        updated_items = []
+        for key, (s, d, e) in self._items:
             if s > end:
-                self._parsed[k] = (s - diff, d, e - diff)
+                updated_items.append((key, (s - diff, d, e - diff)))
             elif e > start:
-                self._parsed[k] = (s, d, e - diff)
+                updated_items.append((key, (s, d, e - diff)))
+            else:
+                updated_items.append((key, (s, d, e)))
+        self._items = updated_items
+        
+        # Update unique keys lookup
+        updated_unique = {}
+        for key, (s, d, e) in self._items:
+            if key not in updated_unique:
+                updated_unique[key] = (s, d, e)
+        self._unique_keys = updated_unique
 
         self.contents = self.contents[:start] + self.contents[end:]
         self.modified = True
 
     def __contains__(self, keywords: object) -> bool:
-        return keywords in self._parsed
+        return keywords in self._unique_keys
 
     def __iter__(self) -> Iterator[tuple[str, ...]]:
-        return iter(self._parsed)
+        return iter(self._unique_keys)
 
     def __len__(self) -> int:
-        return len(self._parsed)
+        return len(self._unique_keys)
 
     def entry_location(
         self, keywords: tuple[str, ...], *, missing_ok: bool = False
     ) -> tuple[int, int]:
         try:
-            start, _, end = self._parsed[keywords]
+            start, _, end = self._unique_keys[keywords]
         except KeyError:
             if missing_ok:
                 if len(keywords) > 1:
@@ -764,20 +768,144 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
 
         return start, end
 
-    def as_dict(self) -> File:
-        ret: File = {}
-        for keywords, (_, data, _) in self._parsed.items():
-            r = ret
-            for k in keywords[:-1]:
-                v = r[k]
-                assert isinstance(v, dict)
-                r = cast("File", v)
-
-            assert isinstance(r, dict)
-            if keywords:
-                r[keywords[-1]] = {} if data is ... else data
-            else:
-                assert data is not ...
-                r[None] = data
-
-        return ret
+    def as_dict(self) -> Union[File, MultiDict]:
+        """Return a nested dict representation, using MultiDict if there are duplicates."""
+        # First, check if we have any duplicate keys (ignoring ellipsis placeholders)
+        key_counts = {}
+        for key, (_, data, _) in self._items:
+            if data is not ...:  # Only count actual data, not placeholders
+                key_counts[key] = key_counts.get(key, 0) + 1
+        
+        has_duplicates = any(count > 1 for count in key_counts.values())
+        
+        if not has_duplicates:
+            # Use regular dict approach when no duplicates
+            ret: File = {}
+            
+            # First collect all actual data values (non-ellipsis)
+            actual_data = {}
+            for keywords, (_, data, _) in self._items:
+                if data is not ... and keywords not in actual_data:
+                    actual_data[keywords] = data
+            
+            # Identify all subdictories that need to be created
+            subdirs_needed = set()
+            for keywords in actual_data:
+                # Add all parent paths that need subdirectories
+                for i in range(1, len(keywords)):
+                    parent_path = keywords[:i]
+                    subdirs_needed.add(parent_path)
+            
+            # Create subdirectories first  
+            for subdir_path in sorted(subdirs_needed):
+                r = ret
+                for k in subdir_path[:-1]:
+                    if k not in r:
+                        r[k] = {}
+                    r = r[k]
+                if subdir_path[-1] not in r:
+                    r[subdir_path[-1]] = {}
+            
+            # Then add actual data
+            for keywords, data in actual_data.items():
+                r = ret
+                if keywords:  # Only navigate if there are keywords
+                    for k in keywords[:-1]:
+                        assert k in r and isinstance(r[k], dict)
+                        r = r[k]
+                    r[keywords[-1]] = data
+                else:
+                    # Handle standalone data (no keywords)
+                    r[None] = data
+            
+            return ret
+        else:
+            # Build structure that can handle duplicates at any level
+            # Group items by their parent path (only for actual data, not placeholders)
+            groups: dict[tuple[str, ...], list[tuple[str, Data | StandaloneData | EllipsisType]]] = {}
+            
+            for keywords, (_, data, _) in self._items:
+                if data is ...:  # Skip placeholder entries
+                    continue
+                    
+                if keywords:
+                    parent_path = keywords[:-1] 
+                    final_key = keywords[-1]
+                    if parent_path not in groups:
+                        groups[parent_path] = []
+                    groups[parent_path].append((final_key, data))
+                else:
+                    # Top-level entry
+                    if () not in groups:
+                        groups[()] = []
+                    groups[()].append((None, data))
+            
+            # Also need to handle subdictionaries (ellipsis entries)
+            subdicts = set()
+            for keywords, (_, data, _) in self._unique_keys.items():
+                if data is ... and keywords:
+                    subdicts.add(keywords)
+            
+            # Build the result structure
+            ret = {}
+            
+            # First create subdirectory structure
+            for subdict_path in subdicts:
+                current = ret
+                for k in subdict_path[:-1]:
+                    if k not in current:
+                        current[k] = {}
+                    current = current[k]
+                if subdict_path[-1] not in current:
+                    current[subdict_path[-1]] = {}
+            
+            for parent_path, items in groups.items():
+                # Navigate to the parent location
+                current = ret
+                for k in parent_path:
+                    if k not in current:
+                        current[k] = {}
+                    current = current[k]
+                
+                # Check if this level has duplicates
+                key_counts_at_level = {}
+                for key, _ in items:
+                    key_counts_at_level[key] = key_counts_at_level.get(key, 0) + 1
+                
+                level_has_duplicates = any(count > 1 for count in key_counts_at_level.values())
+                
+                if level_has_duplicates:
+                    # Use MultiDict for this level
+                    level_dict = MultiDict()
+                    for key, data in items:
+                        level_dict.add(key, data)
+                    
+                    # If current is a regular dict, convert it
+                    if isinstance(current, dict):
+                        # Save existing content
+                        existing_items = list(current.items())
+                        current.clear()
+                        
+                        # Add existing items to MultiDict if they don't conflict
+                        for existing_key, existing_value in existing_items:
+                            if existing_key not in [k for k, _ in items]:
+                                level_dict[existing_key] = existing_value
+                        
+                        # Update the parent to point to the MultiDict
+                        if parent_path:
+                            parent = ret
+                            for k in parent_path[:-1]:
+                                parent = parent[k]
+                            parent[parent_path[-1]] = level_dict
+                        else:
+                            ret = level_dict
+                    else:
+                        # Current is already a MultiDict
+                        for key, data in items:
+                            current.add(key, data)
+                else:
+                    # Use regular dict for this level
+                    for key, data in items:
+                        current[key] = data
+            
+            return ret

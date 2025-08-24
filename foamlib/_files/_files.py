@@ -15,6 +15,7 @@ else:
     from typing import Iterator, Mapping, MutableMapping, Sequence
 
 import numpy as np
+from multidict import MultiDict
 
 from ._io import FoamFileIO
 from ._parsing import loads
@@ -499,15 +500,19 @@ class FoamFile(
     def __fspath__(self) -> str:
         return str(self.path)
 
-    def as_dict(self, *, include_header: bool = False) -> File:
+    def as_dict(self, *, include_header: bool = False) -> Union[File, MultiDict]:
         """
         Return a nested dict representation of the file.
 
         :param include_header: Whether to include the "FoamFile" header in the output.
         """
         d = self._get_parsed().as_dict()
-        if not include_header:
+        if not include_header and hasattr(d, 'pop'):
             d.pop("FoamFile", None)
+        elif not include_header and hasattr(d, 'popone'):
+            # For MultiDict, remove all FoamFile entries
+            while "FoamFile" in d:
+                d.popone("FoamFile")
         return deepcopy(d)
 
     @staticmethod
@@ -515,7 +520,7 @@ class FoamFile(
         s: bytes | str,
         *,
         include_header: bool = False,
-    ) -> File | StandaloneData:
+    ) -> Union[File, MultiDict, StandaloneData]:
         """
         Standalone deserializing function.
 
@@ -529,7 +534,15 @@ class FoamFile(
         ret = loads(s, keywords=())
 
         if not include_header and isinstance(ret, Mapping) and "FoamFile" in ret:
-            del ret["FoamFile"]
+            # Make a copy to avoid modifying the original
+            if isinstance(ret, MultiDict):
+                ret = ret.copy()
+                while "FoamFile" in ret:
+                    ret.popone("FoamFile")
+            else:
+                ret = dict(ret)
+                del ret["FoamFile"]
+            
             if len(ret) == 1 and None in ret:
                 val = ret[None]
                 assert not isinstance(val, Mapping)
