@@ -322,7 +322,6 @@ class FoamCaseRunBase(FoamCaseBase):
 
             # Set up log file monitoring
             with LogFileMonitor(self.path, process_stdout) as log_monitor:
-
                 yield process_stdout
 
                 # Check for any final progress updates from log files

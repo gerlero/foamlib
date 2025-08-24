@@ -69,7 +69,6 @@ def run_sync(
 
     # Set up log file monitoring
     with LogFileMonitor(case, process_stdout) as log_monitor:
-
         with subprocess.Popen(
             cmd,
             cwd=case,
@@ -230,7 +229,9 @@ class LogFileMonitor:
     """Monitor log files for progress information."""
 
     def __init__(
-        self, case_path: os.PathLike[str], process_line: Callable[[str], None] | None = None
+        self,
+        case_path: os.PathLike[str],
+        process_line: Callable[[str], None] | None = None,
     ) -> None:
         """
         Initialize log file monitor.
@@ -307,7 +308,9 @@ class AsyncLogFileMonitor(LogFileMonitor):
     """Asynchronous version of log file monitor."""
 
     def __init__(
-        self, case_path: os.PathLike[str], process_line: Callable[[str], None] | None = None
+        self,
+        case_path: os.PathLike[str],
+        process_line: Callable[[str], None] | None = None,
     ) -> None:
         super().__init__(case_path, process_line)
         self._monitor_task: asyncio.Task[None] | None = None
