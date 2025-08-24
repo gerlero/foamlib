@@ -39,7 +39,7 @@ else:
     from typing_extensions import Self
 
 from ._base import FoamCaseBase
-from ._subprocess import DEVNULL, STDOUT
+from ._subprocess import DEVNULL, STDOUT, LogFileMonitor
 
 if TYPE_CHECKING:
     from .._files import FoamFieldFile
@@ -300,9 +300,6 @@ class FoamCaseRunBase(FoamCaseBase):
                     end_time = None
         except (KeyError, FileNotFoundError):
             end_time = None
-
-        # Import here to avoid circular imports
-        from ._subprocess import LogFileMonitor  # noqa: PLC0415
 
         with self.__progress as progress:
             task = progress.add_task(

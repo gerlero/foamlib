@@ -64,9 +64,6 @@ def run_sync(
     if sys.version_info < (3, 8):
         cmd = [str(arg) for arg in cmd]
 
-    # Import here to avoid circular imports
-    from ._subprocess import LogFileMonitor  # noqa: PLC0415
-
     # Set up log file monitoring
     with LogFileMonitor(case, process_stdout) as log_monitor:
         with subprocess.Popen(
@@ -148,9 +145,6 @@ async def run_async(
 ) -> CompletedProcess[str]:
     if sys.version_info < (3, 8):
         cmd = [str(arg) for arg in cmd]
-
-    # Import here to avoid circular imports
-    from ._subprocess import AsyncLogFileMonitor  # noqa: PLC0415
 
     # Set up log file monitoring
     async with AsyncLogFileMonitor(case, process_stdout) as log_monitor:
