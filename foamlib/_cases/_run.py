@@ -302,7 +302,10 @@ class FoamCaseRunBase(FoamCaseBase):
             end_time = None
 
         # Import here to avoid circular imports
-        from ._log_monitor import LogFileMonitor, should_monitor_log_files
+        from ._log_monitor import (  # noqa: PLC0415
+            LogFileMonitor,
+            should_monitor_log_files,
+        )
 
         with self.__progress as progress:
             task = progress.add_task(
@@ -330,7 +333,7 @@ class FoamCaseRunBase(FoamCaseBase):
             # If we have a log monitor, check for any final progress updates
             if log_monitor is not None:
                 log_monitor.monitor_once()
-            
+
             progress.update(task, completed=1, total=1)
 
     def __mkrundir(self) -> Path:

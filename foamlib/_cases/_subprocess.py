@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import selectors
 import subprocess
@@ -58,8 +59,11 @@ def run_sync(
         cmd = [str(arg) for arg in cmd]
 
     # Import here to avoid circular imports
-    from ._log_monitor import LogFileMonitor, should_monitor_log_files
-    
+    from ._log_monitor import (  # noqa: PLC0415
+        LogFileMonitor,
+        should_monitor_log_files,
+    )
+
     # Set up log file monitoring if needed
     log_monitor = None
     if should_monitor_log_files(cmd):
@@ -90,8 +94,10 @@ def run_sync(
                 # Check for new log file content if monitoring
                 if log_monitor is not None:
                     log_monitor.monitor_once()
-                
-                for key, _ in selector.select(timeout=0.1):  # Small timeout to allow log monitoring
+
+                for key, _ in selector.select(
+                    timeout=0.1
+                ):  # Small timeout to allow log monitoring
                     assert key.fileobj in open_streams
                     line = key.fileobj.readline()  # type: ignore [union-attr]
                     if not line:
@@ -146,7 +152,10 @@ async def run_async(
         cmd = [str(arg) for arg in cmd]
 
     # Import here to avoid circular imports
-    from ._log_monitor import AsyncLogFileMonitor, should_monitor_log_files
+    from ._log_monitor import (  # noqa: PLC0415
+        AsyncLogFileMonitor,
+        should_monitor_log_files,
+    )
 
     # Set up log file monitoring if needed
     log_monitor = None
@@ -217,12 +226,10 @@ async def run_async(
             stdout=output.getvalue() if output is not None else None,
             stderr=error.getvalue(),
         )
-    
+
     finally:
         # Stop monitoring when done
         if monitor_task is not None:
             monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await monitor_task
-            except asyncio.CancelledError:
-                pass

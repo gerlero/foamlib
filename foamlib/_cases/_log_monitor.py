@@ -12,30 +12,23 @@ from typing import Pattern
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable, Sequence
+
     PathLike = os.PathLike[str]
 else:
     from typing import Callable, Sequence
-    if hasattr(os, 'PathLike'):
-        try:
-            PathLike = os.PathLike[str]
-        except TypeError:
-            # Python 3.7/3.8 - os.PathLike not subscriptable
-            PathLike = os.PathLike
-    else:
-        PathLike = str
+
+    PathLike = os.PathLike
 
 
 class LogFileMonitor:
     """Monitor log files for progress information."""
 
     # Pattern to match "Time = <number>" lines in OpenFOAM output
-    TIME_PATTERN: Pattern[str] = re.compile(r'^Time = (\S+)', re.MULTILINE)
+    TIME_PATTERN: Pattern[str] = re.compile(r"^Time = (\S+)", re.MULTILINE)
 
     def __init__(
-        self,
-        case_path: PathLike,
-        process_line: Callable[[str], None] | None = None
-    ):
+        self, case_path: PathLike, process_line: Callable[[str], None] | None = None
+    ) -> None:
         """
         Initialize log file monitor.
 
@@ -61,14 +54,14 @@ class LogFileMonitor:
             if current_size <= last_size:
                 return []
 
-            with log_file.open('r', encoding='utf-8', errors='ignore') as f:
+            with log_file.open("r", encoding="utf-8", errors="ignore") as f:
                 f.seek(last_size)
                 new_content = f.read(current_size - last_size)
                 self._monitored_files[log_file] = current_size
 
                 return new_content.splitlines(keepends=True)
 
-        except (OSError, IOError):
+        except OSError:
             # File might not exist yet or be temporarily unavailable
             return []
 
@@ -98,10 +91,8 @@ class AsyncLogFileMonitor(LogFileMonitor):
     """Asynchronous version of log file monitor."""
 
     def __init__(
-        self,
-        case_path: PathLike,
-        process_line: Callable[[str], None] | None = None
-    ):
+        self, case_path: PathLike, process_line: Callable[[str], None] | None = None
+    ) -> None:
         super().__init__(case_path, process_line)
         self._monitor_task: asyncio.Task[None] | None = None
 
@@ -127,9 +118,7 @@ class AsyncLogFileMonitor(LogFileMonitor):
         if self._monitor_task is not None and not self._monitor_task.done():
             self._monitor_task.cancel()
 
-        self._monitor_task = asyncio.create_task(
-            self.start_monitoring_async(interval)
-        )
+        self._monitor_task = asyncio.create_task(self.start_monitoring_async(interval))
         return self._monitor_task
 
     def stop_background_monitoring(self) -> None:
@@ -156,13 +145,10 @@ def should_monitor_log_files(cmd: str | Sequence[str | PathLike]) -> bool:
     cmd_name = Path(cmd[0]).name.lower()
 
     # Shell invocations
-    if cmd_name in ('bash', 'sh', 'zsh', 'csh', 'tcsh'):
+    if cmd_name in ("bash", "sh", "zsh", "csh", "tcsh"):
         return True
 
     # Common OpenFOAM run scripts
-    script_names = {
-        'allrun', 'allrun.pre', 'allrun-parallel',
-        'run', 'run-parallel'
-    }
+    script_names = {"allrun", "allrun.pre", "allrun-parallel", "run", "run-parallel"}
 
-    return cmd_name in script_names or cmd_name.endswith('.sh')
+    return cmd_name in script_names or cmd_name.endswith(".sh")
