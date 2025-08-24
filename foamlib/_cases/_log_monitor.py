@@ -145,6 +145,10 @@ def should_monitor_log_files(cmd: list[str] | str) -> bool:
     
     cmd_name = Path(cmd[0]).name.lower()
     
+    # Shell invocations
+    if cmd_name in ('bash', 'sh', 'zsh', 'csh', 'tcsh'):
+        return True
+    
     # Common OpenFOAM run scripts
     script_names = {
         'allrun', 'allrun.pre', 'allrun-parallel', 
