@@ -45,6 +45,69 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
 
+class OrderedMultiDict:
+    """A MultiDict-like structure that preserves order and allows duplicate keys."""
+    
+    def __init__(self) -> None:
+        self._items: list[tuple[tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]]] = []
+    
+    def add(self, key: tuple[str, ...], value: tuple[int, Data | StandaloneData | EllipsisType, int]) -> None:
+        """Add a key-value pair, preserving order and allowing duplicates."""
+        self._items.append((key, value))
+    
+    def __getitem__(self, key: tuple[str, ...]) -> tuple[int, Data | StandaloneData | EllipsisType, int]:
+        """Get the first value for the given key."""
+        for k, v in self._items:
+            if k == key:
+                return v
+        raise KeyError(key)
+    
+    def __setitem__(self, key: tuple[str, ...], value: tuple[int, Data | StandaloneData | EllipsisType, int]) -> None:
+        """Set the value for a key, replacing the first occurrence or adding if not found."""
+        for i, (k, v) in enumerate(self._items):
+            if k == key:
+                self._items[i] = (key, value)
+                return
+        # If key not found, add it
+        self._items.append((key, value))
+    
+    def __delitem__(self, key: tuple[str, ...]) -> None:
+        """Delete all occurrences of the key."""
+        self._items = [(k, v) for k, v in self._items if k != key]
+    
+    def getall(self, key: tuple[str, ...]) -> list[tuple[int, Data | StandaloneData | EllipsisType, int]]:
+        """Get all values for the given key, preserving order."""
+        return [v for k, v in self._items if k == key]
+    
+    def __contains__(self, key: tuple[str, ...]) -> bool:
+        """Check if key exists."""
+        return any(k == key for k, v in self._items)
+    
+    def __iter__(self) -> Iterator[tuple[str, ...]]:
+        """Iterate over unique keys in order of first occurrence."""
+        seen = set()
+        for k, v in self._items:
+            if k not in seen:
+                seen.add(k)
+                yield k
+    
+    def __len__(self) -> int:
+        """Return number of unique keys."""
+        return len(set(k for k, v in self._items))
+    
+    def items(self) -> Iterator[tuple[tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]]]:
+        """Iterate over all key-value pairs, preserving order and duplicates."""
+        return iter(self._items)
+    
+    def keys(self) -> Iterator[tuple[str, ...]]:
+        """Iterate over all keys, preserving order and duplicates."""
+        return (k for k, v in self._items)
+    
+    def values(self) -> Iterator[tuple[int, Data | StandaloneData | EllipsisType, int]]:
+        """Iterate over all values, preserving order."""
+        return (v for k, v in self._items)
+
+
 def _ascii_numeric_list(
     dtype: DTypeLike,
     *,
@@ -517,14 +580,14 @@ _LOCATED_FILE = (
 
 class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
     def __init__(self, contents: bytes) -> None:
-        self._parsed: MutableMapping[
-            tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
-        ] = {}
+        # Use OrderedMultiDict to preserve order and allow duplicate keys
+        self._parsed: OrderedMultiDict = OrderedMultiDict()
         for parse_result in _LOCATED_FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
         ):
-            self._parsed.update(self._flatten_result(parse_result))
+            # Get all key-value pairs from this parse result
+            for key, value in self._flatten_result(parse_result):
+                self._parsed.add(key, value)
 
         self.contents = contents
         self.modified = False
@@ -532,13 +595,13 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
     @staticmethod
     def _flatten_result(
         parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
-    ) -> Mapping[
-        tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]
+    ) -> Sequence[
+        tuple[tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]]
     ]:
-        ret: MutableMapping[
-            tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
-        ] = {}
+        # Return a sequence of (key, value) pairs to preserve order and allow duplicates
+        ret: list[
+            tuple[tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]]
+        ] = []
         start = parse_result.locn_start
         assert isinstance(start, int)
         item = parse_result.value
@@ -550,24 +613,42 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
             assert not _keywords
             assert len(data) == 1
             assert not isinstance(data[0], ParseResults)
-            ret[()] = (start, data[0], end)
+            ret.append(((), (start, data[0], end)))
         else:
             assert isinstance(keyword, str)
-            ret[(*_keywords, keyword)] = (start, ..., end)
+            # First add the placeholder entry
+            ret.append(((*_keywords, keyword), (start, ..., end)))
             for d in data:
                 if isinstance(d, ParseResults):
-                    ret.update(
-                        Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
-                    )
+                    # Recursively process nested results
+                    nested_results = Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
+                    ret.extend(nested_results)
                 else:
-                    ret[(*_keywords, keyword)] = (start, d, end)
+                    # Add each data item as a separate entry - this preserves multiple directives
+                    ret.append(((*_keywords, keyword), (start, d, end)))
         return ret
 
     def __getitem__(
         self, keywords: tuple[str, ...]
     ) -> Data | StandaloneData | EllipsisType:
+        # For backward compatibility, return the first non-ellipsis value if available
+        all_values = self._parsed.getall(keywords)
+        for _, data, _ in all_values:
+            if data is not ...:
+                return data
+        # If no non-ellipsis values found, return the first value (could be ellipsis)
         _, data, _ = self._parsed[keywords]
         return data
+
+    def getall(
+        self, keywords: tuple[str, ...]
+    ) -> list[Data | StandaloneData | EllipsisType]:
+        """Get all values for the given keywords, preserving order."""
+        values = []
+        for _, data, _ in self._parsed.getall(keywords):
+            if data is not ...:  # Skip placeholder entries
+                values.append(data)
+        return values
 
     def put(
         self,
