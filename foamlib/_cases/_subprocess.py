@@ -59,15 +59,10 @@ def run_sync(
         cmd = [str(arg) for arg in cmd]
 
     # Import here to avoid circular imports
-    from ._log_monitor import (  # noqa: PLC0415
-        LogFileMonitor,
-        should_monitor_log_files,
-    )
+    from ._log_monitor import LogFileMonitor  # noqa: PLC0415
 
-    # Set up log file monitoring if needed
-    log_monitor = None
-    if should_monitor_log_files(cmd):
-        log_monitor = LogFileMonitor(case, process_stdout)
+    # Set up log file monitoring
+    log_monitor = LogFileMonitor(case, process_stdout)
 
     with subprocess.Popen(
         cmd,
@@ -91,9 +86,8 @@ def run_sync(
             selector.register(proc.stderr, selectors.EVENT_READ)
             open_streams = {proc.stdout, proc.stderr}
             while open_streams:
-                # Check for new log file content if monitoring
-                if log_monitor is not None:
-                    log_monitor.monitor_once()
+                # Check for new log file content
+                log_monitor.monitor_once()
 
                 for key, _ in selector.select(
                     timeout=0.1
@@ -118,8 +112,7 @@ def run_sync(
                             stderr.write(line)
 
     # Final check for log file content
-    if log_monitor is not None:
-        log_monitor.monitor_once()
+    log_monitor.monitor_once()
 
     assert proc.returncode is not None
 
@@ -152,17 +145,11 @@ async def run_async(
         cmd = [str(arg) for arg in cmd]
 
     # Import here to avoid circular imports
-    from ._log_monitor import (  # noqa: PLC0415
-        AsyncLogFileMonitor,
-        should_monitor_log_files,
-    )
+    from ._log_monitor import AsyncLogFileMonitor  # noqa: PLC0415
 
-    # Set up log file monitoring if needed
-    log_monitor = None
-    monitor_task = None
-    if should_monitor_log_files(cmd):
-        log_monitor = AsyncLogFileMonitor(case, process_stdout)
-        monitor_task = log_monitor.start_background_monitoring()
+    # Set up log file monitoring
+    log_monitor = AsyncLogFileMonitor(case, process_stdout)
+    monitor_task = log_monitor.start_background_monitoring()
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -209,8 +196,7 @@ async def run_async(
         assert proc.returncode is not None
 
         # Final check for log file content
-        if log_monitor is not None:
-            await log_monitor.monitor_once_async()
+        await log_monitor.monitor_once_async()
 
         if check and proc.returncode != 0:
             raise CalledProcessError(
@@ -229,7 +215,6 @@ async def run_async(
 
     finally:
         # Stop monitoring when done
-        if monitor_task is not None:
-            monitor_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await monitor_task
+        monitor_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await monitor_task

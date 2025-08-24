@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import Pattern
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable
 
     PathLike = os.PathLike[str]
 else:
-    from typing import Callable, Sequence
+    from typing import Callable
 
     PathLike = os.PathLike
 
@@ -128,27 +128,4 @@ class AsyncLogFileMonitor(LogFileMonitor):
             self._monitor_task.cancel()
 
 
-def should_monitor_log_files(cmd: str | Sequence[str | PathLike]) -> bool:
-    """
-    Determine if a command is likely to redirect output to log files.
 
-    Returns True for commands that are likely to be Allrun scripts or
-    other scripts that use runApplication.
-    """
-    if isinstance(cmd, str):
-        # Shell commands are often scripts
-        return True
-
-    if not cmd:
-        return False
-
-    cmd_name = Path(cmd[0]).name.lower()
-
-    # Shell invocations
-    if cmd_name in ("bash", "sh", "zsh", "csh", "tcsh"):
-        return True
-
-    # Common OpenFOAM run scripts
-    script_names = {"allrun", "allrun.pre", "allrun-parallel", "run", "run-parallel"}
-
-    return cmd_name in script_names or cmd_name.endswith(".sh")
