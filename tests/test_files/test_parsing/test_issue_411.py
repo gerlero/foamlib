@@ -17,7 +17,7 @@ def test_issue_411_pipe_operator() -> None:
             laplacian((1|A(U)),p) Gauss linear limited 0.333;
         }
     """)
-    assert parsed[("laplacianSchemes", "laplacian((1|A(U)),p)")] == (
+    assert parsed["laplacianSchemes"]["laplacian((1|A(U)),p)"] == (
         "Gauss",
         "linear",
         "limited",
@@ -31,7 +31,7 @@ def test_issue_411_pipe_operator() -> None:
             div((rho*thermo:mu|rho),U) Gauss linear;
         }
     """)
-    assert parsed[("divSchemes", "div((rho*thermo:mu|rho),U)")] == ("Gauss", "linear")
+    assert parsed["divSchemes"]["div((rho*thermo:mu|rho),U)"] == ("Gauss", "linear")
 
     # Test case 3: Pipe in laplacian schemes
     parsed = Parsed(b"""
@@ -40,7 +40,7 @@ def test_issue_411_pipe_operator() -> None:
             laplacian((DT|rho),T) Gauss linear corrected;
         }
     """)
-    assert parsed[("laplacianSchemes", "laplacian((DT|rho),T)")] == (
+    assert parsed["laplacianSchemes"]["laplacian((DT|rho),T)"] == (
         "Gauss",
         "linear",
         "corrected",
@@ -53,7 +53,7 @@ def test_issue_411_pipe_operator() -> None:
             interpolate(rho|U) linear;
         }
     """)
-    assert parsed[("interpolationSchemes", "interpolate(rho|U)")] == "linear"
+    assert parsed["interpolationSchemes"]["interpolate(rho|U)"] == "linear"
 
     # Test case 5: Multiple pipes and complex nesting
     parsed = Parsed(b"""
@@ -62,7 +62,7 @@ def test_issue_411_pipe_operator() -> None:
             div(((rho*(thermo:mu|rho))*dev2(T(grad(U))))) Gauss linear;
         }
     """)
-    assert parsed[("divSchemes", "div(((rho*(thermo:mu|rho))*dev2(T(grad(U)))))")] == (
+    assert parsed["divSchemes"]["div(((rho*(thermo:mu|rho))*dev2(T(grad(U)))))"] == (
         "Gauss",
         "linear",
     )
@@ -74,7 +74,7 @@ def test_issue_411_pipe_operator() -> None:
             div(((rho*(thermo:mu|rho))*dev2(T(grad(U))))) Gauss linear;
         }
     """)
-    assert parsed[("divSchemes", "div(((rho*(thermo:mu|rho))*dev2(T(grad(U)))))")] == (
+    assert parsed["divSchemes"]["div(((rho*(thermo:mu|rho))*dev2(T(grad(U)))))"] == (
         "Gauss",
         "linear",
     )
@@ -90,7 +90,7 @@ def test_issue_411_edge_cases() -> None:
             test((|value),param) result;
         }
     """)
-    assert parsed[("schemes", "test((|value),param)")] == "result"
+    assert parsed["schemes"]["test((|value),param)"] == "result"
 
     # Test pipe at end of parentheses
     parsed = Parsed(b"""
@@ -99,7 +99,7 @@ def test_issue_411_edge_cases() -> None:
             test((value|),param) result;
         }
     """)
-    assert parsed[("schemes", "test((value|),param)")] == "result"
+    assert parsed["schemes"]["test((value|),param)"] == "result"
 
     # Test multiple consecutive pipes
     parsed = Parsed(b"""
@@ -108,7 +108,7 @@ def test_issue_411_edge_cases() -> None:
             test((a||b),param) result;
         }
     """)
-    assert parsed[("schemes", "test((a||b),param)")] == "result"
+    assert parsed["schemes"]["test((a||b),param)"] == "result"
 
     # Test pipe with other special characters
     parsed = Parsed(b"""
@@ -117,4 +117,4 @@ def test_issue_411_edge_cases() -> None:
             test((a|b&c.d:e),param) result;
         }
     """)
-    assert parsed[("schemes", "test((a|b&c.d:e),param)")] == "result"
+    assert parsed["schemes"]["test((a|b&c.d:e),param)"] == "result"

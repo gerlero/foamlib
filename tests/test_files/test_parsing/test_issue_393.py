@@ -17,7 +17,7 @@ def test_issue_393_complex_keys() -> None:
             div((muEff*dev2(grad(U).T()))) Gauss linear;
         }
     """)
-    assert parsed[("divSchemes", "div((muEff*dev2(grad(U).T())))")] == (
+    assert parsed["divSchemes"]["div((muEff*dev2(grad(U).T())))"] == (
         "Gauss",
         "linear",
     )
@@ -29,7 +29,7 @@ def test_issue_393_complex_keys() -> None:
             div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
         }
     """)
-    assert parsed[("divSchemes", "div(((rho*nuEff)*dev2(T(grad(U)))))")] == (
+    assert parsed["divSchemes"]["div(((rho*nuEff)*dev2(T(grad(U)))))"] == (
         "Gauss",
         "linear",
     )
@@ -41,7 +41,7 @@ def test_issue_393_complex_keys() -> None:
             div(((rho*(thermo:mu|rho))*dev2(T(grad(U))))) Gauss linear;
         }
     """)
-    assert parsed[("divSchemes", "div(((rho*(thermo:mu|rho))*dev2(T(grad(U)))))")] == (
+    assert parsed["divSchemes"]["div(((rho*(thermo:mu|rho))*dev2(T(grad(U)))))"] == (
         "Gauss",
         "linear",
     )
@@ -53,7 +53,7 @@ def test_issue_393_complex_keys() -> None:
             laplacian((rho*DomegaEff),omega) omegaGauss linear limited 0.333;
         }
     """)
-    assert parsed[("laplacianSchemes", "laplacian((rho*DomegaEff),omega)")] == (
+    assert parsed["laplacianSchemes"]["laplacian((rho*DomegaEff),omega)"] == (
         "omegaGauss",
         "linear",
         "limited",
@@ -69,19 +69,19 @@ def test_issue_393_complex_keys() -> None:
             laplacian((rho*DnuTildaEff),k) Gauss linear limited 0.333;
         }
     """)
-    assert parsed[("laplacianSchemes", "laplacian((rho*DkEff),k)")] == (
+    assert parsed["laplacianSchemes"]["laplacian((rho*DkEff),k)"] == (
         "Gauss",
         "linear",
         "limited",
         0.333,
     )
-    assert parsed[("laplacianSchemes", "laplacian((rho*DepsilonEff),omega)")] == (
+    assert parsed["laplacianSchemes"]["laplacian((rho*DepsilonEff),omega)"] == (
         "Gauss",
         "linear",
         "limited",
         0.333,
     )
-    assert parsed[("laplacianSchemes", "laplacian((rho*DnuTildaEff),k)")] == (
+    assert parsed["laplacianSchemes"]["laplacian((rho*DnuTildaEff),k)"] == (
         "Gauss",
         "linear",
         "limited",
@@ -105,18 +105,18 @@ def test_original_working_cases_still_work() -> None:
             default         Gauss linear limited 0.333;
         }
     """)
-    assert parsed[("divSchemes", "div((rho*R))")] == ("Gauss", "linear")
-    assert parsed[("divSchemes", "div(phi,omega)")] == (
+    assert parsed["divSchemes"]["div((rho*R))"] == ("Gauss", "linear")
+    assert parsed["divSchemes"]["div(phi,omega)"] == (
         "Gauss",
         "linearUpwind",
         "grad(omega)",
     )
-    assert parsed[("divSchemes", "div(phi,U)")] == ("Gauss", "linearUpwind", "grad(U)")
-    assert parsed[("divSchemes", "div((nuEff*dev2(T(grad(U)))))")] == (
+    assert parsed["divSchemes"]["div(phi,U)"] == ("Gauss", "linearUpwind", "grad(U)")
+    assert parsed["divSchemes"]["div((nuEff*dev2(T(grad(U)))))"] == (
         "Gauss",
         "linear",
     )
-    assert parsed[("laplacianSchemes", "default")] == (
+    assert parsed["laplacianSchemes"]["default"] == (
         "Gauss",
         "linear",
         "limited",

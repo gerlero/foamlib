@@ -39,13 +39,13 @@ def test_dict_strange_keys() -> None:
         }
     """
     )
-    assert parsed[("divSchemes", "div(phi,U)")] == ("Gauss", "linear")
-    assert parsed[("divSchemes", "div((nuEff*dev2(T(grad(U)))))")] == (
+    assert parsed["divSchemes"]["div(phi,U)"] == ("Gauss", "linear")
+    assert parsed["divSchemes"]["div((nuEff*dev2(T(grad(U)))))"] == (
         "Gauss",
         "linear",
     )
-    assert parsed[("divSchemes", '".*"')] == 1
-    assert parsed[("divSchemes", "div(rhoPhi,U)")] == (
+    assert parsed["divSchemes"]['".*"'] == 1
+    assert parsed["divSchemes"]["div(rhoPhi,U)"] == (
         "Gauss",
         "cellCoBlended",
         2,
@@ -65,7 +65,7 @@ def test_var_value_with_space() -> None:
         }
     """
     )
-    assert parsed[("laplacianSchemes", "default")] == ("Gauss", "linear", "corrected")
+    assert parsed["laplacianSchemes"]["default"] == ("Gauss", "linear", "corrected")
 
 
 @pytest.mark.xfail(reason="Not currently supported")
@@ -75,7 +75,7 @@ def test_strange_dict_macro() -> None:
         relaxationFactors { $relaxationFactors-SIMPLE }
         """
     )
-    assert parsed[("relaxationFactors",)] == "$relaxationFactors-SIMPLE"
+    assert parsed["relaxationFactors"] == "$relaxationFactors-SIMPLE"
 
 
 @pytest.mark.xfail(reason="Not currently supported")
@@ -89,8 +89,8 @@ def test_directive_eval() -> None:
         }
         """
     )
-    assert parsed[("transform", "origin")] == ["#eval{0.5 * $SLAB_OFFSET}", 0, 0]
-    assert parsed[("transform", "rotation")] == "none"
+    assert parsed["transform"]["origin"] == ["#eval{0.5 * $SLAB_OFFSET}", 0, 0]
+    assert parsed["transform"]["rotation"] == "none"
 
 
 @pytest.mark.xfail(reason="Not currently supported")
@@ -138,9 +138,9 @@ def test_macro_with_dict() -> None:
         xmin        ${{ -$xmax }};
         """
     )
-    assert parsed[("rInner45",)] == "${{ $rInner * sqrt(0.5) }}"
-    assert parsed[("rOuter45",)] == "${{ $rOuter * sqrt(0.5) }}"
-    assert parsed[("xmin",)] == "${{ -$xmax }}"
+    assert parsed["rInner45"] == "${{ $rInner * sqrt(0.5) }}"
+    assert parsed["rOuter45"] == "${{ $rOuter * sqrt(0.5) }}"
+    assert parsed["xmin"] == "${{ -$xmax }}"
 
 
 def test_directive_strange() -> None:
@@ -149,7 +149,7 @@ def test_directive_strange() -> None:
         #remove ( "r(Inner|Outer).*"  "[xy](min|max)" )
         """
     )
-    assert parsed[("#remove",)] == ['"r(Inner|Outer).*"', '"[xy](min|max)"']
+    assert parsed["#remove"] == ['"r(Inner|Outer).*"', '"[xy](min|max)"']
 
 
 @pytest.mark.xfail(reason="Not currently supported")
@@ -159,7 +159,7 @@ def test_directive_with_macro() -> None:
         timeStart       #eval{ 0.1 * ${/endTime} };
         """
     )
-    assert parsed[("timeStart",)] == "#eval{ 0.1 * ${/endTime} }"
+    assert parsed["timeStart"] == "#eval{ 0.1 * ${/endTime} }"
 
 
 def test_strange_assignment() -> None:
@@ -180,7 +180,7 @@ def test_strange_assignment() -> None:
         }
         """
     )
-    assert parsed[("divSchemes", "div(phi,U)")] == (
+    assert parsed["divSchemes"]["div(phi,U)"] == (
         "Gauss",
         "DEShybrid",
         "linear",
@@ -210,7 +210,7 @@ def test_unnamed_dict_in_list() -> None:
         );
         """
     )
-    assert parsed[("drag",)] == [
+    assert parsed["drag"] == [
         (
             ["air", "water"],
             {"type": "blended", "residualPhaseFraction": 0.001, "residualSlip": 0.001},
@@ -230,7 +230,7 @@ def test_unnamed_dict_in_list1() -> None:
         );
         """
     )
-    assert parsed[("features",)] == [
+    assert parsed["features"] == [
         {"file": '"geom.extendedFeatureEdgeMesh"', "level": 1}
     ]
 
@@ -262,8 +262,8 @@ def test_list_triple_named() -> None:
         }
         """
     )
-    assert parsed[("velocity-inlet-5", "type")] == "fixedValue"
-    assert parsed[("velocity-inlet-5", "value")] == pytest.approx([1, 0, 0])
+    assert parsed["velocity-inlet-5"]["type"] == "fixedValue"
+    assert parsed["velocity-inlet-5"]["value"] == pytest.approx([1, 0, 0])
 
 
 def test_assignment_strange_name() -> None:
@@ -276,11 +276,11 @@ def test_assignment_strange_name() -> None:
         }
     """
     )
-    assert parsed[("equations", '"(U|e|k).*"')] == 0.7
-    assert isinstance(parsed[("equations", '"(U|e|k|epsilon).*"')], tuple)
-    assert parsed[("equations", '"(U|e|k|epsilon).*"')][0] == "table"
+    assert parsed["equations"]['"(U|e|k).*"'] == 0.7
+    assert isinstance(parsed["equations"]['"(U|e|k|epsilon).*"'], tuple)
+    assert parsed["equations"]['"(U|e|k|epsilon).*"'][0] == "table"
     assert np.array_equal(
-        parsed[("equations", '"(U|e|k|epsilon).*"')][1],  # type: ignore[arg-type]
+        parsed["equations"]['"(U|e|k|epsilon).*"'][1],  # type: ignore[arg-type]
         [[0, 0.4], [0.5, 0.7]],
     )
 
@@ -298,10 +298,10 @@ def test_code_with_directive_and_macro() -> None:
         }
         """
     )
-    assert parsed[("timeStart",)] == "#eval #{ 1.0/3.0 * ${/endTime} #}"
-    assert parsed[("U", "mean")] is True
-    assert parsed[("U", "prime2Mean")] is True
-    assert parsed[("U", "base")] == "time"
+    assert parsed["timeStart"] == "#eval #{ 1.0/3.0 * ${/endTime} #}"
+    assert parsed["U"]["mean"] is True
+    assert parsed["U"]["prime2Mean"] is True
+    assert parsed["U"]["base"] == "time"
 
 
 @pytest.mark.xfail(reason="Not currently supported")
@@ -311,7 +311,7 @@ def test_code_with_directive() -> None:
         nx  #eval #{ round(5 * $NSLABS) #};
         """
     )
-    assert parsed[("nx",)] == "#eval #{ round(5 * $NSLABS) #}"
+    assert parsed["nx"] == "#eval #{ round(5 * $NSLABS) #}"
 
 
 def test_list_u() -> None:
@@ -334,7 +334,7 @@ def test_list_u() -> None:
         )
         """
     )
-    data = parsed[()]
+    data = parsed.as_dict()
     assert isinstance(data, np.ndarray)
     assert data.shape == (9, 3)
     assert np.array_equal(
@@ -364,9 +364,9 @@ def test_list_as_write_cell_centers() -> None:
         );
         """
     )
-    assert parsed[("value",)] == pytest.approx([47.619, 142.857])
+    assert parsed["value"] == pytest.approx([47.619, 142.857])
 
 
 def test_list_as_write_cell_centers_short() -> None:
     parsed = Parsed(b"value           nonuniform List<scalar> 4(250 750 1250 1750);")
-    assert parsed[("value",)] == pytest.approx([250, 750, 1250, 1750])
+    assert parsed["value"] == pytest.approx([250, 750, 1250, 1750])
