@@ -517,28 +517,26 @@ _LOCATED_FILE = (
 
 class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
     def __init__(self, contents: bytes) -> None:
-        self._parsed: MutableMapping[
-            tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
-        ] = {}
+        # Internal nested structure: maps string keys to either another dict or entry info
+        # Entry info format: tuple[int, Data | StandaloneData | EllipsisType, int]
+        self._parsed: MutableMapping[str, Union[
+            MutableMapping,
+            tuple[int, Data | StandaloneData | EllipsisType, int]
+        ]] = {}
+        
+        # Build the nested structure from parse results
         for parse_result in _LOCATED_FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
         ):
-            self._parsed.update(self._flatten_result(parse_result))
+            self._add_nested_result(parse_result)
 
         self.contents = contents
         self.modified = False
 
-    @staticmethod
-    def _flatten_result(
-        parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
-    ) -> Mapping[
-        tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]
-    ]:
-        ret: MutableMapping[
-            tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
-        ] = {}
+    def _add_nested_result(
+        self, parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
+    ) -> None:
+        """Add parse result to the nested structure."""
         start = parse_result.locn_start
         assert isinstance(start, int)
         item = parse_result.value
@@ -546,27 +544,188 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         end = parse_result.locn_end
         assert isinstance(end, int)
         keyword, *data = item
+        
         if keyword is None:
+            # Root-level standalone data
             assert not _keywords
             assert len(data) == 1
             assert not isinstance(data[0], ParseResults)
-            ret[()] = (start, data[0], end)
+            self._set_nested_entry((), (start, data[0], end))
         else:
             assert isinstance(keyword, str)
-            ret[(*_keywords, keyword)] = (start, ..., end)
+            full_path = (*_keywords, keyword)
+            # First, mark this as a dict entry (with ellipsis)
+            self._set_nested_entry(full_path, (start, ..., end))
+            
+            # Then process the data
             for d in data:
                 if isinstance(d, ParseResults):
-                    ret.update(
-                        Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
-                    )
+                    self._add_nested_result(d, _keywords=full_path)
                 else:
-                    ret[(*_keywords, keyword)] = (start, d, end)
-        return ret
+                    # Replace the ellipsis with actual data
+                    self._set_nested_entry(full_path, (start, d, end))
+
+    def _set_nested_entry(
+        self, keywords: tuple[str, ...], entry_info: tuple[int, Data | StandaloneData | EllipsisType, int]
+    ) -> None:
+        """Set an entry in the nested structure."""
+        current = self._parsed
+        
+        # Navigate to the correct nested level, creating intermediate dicts as needed
+        for key in keywords[:-1]:
+            if key not in current:
+                current[key] = {}
+            elif isinstance(current[key], tuple):
+                # If it was a tuple, we need to preserve the info and convert to dict
+                old_info = current[key]
+                current[key] = {"__info__": old_info}
+            current = current[key]
+            assert isinstance(current, MutableMapping)
+        
+        # Set the entry
+        if keywords:
+            # Check if we're setting a dict entry that should contain the ellipsis info
+            if entry_info[1] is ... and keywords[-1] not in current:
+                # Create dict with info
+                current[keywords[-1]] = {"__info__": entry_info}
+            elif entry_info[1] is ... and isinstance(current[keywords[-1]], MutableMapping):
+                # Update existing dict with info
+                current[keywords[-1]]["__info__"] = entry_info
+            else:
+                # Regular entry
+                current[keywords[-1]] = entry_info
+        else:
+            # Root level entry - use special key
+            current[""] = entry_info
+
+    def _get_nested_entry(
+        self, keywords: tuple[str, ...]
+    ) -> tuple[int, Data | StandaloneData | EllipsisType, int]:
+        """Get an entry from the nested structure."""
+        current = self._parsed
+        
+        # Navigate to the correct nested level
+        for key in keywords[:-1]:
+            current = current[key]
+            assert isinstance(current, MutableMapping)
+        
+        # Get the entry
+        if keywords:
+            entry = current[keywords[-1]]
+            if isinstance(entry, MutableMapping) and "__info__" in entry:
+                # This is a dict with stored info
+                return entry["__info__"]
+            else:
+                # Regular entry
+                assert isinstance(entry, tuple)
+                return entry
+        else:
+            # Root level entry
+            entry = current[""]
+            assert isinstance(entry, tuple)
+            return entry
+
+    def _has_nested_entry(self, keywords: tuple[str, ...]) -> bool:
+        """Check if an entry exists in the nested structure."""
+        try:
+            current = self._parsed
+            
+            # Navigate to the correct nested level
+            for key in keywords[:-1]:
+                current = current[key]
+                assert isinstance(current, MutableMapping)
+            
+            # Check if the entry exists
+            if keywords:
+                if keywords[-1] not in current:
+                    return False
+                entry = current[keywords[-1]]
+                # Either a tuple or a dict with __info__
+                return isinstance(entry, tuple) or (isinstance(entry, MutableMapping) and "__info__" in entry)
+            else:
+                # Root level entry
+                return "" in current and isinstance(current[""], tuple)
+        except (KeyError, AssertionError):
+            return False
+
+    def _iter_nested_keys(self) -> Iterator[tuple[str, ...]]:
+        """Iterate over all keys in the nested structure."""
+        seen = set()
+        
+        def _iter_recursive(current: MutableMapping, path: tuple[str, ...]) -> Iterator[tuple[str, ...]]:
+            for key, value in current.items():
+                if key == "":
+                    # Root level entry
+                    if path not in seen:
+                        seen.add(path)
+                        yield path
+                elif key == "__info__":
+                    # Info entry - yield the parent path
+                    if path not in seen:
+                        seen.add(path)
+                        yield path
+                elif isinstance(value, tuple):
+                    # Leaf entry
+                    current_path = (*path, key)
+                    if current_path not in seen:
+                        seen.add(current_path)
+                        yield current_path
+                else:
+                    # Nested dict - recurse
+                    yield from _iter_recursive(value, (*path, key))
+        
+        yield from _iter_recursive(self._parsed, ())
+
+    def _update_nested_locations(
+        self, keywords: tuple[str, ...], diff: int, start_pos: int, end_pos: int
+    ) -> None:
+        """Update location information in the nested structure after content changes."""
+        def _update_recursive(current: MutableMapping, path: tuple[str, ...]) -> None:
+            for key, value in list(current.items()):
+                if key == "__info__":
+                    # Update the info tuple
+                    s, d, e = value
+                    if s >= end_pos:
+                        current[key] = (s + diff, d, e + diff)
+                    elif e > start_pos:
+                        current[key] = (s, d, e + diff)
+                elif isinstance(value, tuple):
+                    # Update regular entry
+                    s, d, e = value
+                    if s >= end_pos:
+                        current[key] = (s + diff, d, e + diff)
+                    elif e > start_pos:
+                        current[key] = (s, d, e + diff)
+                else:
+                    # Recurse into nested dict
+                    _update_recursive(value, (*path, key) if key != "" else path)
+        
+        _update_recursive(self._parsed, ())
+
+    def _delete_nested_subtree(self, keywords: tuple[str, ...]) -> None:
+        """Delete an entry and all its children from the nested structure."""
+        if not keywords:
+            # Can't delete root
+            return
+            
+        current = self._parsed
+        
+        # Navigate to parent
+        for key in keywords[:-1]:
+            if key not in current:
+                return
+            current = current[key]
+            if not isinstance(current, MutableMapping):
+                return
+        
+        # Delete the entry and any nested structure
+        if keywords[-1] in current:
+            del current[keywords[-1]]
 
     def __getitem__(
         self, keywords: tuple[str, ...]
     ) -> Data | StandaloneData | EllipsisType:
-        _, data, _ = self._parsed[keywords]
+        _, data, _ = self._get_nested_entry(keywords)
         return data
 
     def put(
@@ -578,53 +737,57 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         start, end = self.entry_location(keywords, missing_ok=True)
 
         diff = len(content) - (end - start)
-        for k, (s, d, e) in self._parsed.items():
-            if s >= end:
-                self._parsed[k] = (s + diff, d, e + diff)
-            elif e > start:
-                self._parsed[k] = (s, d, e + diff)
+        self._update_nested_locations(keywords, diff, start, end)
 
-        self._parsed[keywords] = (start, data, end + diff)
+        self._set_nested_entry(keywords, (start, data, end + diff))
 
         self.contents = self.contents[:start] + content + self.contents[end:]
         self.modified = True
 
-        for k in list(self._parsed):
-            if keywords != k and keywords == k[: len(keywords)]:
-                del self._parsed[k]
+        # Remove any child entries that would be overwritten
+        self._remove_children_of(keywords)
 
     def __delitem__(self, keywords: tuple[str, ...]) -> None:
         start, end = self.entry_location(keywords)
-        del self._parsed[keywords]
+        self._delete_nested_subtree(keywords)
 
-        for k in list(self._parsed):
-            if keywords == k[: len(keywords)]:
-                del self._parsed[k]
+        # Remove any child entries
+        self._remove_children_of(keywords)
 
         diff = end - start
-        for k, (s, d, e) in self._parsed.items():
-            if s > end:
-                self._parsed[k] = (s - diff, d, e - diff)
-            elif e > start:
-                self._parsed[k] = (s, d, e - diff)
+        self._update_nested_locations(keywords, -diff, start, end)
 
         self.contents = self.contents[:start] + self.contents[end:]
         self.modified = True
 
+    def _remove_children_of(self, keywords: tuple[str, ...]) -> None:
+        """Remove all child entries of the given keywords path."""
+        # Collect all keys that are children of this path
+        keys_to_remove = []
+        for key in self._iter_nested_keys():
+            if len(key) > len(keywords) and key[:len(keywords)] == keywords:
+                keys_to_remove.append(key)
+        
+        # Remove them
+        for key in keys_to_remove:
+            self._delete_nested_subtree(key)
+
     def __contains__(self, keywords: object) -> bool:
-        return keywords in self._parsed
+        if not isinstance(keywords, tuple):
+            return False
+        return self._has_nested_entry(keywords)
 
     def __iter__(self) -> Iterator[tuple[str, ...]]:
-        return iter(self._parsed)
+        return self._iter_nested_keys()
 
     def __len__(self) -> int:
-        return len(self._parsed)
+        return sum(1 for _ in self._iter_nested_keys())
 
     def entry_location(
         self, keywords: tuple[str, ...], *, missing_ok: bool = False
     ) -> tuple[int, int]:
         try:
-            start, _, end = self._parsed[keywords]
+            start, _, end = self._get_nested_entry(keywords)
         except KeyError:
             if missing_ok:
                 if len(keywords) > 1:
@@ -642,7 +805,8 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
 
     def as_dict(self) -> File:
         ret: File = {}
-        for keywords, (_, data, _) in self._parsed.items():
+        for keywords in self._iter_nested_keys():
+            _, data, _ = self._get_nested_entry(keywords)
             r = ret
             for k in keywords[:-1]:
                 v = r[k]
