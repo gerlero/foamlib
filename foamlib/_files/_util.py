@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import sys
 from abc import abstractmethod
 from typing import TypeVar, overload
@@ -60,8 +61,48 @@ class MultiMapping(Mapping[K, V]):
 
 
 class MutableMultiMapping(MutableMapping[K, V], MultiMapping[K, V]):
+    def __delitem__(self, key: K) -> None:
+        self.popone(key)
+        with contextlib.suppress(KeyError):
+            while True:
+                self.popone(key)
+
     @abstractmethod
     def add(self, key: K, value: V) -> None:
+        raise NotImplementedError
+
+    @overload
+    def pop(self, key: K) -> V: ...
+
+    @overload
+    def pop(self, key: K, default: D) -> V | D: ...
+
+    def pop(
+        self, key: K, default: D | MultiMapping._NoneType = MultiMapping._NONE
+    ) -> V | D:
+        ret = self.popone(key, default)
+        assert not isinstance(ret, MultiMapping._NoneType)
+        return ret
+
+    @overload
+    def popone(self, key: K) -> V: ...
+
+    @overload
+    def popone(self, key: K, default: D) -> V | D: ...
+
+    def popone(
+        self, key: K, default: D | MultiMapping._NoneType = MultiMapping._NONE
+    ) -> V | D:
+        try:
+            return self._popone(key)
+        except KeyError:
+            if default is not MultiMapping._NONE:
+                assert not isinstance(default, MultiMapping._NoneType)
+                return default
+            raise
+
+    @abstractmethod
+    def _popone(self, key: K) -> V:
         raise NotImplementedError
 
     @overload
