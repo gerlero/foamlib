@@ -515,10 +515,12 @@ _LOCATED_FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
+class Parsed(Mapping[str, Union[Data, StandaloneData, EllipsisType]]):
+    _KEY_DELIMITER = "|"  # Delimiter for flattening hierarchical keys
+    
     def __init__(self, contents: bytes) -> None:
         self._parsed: MutableMapping[
-            tuple[str, ...],
+            str,
             tuple[int, Data | StandaloneData | EllipsisType, int],
         ] = {}
         for parse_result in _LOCATED_FILE.parse_string(
@@ -528,15 +530,34 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
 
         self.contents = contents
         self.modified = False
+    
+    @classmethod
+    def _tuple_to_str_key(cls, keywords: tuple[str, ...]) -> str:
+        """Convert tuple of keywords to a single string key."""
+        if not keywords:
+            return ""
+        return cls._KEY_DELIMITER.join(keywords)
+    
+    @classmethod
+    def _str_to_tuple_key(cls, key: str) -> tuple[str, ...]:
+        """Convert string key back to tuple of keywords."""
+        if not key:
+            return ()
+        return tuple(key.split(cls._KEY_DELIMITER))
+    
+    def keys_as_tuples(self) -> Iterator[tuple[str, ...]]:
+        """Return keys in the traditional tuple format for backward compatibility."""
+        for str_key in self._parsed:
+            yield self._str_to_tuple_key(str_key)
 
     @staticmethod
     def _flatten_result(
         parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
     ) -> Mapping[
-        tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]
+        str, tuple[int, Data | StandaloneData | EllipsisType, int]
     ]:
         ret: MutableMapping[
-            tuple[str, ...],
+            str,
             tuple[int, Data | StandaloneData | EllipsisType, int],
         ] = {}
         start = parse_result.locn_start
@@ -550,32 +571,44 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
             assert not _keywords
             assert len(data) == 1
             assert not isinstance(data[0], ParseResults)
-            ret[()] = (start, data[0], end)
+            ret[Parsed._tuple_to_str_key(())] = (start, data[0], end)
         else:
             assert isinstance(keyword, str)
-            ret[(*_keywords, keyword)] = (start, ..., end)
+            current_keywords = (*_keywords, keyword)
+            ret[Parsed._tuple_to_str_key(current_keywords)] = (start, ..., end)
             for d in data:
                 if isinstance(d, ParseResults):
                     ret.update(
-                        Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
+                        Parsed._flatten_result(d, _keywords=current_keywords)
                     )
                 else:
-                    ret[(*_keywords, keyword)] = (start, d, end)
+                    ret[Parsed._tuple_to_str_key(current_keywords)] = (start, d, end)
         return ret
 
     def __getitem__(
-        self, keywords: tuple[str, ...]
+        self, keywords: str | tuple[str, ...]
     ) -> Data | StandaloneData | EllipsisType:
-        _, data, _ = self._parsed[keywords]
+        if isinstance(keywords, tuple):
+            # Backward compatibility: convert tuple to string key
+            str_key = self._tuple_to_str_key(keywords)
+        else:
+            str_key = keywords
+        _, data, _ = self._parsed[str_key]
         return data
 
     def put(
         self,
-        keywords: tuple[str, ...],
+        keywords: str | tuple[str, ...],
         data: Data | StandaloneData | EllipsisType,
         content: bytes,
     ) -> None:
-        start, end = self.entry_location(keywords, missing_ok=True)
+        if isinstance(keywords, tuple):
+            # Backward compatibility: convert tuple to string key
+            str_key = self._tuple_to_str_key(keywords)
+        else:
+            str_key = keywords
+        
+        start, end = self.entry_location(str_key, missing_ok=True)
 
         diff = len(content) - (end - start)
         for k, (s, d, e) in self._parsed.items():
@@ -584,21 +617,33 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
             elif e > start:
                 self._parsed[k] = (s, d, e + diff)
 
-        self._parsed[keywords] = (start, data, end + diff)
+        self._parsed[str_key] = (start, data, end + diff)
 
         self.contents = self.contents[:start] + content + self.contents[end:]
         self.modified = True
 
+        # Remove nested entries that start with this key
+        keywords_tuple = self._str_to_tuple_key(str_key)
         for k in list(self._parsed):
-            if keywords != k and keywords == k[: len(keywords)]:
+            k_tuple = self._str_to_tuple_key(k)
+            if str_key != k and keywords_tuple == k_tuple[: len(keywords_tuple)]:
                 del self._parsed[k]
 
-    def __delitem__(self, keywords: tuple[str, ...]) -> None:
-        start, end = self.entry_location(keywords)
-        del self._parsed[keywords]
+    def __delitem__(self, keywords: str | tuple[str, ...]) -> None:
+        if isinstance(keywords, tuple):
+            # Backward compatibility: convert tuple to string key  
+            str_key = self._tuple_to_str_key(keywords)
+        else:
+            str_key = keywords
+            
+        start, end = self.entry_location(str_key)
+        del self._parsed[str_key]
 
+        # Remove nested entries that start with this key
+        keywords_tuple = self._str_to_tuple_key(str_key)
         for k in list(self._parsed):
-            if keywords == k[: len(keywords)]:
+            k_tuple = self._str_to_tuple_key(k)
+            if keywords_tuple == k_tuple[: len(keywords_tuple)]:
                 del self._parsed[k]
 
         diff = end - start
@@ -612,24 +657,40 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         self.modified = True
 
     def __contains__(self, keywords: object) -> bool:
-        return keywords in self._parsed
+        if isinstance(keywords, tuple):
+            # Backward compatibility: convert tuple to string key
+            return self._tuple_to_str_key(keywords) in self._parsed
+        elif isinstance(keywords, str):
+            return keywords in self._parsed
+        else:
+            return False
 
-    def __iter__(self) -> Iterator[tuple[str, ...]]:
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._parsed)
         return iter(self._parsed)
 
     def __len__(self) -> int:
         return len(self._parsed)
 
     def entry_location(
-        self, keywords: tuple[str, ...], *, missing_ok: bool = False
+        self, keywords: str | tuple[str, ...], *, missing_ok: bool = False
     ) -> tuple[int, int]:
+        if isinstance(keywords, tuple):
+            # Backward compatibility: convert tuple to string key
+            str_key = self._tuple_to_str_key(keywords)
+            keywords_tuple = keywords
+        else:
+            str_key = keywords
+            keywords_tuple = self._str_to_tuple_key(keywords)
+            
         try:
-            start, _, end = self._parsed[keywords]
+            start, _, end = self._parsed[str_key]
         except KeyError:
             if missing_ok:
-                if len(keywords) > 1:
-                    assert self[keywords[:-1]] is ...
-                    start, end = self.entry_location(keywords[:-1])
+                if len(keywords_tuple) > 1:
+                    parent_key = self._tuple_to_str_key(keywords_tuple[:-1])
+                    assert self[parent_key] is ...
+                    start, end = self.entry_location(parent_key)
                     end = self.contents.rindex(b"}", start, end)
                 else:
                     end = len(self.contents)
@@ -642,7 +703,8 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
 
     def as_dict(self) -> File:
         ret: File = {}
-        for keywords, (_, data, _) in self._parsed.items():
+        for str_key, (_, data, _) in self._parsed.items():
+            keywords = self._str_to_tuple_key(str_key)
             r = ret
             for k in keywords[:-1]:
                 v = r[k]
