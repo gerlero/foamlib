@@ -44,6 +44,9 @@ from ._types import Data, Dimensioned, DimensionSet, File, StandaloneData, SubDi
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
+# Type alias for keys that can be either strings or tuples (for backward compatibility)
+KeyType = Union[str, Tuple[str, ...]]
+
 
 def _ascii_numeric_list(
     dtype: DTypeLike,
@@ -586,7 +589,7 @@ class Parsed(Mapping[str, Union[Data, StandaloneData, EllipsisType]]):
         return ret
 
     def __getitem__(
-        self, keywords: str | tuple[str, ...]
+        self, keywords: KeyType
     ) -> Data | StandaloneData | EllipsisType:
         if isinstance(keywords, tuple):
             # Backward compatibility: convert tuple to string key
@@ -598,7 +601,7 @@ class Parsed(Mapping[str, Union[Data, StandaloneData, EllipsisType]]):
 
     def put(
         self,
-        keywords: str | tuple[str, ...],
+        keywords: KeyType,
         data: Data | StandaloneData | EllipsisType,
         content: bytes,
     ) -> None:
@@ -629,7 +632,7 @@ class Parsed(Mapping[str, Union[Data, StandaloneData, EllipsisType]]):
             if str_key != k and keywords_tuple == k_tuple[: len(keywords_tuple)]:
                 del self._parsed[k]
 
-    def __delitem__(self, keywords: str | tuple[str, ...]) -> None:
+    def __delitem__(self, keywords: KeyType) -> None:
         if isinstance(keywords, tuple):
             # Backward compatibility: convert tuple to string key  
             str_key = self._tuple_to_str_key(keywords)
@@ -673,7 +676,7 @@ class Parsed(Mapping[str, Union[Data, StandaloneData, EllipsisType]]):
         return len(self._parsed)
 
     def entry_location(
-        self, keywords: str | tuple[str, ...], *, missing_ok: bool = False
+        self, keywords: KeyType, *, missing_ok: bool = False
     ) -> tuple[int, int]:
         if isinstance(keywords, tuple):
             # Backward compatibility: convert tuple to string key
