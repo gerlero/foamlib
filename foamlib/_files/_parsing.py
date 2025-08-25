@@ -568,6 +568,10 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         if nested_dict is None:
             nested_dict = self._parsed
         
+        # Handle root level _value case (empty tuple key)
+        if '_value' in nested_dict and not prefix:
+            yield ()
+        
         for key, value in nested_dict.items():
             if key == '_value':
                 continue  # Skip the _value key itself
