@@ -17,7 +17,7 @@ else:
 import numpy as np
 
 from ._io import FoamFileIO
-from ._parsing import loads
+from ._parsing import loads, Parsed
 from ._serialization import dumps, normalize_data, normalize_keyword
 from ._types import (
     Data,

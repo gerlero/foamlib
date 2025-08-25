@@ -600,11 +600,11 @@ class Parsed(Mapping[str, Union[Data, StandaloneData, EllipsisType, "Parsed"]]):
 
     def put(
         self,
-        key: str,
+        keywords: tuple[str, ...],
         data: Data | StandaloneData | EllipsisType,
         content: bytes,
     ) -> None:
-        keywords = (*self._key_path, key)
+        # Handle tuple keys for backward compatibility
         root = self._get_root()
         start, end = root.entry_location(keywords, missing_ok=True)
 
@@ -623,6 +623,16 @@ class Parsed(Mapping[str, Union[Data, StandaloneData, EllipsisType, "Parsed"]]):
         for k in list(root._root_data):
             if keywords != k and keywords == k[: len(keywords)]:
                 del root._root_data[k]
+
+    def put_key(
+        self,
+        key: str,
+        data: Data | StandaloneData | EllipsisType,
+        content: bytes,
+    ) -> None:
+        # New method for string keys
+        keywords = (*self._key_path, key)
+        self.put(keywords, data, content)
 
     def __delitem__(self, key: str) -> None:
         keywords = (*self._key_path, key)
