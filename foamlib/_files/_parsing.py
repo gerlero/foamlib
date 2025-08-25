@@ -517,17 +517,82 @@ _LOCATED_FILE = (
 
 class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
     def __init__(self, contents: bytes) -> None:
-        self._parsed: MutableMapping[
-            tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
-        ] = {}
+        # Use nested dict structure with string keys for multidict compatibility
+        self._parsed: MutableMapping[str, object] = {}
         for parse_result in _LOCATED_FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
         ):
-            self._parsed.update(self._flatten_result(parse_result))
+            flat_results = self._flatten_result(parse_result)
+            for keywords, value_tuple in flat_results.items():
+                self._set_nested_value(keywords, value_tuple)
 
         self.contents = contents
         self.modified = False
+
+    def _set_nested_value(self, keys: tuple[str, ...], value: tuple[int, Data | StandaloneData | EllipsisType, int]) -> None:
+        """Set a value in the nested dictionary using a tuple of keys."""
+        current = self._parsed
+        for key in keys[:-1]:
+            if key not in current:
+                current[key] = {}
+            current = current[key]
+        
+        if keys:
+            # For non-empty keys, store the value
+            if keys[-1] not in current:
+                current[keys[-1]] = {}
+            current[keys[-1]]['_value'] = value
+        else:
+            # For empty keys (root level)
+            current['_value'] = value
+
+    def _get_nested_value(self, keys: tuple[str, ...]) -> tuple[int, Data | StandaloneData | EllipsisType, int]:
+        """Get a value from the nested dictionary using a tuple of keys."""
+        current = self._parsed
+        for key in keys:
+            current = current[key]
+        return current['_value']
+
+    def _has_nested_key(self, keys: tuple[str, ...]) -> bool:
+        """Check if a key path exists in the nested dictionary."""
+        try:
+            current = self._parsed
+            for key in keys:
+                current = current[key]
+            return '_value' in current
+        except (KeyError, TypeError):
+            return False
+
+    def _iter_nested_keys(self, nested_dict: MutableMapping[str, object] | None = None, prefix: tuple[str, ...] = ()) -> Iterator[tuple[str, ...]]:
+        """Iterate over all key paths in the nested dictionary."""
+        if nested_dict is None:
+            nested_dict = self._parsed
+        
+        for key, value in nested_dict.items():
+            if key == '_value':
+                continue  # Skip the _value key itself
+            else:
+                current_path = prefix + (key,)
+                if isinstance(value, dict) and '_value' in value:
+                    yield current_path
+                    # Recursively iterate through children (excluding _value)
+                    child_dict = {k: v for k, v in value.items() if k != '_value'}
+                    if child_dict:  # Only recurse if there are children
+                        yield from self._iter_nested_keys(child_dict, current_path)
+
+    def _delete_nested_key(self, keys: tuple[str, ...]) -> None:
+        """Delete a key path from the nested dictionary."""
+        if not keys:
+            self._parsed.pop('_value', None)
+            return
+        
+        # Navigate to parent
+        current = self._parsed
+        for key in keys[:-1]:
+            current = current[key]
+        
+        # Remove the final key completely
+        current.pop(keys[-1], None)
 
     @staticmethod
     def _flatten_result(
@@ -566,7 +631,7 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
     def __getitem__(
         self, keywords: tuple[str, ...]
     ) -> Data | StandaloneData | EllipsisType:
-        _, data, _ = self._parsed[keywords]
+        _, data, _ = self._get_nested_value(keywords)
         return data
 
     def put(
@@ -578,54 +643,69 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         start, end = self.entry_location(keywords, missing_ok=True)
 
         diff = len(content) - (end - start)
-        for k, (s, d, e) in self._parsed.items():
-            if s >= end:
-                self._parsed[k] = (s + diff, d, e + diff)
-            elif e > start:
-                self._parsed[k] = (s, d, e + diff)
+        
+        # Update positions of all entries
+        for current_keys in list(self._iter_nested_keys()):
+            try:
+                s, d, e = self._get_nested_value(current_keys)
+                if s >= end:
+                    self._set_nested_value(current_keys, (s + diff, d, e + diff))
+                elif e > start:
+                    self._set_nested_value(current_keys, (s, d, e + diff))
+            except (KeyError, TypeError):
+                continue
 
-        self._parsed[keywords] = (start, data, end + diff)
+        self._set_nested_value(keywords, (start, data, end + diff))
 
         self.contents = self.contents[:start] + content + self.contents[end:]
         self.modified = True
 
-        for k in list(self._parsed):
-            if keywords != k and keywords == k[: len(keywords)]:
-                del self._parsed[k]
+        # Remove any child entries that are now invalidated
+        for current_keys in list(self._iter_nested_keys()):
+            if keywords != current_keys and keywords == current_keys[: len(keywords)]:
+                self._delete_nested_key(current_keys)
 
     def __delitem__(self, keywords: tuple[str, ...]) -> None:
         start, end = self.entry_location(keywords)
-        del self._parsed[keywords]
+        self._delete_nested_key(keywords)
 
-        for k in list(self._parsed):
-            if keywords == k[: len(keywords)]:
-                del self._parsed[k]
+        # Remove any child entries
+        for current_keys in list(self._iter_nested_keys()):
+            if keywords == current_keys[: len(keywords)]:
+                self._delete_nested_key(current_keys)
 
         diff = end - start
-        for k, (s, d, e) in self._parsed.items():
-            if s > end:
-                self._parsed[k] = (s - diff, d, e - diff)
-            elif e > start:
-                self._parsed[k] = (s, d, e - diff)
+        # Update positions of remaining entries
+        for current_keys in list(self._iter_nested_keys()):
+            try:
+                s, d, e = self._get_nested_value(current_keys)
+                if s > end:
+                    self._set_nested_value(current_keys, (s - diff, d, e - diff))
+                elif e > start:
+                    self._set_nested_value(current_keys, (s, d, e - diff))
+            except (KeyError, TypeError):
+                continue
 
         self.contents = self.contents[:start] + self.contents[end:]
         self.modified = True
 
     def __contains__(self, keywords: object) -> bool:
-        return keywords in self._parsed
+        if not isinstance(keywords, tuple):
+            return False
+        return self._has_nested_key(keywords)
 
     def __iter__(self) -> Iterator[tuple[str, ...]]:
-        return iter(self._parsed)
+        return self._iter_nested_keys()
 
     def __len__(self) -> int:
-        return len(self._parsed)
+        return len(list(self._iter_nested_keys()))
 
     def entry_location(
         self, keywords: tuple[str, ...], *, missing_ok: bool = False
     ) -> tuple[int, int]:
         try:
-            start, _, end = self._parsed[keywords]
-        except KeyError:
+            start, _, end = self._get_nested_value(keywords)
+        except (KeyError, TypeError):
             if missing_ok:
                 if len(keywords) > 1:
                     assert self[keywords[:-1]] is ...
@@ -642,7 +722,8 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
 
     def as_dict(self) -> File:
         ret: File = {}
-        for keywords, (_, data, _) in self._parsed.items():
+        for keywords in self._iter_nested_keys():
+            _, data, _ = self._get_nested_value(keywords)
             r = ret
             for k in keywords[:-1]:
                 v = r[k]
