@@ -7,7 +7,7 @@ from foamlib._files._parsing import Parsed
 
 
 def test_var_simple() -> None:
-    assert Parsed(b"a  b;")[("a",)] == "b"
+    assert Parsed(b"a  b;")["a"] == "b"
 
 
 def test_var_quoted_string() -> None:
@@ -17,7 +17,7 @@ def test_var_quoted_string() -> None:
         {
             default    "Gauss linear corrected";
         }
-    """)[("laplacianSchemes", "default")]
+    """)["laplacianSchemes"]["default"]
         == '"Gauss linear corrected"'
     )
 
@@ -28,8 +28,8 @@ def test_var_multiple() -> None:
 
         c    d;
     """)
-    assert parsed[("a",)] == "b"
-    assert parsed[("c",)] == "d"
+    assert parsed["a"] == "b"
+    assert parsed["c"] == "d"
 
 
 def test_strange_names() -> None:
@@ -55,10 +55,10 @@ def test_strange_names() -> None:
 
     """)
     # Note: quoted strings include the quotes in the key
-    assert parsed[('"(U|k|epsilon|R)Final"', "$U")] == ""
-    assert parsed[("thermalPhaseChange:dmdtf",)] == 1.0
-    assert parsed[("thermo:rho", "solver")] == "PCG"
-    assert parsed[("alpha.water", "solver")] == "PCG"
+    assert parsed['"(U|k|epsilon|R)Final"']["$U"] == ""
+    assert parsed["thermalPhaseChange:dmdtf"] == 1.0
+    assert parsed["thermo:rho"]["solver"] == "PCG"
+    assert parsed["alpha.water"]["solver"] == "PCG"
 
 
 def test_list_simple() -> None:
@@ -68,7 +68,7 @@ def test_list_simple() -> None:
             (1 5 4 0)
             (2 3 4 5)
         );
-    """)[("faces",)]
+    """)["faces"]
     assert np.array_equal(faces, [[1, 5, 4, 0], [2, 3, 4, 5]])  # type: ignore[arg-type]
 
 
@@ -81,7 +81,7 @@ def test_list_assignment() -> None:
             4
             0
         );
-    """)[("faces",)]
+    """)["faces"]
     assert np.array_equal(faces, [1, 5, 4, 0])  # type: ignore[arg-type]
 
 
@@ -96,9 +96,9 @@ def test_dict_simple() -> None:
             object      controlDict;
         }
     """)
-    assert parsed[("my_dict", "version")] == 2.0
-    assert parsed[("my_dict", "format")] == "ascii"
-    assert parsed[("my_dict", "location")] == '"system"'
+    assert parsed["my_dict"]["version"] == 2.0
+    assert parsed["my_dict"]["format"] == "ascii"
+    assert parsed["my_dict"]["location"] == '"system"'
 
 
 def test_dict_nested() -> None:
@@ -121,8 +121,8 @@ def test_dict_nested() -> None:
             }
         }
     """)
-    assert parsed[("my_nested_dict", "p", "solver")] == "PCG"
-    assert parsed[("my_nested_dict", "U", "tolerance")] == 1e-05
+    assert parsed["my_nested_dict"]["p"]["solver"] == "PCG"
+    assert parsed["my_nested_dict"]["U"]["tolerance"] == 1e-05
 
 
 def test_dict_with_list() -> None:
@@ -135,7 +135,7 @@ def test_dict_with_list() -> None:
             pRefValue                   0;
         }
     """)
-    assert np.array_equal(parsed[("PISO", "pRefPoint")], [0, 0, 0])  # type: ignore[arg-type]
+    assert np.array_equal(parsed["PISO"]["pRefPoint"], [0, 0, 0])  # type: ignore[arg-type]
 
 
 def test_list_with_dict() -> None:
@@ -152,7 +152,7 @@ def test_list_with_dict() -> None:
                 );
             }
         );
-    """)[("boundary",)]
+    """)["boundary"]
     assert isinstance(boundary, list)
     assert len(boundary) == 1
 
@@ -169,7 +169,7 @@ def test_list_with_str() -> None:
         (
             hex (0 1 2 3 4 5 6 7) (40 40 40) simpleGrading (1 1 1)
         );
-    """)[("blocks",)]
+    """)["blocks"]
     assert isinstance(blocks, list)
     assert len(blocks) == 5
 
@@ -194,12 +194,12 @@ def test_file_simple() -> None:
 
         c  d;
     """)
-    assert parsed[("a",)] == "b"
-    assert parsed[("c",)] == "d"
-    assert parsed[("FoamFile", "version")] == 2.0
-    assert parsed[("FoamFile", "format")] == "ascii"
-    assert parsed[("FoamFile", "class")] == "dictionary"
-    assert parsed[("FoamFile", "object")] == "blockMeshDict"
+    assert parsed["a"] == "b"
+    assert parsed["c"] == "d"
+    assert parsed["FoamFile"]["version"] == 2.0
+    assert parsed["FoamFile"]["format"] == "ascii"
+    assert parsed["FoamFile"]["class"] == "dictionary"
+    assert parsed["FoamFile"]["object"] == "blockMeshDict"
 
 
 def test_file() -> None:
@@ -227,11 +227,11 @@ def test_file() -> None:
             a    1;
         }
     """)
-    assert parsed[("a",)] == 1
-    assert parsed[("b",)] == 2
-    faces = parsed[("faces",)]
+    assert parsed["a"] == 1
+    assert parsed["b"] == 2
+    faces = parsed["faces"]
     assert np.array_equal(faces, [[1, 5, 4, 0], [2, 3, 4, 5]])  # type: ignore[arg-type]
-    assert parsed[("my_dict", "a")] == 1
+    assert parsed["my_dict"]["a"] == 1
 
 
 def test_directive() -> None:
@@ -243,8 +243,8 @@ def test_directive() -> None:
 
         #include  "initialConditions"
     """)
-    assert parsed[("FoamFile", "version")] == 2.0
-    assert parsed[("#include",)] == '"initialConditions"'
+    assert parsed["FoamFile"]["version"] == 2.0
+    assert parsed["#include"] == '"initialConditions"'
 
 
 @pytest.mark.xfail(reason="Not currently supported")
@@ -337,12 +337,12 @@ def test_macro() -> None:
 
         relaxationFactors  $relaxationFactors-SIMPLE;
     """)
-    assert parsed[("relTol",)] == "$p"
-    assert parsed[("Phi", "$p")] == ""
-    assert parsed[("p_rbghFinal", "$p_rbgh")] == ""
-    assert parsed[("p_rbghFinal", "tolerance")] == 1e-08
-    assert parsed[("p_rbghFinal", "relTol")] == 0
-    assert parsed[("relaxationFactors",)] == "$relaxationFactors-SIMPLE"
+    assert parsed["relTol"] == "$p"
+    assert parsed["Phi"]["$p"] == ""
+    assert parsed["p_rbghFinal"]["$p_rbgh"] == ""
+    assert parsed["p_rbghFinal"]["tolerance"] == 1e-08
+    assert parsed["p_rbghFinal"]["relTol"] == 0
+    assert parsed["relaxationFactors"] == "$relaxationFactors-SIMPLE"
 
 
 def test_empty_dict() -> None:
@@ -362,7 +362,7 @@ def test_dict_isolated_key() -> None:
             grad(U);
         }
     """)
-    assert parsed[("cache", "grad(U)")] == ""
+    assert parsed["cache"]["grad(U)"] == ""
 
 
 def test_dimension_set() -> None:
@@ -378,13 +378,13 @@ def test_dimension_set() -> None:
             rhoMin    rhoMin [1 -3 0 0 0 0 0] 0.3;
         }
     """)
-    assert parsed[("dimensions",)] == FoamFile.DimensionSet(length=2, time=-1)
-    assert isinstance(parsed[("nu",)], FoamFile.Dimensioned)
-    assert parsed[("nu",)].dimensions == FoamFile.DimensionSet(length=2, time=-1)
-    assert isinstance(parsed[("nu1",)], FoamFile.Dimensioned)
-    assert parsed[("nu1",)].dimensions == FoamFile.DimensionSet(length=2, time=-1)
-    assert isinstance(parsed[("SIMPLE", "rhoMin")], FoamFile.Dimensioned)
-    assert parsed[("SIMPLE", "rhoMin")].dimensions == FoamFile.DimensionSet(
+    assert parsed["dimensions"] == FoamFile.DimensionSet(length=2, time=-1)
+    assert isinstance(parsed["nu"], FoamFile.Dimensioned)
+    assert parsed["nu"].dimensions == FoamFile.DimensionSet(length=2, time=-1)
+    assert isinstance(parsed["nu1"], FoamFile.Dimensioned)
+    assert parsed["nu1"].dimensions == FoamFile.DimensionSet(length=2, time=-1)
+    assert isinstance(parsed["SIMPLE"]["rhoMin"], FoamFile.Dimensioned)
+    assert parsed["SIMPLE"]["rhoMin"].dimensions == FoamFile.DimensionSet(
         mass=1, length=-3
     )
 
@@ -395,8 +395,8 @@ def test_named_values() -> None:
 
         ft    limitedLinear01 1;
     """)
-    assert parsed[("a",)] == "b"
-    assert parsed[("ft",)] == ("limitedLinear01", 1)
+    assert parsed["a"] == "b"
+    assert parsed["ft"] == ("limitedLinear01", 1)
 
 
 @pytest.mark.xfail(reason="Not currently supported")
@@ -407,7 +407,7 @@ def test_macro_ugly() -> None:
             ${_${FOAM_EXECUTABLE}};
         }
     """)
-    assert parsed[("relaxationFactors", "${_${FOAM_EXECUTABLE}}")] == ""
+    assert parsed["relaxationFactors"]["${_${FOAM_EXECUTABLE}}"] == ""
 
 
 def test_list_on_1_line() -> None:
@@ -424,10 +424,10 @@ def test_list_on_1_line() -> None:
             }
         }
     """)
-    assert parsed[("libs",)] == ["overset", "rigidBodyDynamics"]
-    assert parsed[("functions", "minMax1", "libs")] == ["fieldFunctionObjects"]
-    assert parsed[("functions", "minMax1", "type")] == "fieldMinMax"
-    assert parsed[("functions", "minMax1", "fields")] == ["U", "p"]
+    assert parsed["libs"] == ["overset", "rigidBodyDynamics"]
+    assert parsed["functions"]["minMax1"]["libs"] == ["fieldFunctionObjects"]
+    assert parsed["functions"]["minMax1"]["type"] == "fieldMinMax"
+    assert parsed["functions"]["minMax1"]["fields"] == ["U", "p"]
 
 
 def test_double_value() -> None:
@@ -438,8 +438,8 @@ def test_double_value() -> None:
             object    controlDict.1st;
         }
     """)
-    assert parsed[("FoamFile", "format")] == "ascii"
-    assert parsed[("FoamFile", "object")] == "controlDict.1st"
+    assert parsed["FoamFile"]["format"] == "ascii"
+    assert parsed["FoamFile"]["object"] == "controlDict.1st"
 
 
 def test_for_blockmesh() -> None:
@@ -451,8 +451,8 @@ def test_for_blockmesh() -> None:
             hex (4 6 14 12 0 2 10 8) (1 $upstreamCells $cylinderBoxCells) $expandBlock
         );
     """)
-    assert parsed[("negHalfWidth",)] == ("#neg", "$halfWidth")
-    blocks = parsed[("blocks",)]
+    assert parsed["negHalfWidth"] == ("#neg", "$halfWidth")
+    blocks = parsed["blocks"]
     assert isinstance(blocks, list)
     assert len(blocks) == 4
 
@@ -466,7 +466,7 @@ def test_for_u() -> None:
     parsed = Parsed(b"""
         internalField  uniform $include/caseSettings!internalField/U;
     """)
-    assert parsed[("internalField",)] == (
+    assert parsed["internalField"] == (
         "uniform",
         "$include/caseSettings!internalField/U",
     )
@@ -482,7 +482,7 @@ def test_blocks() -> None:
             hex (16 17 18 19 20 21 22 23) (96 1 72) simpleGrading (1 1 1)
         );
     """)
-    blocks = parsed[("blocks",)]
+    blocks = parsed["blocks"]
     assert isinstance(blocks, list)
     assert len(blocks) == 22
 
@@ -521,7 +521,7 @@ def test_macro_signed() -> None:
             ($x1 $y1 -$w2)
         );
     """)
-    assert parsed[("vertices",)] == [
+    assert parsed["vertices"] == [
         ["$x0", "$y0", "-$w2"],
         [0, "-$h2", "-$w2"],
         [0, "$h2", "-$w2"],
@@ -567,13 +567,12 @@ def test_colon_double_name() -> None:
             compressible::turbulentTemperatureTwoPhaseRadCoupledMixed   0;
         }
     """)
-    assert parsed[("DebugSwitches", "compressible::alphatWallBoilingWallFunction")] == 0
+    assert parsed["DebugSwitches"]["compressible::alphatWallBoilingWallFunction"] == 0
     assert (
         parsed[
-            (
-                "DebugSwitches",
-                "compressible::turbulentTemperatureTwoPhaseRadCoupledMixed",
-            )
+            "DebugSwitches"
+        ][
+            "compressible::turbulentTemperatureTwoPhaseRadCoupledMixed"
         ]
         == 0
     )
@@ -587,7 +586,7 @@ def test_list_edges() -> None:
             spline 6 5 ((0.6 0.0124 0.05) (0.7 0.0395 0.05) (0.8 0.0724 0.05) (0.9 0.132 0.05) (1 0.172 0.05) (1.1 0.132 0.05) (1.2 0.0724 0.05) (1.3 0.0395 0.05) (1.4 0.0124 0.05))
         );
     """)
-    edges = parsed[("edges",)]
+    edges = parsed["edges"]
     assert isinstance(edges, list)
     assert len(edges) == 8
 
@@ -635,7 +634,7 @@ def test_list_edges_arcs() -> None:
             arc 5 10 origin (0 0 0)
         );
     """)
-    edges = parsed[("edges",)]
+    edges = parsed["edges"]
     assert isinstance(edges, list)
     assert len(edges) == 10
     assert edges[0] == "arc"
@@ -659,7 +658,7 @@ def test_list_blocks() -> None:
             hex (2 3 11 10 5 4 12 13) (225 100 1) simpleGrading (1 ((0.1 0.25 41.9) (0.9 0.75 1)) 1)
         );
     """)
-    blocks = parsed[("blocks",)]
+    blocks = parsed["blocks"]
 
     assert isinstance(blocks, list)
     assert len(blocks) == 15
@@ -741,5 +740,5 @@ def test_list_uniform() -> None:
                 0
             );
         """)
-    assert parsed[("a",)] == 1
-    assert parsed[("internalField",)] == pytest.approx([0.1, 0, 0])
+    assert parsed["a"] == 1
+    assert parsed["internalField"] == pytest.approx([0.1, 0, 0])

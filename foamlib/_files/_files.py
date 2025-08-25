@@ -285,18 +285,37 @@ class FoamFile(
         self, keywords: str | tuple[str, ...] | None
     ) -> Data | StandaloneData | FoamFile.SubDict:
         if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
+            # Root level access
+            parsed = self._get_parsed()
+            # For root level, we need to check for standalone data
+            root_data = parsed._get_root()._root_data
+            if () in root_data:
+                _, data, _ = root_data[()]
+                return deepcopy(data)
+            raise KeyError("No root data")
+        elif isinstance(keywords, str):
+            # String key access
+            parsed = self._get_parsed()
+            value = parsed[keywords]
+        else:
+            # Tuple key access - convert to nested access
+            parsed = self._get_parsed()
+            current = parsed
+            for key in keywords:
+                if isinstance(current, Parsed):
+                    current = current[key]
+                else:
+                    raise KeyError(f"Invalid path: {keywords}")
+            value = current
 
-        parsed = self._get_parsed()
-
-        value = parsed[keywords]
-
-        assert not isinstance(value, Mapping)
-
-        if value is ...:
-            return FoamFile.SubDict(self, keywords)
+        if isinstance(value, Parsed):
+            # Convert tuple keywords for SubDict compatibility
+            if isinstance(keywords, str):
+                tuple_keywords = (keywords,)
+            else:
+                tuple_keywords = keywords
+            return FoamFile.SubDict(self, tuple_keywords)
+        
         return deepcopy(value)
 
     @overload  # type: ignore [override]
@@ -461,29 +480,65 @@ class FoamFile(
                 )
 
     def __delitem__(self, keywords: str | tuple[str, ...] | None) -> None:
-        if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
-
         with self:
-            del self._get_parsed()[keywords]
+            parsed = self._get_parsed()
+            if keywords is None:
+                # Delete root data - need to use the old tuple interface for now
+                root = parsed._get_root()
+                if () in root._root_data:
+                    del root._root_data[()]
+                else:
+                    raise KeyError("No root data to delete")
+            elif isinstance(keywords, str):
+                # String key deletion
+                del parsed[keywords]
+            else:
+                # Tuple key deletion - navigate to parent and delete last key
+                if len(keywords) == 1:
+                    del parsed[keywords[0]]
+                else:
+                    current = parsed
+                    for key in keywords[:-1]:
+                        current = current[key]
+                    del current[keywords[-1]]
 
     def _iter(self, keywords: tuple[str, ...] = ()) -> Iterator[str | None]:
-        yield from (
-            k[-1] if k else None for k in self._get_parsed() if k[:-1] == keywords
-        )
+        parsed = self._get_parsed()
+        if keywords == ():
+            # Root level iteration
+            yield from parsed.keys()
+        else:
+            # Navigate to the specified path and iterate its keys
+            current = parsed
+            for key in keywords:
+                current = current[key]
+            if isinstance(current, Parsed):
+                yield from current.keys()
 
     def __iter__(self) -> Iterator[str | None]:
         yield from (k for k in self._iter() if k != "FoamFile")
 
     def __contains__(self, keywords: object) -> bool:
+        parsed = self._get_parsed()
         if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
-
-        return keywords in self._get_parsed()
+            # Check for root data
+            root = parsed._get_root()
+            return () in root._root_data
+        elif isinstance(keywords, str):
+            return keywords in parsed
+        elif isinstance(keywords, tuple):
+            # Navigate the path to check if it exists
+            try:
+                current = parsed
+                for key in keywords:
+                    if not isinstance(current, Parsed) or key not in current:
+                        return False
+                    current = current[key]
+                return True
+            except (KeyError, TypeError):
+                return False
+        else:
+            return False
 
     def __len__(self) -> int:
         return len(list(iter(self)))

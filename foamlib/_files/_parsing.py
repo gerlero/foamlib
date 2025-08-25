@@ -515,19 +515,37 @@ _LOCATED_FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
-    def __init__(self, contents: bytes) -> None:
-        self._parsed: MutableMapping[
-            tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
-        ] = {}
-        for parse_result in _LOCATED_FILE.parse_string(
-            contents.decode("latin-1"), parse_all=True
-        ):
-            self._parsed.update(self._flatten_result(parse_result))
+class Parsed(Mapping[str, Union[Data, StandaloneData, EllipsisType, "Parsed"]]):
+    def __init__(self, contents: bytes, *, _parent: "Parsed | None" = None, _key_path: tuple[str, ...] = ()) -> None:
+        if _parent is None:
+            # Root instance
+            self._root_data: MutableMapping[
+                tuple[str, ...],
+                tuple[int, Data | StandaloneData | EllipsisType, int],
+            ] = {}
+            for parse_result in _LOCATED_FILE.parse_string(
+                contents.decode("latin-1"), parse_all=True
+            ):
+                self._root_data.update(self._flatten_result(parse_result))
 
-        self.contents = contents
-        self.modified = False
+            self.contents = contents
+            self.modified = False
+            self._parent = None
+            self._key_path = ()
+        else:
+            # Sub-dict instance
+            self._root_data = _parent._root_data
+            self.contents = _parent.contents
+            self.modified = _parent.modified
+            self._parent = _parent
+            self._key_path = _key_path
+
+    def _get_root(self) -> "Parsed":
+        """Get the root Parsed instance."""
+        current = self
+        while current._parent is not None:
+            current = current._parent
+        return current
 
     @staticmethod
     def _flatten_result(
@@ -564,75 +582,118 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         return ret
 
     def __getitem__(
-        self, keywords: tuple[str, ...]
-    ) -> Data | StandaloneData | EllipsisType:
-        _, data, _ = self._parsed[keywords]
-        return data
+        self, key: str
+    ) -> Data | StandaloneData | EllipsisType | "Parsed":
+        full_path = (*self._key_path, key)
+        
+        # Check if this key exists in the root data
+        if full_path not in self._root_data:
+            raise KeyError(key)
+        
+        _, data, _ = self._root_data[full_path]
+        
+        # If data is Ellipsis (...), this is a sub-dictionary
+        if data is ...:
+            return Parsed(self.contents, _parent=self._get_root(), _key_path=full_path)
+        else:
+            return data
 
     def put(
         self,
-        keywords: tuple[str, ...],
+        key: str,
         data: Data | StandaloneData | EllipsisType,
         content: bytes,
     ) -> None:
-        start, end = self.entry_location(keywords, missing_ok=True)
+        keywords = (*self._key_path, key)
+        root = self._get_root()
+        start, end = root.entry_location(keywords, missing_ok=True)
 
         diff = len(content) - (end - start)
-        for k, (s, d, e) in self._parsed.items():
+        for k, (s, d, e) in root._root_data.items():
             if s >= end:
-                self._parsed[k] = (s + diff, d, e + diff)
+                root._root_data[k] = (s + diff, d, e + diff)
             elif e > start:
-                self._parsed[k] = (s, d, e + diff)
+                root._root_data[k] = (s, d, e + diff)
 
-        self._parsed[keywords] = (start, data, end + diff)
+        root._root_data[keywords] = (start, data, end + diff)
 
-        self.contents = self.contents[:start] + content + self.contents[end:]
-        self.modified = True
+        root.contents = root.contents[:start] + content + root.contents[end:]
+        root.modified = True
 
-        for k in list(self._parsed):
+        for k in list(root._root_data):
             if keywords != k and keywords == k[: len(keywords)]:
-                del self._parsed[k]
+                del root._root_data[k]
 
-    def __delitem__(self, keywords: tuple[str, ...]) -> None:
-        start, end = self.entry_location(keywords)
-        del self._parsed[keywords]
+    def __delitem__(self, key: str) -> None:
+        keywords = (*self._key_path, key)
+        root = self._get_root()
+        start, end = root.entry_location(keywords)
+        del root._root_data[keywords]
 
-        for k in list(self._parsed):
+        for k in list(root._root_data):
             if keywords == k[: len(keywords)]:
-                del self._parsed[k]
+                del root._root_data[k]
 
         diff = end - start
-        for k, (s, d, e) in self._parsed.items():
+        for k, (s, d, e) in root._root_data.items():
             if s > end:
-                self._parsed[k] = (s - diff, d, e - diff)
+                root._root_data[k] = (s - diff, d, e - diff)
             elif e > start:
-                self._parsed[k] = (s, d, e - diff)
+                root._root_data[k] = (s, d, e - diff)
 
-        self.contents = self.contents[:start] + self.contents[end:]
-        self.modified = True
+        root.contents = root.contents[:start] + root.contents[end:]
+        root.modified = True
 
-    def __contains__(self, keywords: object) -> bool:
-        return keywords in self._parsed
+    def __contains__(self, key: object) -> bool:
+        if not isinstance(key, str):
+            return False
+        keywords = (*self._key_path, key)
+        return keywords in self._get_root()._root_data
 
-    def __iter__(self) -> Iterator[tuple[str, ...]]:
-        return iter(self._parsed)
+    def __iter__(self) -> Iterator[str]:
+        root = self._get_root()
+        keys = set()
+        path_len = len(self._key_path)
+        
+        for k in root._root_data:
+            # Check if this key is a direct child of our current path
+            if len(k) == path_len + 1 and k[:path_len] == self._key_path:
+                keys.add(k[path_len])
+        
+        return iter(keys)
 
     def __len__(self) -> int:
-        return len(self._parsed)
+        root = self._get_root()
+        count = 0
+        path_len = len(self._key_path)
+        
+        for k in root._root_data:
+            # Check if this key is a direct child of our current path
+            if len(k) == path_len + 1 and k[:path_len] == self._key_path:
+                count += 1
+        
+        return count
 
     def entry_location(
-        self, keywords: tuple[str, ...], *, missing_ok: bool = False
+        self, key: str | tuple[str, ...], *, missing_ok: bool = False
     ) -> tuple[int, int]:
+        # Handle both old tuple interface and new string interface for backward compatibility during transition
+        if isinstance(key, str):
+            keywords = (*self._key_path, key)
+        else:
+            keywords = key
+            
+        root = self._get_root()
         try:
-            start, _, end = self._parsed[keywords]
+            start, _, end = root._root_data[keywords]
         except KeyError:
             if missing_ok:
                 if len(keywords) > 1:
-                    assert self[keywords[:-1]] is ...
-                    start, end = self.entry_location(keywords[:-1])
-                    end = self.contents.rindex(b"}", start, end)
+                    assert root._root_data.get(keywords[:-1], (None, None, None))[1] is ...
+                    start, end = root.entry_location(keywords[:-1])
+                    end = root.contents.rindex(b"}", start, end)
                 else:
-                    end = len(self.contents)
+                    end = len(root.contents)
 
                 start = end
             else:
@@ -642,18 +703,32 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
 
     def as_dict(self) -> File:
         ret: File = {}
-        for keywords, (_, data, _) in self._parsed.items():
-            r = ret
-            for k in keywords[:-1]:
-                v = r[k]
-                assert isinstance(v, dict)
-                r = cast("File", v)
+        root = self._get_root()
+        
+        # Only include keys that are under our current path
+        for keywords, (_, data, _) in root._root_data.items():
+            # Check if this key is under our current path
+            if len(keywords) > len(self._key_path) and keywords[:len(self._key_path)] == self._key_path:
+                # Get the relative path from our current position
+                relative_keywords = keywords[len(self._key_path):]
+                
+                r = ret
+                for k in relative_keywords[:-1]:
+                    if k not in r:
+                        r[k] = {}
+                    v = r[k]
+                    assert isinstance(v, dict)
+                    r = cast("File", v)
 
-            assert isinstance(r, dict)
-            if keywords:
-                r[keywords[-1]] = {} if data is ... else data
-            else:
-                assert data is not ...
-                r[None] = data
+                assert isinstance(r, dict)
+                if relative_keywords:
+                    r[relative_keywords[-1]] = {} if data is ... else data
+
+        # Handle the case where we're at a leaf with data but no sub-keys
+        if self._key_path in root._root_data:
+            _, data, _ = root._root_data[self._key_path]
+            if data is not ... and not ret:
+                # This is a direct value, not a dict
+                return data  # type: ignore[return-value]
 
         return ret
