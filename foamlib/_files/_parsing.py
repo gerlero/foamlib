@@ -515,11 +515,51 @@ _LOCATED_FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
+class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType, "Parsed._SubDict"]]):
+    class _SubDict(Mapping[str, Union[Data, StandaloneData, "Parsed._SubDict"]]):
+        """
+        A nested sub-dictionary within a parsed file that maintains location information.
+        """
+        
+        def __init__(
+            self, 
+            parsed: "Parsed", 
+            keywords: tuple[str, ...],
+            start: int,
+            end: int
+        ) -> None:
+            self._parsed = parsed
+            self._keywords = keywords
+            self._start = start
+            self._end = end
+        
+        def __getitem__(self, key: str) -> Union[Data, StandaloneData, "Parsed._SubDict"]:
+            full_key = (*self._keywords, key)
+            return self._parsed[full_key]
+        
+        def __iter__(self) -> Iterator[str]:
+            prefix_len = len(self._keywords)
+            for keywords in self._parsed:
+                if (len(keywords) == prefix_len + 1 and 
+                    keywords[:prefix_len] == self._keywords):
+                    yield keywords[prefix_len]
+        
+        def __len__(self) -> int:
+            return sum(1 for _ in self)
+        
+        def __contains__(self, key: object) -> bool:
+            if not isinstance(key, str):
+                return False
+            full_key = (*self._keywords, key)
+            return full_key in self._parsed
+        
+        def __repr__(self) -> str:
+            return f"{type(self).__qualname__}({self._keywords})"
+
     def __init__(self, contents: bytes) -> None:
         self._parsed: MutableMapping[
             tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
+            tuple[int, Data | StandaloneData | EllipsisType | "Parsed._SubDict", int],
         ] = {}
         for parse_result in _LOCATED_FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
@@ -529,15 +569,14 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         self.contents = contents
         self.modified = False
 
-    @staticmethod
     def _flatten_result(
-        parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
+        self, parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
     ) -> Mapping[
-        tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]
+        tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType | "Parsed._SubDict", int]
     ]:
         ret: MutableMapping[
             tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
+            tuple[int, Data | StandaloneData | EllipsisType | "Parsed._SubDict", int],
         ] = {}
         start = parse_result.locn_start
         assert isinstance(start, int)
@@ -553,26 +592,42 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
             ret[()] = (start, data[0], end)
         else:
             assert isinstance(keyword, str)
-            ret[(*_keywords, keyword)] = (start, ..., end)
-            for d in data:
-                if isinstance(d, ParseResults):
-                    ret.update(
-                        Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
-                    )
+            # Check if this entry has nested ParseResults (indicating a dictionary)
+            # or if there's no data at all (empty dictionary)
+            has_nested_dict = any(isinstance(d, ParseResults) for d in data)
+            is_empty_dict = len(data) == 0
+            
+            if has_nested_dict or is_empty_dict:
+                # Create a _SubDict instance for this nested dictionary (including empty dicts)
+                subdict = self._SubDict(self, (*_keywords, keyword), start, end)
+                ret[(*_keywords, keyword)] = (start, subdict, end)
+                
+                # Process nested entries
+                for d in data:
+                    if isinstance(d, ParseResults):
+                        ret.update(
+                            self._flatten_result(d, _keywords=(*_keywords, keyword))
+                        )
+            else:
+                # No nested dictionary, store the data directly
+                if len(data) == 1:
+                    ret[(*_keywords, keyword)] = (start, data[0], end)
+                elif len(data) > 1:
+                    ret[(*_keywords, keyword)] = (start, tuple(data), end)
                 else:
-                    ret[(*_keywords, keyword)] = (start, d, end)
+                    ret[(*_keywords, keyword)] = (start, "", end)
         return ret
 
     def __getitem__(
         self, keywords: tuple[str, ...]
-    ) -> Data | StandaloneData | EllipsisType:
+    ) -> Data | StandaloneData | EllipsisType | _SubDict:
         _, data, _ = self._parsed[keywords]
         return data
 
     def put(
         self,
         keywords: tuple[str, ...],
-        data: Data | StandaloneData | EllipsisType,
+        data: Data | StandaloneData | EllipsisType | _SubDict,
         content: bytes,
     ) -> None:
         start, end = self.entry_location(keywords, missing_ok=True)
@@ -651,9 +706,14 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
 
             assert isinstance(r, dict)
             if keywords:
-                r[keywords[-1]] = {} if data is ... else data
+                if isinstance(data, self._SubDict):
+                    r[keywords[-1]] = {}
+                elif data is ...:
+                    r[keywords[-1]] = {}
+                else:
+                    r[keywords[-1]] = data
             else:
-                assert data is not ...
+                assert data is not ... and not isinstance(data, self._SubDict)
                 r[None] = data
 
         return ret
