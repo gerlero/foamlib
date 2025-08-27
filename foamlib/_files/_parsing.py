@@ -56,7 +56,7 @@ def _ascii_numeric_list(
     dtype = np.dtype(dtype)
 
     if np.issubdtype(dtype, np.floating):
-        element = common.sci_real
+        element = common.fnumber
         element_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
     elif np.issubdtype(dtype, np.integer):
         element = common.integer
@@ -344,9 +344,9 @@ _SWITCH = (
 _DIMENSIONS = (
     Literal("[").suppress() + common.number[0, 7] + Literal("]").suppress()
 ).set_parse_action(lambda tks: DimensionSet(*tks))
-_TENSOR = common.sci_real | (
+_TENSOR = common.fnumber | (
     Literal("(").suppress()
-    + Group(common.sci_real[3] | common.sci_real[6] | common.sci_real[9])
+    + Group(common.fnumber[3] | common.fnumber[6] | common.fnumber[9])
     + Literal(")").suppress()
 ).add_parse_action(lambda tks: np.array(tks[0], dtype=float))
 _BALANCED = Forward()
