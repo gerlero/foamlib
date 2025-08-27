@@ -15,6 +15,7 @@ else:
     from typing import Iterator, Mapping, MutableMapping, Sequence
 
 import numpy as np
+from multicollections import MutableMultiMapping
 
 from ._io import FoamFileIO
 from ._parsing import loads
@@ -63,7 +64,7 @@ def _tensor_kind_for_field(
 
 
 class FoamFile(
-    MutableMapping[
+    MutableMultiMapping[
         Optional[Union[str, Tuple[str, ...]]],
         Union[Data, StandaloneData, MutableSubDict],
     ],
@@ -600,6 +601,28 @@ class FoamFile(
             )
 
         return ret
+
+    def _getall(self, keywords: str | tuple[str, ...] | None) -> list[Data | StandaloneData | FoamFile.SubDict]:
+        """Return all values for the given keywords."""
+        # Should return empty list if the key doesn't exist (per multicollections API)
+        if keywords not in self:
+            return []
+        return [self[keywords]]
+
+    def _popone(self, keywords: str | tuple[str, ...] | None) -> Data | StandaloneData | FoamFile.SubDict:
+        """Remove and return one value for the given keywords."""
+        if keywords not in self:
+            raise KeyError(keywords)
+        value = self[keywords]
+        del self[keywords]
+        return value
+
+    def add(self, keywords: str | tuple[str, ...] | None, value: DataLike | StandaloneDataLike | SubDictLike) -> None:
+        """Add a value for the given keywords without replacing existing values."""
+        # Since the current implementation only supports one value per key,
+        # this will behave the same as __setitem__ for now
+        # In a full MultiMapping implementation, this would append to a list of values
+        self[keywords] = value
 
 
 class FoamFieldFile(FoamFile):

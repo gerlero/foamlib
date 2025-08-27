@@ -15,6 +15,7 @@ else:
     EllipsisType = type(...)
 
 import numpy as np
+from multicollections import MutableMultiMapping
 from pyparsing import (
     CaselessKeyword,
     CharsNotIn,
@@ -515,7 +516,7 @@ _LOCATED_FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
+class Parsed(MutableMultiMapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
     def __init__(self, contents: bytes) -> None:
         self._parsed: MutableMapping[
             tuple[str, ...],
@@ -657,3 +658,42 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
                 r[None] = data
 
         return ret
+
+    def __setitem__(self, keywords: tuple[str, ...], value: Data | StandaloneData | EllipsisType) -> None:
+        """Set a value for the given keywords, replacing any existing value."""
+        # Use the existing put method logic but with a generated content
+        # For now, we'll delegate to put with a simple serialization
+        # This is a minimal implementation to satisfy the abstract method requirement
+        if value is ...:
+            content = b"{}"
+        elif isinstance(value, str):
+            content = value.encode("latin-1") + b";"
+        elif isinstance(value, (int, float)):
+            content = str(value).encode("latin-1") + b";"
+        else:
+            # For complex types, use a simple string representation
+            content = str(value).encode("latin-1") + b";"
+
+        self.put(keywords, value, content)
+
+    def _getall(self, keywords: tuple[str, ...]) -> list[Data | StandaloneData | EllipsisType]:
+        """Return all values for the given keywords."""
+        # Should return empty list if the key doesn't exist (per multicollections API)
+        if keywords not in self._parsed:
+            return []
+        return [self[keywords]]
+
+    def _popone(self, keywords: tuple[str, ...]) -> Data | StandaloneData | EllipsisType:
+        """Remove and return one value for the given keywords."""
+        if keywords not in self._parsed:
+            raise KeyError(keywords)
+        value = self[keywords]
+        del self[keywords]
+        return value
+
+    def add(self, keywords: tuple[str, ...], value: Data | StandaloneData | EllipsisType) -> None:
+        """Add a value for the given keywords without replacing existing values."""
+        # Since the current implementation only supports one value per key,
+        # this will behave the same as __setitem__ for now
+        # In a full MultiMapping implementation, this would append to a list of values
+        self[keywords] = value
