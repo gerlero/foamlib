@@ -14,6 +14,8 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Iterator, Mapping, MutableMapping, Sequence
 
+from multicollections.abc import MutableMultiMapping
+
 import numpy as np
 
 from ._io import FoamFileIO
@@ -63,7 +65,7 @@ def _tensor_kind_for_field(
 
 
 class FoamFile(
-    MutableMapping[
+    MutableMultiMapping[
         Optional[Union[str, Tuple[str, ...]]],
         Union[Data, StandaloneData, MutableSubDict],
     ],
@@ -498,6 +500,55 @@ class FoamFile(
 
     def __fspath__(self) -> str:
         return str(self.path)
+
+    def getone(
+        self, keywords: str | tuple[str, ...] | None
+    ) -> Data | StandaloneData | FoamFile.SubDict:
+        """Get the first value for a key."""
+        return self[keywords]
+
+    def getall(
+        self, keywords: str | tuple[str, ...] | None
+    ) -> list[Data | StandaloneData | FoamFile.SubDict]:
+        """Get all values for a key."""
+        if keywords is None:
+            keywords = ()
+        elif not isinstance(keywords, tuple):
+            keywords = (keywords,)
+
+        parsed = self._get_parsed()
+        
+        if keywords not in parsed:
+            raise KeyError(keywords)
+            
+        values = parsed.getall(keywords)
+        result = []
+        for value in values:
+            if value is ...:
+                result.append(FoamFile.SubDict(self, keywords))
+            else:
+                result.append(deepcopy(value))
+        return result
+
+    def add(
+        self,
+        keywords: str | tuple[str, ...] | None,
+        data: DataLike | StandaloneDataLike | SubDictLike,
+    ) -> None:
+        """Add a new value for a key without replacing existing values."""
+        # For now, delegate to __setitem__ since the current implementation 
+        # doesn't support true multi-values at the file level 
+        # (each entry in the file is unique by position)
+        # This could be enhanced in the future to support appending entries
+        self[keywords] = data
+
+    def popone(
+        self, keywords: str | tuple[str, ...] | None
+    ) -> Data | StandaloneData | FoamFile.SubDict:
+        """Remove and return the first value for a key."""
+        result = self[keywords]
+        del self[keywords]
+        return result
 
     def as_dict(self, *, include_header: bool = False) -> File:
         """

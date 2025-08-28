@@ -9,6 +9,8 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Iterator, Mapping, MutableMapping, Sequence
 
+from multicollections.abc import MultiMapping
+
 if sys.version_info >= (3, 10):
     from types import EllipsisType
 else:
@@ -515,16 +517,19 @@ _LOCATED_FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
+class Parsed(MultiMapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
     def __init__(self, contents: bytes) -> None:
         self._parsed: MutableMapping[
             tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
+            list[tuple[int, Data | StandaloneData | EllipsisType, int]],
         ] = {}
         for parse_result in _LOCATED_FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
         ):
-            self._parsed.update(self._flatten_result(parse_result))
+            for key, value in self._flatten_result(parse_result).items():
+                if key not in self._parsed:
+                    self._parsed[key] = []
+                self._parsed[key].append(value)
 
         self.contents = contents
         self.modified = False
@@ -566,8 +571,24 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
     def __getitem__(
         self, keywords: tuple[str, ...]
     ) -> Data | StandaloneData | EllipsisType:
-        _, data, _ = self._parsed[keywords]
+        values = self._parsed[keywords]
+        if not values:
+            raise KeyError(keywords)
+        _, data, _ = values[0]  # Return the first value
         return data
+
+    def getone(
+        self, keywords: tuple[str, ...]
+    ) -> Data | StandaloneData | EllipsisType:
+        """Get the first value for a key."""
+        return self[keywords]
+
+    def getall(
+        self, keywords: tuple[str, ...]
+    ) -> list[Data | StandaloneData | EllipsisType]:
+        """Get all values for a key."""
+        values = self._parsed[keywords]
+        return [data for _, data, _ in values]
 
     def put(
         self,
@@ -578,13 +599,14 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         start, end = self.entry_location(keywords, missing_ok=True)
 
         diff = len(content) - (end - start)
-        for k, (s, d, e) in self._parsed.items():
-            if s >= end:
-                self._parsed[k] = (s + diff, d, e + diff)
-            elif e > start:
-                self._parsed[k] = (s, d, e + diff)
+        for k, values_list in self._parsed.items():
+            for i, (s, d, e) in enumerate(values_list):
+                if s >= end:
+                    values_list[i] = (s + diff, d, e + diff)
+                elif e > start:
+                    values_list[i] = (s, d, e + diff)
 
-        self._parsed[keywords] = (start, data, end + diff)
+        self._parsed[keywords] = [(start, data, end + diff)]
 
         self.contents = self.contents[:start] + content + self.contents[end:]
         self.modified = True
@@ -602,11 +624,12 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
                 del self._parsed[k]
 
         diff = end - start
-        for k, (s, d, e) in self._parsed.items():
-            if s > end:
-                self._parsed[k] = (s - diff, d, e - diff)
-            elif e > start:
-                self._parsed[k] = (s, d, e - diff)
+        for k, values_list in self._parsed.items():
+            for i, (s, d, e) in enumerate(values_list):
+                if s > end:
+                    values_list[i] = (s - diff, d, e - diff)
+                elif e > start:
+                    values_list[i] = (s, d, e - diff)
 
         self.contents = self.contents[:start] + self.contents[end:]
         self.modified = True
@@ -615,16 +638,23 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         return keywords in self._parsed
 
     def __iter__(self) -> Iterator[tuple[str, ...]]:
-        return iter(self._parsed)
+        """Return an iterator that yields keys multiple times if they have multiple values."""
+        for key, values in self._parsed.items():
+            for _ in values:
+                yield key
 
     def __len__(self) -> int:
-        return len(self._parsed)
+        """Return the total number of items (key-value pairs)."""
+        return sum(len(values) for values in self._parsed.values())
 
     def entry_location(
         self, keywords: tuple[str, ...], *, missing_ok: bool = False
     ) -> tuple[int, int]:
         try:
-            start, _, end = self._parsed[keywords]
+            values = self._parsed[keywords]
+            if not values:
+                raise KeyError(keywords)
+            start, _, end = values[0]  # Use the first value for location
         except KeyError:
             if missing_ok:
                 if len(keywords) > 1:
@@ -642,18 +672,21 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
 
     def as_dict(self) -> File:
         ret: File = {}
-        for keywords, (_, data, _) in self._parsed.items():
-            r = ret
-            for k in keywords[:-1]:
-                v = r[k]
-                assert isinstance(v, dict)
-                r = cast("File", v)
+        for keywords, values_list in self._parsed.items():
+            # For as_dict, we'll use the first value to maintain compatibility
+            if values_list:
+                _, data, _ = values_list[0]
+                r = ret
+                for k in keywords[:-1]:
+                    v = r[k]
+                    assert isinstance(v, dict)
+                    r = cast("File", v)
 
-            assert isinstance(r, dict)
-            if keywords:
-                r[keywords[-1]] = {} if data is ... else data
-            else:
-                assert data is not ...
-                r[None] = data
+                assert isinstance(r, dict)
+                if keywords:
+                    r[keywords[-1]] = {} if data is ... else data
+                else:
+                    assert data is not ...
+                    r[None] = data
 
         return ret
