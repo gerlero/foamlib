@@ -526,7 +526,7 @@ class Parsed(MultiMapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisT
         for parse_result in _LOCATED_FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
         ):
-            for key, value in self._flatten_result(parse_result).items():
+            for key, value in self._flatten_result(parse_result):
                 if key not in self._parsed:
                     self._parsed[key] = []
                 self._parsed[key].append(value)
@@ -537,13 +537,7 @@ class Parsed(MultiMapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisT
     @staticmethod
     def _flatten_result(
         parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
-    ) -> Mapping[
-        tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]
-    ]:
-        ret: MutableMapping[
-            tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
-        ] = {}
+    ) -> Iterator[tuple[tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]]]:
         start = parse_result.locn_start
         assert isinstance(start, int)
         item = parse_result.value
@@ -555,18 +549,27 @@ class Parsed(MultiMapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisT
             assert not _keywords
             assert len(data) == 1
             assert not isinstance(data[0], ParseResults)
-            ret[()] = (start, data[0], end)
+            yield ((), (start, data[0], end))
         else:
             assert isinstance(keyword, str)
-            ret[(*_keywords, keyword)] = (start, ..., end)
+            key = (*_keywords, keyword)
+            
+            # Check if we have any sub-ParseResults (indicating a subdictionary)
+            has_subdictionary = any(isinstance(d, ParseResults) for d in data)
+            # Also check if we have any direct values
+            has_direct_values = any(not isinstance(d, ParseResults) for d in data)
+            
+            # If we have subdictionary entries but no direct values, OR if we have no data at all
+            # (empty subdictionary), yield ellipsis
+            if (has_subdictionary and not has_direct_values) or len(data) == 0:
+                yield (key, (start, ..., end))
+            
+            # Process all the data items
             for d in data:
                 if isinstance(d, ParseResults):
-                    ret.update(
-                        Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
-                    )
+                    yield from Parsed._flatten_result(d, _keywords=key)
                 else:
-                    ret[(*_keywords, keyword)] = (start, d, end)
-        return ret
+                    yield (key, (start, d, end))
 
     def __getitem__(
         self, keywords: tuple[str, ...]
