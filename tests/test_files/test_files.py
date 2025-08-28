@@ -59,14 +59,14 @@ def test_write_read(tmp_path: Path) -> None:
     assert len(sd) == 1
     assert list(sd) == ["key"]
 
-    d["subdict2"] = d["subdict"]
+    d["subdict2"] = d["subdict"]  # type: ignore [assignment]
     sd2 = d["subdict2"]
     assert isinstance(sd2, FoamFile.SubDict)
     assert sd2["key"] == "value"
     assert len(sd) == 1
     assert list(sd) == ["key"]
 
-    sd["subsubdict"] = d["subdict"]
+    sd["subsubdict"] = d["subdict"]  # type: ignore [assignment]
     ssd = sd["subsubdict"]
     assert isinstance(ssd, FoamFile.SubDict)
     assert ssd["key"] == "value"
