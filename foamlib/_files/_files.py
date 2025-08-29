@@ -156,7 +156,7 @@ class FoamFile(
             self._file = _file
             self._keywords = _keywords
 
-        @with_default  # type: ignore [arg-type]
+        @with_default
         def getall(self, keyword: str) -> list[Data | FoamFile.SubDict]:  # type: ignore [override]
             return self._file.getall((*self._keywords, keyword))  # type: ignore [arg-type, call-arg, misc, return-value]
 
@@ -170,7 +170,7 @@ class FoamFile(
         def add(self, keyword: str, data: DataLike | SubDictLike) -> None:
             self._file.add((*self._keywords, keyword), data)  # type: ignore [arg-type]
 
-        @with_default  # type: ignore [arg-type]
+        @with_default
         def popone(self, keyword: str) -> Data | FoamFile.SubDict | None:  # type: ignore [override]
             return self._file.popone((*self._keywords, keyword))  # type: ignore [arg-type, call-arg, misc, return-value]
 
@@ -279,7 +279,7 @@ class FoamFile(
     def object_(self, value: str) -> None:
         self["FoamFile", "object"] = value
 
-    @with_default  # type: ignore [arg-type]
+    @with_default
     def getall(  # type: ignore [override]
         self,
         keywords: str | tuple[str, ...] | None,  # type: ignore [arg-type]
@@ -587,7 +587,7 @@ class FoamFile(
                     + after,
                 )
 
-    @with_default  # type: ignore [arg-type]
+    @with_default
     def popone(
         self, keywords: str | tuple[str, ...] | None
     ) -> Data | StandaloneData | FoamFile.SubDict:
@@ -769,7 +769,7 @@ class FoamFieldFile(FoamFile):
     """
 
     class BoundariesSubDict(FoamFile.SubDict):
-        @with_default  # type: ignore [arg-type]
+        @with_default
         def getall(self, keyword: str) -> list[FoamFieldFile.BoundarySubDict | Data]:  # type: ignore [override]
             ret = super().getall(keyword)  # type: ignore [call-arg, misc]
             for r in ret:
@@ -814,7 +814,7 @@ class FoamFieldFile(FoamFile):
         def value(self) -> None:
             del self["value"]
 
-    @with_default  # type: ignore [arg-type]
+    @with_default
     def getall(  # type: ignore [override]
         self, keywords: str | tuple[str, ...] | None
     ) -> list[Data | StandaloneData | FoamFieldFile.SubDict]:

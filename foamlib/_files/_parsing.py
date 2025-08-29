@@ -576,7 +576,7 @@ class Parsed(
                         ret.add((*_keywords, keyword), Parsed._Entry(d, start, end))
         return ret
 
-    @with_default  # type: ignore [arg-type]
+    @with_default
     def getall(
         self, keywords: tuple[str, ...]
     ) -> list[Data | StandaloneData | EllipsisType]:
@@ -627,7 +627,7 @@ class Parsed(
         self.contents = self.contents[:start] + content + self.contents[end:]
         self.modified = True
 
-    @with_default  # type: ignore [arg-type]
+    @with_default
     def popone(self, keywords: tuple[str, ...]) -> Data | StandaloneData | EllipsisType:
         start, end = self.entry_location(keywords)
         entry = self._parsed.popone(keywords)  # type: ignore [call-arg]
