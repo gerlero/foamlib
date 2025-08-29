@@ -4,11 +4,13 @@ import sys
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
 import numpy as np
+from multicollections import MultiDict
+from multicollections.abc import MutableMultiMapping
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Mapping, MutableMapping, Sequence
+    from collections.abc import Mapping, Sequence
 else:
-    from typing import Mapping, MutableMapping, Sequence
+    from typing import Mapping, Sequence
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
@@ -261,10 +263,15 @@ def is_sequence(
     )
 
 
-SubDict = Dict[str, Union[Data, "SubDict"]]
+SubDict = Union[
+    Dict[str, Union[Data, "SubDict"]], MultiDict[str, Union[Data, "SubDict"]]
+]
 SubDictLike = Mapping[str, Union[DataLike, "SubDictLike"]]
-MutableSubDict = MutableMapping[str, Union[Data, "MutableSubDict"]]
+MutableSubDict = MutableMultiMapping[str, Union[Data, "MutableSubDict"]]
 
 
-File = Dict[Optional[str], Union[StandaloneData, Data, SubDict]]
+File = Union[
+    Dict[Optional[str], Union[StandaloneData, Data, SubDict]],
+    MultiDict[Optional[str], Union[StandaloneData, Data, SubDict]],
+]
 FileLike = Mapping[Optional[str], Union[StandaloneDataLike, DataLike, SubDictLike]]

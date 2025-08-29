@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import dataclasses
 import re
 import sys
 from typing import TYPE_CHECKING, Tuple, Union, cast, overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Iterator, Mapping, MutableMapping, Sequence
+    from collections.abc import Iterator, Sequence
 else:
-    from typing import Iterator, Mapping, MutableMapping, Sequence
+    from typing import Iterator, Sequence
 
 if sys.version_info >= (3, 10):
     from types import EllipsisType
@@ -15,6 +16,8 @@ else:
     EllipsisType = type(...)
 
 import numpy as np
+from multicollections import MultiDict
+from multicollections.abc import MultiMapping, MutableMultiMapping, with_default
 from pyparsing import (
     CaselessKeyword,
     CharsNotIn,
@@ -40,6 +43,7 @@ from pyparsing import (
 )
 
 from ._types import Data, Dimensioned, DimensionSet, File, StandaloneData, SubDict
+from ._util import as_any_dict
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -282,10 +286,11 @@ def _dict_of(
         keyword_entry = Located(keyword_entry)
 
     dict_ <<= (
-        Literal("{").suppress()
-        + Dict(Group(keyword_entry)[...], asdict=not located)
-        + Literal("}").suppress()
+        Literal("{").suppress() + Group(keyword_entry)[...] + Literal("}").suppress()
     )
+
+    if not located:
+        dict_.set_parse_action(lambda tks: as_any_dict(tks.as_list()))
 
     return dict_
 
@@ -457,7 +462,7 @@ _STANDALONE_DATA = (
 
 
 _FILE = (
-    Dict(_KEYWORD_ENTRY[...] + Opt(Group(_STANDALONE_DATA)) + _KEYWORD_ENTRY[...])
+    (_KEYWORD_ENTRY[...] + Opt(Group(_STANDALONE_DATA)) + _KEYWORD_ENTRY[...])
     .ignore(_COMMENT)
     .parse_with_tabs()
 )
@@ -482,7 +487,7 @@ def loads(
         s = s.decode("latin-1")
 
     if keywords == ():
-        data = _FILE.parse_string(s, parse_all=True).as_dict()
+        data = as_any_dict(_FILE.parse_string(s, parse_all=True).as_list())
 
         if len(data) == 1 and None in data:
             data = data[None]
@@ -515,16 +520,24 @@ _LOCATED_FILE = (
 )
 
 
-class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]):
+class Parsed(
+    MutableMultiMapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
+):
+    @dataclasses.dataclass
+    class _Entry:
+        data: Data | StandaloneData | EllipsisType
+        start: int
+        end: int
+
     def __init__(self, contents: bytes) -> None:
-        self._parsed: MutableMapping[
+        self._parsed: MultiDict[
             tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
-        ] = {}
+            Parsed._Entry,
+        ] = MultiDict()
         for parse_result in _LOCATED_FILE.parse_string(
             contents.decode("latin-1"), parse_all=True
         ):
-            self._parsed.update(self._flatten_result(parse_result))
+            self._parsed.extend(self._flatten_result(parse_result))
 
         self.contents = contents
         self.modified = False
@@ -532,42 +545,48 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
     @staticmethod
     def _flatten_result(
         parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
-    ) -> Mapping[
-        tuple[str, ...], tuple[int, Data | StandaloneData | EllipsisType, int]
-    ]:
-        ret: MutableMapping[
-            tuple[str, ...],
-            tuple[int, Data | StandaloneData | EllipsisType, int],
-        ] = {}
+    ) -> MultiMapping[tuple[str, ...], Parsed._Entry]:
+        ret: MultiDict[tuple[str, ...], Parsed._Entry] = MultiDict()
+        value = parse_result.value
+        assert isinstance(value, Sequence)
         start = parse_result.locn_start
         assert isinstance(start, int)
-        item = parse_result.value
-        assert isinstance(item, Sequence)
         end = parse_result.locn_end
         assert isinstance(end, int)
-        keyword, *data = item
+        keyword, *data = value
         if keyword is None:
             assert not _keywords
             assert len(data) == 1
             assert not isinstance(data[0], ParseResults)
-            ret[()] = (start, data[0], end)
+            assert () not in ret
+            ret[()] = Parsed._Entry(data[0], start, end)
         else:
             assert isinstance(keyword, str)
-            ret[(*_keywords, keyword)] = (start, ..., end)
-            for d in data:
-                if isinstance(d, ParseResults):
-                    ret.update(
-                        Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
-                    )
-                else:
-                    ret[(*_keywords, keyword)] = (start, d, end)
+            assert (*_keywords, keyword) not in ret
+            if not data:
+                ret[(*_keywords, keyword)] = Parsed._Entry(..., start, end)
+            else:
+                for d in data:
+                    if isinstance(d, ParseResults):
+                        ret[(*_keywords, keyword)] = Parsed._Entry(..., start, end)
+                        ret.extend(
+                            Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
+                        )
+                    else:
+                        ret.add((*_keywords, keyword), Parsed._Entry(d, start, end))
         return ret
 
-    def __getitem__(
+    @with_default  # type: ignore [arg-type]
+    def getall(
         self, keywords: tuple[str, ...]
-    ) -> Data | StandaloneData | EllipsisType:
-        _, data, _ = self._parsed[keywords]
-        return data
+    ) -> list[Data | StandaloneData | EllipsisType]:
+        return [entry.data for entry in self._parsed.getall(keywords)]  # type: ignore [call-arg]
+
+    def __setitem__(
+        self, key: tuple[str, ...], value: Data | StandaloneData | EllipsisType
+    ) -> None:
+        msg = "Use 'put' method instead"
+        raise NotImplementedError(msg)
 
     def put(
         self,
@@ -575,16 +594,18 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         data: Data | StandaloneData | EllipsisType,
         content: bytes,
     ) -> None:
-        start, end = self.entry_location(keywords, missing_ok=True)
+        start, end = self.entry_location(keywords)
 
         diff = len(content) - (end - start)
-        for k, (s, d, e) in self._parsed.items():
-            if s >= end:
-                self._parsed[k] = (s + diff, d, e + diff)
-            elif e > start:
-                self._parsed[k] = (s, d, e + diff)
+        for entry in self._parsed.values():  # type: ignore [var-annotated]
+            assert isinstance(entry, Parsed._Entry)
+            if entry.start >= end:
+                entry.start += diff
+                entry.end += diff
+            elif entry.end > start:
+                entry.end += diff
 
-        self._parsed[keywords] = (start, data, end + diff)
+        self._parsed[keywords] = Parsed._Entry(data, start, end + diff)
 
         self.contents = self.contents[:start] + content + self.contents[end:]
         self.modified = True
@@ -592,6 +613,27 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         for k in list(self._parsed):
             if keywords != k and keywords == k[: len(keywords)]:
                 del self._parsed[k]
+
+    def add(  # type: ignore [override]
+        self,
+        keywords: tuple[str, ...],
+        data: Data | StandaloneData | EllipsisType,
+        content: bytes,
+    ) -> None:
+        start, end = self.entry_location(keywords, add=True)
+
+        self._parsed[keywords] = Parsed._Entry(data, start, end)
+
+        self.contents = self.contents[:start] + content + self.contents[end:]
+        self.modified = True
+
+    @with_default  # type: ignore [arg-type]
+    def popone(self, keywords: tuple[str, ...]) -> Data | StandaloneData | EllipsisType:
+        start, end = self.entry_location(keywords)
+        entry = self._parsed.popone(keywords)  # type: ignore [call-arg]
+        self.contents = self.contents[:start] + self.contents[end:]
+        self.modified = True
+        return entry.data
 
     def __delitem__(self, keywords: tuple[str, ...]) -> None:
         start, end = self.entry_location(keywords)
@@ -602,11 +644,13 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
                 del self._parsed[k]
 
         diff = end - start
-        for k, (s, d, e) in self._parsed.items():
-            if s > end:
-                self._parsed[k] = (s - diff, d, e - diff)
-            elif e > start:
-                self._parsed[k] = (s, d, e - diff)
+        for entry in self._parsed.values():  # type: ignore [var-annotated]
+            assert isinstance(entry, Parsed._Entry)
+            if entry.start > end:
+                entry.start -= diff
+                entry.end -= diff
+            elif entry.end > start:
+                entry.end -= diff
 
         self.contents = self.contents[:start] + self.contents[end:]
         self.modified = True
@@ -621,28 +665,28 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
         return len(self._parsed)
 
     def entry_location(
-        self, keywords: tuple[str, ...], *, missing_ok: bool = False
+        self, keywords: tuple[str, ...], *, add: bool = False
     ) -> tuple[int, int]:
-        try:
-            start, _, end = self._parsed[keywords]
-        except KeyError:
-            if missing_ok:
-                if len(keywords) > 1:
-                    assert self[keywords[:-1]] is ...
-                    start, end = self.entry_location(keywords[:-1])
-                    end = self.contents.rindex(b"}", start, end)
-                else:
-                    end = len(self.contents)
-
-                start = end
+        if add or keywords not in self._parsed:
+            if len(keywords) > 1:
+                assert self[keywords[:-1]] is ...
+                start, end = self.entry_location(keywords[:-1])
+                end = self.contents.rindex(b"}", start, end)
             else:
-                raise
+                end = len(self.contents)
+
+            start = end
+        else:
+            entry = self._parsed[keywords]
+            start = entry.start
+            end = entry.end
 
         return start, end
 
     def as_dict(self) -> File:
         ret: File = {}
-        for keywords, (_, data, _) in self._parsed.items():
+        for keywords, entry in self._parsed.items():  # type: ignore [var-annotated]
+            assert isinstance(entry, Parsed._Entry)
             r = ret
             for k in keywords[:-1]:
                 v = r[k]
@@ -651,9 +695,9 @@ class Parsed(Mapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
 
             assert isinstance(r, dict)
             if keywords:
-                r[keywords[-1]] = {} if data is ... else data
+                r[keywords[-1]] = {} if entry.data is ... else entry.data
             else:
-                assert data is not ...
-                r[None] = data
+                assert entry.data is not ...
+                r[None] = entry.data
 
         return ret

@@ -10,11 +10,12 @@ else:
     from typing_extensions import Literal
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Iterator, Mapping, MutableMapping, Sequence
+    from collections.abc import Iterator, Mapping, Sequence
 else:
-    from typing import Iterator, Mapping, MutableMapping, Sequence
+    from typing import Iterator, Mapping, Sequence
 
 import numpy as np
+from multicollections.abc import MutableMultiMapping, with_default
 
 from ._io import FoamFileIO
 from ._parsing import loads
@@ -63,7 +64,7 @@ def _tensor_kind_for_field(
 
 
 class FoamFile(
-    MutableMapping[
+    MutableMultiMapping[
         Optional[Union[str, Tuple[str, ...]]],
         Union[Data, StandaloneData, MutableSubDict],
     ],
@@ -120,7 +121,7 @@ class FoamFile(
     DimensionSet = DimensionSet
 
     class SubDict(
-        MutableMapping[str, Union[Data, MutableSubDict]],
+        MutableMultiMapping[str, Union[Data, MutableSubDict]],
     ):
         """
         An OpenFOAM sub-dictionary within a file.
@@ -155,8 +156,9 @@ class FoamFile(
             self._file = _file
             self._keywords = _keywords
 
-        def __getitem__(self, keyword: str) -> Data | FoamFile.SubDict:
-            return self._file[(*self._keywords, keyword)]  # type: ignore [return-value]
+        @with_default  # type: ignore [arg-type]
+        def getall(self, keyword: str) -> list[Data | FoamFile.SubDict]:  # type: ignore [override]
+            return self._file.getall((*self._keywords, keyword))  # type: ignore [arg-type, call-arg, misc, return-value]
 
         def __setitem__(
             self,
@@ -164,6 +166,13 @@ class FoamFile(
             data: DataLike | SubDictLike,
         ) -> None:
             self._file[(*self._keywords, keyword)] = data
+
+        def add(self, keyword: str, data: DataLike | SubDictLike) -> None:
+            self._file.add((*self._keywords, keyword), data)  # type: ignore [arg-type]
+
+        @with_default  # type: ignore [arg-type]
+        def popone(self, keyword: str) -> Data | FoamFile.SubDict | None:  # type: ignore [override]
+            return self._file.popone((*self._keywords, keyword))  # type: ignore [arg-type, call-arg, misc, return-value]
 
         def __delitem__(self, keyword: str) -> None:
             del self._file[(*self._keywords, keyword)]
@@ -270,20 +279,11 @@ class FoamFile(
     def object_(self, value: str) -> None:
         self["FoamFile", "object"] = value
 
-    @overload  # type: ignore [override]
-    def __getitem__(self, keywords: None | tuple[()]) -> StandaloneData: ...
-
-    @overload
-    def __getitem__(self, keywords: str) -> Data | FoamFile.SubDict: ...
-
-    @overload
-    def __getitem__(
-        self, keywords: tuple[str, ...]
-    ) -> Data | StandaloneData | FoamFile.SubDict: ...
-
-    def __getitem__(
-        self, keywords: str | tuple[str, ...] | None
-    ) -> Data | StandaloneData | FoamFile.SubDict:
+    @with_default  # type: ignore [arg-type]
+    def getall(  # type: ignore [override]
+        self,
+        keywords: str | tuple[str, ...] | None,  # type: ignore [arg-type]
+    ) -> list[Data | StandaloneData | FoamFile.SubDict]:
         if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -291,13 +291,11 @@ class FoamFile(
 
         parsed = self._get_parsed()
 
-        value = parsed[keywords]
+        ret = parsed.getall(keywords)  # type: ignore [call-arg, misc]
 
-        assert not isinstance(value, Mapping)
-
-        if value is ...:
-            return FoamFile.SubDict(self, keywords)
-        return deepcopy(value)
+        return [
+            FoamFile.SubDict(self, keywords) if v is ... else deepcopy(v) for v in ret
+        ]
 
     @overload  # type: ignore [override]
     def __setitem__(
@@ -369,7 +367,7 @@ class FoamFile(
 
             parsed = self._get_parsed(missing_ok=True)
 
-            start, end = parsed.entry_location(keywords, missing_ok=True)
+            start, end = parsed.entry_location(keywords)
 
             # Check if this is an update to an existing entry
             is_update = keywords in parsed
@@ -424,7 +422,7 @@ class FoamFile(
                 )
 
                 for k, v in data.items():
-                    self[(*keywords, k)] = v
+                    self[(*keywords, k)] = v  # type: ignore [arg-type]
 
             elif keywords:
                 header = self.get("FoamFile", None)
@@ -460,14 +458,146 @@ class FoamFile(
                     + after,
                 )
 
-    def __delitem__(self, keywords: str | tuple[str, ...] | None) -> None:
+    def add(
+        self,
+        keywords: str | tuple[str, ...] | None,
+        data: Data | StandaloneData | SubDictLike,
+    ) -> None:
+        if keywords is None:
+            keywords = ()
+        elif not isinstance(keywords, tuple):
+            keywords = (keywords,)
+
+        if keywords and not isinstance(normalize_keyword(keywords[-1]), str):
+            msg = f"Invalid keyword: {keywords[-1]}"
+            raise ValueError(msg)
+
+        with self:
+            try:
+                write_header = (
+                    not self and "FoamFile" not in self and keywords != ("FoamFile",)
+                )
+            except FileNotFoundError:
+                write_header = keywords != ("FoamFile",)
+
+            if write_header:
+                self["FoamFile"] = {}
+                self.version = 2.0
+                self.format = "ascii"
+                self.class_ = "dictionary"
+                self.location = f'"{self.path.parent.name}"'
+                self.object_ = (
+                    self.path.stem if self.path.suffix == ".gz" else self.path.name
+                )
+
+            if (
+                keywords == ("internalField",)
+                or (
+                    len(keywords) == 3
+                    and keywords[0] == "boundaryField"
+                    and (
+                        keywords[2] == "value"
+                        or keywords[2] == "gradient"
+                        or keywords[2].endswith(("Value", "Gradient"))
+                    )
+                )
+            ) and self.class_ == "dictionary":
+                try:
+                    tensor_kind = _tensor_kind_for_field(data)  # type: ignore [arg-type]
+                except ValueError:
+                    pass
+                else:
+                    self.class_ = (
+                        "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
+                    )
+
+            parsed = self._get_parsed(missing_ok=True)
+
+            start, end = parsed.entry_location(keywords, add=True)
+
+            if start and not parsed.contents[:start].endswith(b"\n\n"):
+                if parsed.contents[:start].endswith(b"\n"):
+                    before = b"\n" if len(keywords) <= 1 else b""
+                else:
+                    before = b"\n\n" if len(keywords) <= 1 else b"\n"
+            else:
+                before = b""
+
+            if not parsed.contents[end:].strip() or parsed.contents[end:].startswith(
+                b"}"
+            ):
+                after = b"\n" + b"    " * (len(keywords) - 2)
+            else:
+                after = b""
+
+            indentation = b"    " * (len(keywords) - 1)
+
+            if isinstance(data, Mapping):
+                if isinstance(data, (FoamFile, FoamFile.SubDict)):
+                    data = data.as_dict()
+
+                parsed.add(
+                    keywords,
+                    ...,
+                    before
+                    + indentation
+                    + dumps(normalize_keyword(keywords[-1]))
+                    + b"\n"
+                    + indentation
+                    + b"{\n"
+                    + indentation
+                    + b"}"
+                    + after,
+                )
+
+                for k, v in data.items():
+                    self.add((*keywords, k), v)  # type: ignore [arg-type]
+
+            elif keywords:
+                header = self.get("FoamFile", None)
+                assert header is None or isinstance(header, FoamFile.SubDict)
+                val = dumps(
+                    data,
+                    keywords=keywords,
+                    header=header,
+                )
+                parsed.add(
+                    keywords,
+                    normalize_data(data, keywords=keywords),
+                    before
+                    + indentation
+                    + dumps(normalize_keyword(keywords[-1]))
+                    + ((b" " + val) if val else b"")
+                    + (b";" if not keywords[-1].startswith("#") else b"")
+                    + after,
+                )
+
+            else:
+                header = self.get("FoamFile", None)
+                assert header is None or isinstance(header, FoamFile.SubDict)
+                parsed.add(
+                    (),
+                    normalize_data(data, keywords=keywords),
+                    before
+                    + dumps(
+                        data,
+                        keywords=(),
+                        header=header,
+                    )
+                    + after,
+                )
+
+    @with_default  # type: ignore [arg-type]
+    def popone(
+        self, keywords: str | tuple[str, ...] | None
+    ) -> Data | StandaloneData | FoamFile.SubDict:
         if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
         with self:
-            del self._get_parsed()[keywords]
+            return self._get_parsed().popone(keywords)  # type: ignore [arg-type, call-arg, misc, return-value]
 
     def _iter(self, keywords: tuple[str, ...] = ()) -> Iterator[str | None]:
         yield from (
@@ -639,11 +769,13 @@ class FoamFieldFile(FoamFile):
     """
 
     class BoundariesSubDict(FoamFile.SubDict):
-        def __getitem__(self, keyword: str) -> FoamFieldFile.BoundarySubDict | Data:
-            value = super().__getitem__(keyword)
-            if isinstance(value, FoamFieldFile.SubDict):
-                assert isinstance(value, FoamFieldFile.BoundarySubDict)
-            return value
+        @with_default  # type: ignore [arg-type]
+        def getall(self, keyword: str) -> list[FoamFieldFile.BoundarySubDict | Data]:  # type: ignore [override]
+            ret = super().getall(keyword)  # type: ignore [call-arg, misc]
+            for r in ret:
+                if isinstance(r, FoamFile.SubDict):
+                    assert isinstance(r, FoamFieldFile.BoundarySubDict)
+            return ret  # type: ignore [return-value]
 
     class BoundarySubDict(FoamFile.SubDict):
         """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""
@@ -682,31 +814,25 @@ class FoamFieldFile(FoamFile):
         def value(self) -> None:
             del self["value"]
 
-    @overload  # type: ignore [override]
-    def __getitem__(self, keywords: None | tuple[()]) -> StandaloneData: ...
-
-    @overload
-    def __getitem__(self, keywords: str) -> Data | FoamFieldFile.SubDict: ...
-
-    @overload
-    def __getitem__(
-        self, keywords: tuple[str, ...]
-    ) -> Data | StandaloneData | FoamFieldFile.SubDict: ...
-
-    def __getitem__(
+    @with_default  # type: ignore [arg-type]
+    def getall(  # type: ignore [override]
         self, keywords: str | tuple[str, ...] | None
-    ) -> Data | StandaloneData | FoamFile.SubDict:
+    ) -> list[Data | StandaloneData | FoamFieldFile.SubDict]:
         if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        ret = super().__getitem__(keywords)
-        if keywords[0] == "boundaryField" and isinstance(ret, FoamFile.SubDict):
-            if len(keywords) == 1:
-                ret = FoamFieldFile.BoundariesSubDict(self, keywords)
-            elif len(keywords) == 2:
-                ret = FoamFieldFile.BoundarySubDict(self, keywords)
+        ret = super().getall(keywords)  # type: ignore [call-arg, misc]
+
+        if keywords[0] == "boundaryField":
+            for i, r in enumerate(ret):
+                if isinstance(r, FoamFile.SubDict):
+                    if len(keywords) == 1:
+                        ret[i] = FoamFieldFile.BoundariesSubDict(self, keywords)
+                    elif len(keywords) == 2:
+                        ret[i] = FoamFieldFile.BoundarySubDict(self, keywords)
+
         return ret
 
     @property
