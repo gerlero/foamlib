@@ -18,7 +18,7 @@ import numpy as np
 from multicollections.abc import MutableMultiMapping, with_default
 
 from ._io import FoamFileIO
-from ._parsing import Parsed, loads
+from ._parsing import loads
 from ._serialization import dumps, normalize_data, normalize_keyword
 from ._types import (
     Data,
@@ -357,9 +357,10 @@ class FoamFile(
                 self.class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
 
     def _calculate_spacing_for_add(
-        self, parsed: Parsed, keywords: tuple[str, ...], start: int, end: int
+        self, keywords: tuple[str, ...], start: int, end: int
     ) -> tuple[bytes, bytes]:
         """Calculate before/after spacing for add operations."""
+        parsed = self._get_parsed(missing_ok=True)
         if start and not parsed.contents[:start].endswith(b"\n\n"):
             if parsed.contents[:start].endswith(b"\n"):
                 before = b"\n" if len(keywords) <= 1 else b""
@@ -376,9 +377,10 @@ class FoamFile(
         return before, after
 
     def _calculate_spacing_for_setitem(
-        self, parsed: Parsed, keywords: tuple[str, ...], start: int, end: int
+        self, keywords: tuple[str, ...], start: int, end: int
     ) -> tuple[bytes, bytes]:
         """Calculate before/after spacing for setitem operations."""
+        parsed = self._get_parsed(missing_ok=True)
         # Check if this is an update to an existing entry
         is_update = keywords in parsed
 
@@ -413,7 +415,6 @@ class FoamFile(
 
     def _process_data_entry(
         self,
-        parsed: Parsed,
         keywords: tuple[str, ...],
         data: DataLike | StandaloneDataLike | SubDictLike,
         before: bytes,
@@ -421,6 +422,7 @@ class FoamFile(
         operation: str,  # "put" or "add"
     ) -> None:
         """Process and write a data entry using either put or add operation."""
+        parsed = self._get_parsed(missing_ok=True)
         indentation = b"    " * (len(keywords) - 1)
 
         if isinstance(data, Mapping):
@@ -506,10 +508,8 @@ class FoamFile(
 
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords)
-            before, after = self._calculate_spacing_for_setitem(
-                parsed, keywords, start, end
-            )
-            self._process_data_entry(parsed, keywords, data, before, after, "put")
+            before, after = self._calculate_spacing_for_setitem(keywords, start, end)
+            self._process_data_entry(keywords, data, before, after, "put")
 
     def add(
         self,
@@ -524,10 +524,8 @@ class FoamFile(
 
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords, add=True)
-            before, after = self._calculate_spacing_for_add(
-                parsed, keywords, start, end
-            )
-            self._process_data_entry(parsed, keywords, data, before, after, "add")
+            before, after = self._calculate_spacing_for_add(keywords, start, end)
+            self._process_data_entry(keywords, data, before, after, "add")
 
     @with_default
     def popone(
