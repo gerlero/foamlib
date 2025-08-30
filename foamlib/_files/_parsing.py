@@ -582,12 +582,14 @@ class Parsed(
                         ret.add((*_keywords, keyword), Parsed._Entry(d, start, end))
         return ret
 
+    @override
     @with_default
     def getall(
         self, keywords: tuple[str, ...]
     ) -> list[Data | StandaloneData | EllipsisType]:
         return [entry.data for entry in self._parsed.getall(keywords)]
 
+    @override
     def __setitem__(
         self, key: tuple[str, ...], value: Data | StandaloneData | EllipsisType
     ) -> None:
@@ -607,7 +609,7 @@ class Parsed(
         self._remove_child_entries(keywords)
 
     @override
-    def add(
+    def add(  # type: ignore[override]
         self,
         keywords: tuple[str, ...],
         data: Data | StandaloneData | EllipsisType,
@@ -618,6 +620,7 @@ class Parsed(
         self._parsed[keywords] = Parsed._Entry(data, start, end)
         self._update_content(start, end, content)
 
+    @override
     @with_default
     def popone(self, keywords: tuple[str, ...]) -> Data | StandaloneData | EllipsisType:
         start, end = self.entry_location(keywords)

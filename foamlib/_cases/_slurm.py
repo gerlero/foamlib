@@ -9,11 +9,16 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Sequence
 
-from ._async import AsyncFoamCase
-from ._subprocess import run_async
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
 
 if TYPE_CHECKING:
     import os
+
+from ._async import AsyncFoamCase
+from ._subprocess import run_async
 
 
 class AsyncSlurmFoamCase(AsyncFoamCase):
@@ -28,6 +33,7 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
         directory.
     """
 
+    @override
     @staticmethod
     async def _run(
         cmd: Sequence[str | os.PathLike[str]] | str,
@@ -51,6 +57,7 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
 
         await run_async(cmd, **kwargs)
 
+    @override
     async def run(
         self,
         cmd: Sequence[str | os.PathLike[str]] | str | None = None,

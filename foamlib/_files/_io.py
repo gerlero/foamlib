@@ -10,11 +10,16 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-from ._parsing import Parsed
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
 
 if TYPE_CHECKING:
     import os
     from types import TracebackType
+
+from ._parsing import Parsed
 
 
 class FoamFileIO:
@@ -73,5 +78,6 @@ class FoamFileIO:
 
         return self.__parsed
 
+    @override
     def __repr__(self) -> str:
         return f"{type(self).__qualname__}('{self.path}')"

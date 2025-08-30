@@ -64,6 +64,7 @@ class FoamCaseRunBase(FoamCaseBase):
         ) -> FoamFieldFile | Coroutine[None, None, FoamFieldFile]:
             raise NotImplementedError
 
+        @override
         @property
         @abstractmethod
         def _case(self) -> FoamCaseRunBase:

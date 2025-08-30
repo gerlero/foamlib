@@ -14,18 +14,13 @@ from typing import (
     cast,
 )
 
-if TYPE_CHECKING:
-    from types import TracebackType
-
 if sys.version_info >= (3, 9):
     from collections.abc import Generator
 else:
     from typing import Generator
 
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
+if TYPE_CHECKING:
+    from types import TracebackType
 
 
 Y = TypeVar("Y")
@@ -87,7 +82,6 @@ class SingletonContextManager(Generic[R]):
             self._users += 1
             return cast("R", self._ret)
 
-    @override
     def __exit__(
         self,
         exc_type: type[BaseException] | None,

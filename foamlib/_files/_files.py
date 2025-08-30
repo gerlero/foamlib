@@ -155,9 +155,9 @@ class FoamFile(
             self._file = _file
             self._keywords = _keywords
 
-        @with_default
         @override
-        def getall(self, keyword: str) -> list[Data | FoamFile.SubDict]:
+        @with_default
+        def getall(self, keyword: str) -> list[Data | FoamFile.SubDict]:  # type: ignore[override]
             return self._file.getall((*self._keywords, keyword))  # type: ignore [return-value]
 
         @override
@@ -172,8 +172,8 @@ class FoamFile(
         def add(self, keyword: str, data: DataLike | SubDictLike) -> None:
             self._file.add((*self._keywords, keyword), data)  # type: ignore [arg-type]
 
-        @with_default
         @override
+        @with_default
         def popone(self, keyword: str) -> Data | FoamFile.SubDict:
             return self._file.popone((*self._keywords, keyword))  # type: ignore [return-value]
 
@@ -195,14 +195,17 @@ class FoamFile(
         def __len__(self) -> int:
             return len(list(iter(self)))
 
+        @override
         def update(self, *args: Any, **kwargs: Any) -> None:
             with self._file:
                 super().update(*args, **kwargs)
 
+        @override
         def clear(self) -> None:
             with self._file:
                 super().clear()
 
+        @override
         def __repr__(self) -> str:
             return f"{type(self).__qualname__}('{self._file}', {self._keywords})"
 
@@ -286,9 +289,9 @@ class FoamFile(
     def object_(self, value: str) -> None:
         self["FoamFile", "object"] = value
 
-    @with_default
     @override
-    def getall(
+    @with_default
+    def getall(  # type: ignore[override]
         self,
         keywords: str | tuple[str, ...] | None,
     ) -> list[Data | StandaloneData | FoamFile.SubDict]:
@@ -488,8 +491,7 @@ class FoamFile(
             else:  # operation == "add"
                 parsed.add((), normalize_data(data, keywords=keywords), content)
 
-    @overload
-    @override
+    @overload  # type: ignore[override]
     def __setitem__(
         self, keywords: None | tuple[()], data: StandaloneDataLike
     ) -> None: ...
@@ -573,10 +575,12 @@ class FoamFile(
     def __len__(self) -> int:
         return len(list(iter(self)))
 
+    @override
     def update(self, *args: Any, **kwargs: Any) -> None:
         with self:
             super().update(*args, **kwargs)
 
+    @override
     def clear(self) -> None:
         with self:
             super().clear()
@@ -724,9 +728,9 @@ class FoamFieldFile(FoamFile):
     """
 
     class BoundariesSubDict(FoamFile.SubDict):
-        @with_default
         @override
-        def getall(self, keyword: str) -> list[FoamFieldFile.BoundarySubDict | Data]:
+        @with_default
+        def getall(self, keyword: str) -> list[FoamFieldFile.BoundarySubDict | Data]:  # type: ignore[override]
             ret = super().getall(keyword)
             for r in ret:
                 if isinstance(r, FoamFile.SubDict):
@@ -770,9 +774,9 @@ class FoamFieldFile(FoamFile):
         def value(self) -> None:
             del self["value"]
 
-    @with_default
     @override
-    def getall(
+    @with_default
+    def getall(  # type: ignore[override]
         self, keywords: str | tuple[str, ...] | None
     ) -> list[Data | StandaloneData | FoamFieldFile.SubDict]:
         if keywords is None:
