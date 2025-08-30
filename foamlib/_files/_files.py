@@ -445,7 +445,8 @@ class FoamFile(
                     self.add((*keywords, k), v)  # type: ignore [arg-type]
 
         elif keywords:
-            assert (header := self.get("FoamFile", None)) is None or isinstance(header, FoamFile.SubDict)
+            header = self.get("FoamFile", None)
+            assert header is None or isinstance(header, FoamFile.SubDict)
             val = dumps(data, keywords=keywords, header=header)
 
             content = (
@@ -463,7 +464,8 @@ class FoamFile(
                 parsed.add(keywords, normalize_data(data, keywords=keywords), content)
 
         else:
-            assert (header := self.get("FoamFile", None)) is None or isinstance(header, FoamFile.SubDict)
+            header = self.get("FoamFile", None)
+            assert header is None or isinstance(header, FoamFile.SubDict)
 
             content = before + dumps(data, keywords=(), header=header) + after
 
