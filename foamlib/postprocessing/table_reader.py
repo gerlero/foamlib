@@ -6,7 +6,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from itertools import islice
 from pathlib import Path
-from typing import Callable, ClassVar, Optional, Union
+from typing import Callable, ClassVar, Optional
 
 import pandas as pd
 from defusedxml.ElementTree import parse
@@ -39,7 +39,7 @@ class TableReader:
     """
 
     _registry: ClassVar[
-        dict[str, Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame]]
+        dict[str, Callable[[str | Path, Optional[list[str]]], pd.DataFrame]]
     ] = {}
 
     def __init__(self) -> None:
@@ -49,8 +49,8 @@ class TableReader:
     def register(
         cls, extension: str
     ) -> Callable[
-        [Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame]],
-        Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame],
+        [Callable[[str | Path, Optional[list[str]]], pd.DataFrame]],
+        Callable[[str | Path, Optional[list[str]]], pd.DataFrame],
     ]:
         """
         Register a reader function for a specific file extension.
@@ -66,15 +66,15 @@ class TableReader:
         """
 
         def decorator(
-            func: Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame],
-        ) -> Callable[[Union[str, Path], Optional[list[str]]], pd.DataFrame]:
+            func: Callable[[str | Path, Optional[list[str]]], pd.DataFrame],
+        ) -> Callable[[str | Path, Optional[list[str]]], pd.DataFrame]:
             cls._registry[extension.lower()] = func
             return func
 
         return decorator
 
     def read(
-        self, filepath: Union[str, Path], column_names: Optional[list[str]] = None
+        self, filepath: str | Path, column_names: Optional[list[str]] = None
     ) -> pd.DataFrame:
         """
         Read a file and return its contents as a pandas DataFrame.
@@ -114,7 +114,7 @@ def is_convertible_to_float(values: list[str]) -> bool:
         return True
 
 
-def extract_column_names(filepath: Union[str, Path]) -> Optional[list[str]]:
+def extract_column_names(filepath: str | Path) -> Optional[list[str]]:
     """
     Extract column names from the first 20 lines of a file.
 
@@ -163,7 +163,7 @@ def update_column_names(
 
 
 def read_oftable(
-    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+    filepath: str | Path, column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """
     Use a regular expression to parse the file and separate on parentheses and whitespace.
@@ -193,7 +193,7 @@ def read_oftable(
 
 @TableReader.register(".dat")
 def read_dat(
-    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+    filepath: str | Path, column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """Read a .dat file and return a DataFrame."""
     return read_oftable(filepath, column_names=column_names)
@@ -201,7 +201,7 @@ def read_dat(
 
 @TableReader.register(".raw")
 def read_raw(
-    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+    filepath: str | Path, column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """Read a .raw file and return a DataFrame."""
     if column_names is None:
@@ -213,7 +213,7 @@ def read_raw(
 
 @TableReader.register("")
 def read_default(
-    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+    filepath: str | Path, column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """Read a file with no extension and return a DataFrame."""
     return read_oftable(filepath, column_names=column_names)
@@ -221,7 +221,7 @@ def read_default(
 
 @TableReader.register(".xy")
 def read_xy(
-    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+    filepath: str | Path, column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """Read a .xy file and return a DataFrame."""
     if column_names is None:
@@ -233,7 +233,7 @@ def read_xy(
 
 @TableReader.register(".csv")
 def read_csv(
-    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+    filepath: str | Path, column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """Read a .csv file and return a DataFrame."""
     with open(filepath) as f:
@@ -257,7 +257,7 @@ def read_csv(
 
 
 def read_catch2_benchmark(
-    filepath: Union[str, Path], column_names: Optional[list[str]] = None
+    filepath: str | Path, column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """Read a Catch2 XML benchmark results file and return a DataFrame."""
     tree = parse(filepath)
