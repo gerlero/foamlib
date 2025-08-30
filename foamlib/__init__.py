@@ -1,6 +1,6 @@
 """A Python interface for interacting with OpenFOAM."""
 
-__version__ = "1.1.6"
+from importlib.metadata import version
 
 from ._cases import (
     AsyncFoamCase,
@@ -11,6 +11,8 @@ from ._cases import (
     FoamCaseRunBase,
 )
 from ._files import FoamFieldFile, FoamFile
+
+__version__ = version("foamlib")
 
 __all__ = [
     "AsyncFoamCase",
