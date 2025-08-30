@@ -615,14 +615,9 @@ class Parsed(
     def popone(self, keywords: tuple[str, ...]) -> Data | StandaloneData | EllipsisType:
         start, end = self.entry_location(keywords)
         entry = self._parsed.popone(keywords)  # type: ignore [call-arg]
-        self._update_content(start, end, b"")
-        return entry.data
-
-    def __delitem__(self, keywords: tuple[str, ...]) -> None:
-        start, end = self.entry_location(keywords)
-        del self._parsed[keywords]
         self._remove_child_entries(keywords)
         self._update_content(start, end, b"")
+        return entry.data
 
     def __contains__(self, keywords: object) -> bool:
         return keywords in self._parsed
