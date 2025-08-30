@@ -44,6 +44,7 @@ parameter_sweep = [
     "pandas>=1,<3",
     "pydantic>=2.0.0,<3",
     "defusedxml>=0.7.1,<0.8",
+    "eval-type-backport>=0.2,<0.3; python_version<='3.9'",
 ]
 lint = ["ruff"]
 typing = [
