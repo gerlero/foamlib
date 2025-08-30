@@ -297,6 +297,189 @@ class FoamFile(
             FoamFile.SubDict(self, keywords) if v is ... else deepcopy(v) for v in ret
         ]
 
+    def _normalize_and_validate_keywords(
+        self, keywords: str | tuple[str, ...] | None
+    ) -> tuple[str, ...]:
+        """Normalize keywords to tuple format and validate them."""
+        if keywords is None:
+            keywords = ()
+        elif not isinstance(keywords, tuple):
+            keywords = (keywords,)
+
+        if keywords and not isinstance(normalize_keyword(keywords[-1]), str):
+            msg = f"Invalid keyword: {keywords[-1]}"
+            raise ValueError(msg)
+
+        return keywords
+
+    def _write_header_if_needed(self, keywords: tuple[str, ...]) -> None:
+        """Write FoamFile header if needed."""
+        try:
+            write_header = (
+                not self and "FoamFile" not in self and keywords != ("FoamFile",)
+            )
+        except FileNotFoundError:
+            write_header = keywords != ("FoamFile",)
+
+        if write_header:
+            self["FoamFile"] = {}
+            self.version = 2.0
+            self.format = "ascii"
+            self.class_ = "dictionary"
+            self.location = f'"{self.path.parent.name}"'
+            self.object_ = (
+                self.path.stem if self.path.suffix == ".gz" else self.path.name
+            )
+
+    def _update_class_for_field_if_needed(
+        self,
+        keywords: tuple[str, ...],
+        data: DataLike | StandaloneDataLike | SubDictLike,
+    ) -> None:
+        """Update class field to appropriate field type if this is a field entry."""
+        if (
+            keywords == ("internalField",)
+            or (
+                len(keywords) == 3
+                and keywords[0] == "boundaryField"
+                and (
+                    keywords[2] == "value"
+                    or keywords[2] == "gradient"
+                    or keywords[2].endswith(("Value", "Gradient"))
+                )
+            )
+        ) and self.class_ == "dictionary":
+            try:
+                tensor_kind = _tensor_kind_for_field(data)  # type: ignore [arg-type]
+            except ValueError:
+                pass
+            else:
+                self.class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
+
+    def _calculate_spacing_for_add(
+        self, keywords: tuple[str, ...], start: int, end: int
+    ) -> tuple[bytes, bytes]:
+        """Calculate before/after spacing for add operations."""
+        parsed = self._get_parsed(missing_ok=True)
+        if start and not parsed.contents[:start].endswith(b"\n\n"):
+            if parsed.contents[:start].endswith(b"\n"):
+                before = b"\n" if len(keywords) <= 1 else b""
+            else:
+                before = b"\n\n" if len(keywords) <= 1 else b"\n"
+        else:
+            before = b""
+
+        if not parsed.contents[end:].strip() or parsed.contents[end:].startswith(b"}"):
+            after = b"\n" + b"    " * (len(keywords) - 2)
+        else:
+            after = b""
+
+        return before, after
+
+    def _calculate_spacing_for_setitem(
+        self, keywords: tuple[str, ...], start: int, end: int
+    ) -> tuple[bytes, bytes]:
+        """Calculate before/after spacing for setitem operations."""
+        parsed = self._get_parsed(missing_ok=True)
+        # Check if this is an update to an existing entry
+        is_update = keywords in parsed
+
+        # For updates to existing sub-dictionary entries, preserve existing spacing
+        # to avoid accumulating blank lines
+        if is_update and len(keywords) > 1:
+            # For existing sub-dictionary entries, check if the existing entry
+            # already starts with any newlines - if so, preserve that formatting
+            existing_content = parsed.contents[start:end]
+            if existing_content.startswith(b"\n"):
+                # Entry already has leading newlines, preserve them exactly
+                before = b""
+            # If the existing entry doesn't start with newlines, add appropriate spacing
+            elif parsed.contents[:start].endswith(b"\n"):
+                before = b""  # Already have a newline before
+            else:
+                before = b"\n"  # Need to add a newline
+        elif start and not parsed.contents[:start].endswith(b"\n\n"):
+            if parsed.contents[:start].endswith(b"\n"):
+                before = b"\n" if len(keywords) <= 1 else b""
+            else:
+                before = b"\n\n" if len(keywords) <= 1 else b"\n"
+        else:
+            before = b""
+
+        if not parsed.contents[end:].strip() or parsed.contents[end:].startswith(b"}"):
+            after = b"\n" + b"    " * (len(keywords) - 2)
+        else:
+            after = b""
+
+        return before, after
+
+    def _process_data_entry(
+        self,
+        keywords: tuple[str, ...],
+        data: DataLike | StandaloneDataLike | SubDictLike,
+        before: bytes,
+        after: bytes,
+        operation: str,  # "put" or "add"
+    ) -> None:
+        """Process and write a data entry using either put or add operation."""
+        parsed = self._get_parsed(missing_ok=True)
+        indentation = b"    " * (len(keywords) - 1)
+
+        if isinstance(data, Mapping):
+            if isinstance(data, (FoamFile, FoamFile.SubDict)):
+                data = data.as_dict()
+
+            content = (
+                before
+                + indentation
+                + dumps(normalize_keyword(keywords[-1]))
+                + b"\n"
+                + indentation
+                + b"{\n"
+                + indentation
+                + b"}"
+                + after
+            )
+
+            if operation == "put":
+                parsed.put(keywords, ..., content)
+                for k, v in data.items():
+                    self[(*keywords, k)] = v  # type: ignore [arg-type]
+            else:  # operation == "add"
+                parsed.add(keywords, ..., content)
+                for k, v in data.items():
+                    self.add((*keywords, k), v)  # type: ignore [arg-type]
+
+        elif keywords:
+            header = self.get("FoamFile", None)
+            assert header is None or isinstance(header, FoamFile.SubDict)
+            val = dumps(data, keywords=keywords, header=header)
+
+            content = (
+                before
+                + indentation
+                + dumps(normalize_keyword(keywords[-1]))
+                + ((b" " + val) if val else b"")
+                + (b";" if not keywords[-1].startswith("#") else b"")
+                + after
+            )
+
+            if operation == "put":
+                parsed.put(keywords, normalize_data(data, keywords=keywords), content)
+            else:  # operation == "add"
+                parsed.add(keywords, normalize_data(data, keywords=keywords), content)
+
+        else:
+            header = self.get("FoamFile", None)
+            assert header is None or isinstance(header, FoamFile.SubDict)
+
+            content = before + dumps(data, keywords=(), header=header) + after
+
+            if operation == "put":
+                parsed.put((), normalize_data(data, keywords=keywords), content)
+            else:  # operation == "add"
+                parsed.add((), normalize_data(data, keywords=keywords), content)
+
     @overload  # type: ignore [override]
     def __setitem__(
         self, keywords: None | tuple[()], data: StandaloneDataLike
@@ -317,275 +500,32 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
-        if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
-
-        if keywords and not isinstance(normalize_keyword(keywords[-1]), str):
-            msg = f"Invalid keyword: {keywords[-1]}"
-            raise ValueError(msg)
+        keywords = self._normalize_and_validate_keywords(keywords)
 
         with self:
-            try:
-                write_header = (
-                    not self and "FoamFile" not in self and keywords != ("FoamFile",)
-                )
-            except FileNotFoundError:
-                write_header = keywords != ("FoamFile",)
-
-            if write_header:
-                self["FoamFile"] = {}
-                self.version = 2.0
-                self.format = "ascii"
-                self.class_ = "dictionary"
-                self.location = f'"{self.path.parent.name}"'
-                self.object_ = (
-                    self.path.stem if self.path.suffix == ".gz" else self.path.name
-                )
-
-            if (
-                keywords == ("internalField",)
-                or (
-                    len(keywords) == 3
-                    and keywords[0] == "boundaryField"
-                    and (
-                        keywords[2] == "value"
-                        or keywords[2] == "gradient"
-                        or keywords[2].endswith(("Value", "Gradient"))
-                    )
-                )
-            ) and self.class_ == "dictionary":
-                try:
-                    tensor_kind = _tensor_kind_for_field(data)  # type: ignore [arg-type]
-                except ValueError:
-                    pass
-                else:
-                    self.class_ = (
-                        "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
-                    )
+            self._write_header_if_needed(keywords)
+            self._update_class_for_field_if_needed(keywords, data)
 
             parsed = self._get_parsed(missing_ok=True)
-
             start, end = parsed.entry_location(keywords)
-
-            # Check if this is an update to an existing entry
-            is_update = keywords in parsed
-
-            # For updates to existing sub-dictionary entries, preserve existing spacing
-            # to avoid accumulating blank lines
-            if is_update and len(keywords) > 1:
-                # For existing sub-dictionary entries, check if the existing entry
-                # already starts with any newlines - if so, preserve that formatting
-                existing_content = parsed.contents[start:end]
-                if existing_content.startswith(b"\n"):
-                    # Entry already has leading newlines, preserve them exactly
-                    before = b""
-                # If the existing entry doesn't start with newlines, add appropriate spacing
-                elif parsed.contents[:start].endswith(b"\n"):
-                    before = b""  # Already have a newline before
-                else:
-                    before = b"\n"  # Need to add a newline
-            elif start and not parsed.contents[:start].endswith(b"\n\n"):
-                if parsed.contents[:start].endswith(b"\n"):
-                    before = b"\n" if len(keywords) <= 1 else b""
-                else:
-                    before = b"\n\n" if len(keywords) <= 1 else b"\n"
-            else:
-                before = b""
-
-            if not parsed.contents[end:].strip() or parsed.contents[end:].startswith(
-                b"}"
-            ):
-                after = b"\n" + b"    " * (len(keywords) - 2)
-            else:
-                after = b""
-
-            indentation = b"    " * (len(keywords) - 1)
-
-            if isinstance(data, Mapping):
-                if isinstance(data, (FoamFile, FoamFile.SubDict)):
-                    data = data.as_dict()
-
-                parsed.put(
-                    keywords,
-                    ...,
-                    before
-                    + indentation
-                    + dumps(normalize_keyword(keywords[-1]))
-                    + b"\n"
-                    + indentation
-                    + b"{\n"
-                    + indentation
-                    + b"}"
-                    + after,
-                )
-
-                for k, v in data.items():
-                    self[(*keywords, k)] = v  # type: ignore [arg-type]
-
-            elif keywords:
-                header = self.get("FoamFile", None)
-                assert header is None or isinstance(header, FoamFile.SubDict)
-                val = dumps(
-                    data,
-                    keywords=keywords,
-                    header=header,
-                )
-                parsed.put(
-                    keywords,
-                    normalize_data(data, keywords=keywords),
-                    before
-                    + indentation
-                    + dumps(normalize_keyword(keywords[-1]))
-                    + ((b" " + val) if val else b"")
-                    + (b";" if not keywords[-1].startswith("#") else b"")
-                    + after,
-                )
-
-            else:
-                header = self.get("FoamFile", None)
-                assert header is None or isinstance(header, FoamFile.SubDict)
-                parsed.put(
-                    (),
-                    normalize_data(data, keywords=keywords),
-                    before
-                    + dumps(
-                        data,
-                        keywords=(),
-                        header=header,
-                    )
-                    + after,
-                )
+            before, after = self._calculate_spacing_for_setitem(keywords, start, end)
+            self._process_data_entry(keywords, data, before, after, "put")
 
     def add(
         self,
         keywords: str | tuple[str, ...] | None,
         data: Data | StandaloneData | SubDictLike,
     ) -> None:
-        if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
-
-        if keywords and not isinstance(normalize_keyword(keywords[-1]), str):
-            msg = f"Invalid keyword: {keywords[-1]}"
-            raise ValueError(msg)
+        keywords = self._normalize_and_validate_keywords(keywords)
 
         with self:
-            try:
-                write_header = (
-                    not self and "FoamFile" not in self and keywords != ("FoamFile",)
-                )
-            except FileNotFoundError:
-                write_header = keywords != ("FoamFile",)
-
-            if write_header:
-                self["FoamFile"] = {}
-                self.version = 2.0
-                self.format = "ascii"
-                self.class_ = "dictionary"
-                self.location = f'"{self.path.parent.name}"'
-                self.object_ = (
-                    self.path.stem if self.path.suffix == ".gz" else self.path.name
-                )
-
-            if (
-                keywords == ("internalField",)
-                or (
-                    len(keywords) == 3
-                    and keywords[0] == "boundaryField"
-                    and (
-                        keywords[2] == "value"
-                        or keywords[2] == "gradient"
-                        or keywords[2].endswith(("Value", "Gradient"))
-                    )
-                )
-            ) and self.class_ == "dictionary":
-                try:
-                    tensor_kind = _tensor_kind_for_field(data)  # type: ignore [arg-type]
-                except ValueError:
-                    pass
-                else:
-                    self.class_ = (
-                        "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
-                    )
+            self._write_header_if_needed(keywords)
+            self._update_class_for_field_if_needed(keywords, data)
 
             parsed = self._get_parsed(missing_ok=True)
-
             start, end = parsed.entry_location(keywords, add=True)
-
-            if start and not parsed.contents[:start].endswith(b"\n\n"):
-                if parsed.contents[:start].endswith(b"\n"):
-                    before = b"\n" if len(keywords) <= 1 else b""
-                else:
-                    before = b"\n\n" if len(keywords) <= 1 else b"\n"
-            else:
-                before = b""
-
-            if not parsed.contents[end:].strip() or parsed.contents[end:].startswith(
-                b"}"
-            ):
-                after = b"\n" + b"    " * (len(keywords) - 2)
-            else:
-                after = b""
-
-            indentation = b"    " * (len(keywords) - 1)
-
-            if isinstance(data, Mapping):
-                if isinstance(data, (FoamFile, FoamFile.SubDict)):
-                    data = data.as_dict()
-
-                parsed.add(
-                    keywords,
-                    ...,
-                    before
-                    + indentation
-                    + dumps(normalize_keyword(keywords[-1]))
-                    + b"\n"
-                    + indentation
-                    + b"{\n"
-                    + indentation
-                    + b"}"
-                    + after,
-                )
-
-                for k, v in data.items():
-                    self.add((*keywords, k), v)  # type: ignore [arg-type]
-
-            elif keywords:
-                header = self.get("FoamFile", None)
-                assert header is None or isinstance(header, FoamFile.SubDict)
-                val = dumps(
-                    data,
-                    keywords=keywords,
-                    header=header,
-                )
-                parsed.add(
-                    keywords,
-                    normalize_data(data, keywords=keywords),
-                    before
-                    + indentation
-                    + dumps(normalize_keyword(keywords[-1]))
-                    + ((b" " + val) if val else b"")
-                    + (b";" if not keywords[-1].startswith("#") else b"")
-                    + after,
-                )
-
-            else:
-                header = self.get("FoamFile", None)
-                assert header is None or isinstance(header, FoamFile.SubDict)
-                parsed.add(
-                    (),
-                    normalize_data(data, keywords=keywords),
-                    before
-                    + dumps(
-                        data,
-                        keywords=(),
-                        header=header,
-                    )
-                    + after,
-                )
+            before, after = self._calculate_spacing_for_add(keywords, start, end)
+            self._process_data_entry(keywords, data, before, after, "add")
 
     @with_default
     def popone(
