@@ -275,7 +275,9 @@ def read_catch2_benchmark(
             subsections = section.findall("Section")
             if subsections:
                 _parse_sections(subsections, test_case_name, new_path)
-            elif (benchmark := section.find("BenchmarkResults")) is not None and (mean := benchmark.find("mean")) is not None:
+            elif (benchmark := section.find("BenchmarkResults")) is not None and (
+                mean := benchmark.find("mean")
+            ) is not None:
                 record = {
                     "test_case": test_case_name,
                     "benchmark_name": benchmark.attrib.get("name"),
