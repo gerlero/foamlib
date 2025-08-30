@@ -92,8 +92,7 @@ def run_sync(
                         timeout=0.1
                     ):  # Small timeout to allow log monitoring
                         assert key.fileobj in open_streams
-                        line = key.fileobj.readline()  # type: ignore [union-attr]
-                        if not line:
+                        if not (line := key.fileobj.readline()):  # type: ignore [union-attr]
                             selector.unregister(key.fileobj)
                             open_streams.remove(key.fileobj)  # type: ignore [arg-type]
                         elif key.fileobj is proc.stdout:
@@ -162,8 +161,7 @@ async def run_async(
             async def tee_stdout() -> None:
                 while True:
                     assert proc.stdout is not None
-                    line = (await proc.stdout.readline()).decode()
-                    if not line:
+                    if not (line := (await proc.stdout.readline()).decode()):
                         break
                     process_stdout(line)
                     if output is not None:
@@ -175,8 +173,7 @@ async def run_async(
             async def tee_stderr() -> None:
                 while True:
                     assert proc.stderr is not None
-                    line = (await proc.stderr.readline()).decode()
-                    if not line:
+                    if not (line := (await proc.stderr.readline()).decode()):
                         break
                     error.write(line)
                     if stderr not in (DEVNULL, PIPE):

@@ -35,8 +35,7 @@ from ._types import (
 def _tensor_kind_for_field(
     field: FieldLike,
 ) -> str:
-    shape = np.shape(field)  # type: ignore [arg-type]
-    if not shape:
+    if not (shape := np.shape(field)):  # type: ignore [arg-type]
         return "scalar"
     if shape == (3,):
         return "vector"

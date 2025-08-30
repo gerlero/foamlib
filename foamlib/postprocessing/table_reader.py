@@ -90,8 +90,7 @@ class TableReader:
         Returns:
             pd.DataFrame: The contents of the file as a pandas DataFrame.
         """
-        ext = str(Path(filepath).suffix.lower())
-        if ext not in self._registry:
+        if (ext := str(Path(filepath).suffix.lower())) not in self._registry:
             error_message = f"No reader registered for extension: '{ext}'"
             raise ReaderNotRegisteredError(error_message)
         return self._registry[ext](filepath, column_names)
@@ -128,9 +127,7 @@ def extract_column_names(filepath: str | Path) -> Optional[list[str]]:
         first_lines = [line.strip() for line in islice(f, 20)]
 
     # Filter only comment lines
-    comment_lines = [line for line in first_lines if line.startswith("#")]
-
-    if not comment_lines:
+    if not (comment_lines := [line for line in first_lines if line.startswith("#")]):
         return None
 
     # Take the last comment line and split into column names
@@ -278,23 +275,20 @@ def read_catch2_benchmark(
             subsections = section.findall("Section")
             if subsections:
                 _parse_sections(subsections, test_case_name, new_path)
-            else:
-                benchmark = section.find("BenchmarkResults")
-                if benchmark is not None:
-                    mean = benchmark.find("mean")
+            elif (benchmark := section.find("BenchmarkResults")) is not None and (
+                mean := benchmark.find("mean")
+            ) is not None:
+                record = {
+                    "test_case": test_case_name,
+                    "benchmark_name": benchmark.attrib.get("name"),
+                    "avg_runtime": float(mean.attrib.get("value", 0)),
+                }
 
-                    if mean is not None:
-                        record = {
-                            "test_case": test_case_name,
-                            "benchmark_name": benchmark.attrib.get("name"),
-                            "avg_runtime": float(mean.attrib.get("value", 0)),
-                        }
+                # Add dynamic section depth fields
+                for i, sec_name in enumerate(new_path):
+                    record[f"section{i + 1}"] = sec_name
 
-                        # Add dynamic section depth fields
-                        for i, sec_name in enumerate(new_path):
-                            record[f"section{i + 1}"] = sec_name
-
-                        records.append(record)
+                records.append(record)
 
     for testcase in root.findall("TestCase"):
         test_case_name = testcase.attrib.get("name")

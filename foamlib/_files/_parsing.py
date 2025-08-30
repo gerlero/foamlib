@@ -487,11 +487,12 @@ def loads(
         s = s.decode("latin-1")
 
     if keywords == ():
-        data = as_any_dict(_FILE.parse_string(s, parse_all=True).as_list())
-
-        if len(data) == 1 and None in data:
+        if (
+            len(data := as_any_dict(_FILE.parse_string(s, parse_all=True).as_list()))
+            == 1
+            and None in data
+        ):
             data = data[None]
-
     else:
         data = _DATA_OR_DICT.parse_string(s, parse_all=True)[0]
 
