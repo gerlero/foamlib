@@ -152,7 +152,7 @@ class FoamFile(
 
         @with_default
         def getall(self, keyword: str) -> list[Data | FoamFile.SubDict]:  # type: ignore [override]
-            return self._file.getall((*self._keywords, keyword))  # type: ignore [arg-type, call-arg, misc, return-value]
+            return self._file.getall((*self._keywords, keyword))  # type: ignore [return-value]
 
         def __setitem__(
             self,
@@ -165,8 +165,8 @@ class FoamFile(
             self._file.add((*self._keywords, keyword), data)  # type: ignore [arg-type]
 
         @with_default
-        def popone(self, keyword: str) -> Data | FoamFile.SubDict | None:  # type: ignore [override]
-            return self._file.popone((*self._keywords, keyword))  # type: ignore [arg-type, call-arg, misc, return-value]
+        def popone(self, keyword: str) -> Data | FoamFile.SubDict:
+            return self._file.popone((*self._keywords, keyword))  # type: ignore [return-value]
 
         def __delitem__(self, keyword: str) -> None:
             del self._file[(*self._keywords, keyword)]
@@ -276,7 +276,7 @@ class FoamFile(
     @with_default
     def getall(  # type: ignore [override]
         self,
-        keywords: str | tuple[str, ...] | None,  # type: ignore [arg-type]
+        keywords: str | tuple[str, ...] | None,
     ) -> list[Data | StandaloneData | FoamFile.SubDict]:
         if keywords is None:
             keywords = ()
@@ -285,7 +285,7 @@ class FoamFile(
 
         parsed = self._get_parsed()
 
-        ret = parsed.getall(keywords)  # type: ignore [call-arg, misc]
+        ret = parsed.getall(keywords)
 
         return [
             FoamFile.SubDict(self, keywords) if v is ... else deepcopy(v) for v in ret
@@ -438,7 +438,7 @@ class FoamFile(
             if operation == "put":
                 parsed.put(keywords, ..., content)
                 for k, v in data.items():
-                    self[(*keywords, k)] = v  # type: ignore [arg-type]
+                    self[(*keywords, k)] = v
             else:  # operation == "add"
                 parsed.add(keywords, ..., content)
                 for k, v in data.items():
@@ -531,7 +531,7 @@ class FoamFile(
             keywords = (keywords,)
 
         with self:
-            return self._get_parsed().popone(keywords)  # type: ignore [arg-type, call-arg, misc, return-value]
+            return self._get_parsed().popone(keywords)  # type: ignore [return-value]
 
     def _iter(self, keywords: tuple[str, ...] = ()) -> Iterator[str | None]:
         yield from (
@@ -705,7 +705,7 @@ class FoamFieldFile(FoamFile):
     class BoundariesSubDict(FoamFile.SubDict):
         @with_default
         def getall(self, keyword: str) -> list[FoamFieldFile.BoundarySubDict | Data]:  # type: ignore [override]
-            ret = super().getall(keyword)  # type: ignore [call-arg, misc]
+            ret = super().getall(keyword)
             for r in ret:
                 if isinstance(r, FoamFile.SubDict):
                     assert isinstance(r, FoamFieldFile.BoundarySubDict)
@@ -757,7 +757,7 @@ class FoamFieldFile(FoamFile):
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        ret = super().getall(keywords)  # type: ignore [call-arg, misc]
+        ret = super().getall(keywords)
 
         if keywords[0] == "boundaryField":
             for i, r in enumerate(ret):
