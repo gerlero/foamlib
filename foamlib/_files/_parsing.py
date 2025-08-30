@@ -619,8 +619,7 @@ class Parsed(
         self._update_content(start, end, b"")
         return entry.data
 
-    def __delitem__(self, keywords: tuple[str, ...]) -> None:
-        self.popone(keywords)
+
 
     def __contains__(self, keywords: object) -> bool:
         return keywords in self._parsed
