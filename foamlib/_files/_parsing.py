@@ -596,23 +596,9 @@ class Parsed(
     ) -> None:
         start, end = self.entry_location(keywords)
 
-        diff = len(content) - (end - start)
-        for entry in self._parsed.values():  # type: ignore [var-annotated]
-            assert isinstance(entry, Parsed._Entry)
-            if entry.start >= end:
-                entry.start += diff
-                entry.end += diff
-            elif entry.end > start:
-                entry.end += diff
-
-        self._parsed[keywords] = Parsed._Entry(data, start, end + diff)
-
-        self.contents = self.contents[:start] + content + self.contents[end:]
-        self.modified = True
-
-        for k in list(self._parsed):
-            if keywords != k and keywords == k[: len(keywords)]:
-                del self._parsed[k]
+        self._update_content(start, end, content)
+        self._parsed[keywords] = Parsed._Entry(data, start, start + len(content))
+        self._remove_child_entries(keywords)
 
     def add(  # type: ignore [override]
         self,
@@ -623,37 +609,20 @@ class Parsed(
         start, end = self.entry_location(keywords, add=True)
 
         self._parsed[keywords] = Parsed._Entry(data, start, end)
-
-        self.contents = self.contents[:start] + content + self.contents[end:]
-        self.modified = True
+        self._update_content(start, end, content)
 
     @with_default
     def popone(self, keywords: tuple[str, ...]) -> Data | StandaloneData | EllipsisType:
         start, end = self.entry_location(keywords)
         entry = self._parsed.popone(keywords)  # type: ignore [call-arg]
-        self.contents = self.contents[:start] + self.contents[end:]
-        self.modified = True
+        self._update_content(start, end, b"")
         return entry.data
 
     def __delitem__(self, keywords: tuple[str, ...]) -> None:
         start, end = self.entry_location(keywords)
         del self._parsed[keywords]
-
-        for k in list(self._parsed):
-            if keywords == k[: len(keywords)]:
-                del self._parsed[k]
-
-        diff = end - start
-        for entry in self._parsed.values():  # type: ignore [var-annotated]
-            assert isinstance(entry, Parsed._Entry)
-            if entry.start > end:
-                entry.start -= diff
-                entry.end -= diff
-            elif entry.end > start:
-                entry.end -= diff
-
-        self.contents = self.contents[:start] + self.contents[end:]
-        self.modified = True
+        self._remove_child_entries(keywords)
+        self._update_content(start, end, b"")
 
     def __contains__(self, keywords: object) -> bool:
         return keywords in self._parsed
@@ -663,6 +632,29 @@ class Parsed(
 
     def __len__(self) -> int:
         return len(self._parsed)
+
+    def _update_content(self, start: int, end: int, new_content: bytes) -> None:
+        """Update content and adjust positions of other entries."""
+        diff = len(new_content) - (end - start)
+
+        # Update positions of other entries if content length changed
+        if diff != 0:
+            for entry in self._parsed.values():  # type: ignore [var-annotated]
+                assert isinstance(entry, Parsed._Entry)
+                if entry.start >= end:
+                    entry.start += diff
+                    entry.end += diff
+                elif entry.end > start:
+                    entry.end += diff
+
+        self.contents = self.contents[:start] + new_content + self.contents[end:]
+        self.modified = True
+
+    def _remove_child_entries(self, keywords: tuple[str, ...]) -> None:
+        """Remove all child entries of the given keywords."""
+        for k in list(self._parsed):
+            if keywords != k and keywords == k[: len(keywords)]:
+                del self._parsed[k]
 
     def entry_location(
         self, keywords: tuple[str, ...], *, add: bool = False
