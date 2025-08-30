@@ -2,12 +2,7 @@ from __future__ import annotations
 
 import sys
 from copy import deepcopy
-from typing import Any, Optional, Tuple, Union, cast, overload
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from typing import Any, Literal, Optional, Tuple, Union, cast, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Iterator, Mapping, Sequence
