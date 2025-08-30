@@ -47,7 +47,7 @@ parameter_sweep = [
 ]
 lint = ["ruff"]
 typing = [
-    "mypy>=1,<2",
+    "mypy>=1.16,<2; python_version>='3.9'",
     "pandas-stubs",
     "scipy-stubs; python_version>='3.10'",
     "types-defusedxml",
