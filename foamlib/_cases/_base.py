@@ -11,10 +11,15 @@ if sys.version_info >= (3, 9):
 else:
     from typing import AbstractSet, Iterator, Sequence
 
-from .._files import FoamFieldFile, FoamFile
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
 
 if TYPE_CHECKING:
     import os
+
+from .._files import FoamFieldFile, FoamFile
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
@@ -68,6 +73,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
                 return FoamFieldFile(self.path / f"{key}.gz")
             return FoamFieldFile(self.path / key)
 
+        @override
         def __contains__(self, obj: object) -> bool:
             if isinstance(obj, FoamFieldFile):
                 return obj.path.parent == self.path and obj.path.is_file()
@@ -77,6 +83,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
                 ).is_file()
             return False
 
+        @override
         def __iter__(self) -> Iterator[FoamFieldFile]:
             for p in self.path.iterdir():
                 if p.is_file() and (
@@ -84,6 +91,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
                 ):
                     yield FoamFieldFile(p)
 
+        @override
         def __len__(self) -> int:
             return len(list(iter(self)))
 
@@ -96,9 +104,11 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         def __fspath__(self) -> str:
             return str(self.path)
 
+        @override
         def __repr__(self) -> str:
             return f"{type(self).__qualname__}('{self.path}')"
 
+        @override
         def __str__(self) -> str:
             return str(self.path)
 
@@ -124,6 +134,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
     @overload
     def __getitem__(self, index: slice) -> Sequence[FoamCaseBase.TimeDirectory]: ...
 
+    @override
     def __getitem__(
         self, index: int | slice | float | str
     ) -> FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]:
@@ -137,6 +148,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             raise IndexError(msg)
         return self._times[index]
 
+    @override
     def __len__(self) -> int:
         return len(self._times)
 
@@ -228,8 +240,10 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
     def __fspath__(self) -> str:
         return str(self.path)
 
+    @override
     def __repr__(self) -> str:
         return f"{type(self).__qualname__}('{self.path}')"
 
+    @override
     def __str__(self) -> str:
         return str(self.path)

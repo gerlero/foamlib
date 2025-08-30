@@ -14,13 +14,13 @@ from typing import (
     cast,
 )
 
-if TYPE_CHECKING:
-    from types import TracebackType
-
 if sys.version_info >= (3, 9):
     from collections.abc import Generator
 else:
     from typing import Generator
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 
 Y = TypeVar("Y")

@@ -15,6 +15,11 @@ if sys.version_info >= (3, 10):
 else:
     EllipsisType = type(...)
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
 import numpy as np
 from multicollections import MultiDict
 from multicollections.abc import MultiMapping, MutableMultiMapping, with_default
@@ -577,12 +582,14 @@ class Parsed(
                         ret.add((*_keywords, keyword), Parsed._Entry(d, start, end))
         return ret
 
+    @override
     @with_default
     def getall(
         self, keywords: tuple[str, ...]
     ) -> list[Data | StandaloneData | EllipsisType]:
         return [entry.data for entry in self._parsed.getall(keywords)]
 
+    @override
     def __setitem__(
         self, key: tuple[str, ...], value: Data | StandaloneData | EllipsisType
     ) -> None:
@@ -601,7 +608,8 @@ class Parsed(
         self._parsed[keywords] = Parsed._Entry(data, start, start + len(content))
         self._remove_child_entries(keywords)
 
-    def add(  # type: ignore [override]
+    @override
+    def add(  # type: ignore[override]
         self,
         keywords: tuple[str, ...],
         data: Data | StandaloneData | EllipsisType,
@@ -612,6 +620,7 @@ class Parsed(
         self._parsed[keywords] = Parsed._Entry(data, start, end)
         self._update_content(start, end, content)
 
+    @override
     @with_default
     def popone(self, keywords: tuple[str, ...]) -> Data | StandaloneData | EllipsisType:
         start, end = self.entry_location(keywords)
@@ -620,12 +629,15 @@ class Parsed(
         self._update_content(start, end, b"")
         return entry.data
 
+    @override
     def __contains__(self, keywords: object) -> bool:
         return keywords in self._parsed
 
+    @override
     def __iter__(self) -> Iterator[tuple[str, ...]]:
         return iter(self._parsed)
 
+    @override
     def __len__(self) -> int:
         return len(self._parsed)
 

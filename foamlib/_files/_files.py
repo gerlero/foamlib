@@ -9,6 +9,11 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Iterator, Mapping, Sequence
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
 import numpy as np
 from multicollections.abc import MutableMultiMapping, with_default
 
@@ -150,10 +155,12 @@ class FoamFile(
             self._file = _file
             self._keywords = _keywords
 
+        @override
         @with_default
-        def getall(self, keyword: str) -> list[Data | FoamFile.SubDict]:  # type: ignore [override]
+        def getall(self, keyword: str) -> list[Data | FoamFile.SubDict]:  # type: ignore[override]
             return self._file.getall((*self._keywords, keyword))  # type: ignore [return-value]
 
+        @override
         def __setitem__(
             self,
             keyword: str,
@@ -161,35 +168,44 @@ class FoamFile(
         ) -> None:
             self._file[(*self._keywords, keyword)] = data
 
+        @override
         def add(self, keyword: str, data: DataLike | SubDictLike) -> None:
             self._file.add((*self._keywords, keyword), data)  # type: ignore [arg-type]
 
+        @override
         @with_default
         def popone(self, keyword: str) -> Data | FoamFile.SubDict:
             return self._file.popone((*self._keywords, keyword))  # type: ignore [return-value]
 
+        @override
         def __delitem__(self, keyword: str) -> None:
             del self._file[(*self._keywords, keyword)]
 
+        @override
         def __iter__(self) -> Iterator[str]:
             for k in self._file._iter(self._keywords):
                 assert k is not None
                 yield k
 
+        @override
         def __contains__(self, keyword: object) -> bool:
             return (*self._keywords, keyword) in self._file
 
+        @override
         def __len__(self) -> int:
             return len(list(iter(self)))
 
+        @override
         def update(self, *args: Any, **kwargs: Any) -> None:
             with self._file:
                 super().update(*args, **kwargs)
 
+        @override
         def clear(self) -> None:
             with self._file:
                 super().clear()
 
+        @override
         def __repr__(self) -> str:
             return f"{type(self).__qualname__}('{self._file}', {self._keywords})"
 
@@ -273,8 +289,9 @@ class FoamFile(
     def object_(self, value: str) -> None:
         self["FoamFile", "object"] = value
 
+    @override
     @with_default
-    def getall(  # type: ignore [override]
+    def getall(  # type: ignore[override]
         self,
         keywords: str | tuple[str, ...] | None,
     ) -> list[Data | StandaloneData | FoamFile.SubDict]:
@@ -474,7 +491,7 @@ class FoamFile(
             else:  # operation == "add"
                 parsed.add((), normalize_data(data, keywords=keywords), content)
 
-    @overload  # type: ignore [override]
+    @overload  # type: ignore[override]
     def __setitem__(
         self, keywords: None | tuple[()], data: StandaloneDataLike
     ) -> None: ...
@@ -489,6 +506,7 @@ class FoamFile(
         data: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None: ...
 
+    @override
     def __setitem__(
         self,
         keywords: str | tuple[str, ...] | None,
@@ -505,6 +523,7 @@ class FoamFile(
             before, after = self._calculate_spacing_for_setitem(keywords, start, end)
             self._process_data_entry(keywords, data, before, after, "put")
 
+    @override
     def add(
         self,
         keywords: str | tuple[str, ...] | None,
@@ -522,6 +541,7 @@ class FoamFile(
             self._process_data_entry(keywords, data, before, after, "add")
 
     @with_default
+    @override
     def popone(
         self, keywords: str | tuple[str, ...] | None
     ) -> Data | StandaloneData | FoamFile.SubDict:
@@ -538,9 +558,11 @@ class FoamFile(
             k[-1] if k else None for k in self._get_parsed() if k[:-1] == keywords
         )
 
+    @override
     def __iter__(self) -> Iterator[str | None]:
         yield from (k for k in self._iter() if k != "FoamFile")
 
+    @override
     def __contains__(self, keywords: object) -> bool:
         if keywords is None:
             keywords = ()
@@ -549,13 +571,16 @@ class FoamFile(
 
         return keywords in self._get_parsed()
 
+    @override
     def __len__(self) -> int:
         return len(list(iter(self)))
 
+    @override
     def update(self, *args: Any, **kwargs: Any) -> None:
         with self:
             super().update(*args, **kwargs)
 
+    @override
     def clear(self) -> None:
         with self:
             super().clear()
@@ -703,8 +728,9 @@ class FoamFieldFile(FoamFile):
     """
 
     class BoundariesSubDict(FoamFile.SubDict):
+        @override
         @with_default
-        def getall(self, keyword: str) -> list[FoamFieldFile.BoundarySubDict | Data]:  # type: ignore [override]
+        def getall(self, keyword: str) -> list[FoamFieldFile.BoundarySubDict | Data]:  # type: ignore[override]
             ret = super().getall(keyword)
             for r in ret:
                 if isinstance(r, FoamFile.SubDict):
@@ -748,8 +774,9 @@ class FoamFieldFile(FoamFile):
         def value(self) -> None:
             del self["value"]
 
+    @override
     @with_default
-    def getall(  # type: ignore [override]
+    def getall(  # type: ignore[override]
         self, keywords: str | tuple[str, ...] | None
     ) -> list[Data | StandaloneData | FoamFieldFile.SubDict]:
         if keywords is None:

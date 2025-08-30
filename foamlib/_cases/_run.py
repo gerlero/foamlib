@@ -38,6 +38,11 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
 from ._base import FoamCaseBase
 from ._subprocess import DEVNULL, STDOUT, LogFileMonitor
 
@@ -59,6 +64,7 @@ class FoamCaseRunBase(FoamCaseBase):
         ) -> FoamFieldFile | Coroutine[None, None, FoamFieldFile]:
             raise NotImplementedError
 
+        @override
         @property
         @abstractmethod
         def _case(self) -> FoamCaseRunBase:
@@ -80,6 +86,7 @@ class FoamCaseRunBase(FoamCaseBase):
 
     __progress = SingletonContextManager(Progress)
 
+    @override
     def __delitem__(self, key: int | float | str) -> None:
         shutil.rmtree(self[key].path)
 

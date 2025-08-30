@@ -22,6 +22,14 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
+if TYPE_CHECKING:
+    import os
+
 import aioshutil
 
 from ._base import FoamCaseBase
@@ -30,8 +38,6 @@ from ._subprocess import run_async
 from ._util import ValuedGenerator, awaitableasynccontextmanager
 
 if TYPE_CHECKING:
-    import os
-
     from .._files import FoamFieldFile
 
 X = TypeVar("X")
@@ -63,10 +69,12 @@ class AsyncFoamCase(FoamCaseRunBase):
     """
 
     class TimeDirectory(FoamCaseRunBase.TimeDirectory):
+        @override
         @property
         def _case(self) -> AsyncFoamCase:
             return AsyncFoamCase(self.path.parent)
 
+        @override
         async def cell_centers(self) -> FoamFieldFile:
             """
             Write and return the cell centers.
@@ -110,6 +118,7 @@ class AsyncFoamCase(FoamCaseRunBase):
                     AsyncFoamCase._reserved_cpus -= cpus
                     AsyncFoamCase._cpus_cond.notify(cpus)
 
+    @override
     @staticmethod
     async def _run(
         cmd: Sequence[str | os.PathLike[str]] | str,
@@ -123,12 +132,14 @@ class AsyncFoamCase(FoamCaseRunBase):
         async with AsyncFoamCase._cpus(cpus):
             await run_async(cmd, **kwargs)
 
+    @override
     @staticmethod
     async def _rmtree(
         path: os.PathLike[str] | str, *, ignore_errors: bool = False
     ) -> None:
         await aioshutil.rmtree(path, ignore_errors=ignore_errors, onerror=None)
 
+    @override
     @staticmethod
     async def _copytree(
         src: os.PathLike[str] | str,
@@ -140,6 +151,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     ) -> None:
         await aioshutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
 
+    @override
     async def clean(self, *, check: bool = False) -> None:
         """
         Clean this case.
@@ -172,6 +184,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     @overload
     def __getitem__(self, index: slice) -> Sequence[AsyncFoamCase.TimeDirectory]: ...
 
+    @override
     def __getitem__(
         self, index: int | slice | float | str
     ) -> AsyncFoamCase.TimeDirectory | Sequence[AsyncFoamCase.TimeDirectory]:
@@ -180,10 +193,12 @@ class AsyncFoamCase(FoamCaseRunBase):
             return AsyncFoamCase.TimeDirectory(ret)
         return [AsyncFoamCase.TimeDirectory(r) for r in ret]
 
+    @override
     async def _prepare(self, *, check: bool = True, log: bool = True) -> None:
         for coro in self._prepare_calls(check=check, log=log):
             await coro
 
+    @override
     async def run(
         self,
         cmd: Sequence[str | os.PathLike[str]] | str | None = None,
@@ -236,26 +251,31 @@ class AsyncFoamCase(FoamCaseRunBase):
         ):
             await coro
 
+    @override
     async def block_mesh(self, *, check: bool = True, log: bool = True) -> None:
         """Run blockMesh on this case."""
         for coro in self._block_mesh_calls(check=check, log=log):
             await coro
 
+    @override
     async def decompose_par(self, *, check: bool = True, log: bool = True) -> None:
         """Decompose this case for parallel running."""
         for coro in self._decompose_par_calls(check=check, log=log):
             await coro
 
+    @override
     async def reconstruct_par(self, *, check: bool = True, log: bool = True) -> None:
         """Reconstruct this case after parallel running."""
         for coro in self._reconstruct_par_calls(check=check, log=log):
             await coro
 
+    @override
     async def restore_0_dir(self) -> None:
         """Restore the 0 directory from the 0.orig directory."""
         for coro in self._restore_0_dir_calls():
             await coro
 
+    @override
     @awaitableasynccontextmanager
     @asynccontextmanager
     async def copy(
@@ -290,6 +310,7 @@ class AsyncFoamCase(FoamCaseRunBase):
 
         await self._rmtree(calls.value.path)
 
+    @override
     @awaitableasynccontextmanager
     @asynccontextmanager
     async def clone(

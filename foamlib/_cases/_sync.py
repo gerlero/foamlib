@@ -14,15 +14,22 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
+
+if TYPE_CHECKING:
+    import os
+    from types import TracebackType
+
 from ._base import FoamCaseBase
 from ._run import FoamCaseRunBase
 from ._subprocess import run_sync
 from ._util import ValuedGenerator
 
 if TYPE_CHECKING:
-    import os
-    from types import TracebackType
-
     from .._files import FoamFieldFile
 
 
@@ -51,10 +58,12 @@ class FoamCase(FoamCaseRunBase):
     """
 
     class TimeDirectory(FoamCaseRunBase.TimeDirectory):
+        @override
         @property
         def _case(self) -> FoamCase:
             return FoamCase(self.path.parent)
 
+        @override
         def cell_centers(self) -> FoamFieldFile:
             """
             Write and return the cell centers.
@@ -69,6 +78,7 @@ class FoamCase(FoamCaseRunBase):
 
             return calls.value
 
+    @override
     @staticmethod
     def _run(
         cmd: Sequence[str | os.PathLike[str]] | str,
@@ -81,10 +91,12 @@ class FoamCase(FoamCaseRunBase):
 
         run_sync(cmd, **kwargs)
 
+    @override
     @staticmethod
     def _rmtree(path: os.PathLike[str] | str, *, ignore_errors: bool = False) -> None:
         shutil.rmtree(path, ignore_errors=ignore_errors)
 
+    @override
     @staticmethod
     def _copytree(
         src: os.PathLike[str] | str,
@@ -102,6 +114,7 @@ class FoamCase(FoamCaseRunBase):
     @overload
     def __getitem__(self, index: slice) -> Sequence[FoamCase.TimeDirectory]: ...
 
+    @override
     def __getitem__(
         self, index: int | slice | float | str
     ) -> FoamCase.TimeDirectory | Sequence[FoamCase.TimeDirectory]:
@@ -121,6 +134,7 @@ class FoamCase(FoamCaseRunBase):
     ) -> None:
         self._rmtree(self.path)
 
+    @override
     def clean(self, *, check: bool = False) -> None:
         """
         Clean this case.
@@ -147,10 +161,12 @@ class FoamCase(FoamCaseRunBase):
         for _ in self._clean_calls(check=check):
             pass
 
+    @override
     def _prepare(self, *, check: bool = True, log: bool = True) -> None:
         for _ in self._prepare_calls(check=check, log=log):
             pass
 
+    @override
     def run(
         self,
         cmd: Sequence[str | os.PathLike[str]] | str | None = None,
@@ -203,26 +219,31 @@ class FoamCase(FoamCaseRunBase):
         ):
             pass
 
+    @override
     def block_mesh(self, *, check: bool = True, log: bool = True) -> None:
         """Run blockMesh on this case."""
         for _ in self._block_mesh_calls(check=check, log=log):
             pass
 
+    @override
     def decompose_par(self, *, check: bool = True, log: bool = True) -> None:
         """Decompose this case for parallel running."""
         for _ in self._decompose_par_calls(check=check, log=log):
             pass
 
+    @override
     def reconstruct_par(self, *, check: bool = True, log: bool = True) -> None:
         """Reconstruct this case after parallel running."""
         for _ in self._reconstruct_par_calls(check=check, log=log):
             pass
 
+    @override
     def restore_0_dir(self) -> None:
         """Restore the 0 directory from the 0.orig directory."""
         for _ in self._restore_0_dir_calls():
             pass
 
+    @override
     def copy(self, dst: os.PathLike[str] | str | None = None) -> Self:
         """
         Make a copy of this case.
@@ -251,6 +272,7 @@ class FoamCase(FoamCaseRunBase):
 
         return calls.value
 
+    @override
     def clone(self, dst: os.PathLike[str] | str | None = None) -> Self:
         """
         Clone this case (make a clean copy).

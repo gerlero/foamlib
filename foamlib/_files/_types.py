@@ -17,6 +17,11 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeGuard
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
 
 class DimensionSet(NamedTuple):
     mass: float = 0
@@ -27,9 +32,11 @@ class DimensionSet(NamedTuple):
     current: float = 0
     luminous_intensity: float = 0
 
+    @override
     def __repr__(self) -> str:
         return f"{type(self).__name__}({', '.join(f'{n}={v}' for n, v in zip(self._fields, self) if v != 0)})"
 
+    @override
     def __add__(self, other: DimensionSet, /) -> DimensionSet:  # type: ignore[override]
         if not isinstance(other, DimensionSet):
             return NotImplemented
@@ -50,6 +57,7 @@ class DimensionSet(NamedTuple):
 
         return self
 
+    @override
     def __mul__(self, other: DimensionSet, /) -> DimensionSet:  # type: ignore[override]
         if not isinstance(other, DimensionSet):
             return NotImplemented
@@ -103,6 +111,7 @@ class Dimensioned:
 
         self.name = name
 
+    @override
     def __repr__(self) -> str:
         if self.name is not None:
             return (

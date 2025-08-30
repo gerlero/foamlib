@@ -21,10 +21,16 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
 CompletedProcess = subprocess.CompletedProcess
 
 
 class CalledProcessError(subprocess.CalledProcessError):
+    @override
     def __str__(self) -> str:
         if self.stderr:
             if isinstance(self.stderr, bytes):
