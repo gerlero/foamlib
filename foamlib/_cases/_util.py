@@ -22,6 +22,11 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Generator
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
 
 Y = TypeVar("Y")
 S = TypeVar("S")
@@ -82,6 +87,7 @@ class SingletonContextManager(Generic[R]):
             self._users += 1
             return cast("R", self._ret)
 
+    @override
     def __exit__(
         self,
         exc_type: type[BaseException] | None,

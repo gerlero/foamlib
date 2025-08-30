@@ -15,6 +15,11 @@ if sys.version_info >= (3, 10):
 else:
     EllipsisType = type(...)
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
 import numpy as np
 from multicollections import MultiDict
 from multicollections.abc import MultiMapping, MutableMultiMapping, with_default
@@ -601,7 +606,8 @@ class Parsed(
         self._parsed[keywords] = Parsed._Entry(data, start, start + len(content))
         self._remove_child_entries(keywords)
 
-    def add(  # type: ignore [override]
+    @override
+    def add(
         self,
         keywords: tuple[str, ...],
         data: Data | StandaloneData | EllipsisType,

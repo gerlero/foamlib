@@ -9,6 +9,11 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Iterator, Mapping, Sequence
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
 import numpy as np
 from multicollections.abc import MutableMultiMapping, with_default
 
@@ -151,7 +156,8 @@ class FoamFile(
             self._keywords = _keywords
 
         @with_default
-        def getall(self, keyword: str) -> list[Data | FoamFile.SubDict]:  # type: ignore [override]
+        @override
+        def getall(self, keyword: str) -> list[Data | FoamFile.SubDict]:
             return self._file.getall((*self._keywords, keyword))  # type: ignore [return-value]
 
         def __setitem__(
@@ -161,10 +167,12 @@ class FoamFile(
         ) -> None:
             self._file[(*self._keywords, keyword)] = data
 
+        @override
         def add(self, keyword: str, data: DataLike | SubDictLike) -> None:
             self._file.add((*self._keywords, keyword), data)  # type: ignore [arg-type]
 
         @with_default
+        @override
         def popone(self, keyword: str) -> Data | FoamFile.SubDict:
             return self._file.popone((*self._keywords, keyword))  # type: ignore [return-value]
 
@@ -505,6 +513,7 @@ class FoamFile(
             before, after = self._calculate_spacing_for_setitem(keywords, start, end)
             self._process_data_entry(keywords, data, before, after, "put")
 
+    @override
     def add(
         self,
         keywords: str | tuple[str, ...] | None,
@@ -522,6 +531,7 @@ class FoamFile(
             self._process_data_entry(keywords, data, before, after, "add")
 
     @with_default
+    @override
     def popone(
         self, keywords: str | tuple[str, ...] | None
     ) -> Data | StandaloneData | FoamFile.SubDict:
