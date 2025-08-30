@@ -46,6 +46,7 @@ class DimensionSet(NamedTuple):
 
         return self
 
+    @override
     def __sub__(self, other: DimensionSet, /) -> DimensionSet:
         if not isinstance(other, DimensionSet):
             return NotImplemented
@@ -63,18 +64,21 @@ class DimensionSet(NamedTuple):
 
         return DimensionSet(*(a + b for a, b in zip(self, other)))
 
+    @override
     def __truediv__(self, other: DimensionSet, /) -> DimensionSet:
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
         return DimensionSet(*(a - b for a, b in zip(self, other)))
 
+    @override
     def __pow__(self, exponent: float, /) -> DimensionSet:
         if not isinstance(exponent, (int, float)):
             return NotImplemented
 
         return DimensionSet(*(a * exponent for a in self))
 
+    @override
     def __bool__(self) -> bool:
         return any(v != 0 for v in self)
 

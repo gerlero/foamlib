@@ -626,12 +626,15 @@ class Parsed(
         self._update_content(start, end, b"")
         return entry.data
 
+    @override
     def __contains__(self, keywords: object) -> bool:
         return keywords in self._parsed
 
+    @override
     def __iter__(self) -> Iterator[tuple[str, ...]]:
         return iter(self._parsed)
 
+    @override
     def __len__(self) -> int:
         return len(self._parsed)
 
