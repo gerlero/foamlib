@@ -94,6 +94,7 @@ packages = [
     "tests",
 ]
 strict = true
+enable_error_code = "explicit-override"
 
 [tool.ruff]
 exclude = [
