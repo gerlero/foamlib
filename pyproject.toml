@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "foamlib"
 description = "A Python interface for interacting with OpenFOAM"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 authors = [{name = "Gabriel S. Gerlero", email = "ggerlero@cimec.unl.edu.ar"}]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -16,7 +16,6 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -50,7 +49,7 @@ typing = [
     "mypy>=1,<2",
     "pandas-stubs",
     "scipy-stubs; python_version>='3.10'",
-    "types-defusedxml; python_version>='3.8'",
+    "types-defusedxml",
 ]
 test = [
     "pytest>=7,<9",

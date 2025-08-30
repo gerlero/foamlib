@@ -61,9 +61,6 @@ def run_sync(
     stderr: int | IO[str] = STDOUT,
     process_stdout: Callable[[str], None] = lambda _: None,
 ) -> CompletedProcess[str]:
-    if sys.version_info < (3, 8):
-        cmd = [str(arg) for arg in cmd]
-
     # Set up log file monitoring
     with LogFileMonitor(case, process_stdout) as log_monitor:
         with subprocess.Popen(
@@ -143,9 +140,6 @@ async def run_async(
     stderr: int | IO[str] = STDOUT,
     process_stdout: Callable[[str], None] = lambda _: None,
 ) -> CompletedProcess[str]:
-    if sys.version_info < (3, 8):
-        cmd = [str(arg) for arg in cmd]
-
     # Set up log file monitoring
     async with AsyncLogFileMonitor(case, process_stdout) as log_monitor:
         monitor_task = log_monitor.start_background_monitoring()
