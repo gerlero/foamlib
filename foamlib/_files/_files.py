@@ -18,7 +18,7 @@ import numpy as np
 from multicollections.abc import MutableMultiMapping, with_default
 
 from ._io import FoamFileIO
-from ._parsing import loads
+from ._parsing import Parsed, loads
 from ._serialization import dumps, normalize_data, normalize_keyword
 from ._types import (
     Data,
@@ -332,7 +332,9 @@ class FoamFile(
             )
 
     def _update_class_for_field_if_needed(
-        self, keywords: tuple[str, ...], data: DataLike | StandaloneDataLike | SubDictLike
+        self,
+        keywords: tuple[str, ...],
+        data: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
         """Update class field to appropriate field type if this is a field entry."""
         if (
@@ -352,12 +354,10 @@ class FoamFile(
             except ValueError:
                 pass
             else:
-                self.class_ = (
-                    "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
-                )
+                self.class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
 
     def _calculate_spacing_for_add(
-        self, parsed, keywords: tuple[str, ...], start: int, end: int
+        self, parsed: Parsed, keywords: tuple[str, ...], start: int, end: int
     ) -> tuple[bytes, bytes]:
         """Calculate before/after spacing for add operations."""
         if start and not parsed.contents[:start].endswith(b"\n\n"):
@@ -376,7 +376,7 @@ class FoamFile(
         return before, after
 
     def _calculate_spacing_for_setitem(
-        self, parsed, keywords: tuple[str, ...], start: int, end: int
+        self, parsed: Parsed, keywords: tuple[str, ...], start: int, end: int
     ) -> tuple[bytes, bytes]:
         """Calculate before/after spacing for setitem operations."""
         # Check if this is an update to an existing entry
@@ -413,7 +413,7 @@ class FoamFile(
 
     def _process_data_entry(
         self,
-        parsed,
+        parsed: Parsed,
         keywords: tuple[str, ...],
         data: DataLike | StandaloneDataLike | SubDictLike,
         before: bytes,
@@ -452,7 +452,7 @@ class FoamFile(
             header = self.get("FoamFile", None)
             assert header is None or isinstance(header, FoamFile.SubDict)
             val = dumps(data, keywords=keywords, header=header)
-            
+
             content = (
                 before
                 + indentation
@@ -470,7 +470,7 @@ class FoamFile(
         else:
             header = self.get("FoamFile", None)
             assert header is None or isinstance(header, FoamFile.SubDict)
-            
+
             content = before + dumps(data, keywords=(), header=header) + after
 
             if operation == "put":
@@ -506,7 +506,9 @@ class FoamFile(
 
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords)
-            before, after = self._calculate_spacing_for_setitem(parsed, keywords, start, end)
+            before, after = self._calculate_spacing_for_setitem(
+                parsed, keywords, start, end
+            )
             self._process_data_entry(parsed, keywords, data, before, after, "put")
 
     def add(
@@ -522,7 +524,9 @@ class FoamFile(
 
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords, add=True)
-            before, after = self._calculate_spacing_for_add(parsed, keywords, start, end)
+            before, after = self._calculate_spacing_for_add(
+                parsed, keywords, start, end
+            )
             self._process_data_entry(parsed, keywords, data, before, after, "add")
 
     @with_default
