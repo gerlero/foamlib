@@ -7,7 +7,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 import pandas as pd
 
@@ -31,7 +31,7 @@ def _of_case(dirnames: list[str]) -> bool:
     return has_constant and has_system
 
 
-def of_cases(dir_name: Union[str, Path]) -> list[str]:
+def of_cases(dir_name: str | Path) -> list[str]:
     """List all OpenFOAM cases in folder.
 
     Parameters
@@ -69,7 +69,7 @@ class DataSource:
     """
 
     file_name: str
-    folder: Union[str, Path]
+    folder: str | Path
     postproc_prefix: str
     time_resolved: bool = True
     _times: set[str] = field(default_factory=set, init=False, repr=False)
@@ -119,7 +119,7 @@ class DataSource:
         return [base / self.file_name]
 
 
-def functionobject(file_name: str, folder: Union[str, Path]) -> DataSource:
+def functionobject(file_name: str, folder: str | Path) -> DataSource:
     """
     Create a DataTarget for a standard OpenFOAM function object.
 
@@ -143,7 +143,7 @@ def functionobject(file_name: str, folder: Union[str, Path]) -> DataSource:
 
 
 def datafile(
-    file_name: str, folder: Union[str, Path], *, time_resolved: bool = False
+    file_name: str, folder: str | Path, *, time_resolved: bool = False
 ) -> DataSource:
     """
     Create a DataTarget for a custom or non-OpenFOAM output file.
@@ -171,7 +171,7 @@ def datafile(
 
 def load_tables(
     source: DataSource,
-    dir_name: Union[str, Path],
+    dir_name: str | Path,
     filter_table: Optional[
         Callable[[pd.DataFrame, list[dict[str, str]]], pd.DataFrame]
     ] = None,

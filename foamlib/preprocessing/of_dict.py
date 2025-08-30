@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 from pydantic import BaseModel
 
@@ -12,7 +12,7 @@ from foamlib import FoamFile
 class FoamDictInstruction(BaseModel):
     """Class representing an instruction to get a value from a FoamFile."""
 
-    file_name: Union[str, Path]
+    file_name: str | Path
     keys: List[str]
 
     def get_value(self) -> Any:

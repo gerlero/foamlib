@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import itertools
 from pathlib import Path
-from typing import List, Union
+from typing import List
 
 import pandas as pd
 from pydantic import BaseModel
@@ -37,8 +37,8 @@ class ParameterStudy(BaseModel):
 
 def csv_generator(
     csv_file: str,
-    template_case: Union[str, Path],
-    output_folder: Union[str, Path] = Path("Cases"),
+    template_case: str | Path,
+    output_folder: str | Path = Path("Cases"),
 ) -> ParameterStudy:
     """Generate a parameter study from a CSV file."""
     parastudy = pd.read_csv(csv_file).to_dict(orient="records")
@@ -77,8 +77,8 @@ def csv_generator(
 
 def grid_generator(
     parameters: List[GridParameter],
-    template_case: Union[str, Path],
-    output_folder: Union[str, Path] = Path("Cases"),
+    template_case: str | Path,
+    output_folder: str | Path = Path("Cases"),
 ) -> ParameterStudy:
     """Generate a parameter study based on grid parameters."""
     cases = []

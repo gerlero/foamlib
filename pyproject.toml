@@ -122,8 +122,7 @@ extend-ignore = [
     "SLF001",
     "TC001",
     "TC003",
-    "TID252",
-    "UP007"
+    "TID252"
 ]
 
 [tool.ruff.lint.pydocstyle]
