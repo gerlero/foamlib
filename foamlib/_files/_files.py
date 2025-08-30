@@ -35,8 +35,7 @@ from ._types import (
 def _tensor_kind_for_field(
     field: FieldLike,
 ) -> str:
-    shape = np.shape(field)  # type: ignore [arg-type]
-    if not shape:
+    if not (shape := np.shape(field)):  # type: ignore [arg-type]
         return "scalar"
     if shape == (3,):
         return "vector"
@@ -446,8 +445,7 @@ class FoamFile(
                     self.add((*keywords, k), v)  # type: ignore [arg-type]
 
         elif keywords:
-            header = self.get("FoamFile", None)
-            assert header is None or isinstance(header, FoamFile.SubDict)
+            assert (header := self.get("FoamFile", None)) is None or isinstance(header, FoamFile.SubDict)
             val = dumps(data, keywords=keywords, header=header)
 
             content = (
@@ -465,8 +463,7 @@ class FoamFile(
                 parsed.add(keywords, normalize_data(data, keywords=keywords), content)
 
         else:
-            header = self.get("FoamFile", None)
-            assert header is None or isinstance(header, FoamFile.SubDict)
+            assert (header := self.get("FoamFile", None)) is None or isinstance(header, FoamFile.SubDict)
 
             content = before + dumps(data, keywords=(), header=header) + after
 

@@ -344,9 +344,7 @@ class FoamCaseRunBase(FoamCaseBase):
         return type(self)(dst)
 
     def _clean_calls(self, *, check: bool) -> Generator[Any, None, None]:
-        script_path = self.__clean_script()
-
-        if script_path is not None:
+        if (script_path := self.__clean_script()) is not None:
             yield self.run([script_path], cpus=0, check=check, log=False)
         else:
             for p in self.__clean_paths():
@@ -391,9 +389,7 @@ class FoamCaseRunBase(FoamCaseBase):
         yield self.run(["reconstructPar"], cpus=0, check=check, log=log)
 
     def _prepare_calls(self, *, check: bool, log: bool) -> Generator[Any, None, None]:
-        script_path = self.__prepare_script()
-
-        if script_path is not None:
+        if (script_path := self.__prepare_script()) is not None:
             yield self.run([script_path], log=log, check=check)
 
         elif (self.path / "system" / "blockMeshDict").is_file():
@@ -444,54 +440,51 @@ class FoamCaseRunBase(FoamCaseBase):
                     **kwargs,
                 )
 
+        elif (script_path := self.__run_script(parallel=parallel)) is not None:
+            if parallel or parallel is None:
+                if cpus is None:
+                    if self._nprocessors > 0:
+                        cpus = self._nprocessors
+                    elif (self.path / "system" / "decomposeParDict").is_file():
+                        cpus = self._nsubdomains
+                    else:
+                        cpus = 1
+            elif cpus is None:
+                cpus = 1
+
+            yield self.run(
+                [script_path], parallel=False, cpus=cpus, check=check, **kwargs
+            )
+
         else:
-            script_path = self.__run_script(parallel=parallel)
+            yield self._prepare(check=check, log=log)
 
-            if script_path is not None:
-                if parallel or parallel is None:
-                    if cpus is None:
-                        if self._nprocessors > 0:
-                            cpus = self._nprocessors
-                        elif (self.path / "system" / "decomposeParDict").is_file():
-                            cpus = self._nsubdomains
-                        else:
-                            cpus = 1
-                elif cpus is None:
-                    cpus = 1
+            if not self and (self.path / "0.orig").is_dir():
+                yield self.restore_0_dir()
 
-                yield self.run(
-                    [script_path], parallel=False, cpus=cpus, check=check, **kwargs
+            if parallel is None:
+                parallel = (
+                    (cpus is not None and cpus > 1)
+                    or self._nprocessors > 0
+                    or (self.path / "system" / "decomposeParDict").is_file()
                 )
 
-            else:
-                yield self._prepare(check=check, log=log)
+            if parallel:
+                if (
+                    self._nprocessors == 0
+                    and (self.path / "system" / "decomposeParDict").is_file()
+                ):
+                    yield self.decompose_par(check=check)
 
-                if not self and (self.path / "0.orig").is_dir():
-                    yield self.restore_0_dir()
+                if cpus is None:
+                    cpus = max(self._nprocessors, 1)
+            elif cpus is None:
+                cpus = 1
 
-                if parallel is None:
-                    parallel = (
-                        (cpus is not None and cpus > 1)
-                        or self._nprocessors > 0
-                        or (self.path / "system" / "decomposeParDict").is_file()
-                    )
-
-                if parallel:
-                    if (
-                        self._nprocessors == 0
-                        and (self.path / "system" / "decomposeParDict").is_file()
-                    ):
-                        yield self.decompose_par(check=check)
-
-                    if cpus is None:
-                        cpus = max(self._nprocessors, 1)
-                elif cpus is None:
-                    cpus = 1
-
-                yield self.run(
-                    [self.application],
-                    parallel=parallel,
-                    cpus=cpus,
-                    check=check,
-                    **kwargs,
-                )
+            yield self.run(
+                [self.application],
+                parallel=parallel,
+                cpus=cpus,
+                check=check,
+                **kwargs,
+            )

@@ -30,7 +30,7 @@ class DimensionSet(NamedTuple):
     def __repr__(self) -> str:
         return f"{type(self).__name__}({', '.join(f'{n}={v}' for n, v in zip(self._fields, self) if v != 0)})"
 
-    def __add__(self, other: DimensionSet) -> DimensionSet:  # type: ignore[override]
+    def __add__(self, other: DimensionSet, /) -> DimensionSet:  # type: ignore[override]
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
@@ -40,7 +40,7 @@ class DimensionSet(NamedTuple):
 
         return self
 
-    def __sub__(self, other: DimensionSet) -> DimensionSet:
+    def __sub__(self, other: DimensionSet, /) -> DimensionSet:
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
@@ -50,19 +50,19 @@ class DimensionSet(NamedTuple):
 
         return self
 
-    def __mul__(self, other: DimensionSet) -> DimensionSet:  # type: ignore[override]
+    def __mul__(self, other: DimensionSet, /) -> DimensionSet:  # type: ignore[override]
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
         return DimensionSet(*(a + b for a, b in zip(self, other)))
 
-    def __truediv__(self, other: DimensionSet) -> DimensionSet:
+    def __truediv__(self, other: DimensionSet, /) -> DimensionSet:
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
         return DimensionSet(*(a - b for a, b in zip(self, other)))
 
-    def __pow__(self, exponent: float) -> DimensionSet:
+    def __pow__(self, exponent: float, /) -> DimensionSet:
         if not isinstance(exponent, (int, float)):
             return NotImplemented
 
@@ -110,7 +110,7 @@ class Dimensioned:
             )
         return f"{type(self).__name__}({self.value}, {self.dimensions})"
 
-    def __add__(self, other: Dimensioned | Tensor) -> Dimensioned:
+    def __add__(self, other: Dimensioned | Tensor, /) -> Dimensioned:
         if not isinstance(other, Dimensioned):
             other = Dimensioned(other, DimensionSet())
 
@@ -122,7 +122,7 @@ class Dimensioned:
             else None,
         )
 
-    def __sub__(self, other: Dimensioned | Tensor) -> Dimensioned:
+    def __sub__(self, other: Dimensioned | Tensor, /) -> Dimensioned:
         if not isinstance(other, Dimensioned):
             other = Dimensioned(other, DimensionSet())
 
@@ -134,7 +134,7 @@ class Dimensioned:
             else None,
         )
 
-    def __mul__(self, other: Dimensioned | Tensor) -> Dimensioned:
+    def __mul__(self, other: Dimensioned | Tensor, /) -> Dimensioned:
         if not isinstance(other, Dimensioned):
             other = Dimensioned(other, DimensionSet())
 
@@ -146,7 +146,7 @@ class Dimensioned:
             else None,
         )
 
-    def __truediv__(self, other: Dimensioned | Tensor) -> Dimensioned:
+    def __truediv__(self, other: Dimensioned | Tensor, /) -> Dimensioned:
         if not isinstance(other, Dimensioned):
             other = Dimensioned(other, DimensionSet())
 
@@ -158,7 +158,7 @@ class Dimensioned:
             else None,
         )
 
-    def __pow__(self, exponent: float) -> Dimensioned:
+    def __pow__(self, exponent: float, /) -> Dimensioned:
         if not isinstance(exponent, (int, float)):
             return NotImplemented
 

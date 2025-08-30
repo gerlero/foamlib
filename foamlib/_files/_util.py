@@ -17,7 +17,6 @@ _V = TypeVar("_V")
 def as_any_dict(
     seq: Sequence[Sequence[_K | _V]] | Mapping[_K, _V],
 ) -> dict[_K, _V] | MultiDict[_K, _V]:
-    d = dict(seq)  # type: ignore[arg-type]
-    if len(d) == len(seq):
+    if len(d := dict(seq)) == len(seq):  # type: ignore[arg-type]
         return d
     return MultiDict(seq)
