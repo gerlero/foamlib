@@ -1,13 +1,13 @@
 # ruff: noqa: UP006, D100
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path  # noqa: TC003
 from typing import List
 
 from pydantic import BaseModel
 
 from foamlib import FoamCase
-from foamlib.preprocessing.of_dict import FoamDictAssignment
+from foamlib.preprocessing.of_dict import FoamDictAssignment  # noqa: TC001
 
 
 class CaseParameter(BaseModel):
@@ -39,7 +39,7 @@ class CaseModifier(BaseModel):
         for pair in self.key_value_pairs:
             pair.set_value(case_path=self.output_case)
 
-        with open(self.output_case / "case.json", "w") as json_file:
+        with (self.output_case / "case.json").open("w") as json_file:
             json_file.write(self.model_dump_json(indent=4))
 
         return of_case

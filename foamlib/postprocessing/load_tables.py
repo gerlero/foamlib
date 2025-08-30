@@ -226,7 +226,7 @@ def load_tables(
             json_path = case_path / "case.json"
             parameters = []
             if json_path.exists():
-                with open(json_path) as f:
+                with json_path.open() as f:
                     json_data = json.load(f)
                     parameters = json_data.get("case_parameters", [])
 

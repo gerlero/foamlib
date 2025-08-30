@@ -5,7 +5,7 @@ from typing import Any, List
 
 from pydantic import BaseModel
 
-from foamlib.preprocessing.of_dict import FoamDictInstruction
+from foamlib.preprocessing.of_dict import FoamDictInstruction  # noqa: TC001
 
 
 class CaseParameter(BaseModel):

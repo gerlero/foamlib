@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
 from itertools import islice
 from pathlib import Path
-from typing import Callable, ClassVar, Optional
+from typing import TYPE_CHECKING, Callable, ClassVar, Optional
+
+if TYPE_CHECKING:
+    import xml.etree.ElementTree as ET
 
 import pandas as pd
 from defusedxml.ElementTree import parse
@@ -123,7 +125,7 @@ def extract_column_names(filepath: str | Path) -> Optional[list[str]]:
         Optional[list[str]]: A list of column names extracted from the file, or None if no
             comment lines are found.
     """
-    with open(filepath) as f:
+    with Path(filepath).open() as f:
         first_lines = [line.strip() for line in islice(f, 20)]
 
     # Filter only comment lines
@@ -233,7 +235,7 @@ def read_csv(
     filepath: str | Path, column_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """Read a .csv file and return a DataFrame."""
-    with open(filepath) as f:
+    with Path(filepath).open() as f:
         first_lines = list(islice(f, 20))
 
     non_comment_lines = [line for line in first_lines if not line.startswith("#")]
