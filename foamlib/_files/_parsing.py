@@ -581,7 +581,7 @@ class Parsed(
     def getall(
         self, keywords: tuple[str, ...]
     ) -> list[Data | StandaloneData | EllipsisType]:
-        return [entry.data for entry in self._parsed.getall(keywords)]  # type: ignore [call-arg]
+        return [entry.data for entry in self._parsed.getall(keywords)]
 
     def __setitem__(
         self, key: tuple[str, ...], value: Data | StandaloneData | EllipsisType
@@ -615,7 +615,7 @@ class Parsed(
     @with_default
     def popone(self, keywords: tuple[str, ...]) -> Data | StandaloneData | EllipsisType:
         start, end = self.entry_location(keywords)
-        entry = self._parsed.popone(keywords)  # type: ignore [call-arg]
+        entry = self._parsed.popone(keywords)
         self._remove_child_entries(keywords)
         self._update_content(start, end, b"")
         return entry.data

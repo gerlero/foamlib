@@ -94,7 +94,6 @@ packages = [
     "tests",
 ]
 strict = true
-disable_error_code = ["unused-ignore"]
 
 [tool.ruff]
 exclude = [

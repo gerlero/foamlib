@@ -80,7 +80,7 @@ def test_loads() -> None:
                           #include "filename2"
                           """)
     assert isinstance(includes, MultiDict)
-    assert includes.getall("#include") == ['"filename1"', '"filename2"']  # type: ignore [call-arg]
+    assert includes.getall("#include") == ['"filename1"', '"filename2"']
     assert list(includes.items()) == [
         ("#include", '"filename1"'),
         ("subdict", {}),
