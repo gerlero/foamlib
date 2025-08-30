@@ -6,7 +6,10 @@ This test ensures that repeated updates to sub-dictionary entries don't accumula
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from foamlib import FoamFile
 

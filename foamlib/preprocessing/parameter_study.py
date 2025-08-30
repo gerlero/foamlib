@@ -5,15 +5,17 @@ from __future__ import annotations
 
 import itertools
 from pathlib import Path
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import pandas as pd
 from pydantic import BaseModel
 
 from foamlib import FoamFile
 from foamlib.preprocessing.case_modifier import CaseModifier, CaseParameter
-from foamlib.preprocessing.grid_parameter_sweep import GridParameter
 from foamlib.preprocessing.of_dict import FoamDictAssignment, FoamDictInstruction
+
+if TYPE_CHECKING:
+    from foamlib.preprocessing.grid_parameter_sweep import GridParameter
 
 
 class ParameterStudy(BaseModel):
@@ -23,7 +25,7 @@ class ParameterStudy(BaseModel):
 
     def create_study(self, study_base_folder: Path = Path()) -> None:
         """Create multiple cases based on the parameter combinations."""
-        with open(study_base_folder / "parameter_study.json", "w") as json_file:
+        with (study_base_folder / "parameter_study.json").open("w") as json_file:
             json_file.write(self.model_dump_json(indent=2))
 
         for of_case in self.cases:
