@@ -5,9 +5,9 @@ from copy import deepcopy
 from typing import Any, Literal, Optional, Tuple, Union, cast, overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Collection, Iterator, Mapping, Sequence
 else:
-    from typing import Iterator, Mapping, Sequence
+    from typing import Collection, Iterator, Mapping, Sequence
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -157,7 +157,7 @@ class FoamFile(
 
         @override
         @with_default
-        def getall(self, keyword: str) -> list[Data | FoamFile.SubDict]:  # type: ignore[override]
+        def getall(self, keyword: str) -> Collection[Data | FoamFile.SubDict]:
             return self._file.getall((*self._keywords, keyword))  # type: ignore [return-value]
 
         @override
@@ -291,10 +291,10 @@ class FoamFile(
 
     @override
     @with_default
-    def getall(  # type: ignore[override]
+    def getall(
         self,
         keywords: str | tuple[str, ...] | None,
-    ) -> list[Data | StandaloneData | FoamFile.SubDict]:
+    ) -> Collection[Data | StandaloneData | FoamFile.SubDict]:
         if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -730,7 +730,9 @@ class FoamFieldFile(FoamFile):
     class BoundariesSubDict(FoamFile.SubDict):
         @override
         @with_default
-        def getall(self, keyword: str) -> list[FoamFieldFile.BoundarySubDict | Data]:  # type: ignore[override]
+        def getall(
+            self, keyword: str
+        ) -> Collection[FoamFieldFile.BoundarySubDict | Data]:
             ret = super().getall(keyword)
             for r in ret:
                 if isinstance(r, FoamFile.SubDict):
@@ -776,15 +778,15 @@ class FoamFieldFile(FoamFile):
 
     @override
     @with_default
-    def getall(  # type: ignore[override]
+    def getall(
         self, keywords: str | tuple[str, ...] | None
-    ) -> list[Data | StandaloneData | FoamFieldFile.SubDict]:
+    ) -> Collection[Data | StandaloneData | FoamFieldFile.SubDict]:
         if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        ret = super().getall(keywords)
+        ret = list(super().getall(keywords))
 
         if keywords[0] == "boundaryField":
             for i, r in enumerate(ret):

@@ -6,9 +6,9 @@ import sys
 from typing import TYPE_CHECKING, Tuple, Union, cast, overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Collection, Iterator, Sequence
 else:
-    from typing import Iterator, Sequence
+    from typing import Collection, Iterator, Sequence
 
 if sys.version_info >= (3, 10):
     from types import EllipsisType
@@ -586,7 +586,7 @@ class Parsed(
     @with_default
     def getall(
         self, keywords: tuple[str, ...]
-    ) -> list[Data | StandaloneData | EllipsisType]:
+    ) -> Collection[Data | StandaloneData | EllipsisType]:
         return [entry.data for entry in self._parsed.getall(keywords)]
 
     @override
@@ -647,7 +647,7 @@ class Parsed(
 
         # Update positions of other entries if content length changed
         if diff != 0:
-            for entry in self._parsed.values():  # type: ignore [var-annotated]
+            for entry in self._parsed.values():
                 assert isinstance(entry, Parsed._Entry)
                 if entry.start >= end:
                     entry.start += diff
@@ -685,7 +685,7 @@ class Parsed(
 
     def as_dict(self) -> File:
         ret: File = {}
-        for keywords, entry in self._parsed.items():  # type: ignore [var-annotated]
+        for keywords, entry in self._parsed.items():
             assert isinstance(entry, Parsed._Entry)
             r = ret
             for k in keywords[:-1]:
