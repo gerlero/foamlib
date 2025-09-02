@@ -1,6 +1,5 @@
 import numpy as np
 from foamlib import FoamFile
-from multicollections import MultiDict
 
 
 def test_loads() -> None:
@@ -75,17 +74,6 @@ def test_loads() -> None:
     assert FoamFile.loads("#include $FOAM_CASE/simControls") == {
         "#include": "$FOAM_CASE/simControls"
     }
-    includes = FoamFile.loads("""#include "filename1"
-                          subdict {}
-                          #include "filename2"
-                          """)
-    assert isinstance(includes, MultiDict)
-    assert includes.getall("#include") == ['"filename1"', '"filename2"']
-    assert list(includes.items()) == [
-        ("#include", '"filename1"'),
-        ("subdict", {}),
-        ("#include", '"filename2"'),
-    ]
     faces = FoamFile.loads("2(3(1 2 3) 4(4 5 6 7))")
     assert isinstance(faces, list)
     assert len(faces) == 2

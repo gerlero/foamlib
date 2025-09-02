@@ -48,7 +48,7 @@ from pyparsing import (
 )
 
 from ._types import Data, Dimensioned, DimensionSet, File, StandaloneData, SubDict
-from ._util import as_any_dict
+from ._util import add_to_mapping, as_any_dict
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -507,7 +507,7 @@ def loads(
 
 _LOCATED_KEYWORD_ENTRIES = Group(
     _keyword_entry_of(
-        _TOKEN,
+        _KEYWORD,
         Opt(_DATA, default=""),
         directive=_DIRECTIVE,
         data_entry=_DATA_ENTRY,
@@ -688,17 +688,32 @@ class Parsed(
         ret: File = {}
         for keywords, entry in self._parsed.items():
             assert isinstance(entry, Parsed._Entry)
-            r = ret
-            for k in keywords[:-1]:
-                v = r[k]
-                assert isinstance(v, dict)
-                r = cast("File", v)
-
-            assert isinstance(r, dict)
-            if keywords:
-                r[keywords[-1]] = {} if entry.data is ... else entry.data
+            if not keywords:
+                assert entry.data is not ...
+                assert None not in ret
+                ret[None] = entry.data
+            elif entry.data is ...:
+                parent: File | SubDict = ret
+                for k in keywords[:-1]:
+                    sub = parent[k]
+                    assert isinstance(sub, (dict, MultiDict))
+                    parent = sub
+                assert keywords[-1] not in parent
+                parent[keywords[-1]] = {}
             else:
                 assert entry.data is not ...
-                r[None] = entry.data
+                if len(keywords) == 1:
+                    ret = add_to_mapping(ret, keywords[0], entry.data)
+                else:
+                    grandparent: File | SubDict = ret
+                    for k in keywords[:-2]:
+                        sub = grandparent[k]
+                        assert isinstance(sub, (dict, MultiDict))
+                        grandparent = sub
+                    sub = grandparent[keywords[-2]]
+                    assert isinstance(sub, (dict, MultiDict))
+                    grandparent[keywords[-2]] = add_to_mapping(
+                        sub, keywords[-1], cast("Data", entry.data)
+                    )
 
         return ret

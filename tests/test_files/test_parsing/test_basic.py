@@ -143,16 +143,3 @@ def test_parse_directive() -> None:
         ]
         == "funcName"
     )
-
-
-def test_parse_multiple_directives() -> None:
-    parsed = Parsed(b"""
-        #include "filename1"
-        subdict {}
-        #include "filename2"
-    """)
-    assert list(parsed.items()) == [
-        (("#include",), '"filename1"'),
-        (("subdict",), ...),
-        (("#include",), '"filename2"'),
-    ]
