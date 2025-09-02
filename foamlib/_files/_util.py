@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TypeVar
+from typing import Any, TypeVar
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
@@ -19,11 +19,9 @@ def as_any_dict(
     *,
     recursive: bool = False,
 ) -> dict[_K, _V] | MultiDict[_K, _V]:
-    if len(d := dict(seq)) == len(seq):
-        result = d
-    else:
-        result = MultiDict(seq)
-    
+    d = dict(seq)
+    result = d if len(d) == len(seq) else MultiDict(seq)
+
     if recursive:
         # Process values recursively for nested mappings
         if isinstance(result, dict):
@@ -36,23 +34,23 @@ def as_any_dict(
                 new_items.append((key, _process_value_recursively(value)))
             result.clear()
             result.update(new_items)
-    
+
     return result
 
 
-def _process_value_recursively(value):
+def _process_value_recursively(value: Any) -> Any:
     """Recursively process a value, converting nested mappings using as_any_dict."""
     # Check if value is a sequence of tuples that looks like a mapping
-    if (isinstance(value, Sequence) and 
-        not isinstance(value, str) and 
+    if (isinstance(value, Sequence) and
+        not isinstance(value, str) and
         (len(value) == 0 or all(isinstance(item, tuple) and len(item) == 2 for item in value))):
         # This looks like a sequence of key-value pairs (or empty), convert it
         return as_any_dict(value, recursive=True)
-    
+
     # Check if value is already a mapping (dict or MultiDict)
-    elif isinstance(value, Mapping):
+    if isinstance(value, Mapping):
         # Convert mapping to sequence of tuples and process
         return as_any_dict(list(value.items()), recursive=True)
-    
+
     # For other types (including lists that don't look like mappings), return as-is
     return value

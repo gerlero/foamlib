@@ -1,10 +1,8 @@
 """Tests for the _util.as_any_dict function."""
 from __future__ import annotations
 
-import pytest
-from multicollections import MultiDict
-
 from foamlib._files._util import as_any_dict
+from multicollections import MultiDict
 
 
 def test_as_any_dict_simple_dict() -> None:
@@ -91,7 +89,7 @@ def test_as_any_dict_recursive_deeply_nested() -> None:
     assert isinstance(result["level1"], dict)
     assert isinstance(result["level1"]["level2a"], dict)
     assert isinstance(result["level1"]["level2b"], MultiDict)
-    
+
     assert result["level1"]["level2a"] == {"level3": 1, "level3b": 2}
     assert list(result["level1"]["level2b"].items()) == [("level3c", 3), ("level3c", 4)]
 
@@ -128,7 +126,7 @@ def test_as_any_dict_empty() -> None:
     result = as_any_dict([])
     assert isinstance(result, dict)
     assert result == {}
-    
+
     result_recursive = as_any_dict([], recursive=True)
     assert isinstance(result_recursive, dict)
     assert result_recursive == {}
@@ -142,14 +140,14 @@ def test_as_any_dict_edge_cases() -> None:
     assert isinstance(result, dict)
     assert isinstance(result["outer"], dict)
     assert result["outer"] == {}
-    
+
     # Single item nested
     seq = [("outer", [("inner", 1)])]
     result = as_any_dict(seq, recursive=True)
     assert isinstance(result, dict)
     assert isinstance(result["outer"], dict)
     assert result["outer"] == {"inner": 1}
-    
+
     # Nested sequences that are not key-value pairs
     seq = [
         ("valid_dict", [("a", 1), ("b", 2)]),
