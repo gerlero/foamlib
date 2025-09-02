@@ -685,20 +685,86 @@ class Parsed(
         return start, end
 
     def as_dict(self) -> File:
-        ret: File = {}
+        # First pass: identify which keys at each level have multiple values
+        key_counts: dict[tuple[str, ...], dict[str | None, int]] = {}
+        
         for keywords, entry in self._parsed.items():
             assert isinstance(entry, Parsed._Entry)
-            r = ret
-            for k in keywords[:-1]:
-                v = r[k]
-                assert isinstance(v, dict)
-                r = cast("File", v)
-
-            assert isinstance(r, dict)
+            
+            # For the final key in the path
             if keywords:
-                r[keywords[-1]] = {} if entry.data is ... else entry.data
+                parent_path = keywords[:-1]
+                final_key = keywords[-1]
+                
+                if parent_path not in key_counts:
+                    key_counts[parent_path] = {}
+                key_counts[parent_path][final_key] = key_counts[parent_path].get(final_key, 0) + 1
             else:
+                # Root level data
+                if () not in key_counts:
+                    key_counts[()] = {}
+                key_counts[()][None] = key_counts[()].get(None, 0) + 1
+        
+        # Second pass: create appropriate containers (dict vs MultiDict)
+        containers: dict[tuple[str, ...], File | SubDict] = {}
+        
+        def get_or_create_container(path: tuple[str, ...]) -> File | SubDict:
+            if path in containers:
+                return containers[path]
+            
+            # Determine if this level needs a MultiDict
+            needs_multidict = False
+            if path in key_counts:
+                for count in key_counts[path].values():
+                    if count > 1:
+                        needs_multidict = True
+                        break
+            
+            if needs_multidict:
+                containers[path] = MultiDict()
+            else:
+                containers[path] = {}
+            
+            return containers[path]
+        
+        # Third pass: populate containers
+        for keywords, entry in self._parsed.items():
+            assert isinstance(entry, Parsed._Entry)
+            
+            # Create containers for all parent levels
+            for i in range(len(keywords)):
+                parent_path = keywords[:i]
+                get_or_create_container(parent_path)
+            
+            # Get the final container
+            if keywords:
+                parent_path = keywords[:-1]
+                parent_container = get_or_create_container(parent_path)
+                final_key = keywords[-1]
+                
+                # Create nested container if needed
+                if entry.data is ...:
+                    child_path = keywords
+                    child_container = get_or_create_container(child_path)
+                    
+                    # Add to parent
+                    if isinstance(parent_container, MultiDict):
+                        parent_container.add(final_key, child_container)
+                    else:
+                        parent_container[final_key] = child_container
+                else:
+                    # Add data to parent
+                    if isinstance(parent_container, MultiDict):
+                        parent_container.add(final_key, entry.data)
+                    else:
+                        parent_container[final_key] = entry.data
+            else:
+                # Root level data
+                root_container = get_or_create_container(())
                 assert entry.data is not ...
-                r[None] = entry.data
-
-        return ret
+                if isinstance(root_container, MultiDict):
+                    root_container.add(None, entry.data)
+                else:
+                    root_container[None] = entry.data
+        
+        return get_or_create_container(())

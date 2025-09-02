@@ -743,3 +743,58 @@ def test_list_uniform() -> None:
         """)
     assert parsed[("a",)] == 1
     assert parsed[("internalField",)] == pytest.approx([0.1, 0, 0])
+
+
+def test_as_dict_with_multidict() -> None:
+    """Test that Parsed.as_dict() returns MultiDict when there are duplicate keys."""
+    from multicollections import MultiDict
+    
+    # Test case 1: Simple duplicate keys at root level
+    parsed1 = Parsed(b'''#include "filename1"
+subdict {}
+#include "filename2"
+''')
+    result1 = parsed1.as_dict()
+    
+    assert isinstance(result1, MultiDict)
+    assert result1.getall("#include") == ['"filename1"', '"filename2"']
+    assert result1["subdict"] == {}
+    
+    # Test case 2: Duplicate keys in nested structure
+    parsed2 = Parsed(b'''
+parent
+{
+    key1 value1;
+    key1 value2;
+    nested
+    {
+        subkey1 subvalue1;
+        subkey1 subvalue2;
+    }
+}
+''')
+    result2 = parsed2.as_dict()
+    
+    assert isinstance(result2, dict)  # Root level has no duplicates
+    parent = result2["parent"]
+    assert isinstance(parent, MultiDict)  # This level has duplicates
+    assert parent.getall("key1") == ["value1", "value2"]
+    
+    nested = parent["nested"]
+    assert isinstance(nested, MultiDict)  # This level also has duplicates
+    assert nested.getall("subkey1") == ["subvalue1", "subvalue2"]
+    
+    # Test case 3: No duplicates should return regular dict
+    parsed3 = Parsed(b'''
+simple
+{
+    key1 value1;
+    key2 value2;
+}
+''')
+    result3 = parsed3.as_dict()
+    
+    assert isinstance(result3, dict)
+    assert isinstance(result3["simple"], dict)
+    assert result3["simple"]["key1"] == "value1"
+    assert result3["simple"]["key2"] == "value2"
