@@ -6,9 +6,9 @@ import sys
 from typing import TYPE_CHECKING, Tuple, Union, cast, overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Collection, Iterator, Sequence
+    from collections.abc import Collection, Iterator, Sequence, MutableMapping
 else:
-    from typing import Collection, Iterator, Sequence
+    from typing import Collection, Iterator, Sequence, MutableMapping
 
 if sys.version_info >= (3, 10):
     from types import EllipsisType
@@ -685,18 +685,18 @@ class Parsed(
         return start, end
 
     def as_dict(self) -> File:
-        ret: File = {}
+        ret: File = MultiDict()
         for keywords, entry in self._parsed.items():
             assert isinstance(entry, Parsed._Entry)
             r = ret
             for k in keywords[:-1]:
                 v = r[k]
-                assert isinstance(v, dict)
+                assert isinstance(v, MutableMapping)
                 r = cast("File", v)
 
-            assert isinstance(r, dict)
+            assert isinstance(r, MutableMapping)
             if keywords:
-                r[keywords[-1]] = {} if entry.data is ... else entry.data
+                r[keywords[-1]] = MultiDict() if entry.data is ... else entry.data
             else:
                 assert entry.data is not ...
                 r[None] = entry.data
