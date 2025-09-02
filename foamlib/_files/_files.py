@@ -5,9 +5,9 @@ from copy import deepcopy
 from typing import Any, Literal, Optional, Tuple, Union, cast, overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Collection, Iterator, Mapping, Sequence, MutableMapping
+    from collections.abc import Collection, Iterator, Mapping, Sequence
 else:
-    from typing import Collection, Iterator, Mapping, Sequence, MutableMapping
+    from typing import Collection, Iterator, Mapping, Sequence
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -15,6 +15,7 @@ else:
     from typing_extensions import override
 
 import numpy as np
+from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
 
 from ._io import FoamFileIO
@@ -214,9 +215,9 @@ class FoamFile(
             ret = self._file.as_dict(include_header=True)
 
             for k in self._keywords:
-                assert isinstance(ret, MutableMapping)
+                assert isinstance(ret, (dict, MultiDict))
                 v = ret[k]
-                assert isinstance(v, MutableMapping)
+                assert isinstance(v, (dict, MultiDict))
                 ret = cast("File", v)
 
             return cast("SubDict", ret)
