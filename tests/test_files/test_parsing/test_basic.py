@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from foamlib import FoamFile
 from foamlib._files._parsing import Parsed
 from foamlib._files._types import is_sequence
@@ -143,3 +144,16 @@ def test_parse_directive() -> None:
         ]
         == "funcName"
     )
+
+
+def test_parse_invalid_content() -> None:
+    """Test that ValueError is raised for malformed content that causes ParseException."""
+    # Test malformed syntax that will cause pyparsing to fail
+    with pytest.raises(ValueError, match="Failed to parse contents"):
+        Parsed(b"key value; unclosed {")
+
+    with pytest.raises(ValueError, match="Failed to parse contents"):
+        Parsed(b"key { value; } extra }")
+
+    with pytest.raises(ValueError, match="Failed to parse contents"):
+        Parsed(b"{ orphaned brace")
