@@ -69,6 +69,9 @@ Choose your preferred installation method:
   <td><strong>🍺 Homebrew</strong></td>
   <td><code>brew install gerlero/openfoam/foamlib</code></td>
 </tr>
+<tr>
+  <td><strong>🐳 Docker</strong></td>
+  <td><code>docker pull microfluidica/foamlib</code></td>
 </table>
 
 ## 🚀 Quick Start
