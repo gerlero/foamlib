@@ -76,3 +76,34 @@ def test_parsed_mutation() -> None:
         parsed.add(("#subdict1",), ..., b"{}")
     assert parsed.popone(("#include",)) == '"filename1"'
     assert list(parsed.getall(("#include",))) == ['"filename5"', '"filename6"']
+
+
+def test_invalid_duplicate_keywords() -> None:
+    with pytest.raises(ValueError, match="Duplicate entry found for keyword"):
+        Parsed(b"""
+        key value1;
+        key value2;
+        """)
+
+    with pytest.raises(ValueError, match="Duplicate entry found for keyword"):
+        Parsed(b"""
+        subdict {
+            key value;
+        }
+        subdict {
+            key2 value2;
+        }
+        """)
+
+    with pytest.raises(ValueError, match="Duplicate entry found for keyword"):
+        Parsed(b"""
+        dict1 {
+            key value1;
+            key value2;
+        }
+        """)
+
+    with pytest.raises(ValueError, match="Duplicate key found"):
+        Parsed(b"""
+        list (subdict { a b; a c; });
+        """)
