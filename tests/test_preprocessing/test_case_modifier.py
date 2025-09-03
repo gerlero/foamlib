@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import shutil
-import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-if sys.version_info >= (3, 9):
+if TYPE_CHECKING:
     from collections.abc import Generator
-else:
-    from typing import Generator
 
 import pytest
 from foamlib import FoamCase

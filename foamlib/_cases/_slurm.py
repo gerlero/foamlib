@@ -4,11 +4,6 @@ import shutil
 import sys
 from typing import TYPE_CHECKING, Any
 
-if sys.version_info >= (3, 9):
-    from collections.abc import Sequence
-else:
-    from typing import Sequence
-
 if sys.version_info >= (3, 12):
     from typing import override
 else:
@@ -16,6 +11,7 @@ else:
 
 if TYPE_CHECKING:
     import os
+    from collections.abc import Sequence
 
 from ._async import AsyncFoamCase
 from ._subprocess import run_async

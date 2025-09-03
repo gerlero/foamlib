@@ -1,13 +1,8 @@
 from __future__ import annotations
 
 import contextlib
-import sys
+from collections.abc import Mapping
 from typing import overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Mapping
-else:
-    from typing import Mapping
 
 import numpy as np
 

@@ -1,11 +1,6 @@
 import os
-import sys
+from collections.abc import AsyncGenerator
 from pathlib import Path
-
-if sys.version_info >= (3, 9):
-    from collections.abc import AsyncGenerator
-else:
-    from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio

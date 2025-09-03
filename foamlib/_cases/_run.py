@@ -14,25 +14,6 @@ from rich.progress import Progress
 
 from ._util import SingletonContextManager
 
-if sys.version_info >= (3, 9):
-    from collections.abc import (
-        Callable,
-        Collection,
-        Coroutine,
-        Generator,
-        Sequence,
-    )
-    from collections.abc import Set as AbstractSet
-else:
-    from typing import (
-        AbstractSet,
-        Callable,
-        Collection,
-        Coroutine,
-        Generator,
-        Sequence,
-    )
-
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -42,6 +23,16 @@ if sys.version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
+
+if TYPE_CHECKING:
+    from collections.abc import (
+        Callable,
+        Collection,
+        Coroutine,
+        Generator,
+        Sequence,
+    )
+    from collections.abc import Set as AbstractSet
 
 from ._base import FoamCaseBase
 from ._subprocess import DEVNULL, STDOUT, LogFileMonitor
@@ -421,9 +412,10 @@ class FoamCaseRunBase(FoamCaseBase):
                 if cpus is None:
                     cpus = 1
 
-            with self.__output(cmd, log=log) as (stdout, stderr), self.__process_stdout(
-                cmd
-            ) as process_stdout:
+            with (
+                self.__output(cmd, log=log) as (stdout, stderr),
+                self.__process_stdout(cmd) as process_stdout,
+            ):
                 if parallel:
                     if isinstance(cmd, str):
                         cmd = [

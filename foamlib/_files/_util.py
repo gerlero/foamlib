@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-import sys
+from collections.abc import Iterable, MutableMapping
 from typing import Protocol, TypeVar
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Iterable, MutableMapping
-else:
-    from typing import Iterable, MutableMapping
 
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping

@@ -9,12 +9,7 @@ import sys
 import time
 from io import StringIO
 from pathlib import Path
-from typing import IO
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable, Mapping, Sequence
-else:
-    from typing import Callable, Mapping, Sequence
+from typing import IO, TYPE_CHECKING
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -25,6 +20,9 @@ if sys.version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping, Sequence
 
 CompletedProcess = subprocess.CompletedProcess
 

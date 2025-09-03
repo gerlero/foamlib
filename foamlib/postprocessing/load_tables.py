@@ -1,4 +1,3 @@
-# ruff: noqa: UP045
 """Load OpenFOAM post-processing tables."""
 
 from __future__ import annotations
@@ -7,7 +6,10 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 import pandas as pd
 
@@ -40,7 +42,7 @@ def of_cases(dir_name: str | Path) -> list[str]:
         name of the search directory
 
     Returns
-    ofcases : List[str]
+    ofcases : list[str]
         pathes of the OpenFOAM directories
     """
     cases = []
@@ -60,7 +62,7 @@ class DataSource:
     ----------
     file_name : str
         The name of the file to be read (e.g., 'forces.dat').
-    folder : Union[str, Path]
+    folder : str | Path
         The subdirectory where the file is located, relative to case path.
     time_resolved : bool
         Whether data is stored in time-specific subdirectories.
@@ -152,7 +154,7 @@ def datafile(
     ----------
     file_name : str
         Name of the file (e.g., 'output.xml').
-    folder : str or Path
+    folder : str | Path
         Subdirectory where the file is located (relative to 'postProcessing/').
     time_resolved : bool
         Whether the data is organized by time subfolders.
@@ -172,11 +174,10 @@ def datafile(
 def load_tables(
     source: DataSource,
     dir_name: str | Path,
-    filter_table: Optional[
-        Callable[[pd.DataFrame, list[dict[str, str]]], pd.DataFrame]
-    ] = None,
-    reader_fn: Optional[Callable[[Path], Optional[pd.DataFrame]]] = None,
-) -> Optional[pd.DataFrame]:
+    filter_table: Callable[[pd.DataFrame, list[dict[str, str]]], pd.DataFrame]
+    | None = None,
+    reader_fn: Callable[[Path], pd.DataFrame | None] | None = None,
+) -> pd.DataFrame | None:
     """
     Load and concatenate all available dataframes for a DataTarget across cases and time steps.
 
@@ -184,7 +185,7 @@ def load_tables(
     ----------
     source : DataSource
         source data descriptor for resolving output paths.
-    dir_name : str or Path
+    dir_name : str | Path
         Root directory where OpenFOAM cases are stored.
     filter_table : callable, optional
         Function to filter or modify the dataframe after reading.
@@ -194,7 +195,7 @@ def load_tables(
 
     Returns
     -------
-    pd.DataFrame or None
+    pd.DataFrame | None
         Concatenated dataframe of all found data, or None if nothing was found.
     """
     all_tables = []

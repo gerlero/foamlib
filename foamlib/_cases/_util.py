@@ -1,25 +1,12 @@
 from __future__ import annotations
 
 import functools
-import sys
 import threading
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncContextManager,
-    Callable,
-    ContextManager,
-    Generic,
-    TypeVar,
-    cast,
-)
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Generator
-else:
-    from typing import Generator
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 if TYPE_CHECKING:
+    import contextlib
+    from collections.abc import Callable, Generator
     from types import TracebackType
 
 
@@ -38,7 +25,7 @@ class ValuedGenerator(Generic[Y, S, R]):
 
 
 class _AwaitableAsyncContextManager(Generic[R]):
-    def __init__(self, cm: AsyncContextManager[R]) -> None:
+    def __init__(self, cm: contextlib.AbstractAsyncContextManager[R]) -> None:
         self._cm = cm
 
     def __await__(self) -> Generator[Any, Any, R]:
@@ -57,7 +44,7 @@ class _AwaitableAsyncContextManager(Generic[R]):
 
 
 def awaitableasynccontextmanager(
-    cm: Callable[..., AsyncContextManager[R]],
+    cm: Callable[..., contextlib.AbstractAsyncContextManager[R]],
 ) -> Callable[..., _AwaitableAsyncContextManager[R]]:
     @functools.wraps(cm)
     def f(*args: Any, **kwargs: Any) -> _AwaitableAsyncContextManager[R]:
@@ -67,10 +54,12 @@ def awaitableasynccontextmanager(
 
 
 class SingletonContextManager(Generic[R]):
-    def __init__(self, factory: Callable[[], ContextManager[R]]) -> None:
+    def __init__(
+        self, factory: Callable[[], contextlib.AbstractContextManager[R]]
+    ) -> None:
         self._factory = factory
         self._users = 0
-        self._cm: ContextManager[R] | None = None
+        self._cm: contextlib.AbstractContextManager[R] | None = None
         self._ret: R | None = None
         self._lock = threading.Lock()
 

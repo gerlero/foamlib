@@ -2,14 +2,10 @@ from __future__ import annotations
 
 import shutil
 import sys
+from collections.abc import Iterator, Sequence
+from collections.abc import Set as AbstractSet
 from pathlib import Path
 from typing import TYPE_CHECKING, overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Iterator, Sequence
-    from collections.abc import Set as AbstractSet
-else:
-    from typing import AbstractSet, Iterator, Sequence
 
 if sys.version_info >= (3, 12):
     from typing import override

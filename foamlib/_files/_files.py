@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
-from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union, cast, overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
-else:
-    from typing import Collection, Iterable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Literal, cast, overload
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -29,7 +25,6 @@ from ._types import (
     FieldLike,
     File,
     FileLike,
-    MutableSubDict,
     StandaloneData,
     StandaloneDataLike,
     SubDict,
@@ -67,8 +62,7 @@ def _tensor_kind_for_field(
 
 class FoamFile(
     MutableMultiMapping[
-        Optional[Union[str, Tuple[str, ...]]],
-        Union[Data, StandaloneData, MutableSubDict],
+        str | tuple[str, ...] | None, "Data | StandaloneData | FoamFile.SubDict"
     ],
     FoamFileIO,
 ):
@@ -123,7 +117,7 @@ class FoamFile(
     DimensionSet = DimensionSet
 
     class SubDict(
-        MutableMultiMapping[str, Union[Data, MutableSubDict]],
+        MutableMultiMapping[str, "Data | FoamFile.SubDict"],
     ):
         """
         An OpenFOAM sub-dictionary within a file.
@@ -736,7 +730,7 @@ class FoamFile(
             entries: list[bytes] = []
             for k, v in file.items():
                 if k is not None:
-                    v = cast("Union[Data, SubDict]", v)
+                    v = cast("Data | SubDict", v)
                     entries.append(
                         dumps(
                             (k, v),

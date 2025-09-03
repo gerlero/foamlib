@@ -3,17 +3,9 @@ from __future__ import annotations
 import dataclasses
 import re
 import sys
-from typing import TYPE_CHECKING, Tuple, Union, cast
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Collection, Iterator, Sequence
-else:
-    from typing import Collection, Iterator, Sequence
-
-if sys.version_info >= (3, 10):
-    from types import EllipsisType
-else:
-    EllipsisType = type(...)
+from collections.abc import Collection, Iterator, Sequence
+from types import EllipsisType
+from typing import TYPE_CHECKING, cast
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -491,7 +483,7 @@ _FILE = (
 
 
 class Parsed(
-    MutableMultiMapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
+    MutableMultiMapping[tuple[str, ...], Data | StandaloneData | EllipsisType]
 ):
     @dataclasses.dataclass
     class _Entry:
