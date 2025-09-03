@@ -1,3 +1,4 @@
+import pytest
 from foamlib._files._files import FoamFile
 from foamlib._files._parsing import Parsed
 from multicollections import MultiDict
@@ -60,3 +61,18 @@ def test_parsed_as_dict() -> None:
     assert subdict2_items[0] == ("#include", '"filename4"')
     assert subdict2_items[1] == ("key2", "value2")
     assert items[3] == ("#include", '"filename5"')
+
+
+def test_parsed_mutation() -> None:
+    parsed = Parsed(CONTENTS)
+    parsed.add(("#include",), '"filename6"', b'"filename6"')
+    assert len(list(parsed.getall(("#include",)))) == 3
+    parsed.add(("key",), "value", b"value")
+    with pytest.raises(ValueError, match="Cannot add duplicate non-directive entry"):
+        parsed.add(("key",), "value", b"value")
+    with pytest.raises(ValueError, match="Cannot add duplicate non-directive entry"):
+        parsed.add(("subdict1",), "value", b"value")
+    with pytest.raises(ValueError, match="Cannot add sub-dictionary with name"):
+        parsed.add(("#subdict1",), ..., b"{}")
+    assert parsed.popone(("#include",)) == '"filename1"'
+    assert list(parsed.getall(("#include",))) == ['"filename5"', '"filename6"']

@@ -504,7 +504,6 @@ class Parsed(
             contents = contents.encode("latin-1")
 
         parse_results = _FILE.parse_string(contents_str, parse_all=True)
-
         self._parsed = self._flatten_results(parse_results)
 
         self.contents = contents
@@ -553,7 +552,7 @@ class Parsed(
     @override
     def __setitem__(
         self, key: tuple[str, ...], value: Data | StandaloneData | EllipsisType
-    ) -> None:
+    ) -> None:  # pragma: no cover
         msg = "Use 'put' method instead"
         raise NotImplementedError(msg)
 
@@ -576,9 +575,17 @@ class Parsed(
         data: Data | StandaloneData | EllipsisType,
         content: bytes,
     ) -> None:
+        if keywords:
+            if keywords in self._parsed and not keywords[-1].startswith("#"):
+                msg = f"Cannot add duplicate non-directive entry: {keywords}"
+                raise ValueError(msg)
+            if keywords[-1].startswith("#") and data is ...:
+                msg = f"Cannot add sub-dictionary with name: {keywords[-1]}"
+                raise ValueError(msg)
+
         start, end = self.entry_location(keywords, add=True)
 
-        self._parsed[keywords] = Parsed._Entry(data, start, end)
+        self._parsed.add(keywords, Parsed._Entry(data, start, end))
         self._update_content(start, end, content)
 
     @override
