@@ -130,7 +130,7 @@ def normalize_data(
         return tuple(normalize_data(d, keywords=keywords) for d in data)  # type: ignore [misc]
 
     if isinstance(data, str):
-        with contextlib.suppress(KeyError):
+        with contextlib.suppress(ValueError, KeyError):
             s = Parsed(data)[()]
             if isinstance(s, (str, tuple, bool)):
                 return s

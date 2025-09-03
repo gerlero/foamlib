@@ -36,6 +36,7 @@ from pyparsing import (
     Located,
     NoMatch,
     Opt,
+    ParseException,
     ParserElement,
     ParseResults,
     Regex,
@@ -48,7 +49,7 @@ from pyparsing import (
 )
 
 from ._types import Data, Dimensioned, DimensionSet, File, StandaloneData, SubDict
-from ._util import add_to_mapping
+from ._util import add_to_mapping, as_dict_check_unique
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -290,10 +291,12 @@ def _dict_of(
     if located:
         keyword_entry = Located(keyword_entry)
 
-    dict_ <<= Dict(
-        Literal("{").suppress() + Group(keyword_entry)[...] + Literal("}").suppress(),
-        asdict=not located,
+    dict_ <<= (
+        Literal("{").suppress() + Group(keyword_entry)[...] + Literal("}").suppress()
     )
+
+    if not located:
+        dict_.set_parse_action(lambda tks: as_dict_check_unique(tks.as_list()))
 
     return dict_
 
@@ -503,7 +506,11 @@ class Parsed(
             contents_str = contents
             contents = contents.encode("latin-1")
 
-        parse_results = _FILE.parse_string(contents_str, parse_all=True)
+        try:
+            parse_results = _FILE.parse_string(contents_str, parse_all=True)
+        except ParseException as e:
+            msg = f"Failed to parse contents: {e}"
+            raise ValueError(msg) from e
         self._parsed = self._flatten_results(parse_results)
 
         self.contents = contents
@@ -533,12 +540,17 @@ class Parsed(
             else:
                 assert isinstance(keyword, str)
                 if len(data) == 0 or isinstance(data[0], ParseResults):
-                    assert (*_keywords, keyword) not in ret
+                    if (*_keywords, keyword) in ret:
+                        msg = f"Duplicate entry found for keyword: {keyword}"
+                        raise ValueError(msg)
                     ret[(*_keywords, keyword)] = Parsed._Entry(..., start, end)
                     ret.extend(
                         Parsed._flatten_results(data, _keywords=(*_keywords, keyword))
                     )
                 else:
+                    if (*_keywords, keyword) in ret and not keyword.startswith("#"):
+                        msg = f"Duplicate entry found for keyword: {keyword}"
+                        raise ValueError(msg)
                     ret.add((*_keywords, keyword), Parsed._Entry(data[0], start, end))
         return ret
 
