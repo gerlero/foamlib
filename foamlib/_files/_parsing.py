@@ -48,7 +48,7 @@ from pyparsing import (
 )
 
 from ._types import Data, Dimensioned, DimensionSet, File, StandaloneData, SubDict
-from ._util import add_to_mapping, as_any_dict
+from ._util import add_to_mapping
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -290,12 +290,10 @@ def _dict_of(
     if located:
         keyword_entry = Located(keyword_entry)
 
-    dict_ <<= (
-        Literal("{").suppress() + Group(keyword_entry)[...] + Literal("}").suppress()
+    dict_ <<= Dict(
+        Literal("{").suppress() + Group(keyword_entry)[...] + Literal("}").suppress(),
+        asdict=not located,
     )
-
-    if not located:
-        dict_.set_parse_action(lambda tks: as_any_dict(tks.as_list()))
 
     return dict_
 
