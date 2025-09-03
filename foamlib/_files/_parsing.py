@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import re
 import sys
-from typing import TYPE_CHECKING, Tuple, Union, cast, overload
+from typing import TYPE_CHECKING, Tuple, Union, cast
 
 if sys.version_info >= (3, 9):
     from collections.abc import Collection, Iterator, Sequence
@@ -467,44 +467,6 @@ _STANDALONE_DATA = (
 ).add_parse_action(lambda tks: [None, tks[0]])
 
 
-_FILE = (
-    (_KEYWORD_ENTRY[...] + Opt(Group(_STANDALONE_DATA)) + _KEYWORD_ENTRY[...])
-    .ignore(_COMMENT)
-    .parse_with_tabs()
-)
-
-_DATA_OR_DICT = (_DATA | _DICT).ignore(_COMMENT).parse_with_tabs()
-
-
-@overload
-def loads(s: bytes | str, *, keywords: tuple[()]) -> File | StandaloneData: ...
-
-
-@overload
-def loads(
-    s: bytes | str, *, keywords: tuple[str, ...] | None = None
-) -> File | StandaloneData | Data | SubDict: ...
-
-
-def loads(
-    s: bytes | str, *, keywords: tuple[str, ...] | None = None
-) -> File | StandaloneData | Data | SubDict:
-    if isinstance(s, bytes):
-        s = s.decode("latin-1")
-
-    if keywords == ():
-        if (
-            len(data := as_any_dict(_FILE.parse_string(s, parse_all=True).as_list()))
-            == 1
-            and None in data
-        ):
-            data = data[None]
-    else:
-        data = _DATA_OR_DICT.parse_string(s, parse_all=True)[0]
-
-    return data
-
-
 _LOCATED_KEYWORD_ENTRIES = Group(
     _keyword_entry_of(
         _KEYWORD,
@@ -516,7 +478,7 @@ _LOCATED_KEYWORD_ENTRIES = Group(
 )[...]
 _LOCATED_STANDALONE_DATA = Group(Located(_STANDALONE_DATA))
 
-_LOCATED_FILE = (
+_FILE = (
     Dict(
         _LOCATED_KEYWORD_ENTRIES
         + Opt(_LOCATED_STANDALONE_DATA)
@@ -536,14 +498,18 @@ class Parsed(
         start: int
         end: int
 
-    def __init__(self, contents: bytes) -> None:
+    def __init__(self, contents: bytes | str) -> None:
         self._parsed: MultiDict[
             tuple[str, ...],
             Parsed._Entry,
         ] = MultiDict()
-        for parse_result in _LOCATED_FILE.parse_string(
-            contents.decode("latin-1"), parse_all=True
-        ):
+        if isinstance(contents, bytes):
+            contents_str = contents.decode("latin-1")
+        else:
+            contents_str = contents
+            contents = contents.encode("latin-1")
+
+        for parse_result in _FILE.parse_string(contents_str, parse_all=True):
             self._parsed.extend(self._flatten_result(parse_result))
 
         self.contents = contents
