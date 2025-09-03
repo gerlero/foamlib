@@ -74,10 +74,10 @@ class FoamFile(
 
     :class:`FoamFile` supports most OpenFOAM data and configuration files (i.e., files with a
     "FoamFile" header), including those with regular expressions and #-based directives.
-    Notable exceptions are FoamFiles with #codeStreams and those multiple #-directives
-    with the same name, which are currently not supported. Non-FoamFile output files are
-    also not suppored by this class. Regular expressions and #-based directives can be
-    accessed and modified, but they are not evaluated or expanded by this library.
+    Notable exceptions are FoamFiles with #codeStreams, which are currently not supported.
+    Non-FoamFile output files are also not supported by this class. Regular expressions and
+    #-based directives can be accessed and modified, but they are not evaluated or expanded
+    by this library.
 
     Use :class:`FoamFile` as a mutable mapping (i.e., like a :class:`dict`) to access and modify
     entries. When accessing a sub-dictionary, the returned value will be a
