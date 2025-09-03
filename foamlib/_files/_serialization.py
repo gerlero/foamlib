@@ -24,6 +24,7 @@ from ._types import (
     SubDictLike,
     is_sequence,
 )
+from ._util import as_dict_check_unique
 
 
 @overload
@@ -50,7 +51,9 @@ def normalize_data(
     keywords: tuple[str, ...] | None = None,
 ) -> Data | StandaloneData | SubDict:
     if isinstance(data, Mapping):
-        return {normalize_keyword(k): normalize_data(v) for k, v in data.items()}  # type: ignore [arg-type, misc]
+        return as_dict_check_unique(
+            ((normalize_keyword(k), normalize_data(v)) for k, v in data.items())  # type: ignore [arg-type, misc]
+        )
 
     if keywords == () and is_sequence(data) and not isinstance(data, tuple):
         try:
