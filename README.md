@@ -171,12 +171,13 @@ asyncio.run(run_multiple_cases())
 ### 🔢 Direct field file access
 
 ```python
+import numpy as np
 from foamlib import FoamFieldFile
 
 # Read field data directly
 U = FoamFieldFile("0/U")
-print(f"Velocity field shape: {len(U.internal_field)}")
-print(f"Boundary conditions: {list(U.boundary_field.keys())}")
+print(f"Velocity field shape: {np.shape(U.internal_field)}")
+print(f"Boundaries: {list(U.boundary_field)}")
 ```
 
 ### 🎯 Optimization with HPC clusters
