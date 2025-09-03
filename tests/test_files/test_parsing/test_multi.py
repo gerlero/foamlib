@@ -76,3 +76,56 @@ def test_parsed_mutation() -> None:
         parsed.add(("#subdict1",), ..., b"{}")
     assert parsed.popone(("#include",)) == '"filename1"'
     assert list(parsed.getall(("#include",))) == ['"filename5"', '"filename6"']
+
+
+def test_parse_invalid_content() -> None:
+    """Test that ValueError is raised for malformed content that causes ParseException."""
+    # Test malformed syntax that will cause pyparsing to fail
+    with pytest.raises(ValueError, match="Failed to parse contents"):
+        Parsed(b"key value; unclosed {")
+    
+    with pytest.raises(ValueError, match="Failed to parse contents"):
+        Parsed(b"key { value; } extra }")
+    
+    with pytest.raises(ValueError, match="Failed to parse contents"):
+        Parsed(b"{ orphaned brace")
+
+
+def test_duplicate_keywords_during_parsing() -> None:
+    """Test that ValueError is raised for duplicate keywords detected during parsing."""
+    # Test duplicate non-directive keywords in the same scope
+    with pytest.raises(ValueError, match="Duplicate entry found for keyword"):
+        Parsed(b"""
+        key value1;
+        key value2;
+        """)
+    
+    # Test duplicate subdictionary names
+    with pytest.raises(ValueError, match="Duplicate entry found for keyword"):
+        Parsed(b"""
+        subdict {
+            key value;
+        }
+        subdict {
+            key2 value2;
+        }
+        """)
+    
+    # Test duplicate nested keywords
+    with pytest.raises(ValueError, match="Duplicate entry found for keyword"):
+        Parsed(b"""
+        dict1 {
+            key value1;
+            key value2;
+        }
+        """)
+    
+    # Test that directives (starting with #) can be duplicated without error
+    parsed = Parsed(b"""
+    #include "file1"
+    #include "file2"
+    key value;
+    """)
+    includes = list(parsed.getall(("#include",)))
+    assert len(includes) == 2
+    assert includes == ['"file1"', '"file2"']
