@@ -29,7 +29,6 @@ classifiers = [
     "Topic :: Software Development",
     "Typing :: Typed",
 ]
-
 dependencies = [
     "aioshutil>=1,<2",
     "multicollections>=1,<2",
@@ -39,9 +38,38 @@ dependencies = [
     "typing-extensions>=4.4,<5; python_version<'3.12'",
 ]
 
+[project.optional-dependencies]
+preprocessing = [
+    "pandas>=1,<3",
+    "pydantic>=2.0.0,<3",
+    "eval-type-backport>=0.2,<0.3; python_version<='3.9'",
+]
+postprocessing = [
+    "pandas>=1,<3",
+    "defusedxml>=0.7.1,<0.8",
+]
+examples = [
+    "scipy>=1,<2",
+    "foamlib[preprocessing]",
+    "foamlib[postprocessing]",
+]
+docs = [
+    "foamlib[preprocessing]",
+    "foamlib[postprocessing]",
+    "sphinx>=5,<9",
+    "sphinx_rtd_theme",
+    "sphinxcontrib-mermaid"
+]
+
+[project.urls]
+Homepage = "https://github.com/gerlero/foamlib"
+Repository = "https://github.com/gerlero/foamlib"
+Documentation = "https://foamlib.readthedocs.io"
+
 [dependency-groups]
 preprocessing = ["foamlib[preprocessing]"]
 postprocessing = ["foamlib[postprocessing]"]
+examples = ["foamlib[examples]"]
 lint = ["ruff"]
 typing = [
     {include-group = "preprocessing"},
@@ -63,6 +91,7 @@ docs = ["foamlib[docs]"]
 dev = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
+    {include-group = "examples"},
     {include-group = "lint"},
     {include-group = "typing"},
     {include-group = "test"},
@@ -72,29 +101,6 @@ parameter_sweep = [
     "foamlib[preprocessing]",
     "foamlib[postprocessing]",
 ]
-
-[project.optional-dependencies]
-preprocessing = [
-    "pandas>=1,<3",
-    "pydantic>=2.0.0,<3",
-    "eval-type-backport>=0.2,<0.3; python_version<='3.9'",
-]
-postprocessing = [
-    "pandas>=1,<3",
-    "defusedxml>=0.7.1,<0.8",
-]
-docs = [
-    "foamlib[preprocessing]",
-    "foamlib[postprocessing]",
-    "sphinx>=5,<9",
-    "sphinx_rtd_theme",
-    "sphinxcontrib-mermaid"
-]
-
-[project.urls]
-Homepage = "https://github.com/gerlero/foamlib"
-Repository = "https://github.com/gerlero/foamlib"
-Documentation = "https://foamlib.readthedocs.io"
 
 [tool.uv.build-backend]
 module-root = "."
@@ -106,9 +112,6 @@ packages = [
 ]
 strict = true
 enable_error_code = "explicit-override"
-
-[tool.ruff]
-exclude = ["example"]
 
 [tool.ruff.lint]
 extend-select = ["ALL"]

@@ -1,0 +1,7 @@
+extend = "../.ruff.toml"
+
+[lint]
+extend-ignore = ["ALL"]
+
+[format]
+exclude = ["**"]
