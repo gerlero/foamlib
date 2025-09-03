@@ -16,7 +16,7 @@
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.07633/status.svg)](https://doi.org/10.21105/joss.07633)
 
 
-**foamlib** provides a simple, modern, ergonomic and fast Python interface for interacting with [OpenFOAM](https://www.openfoam.com).
+**foamlib** is a modern, high-performance Python package that provides a simple and elegant interface for interacting with [OpenFOAM](https://www.openfoam.com). Published in the [Journal of Open Source Software](https://joss.theoj.org/papers/10.21105/joss.07633), it's designed to make OpenFOAM workflows more accessible and efficient for researchers and engineers.
 
 <div align="center">
 <img alt="benchmark" src="https://github.com/gerlero/foamlib/raw/main/benchmark/benchmark.png" height="250">
@@ -27,40 +27,78 @@ Parsing a volVectorField with 200k cells.<sup>[1](#benchmark)</sup>
 
 ## 🚀 Introduction
 
-**foamlib** is a Python package designed to simplify the manipulation of OpenFOAM cases and files. Its standalone parser makes it easy to work with OpenFOAM’s input/output files from Python, while its case-handling capabilities facilitate various execution workflows—reducing boilerplate code and enabling efficient Python-based pre- and post-processing, as well as simulation management.
+**foamlib** is a Python package designed to simplify and streamline OpenFOAM workflows. It provides:
 
-Compared to [PyFoam](https://openfoamwiki.net/index.php/Contrib/PyFoam) and other similar tools like [fluidfoam](https://github.com/fluiddyn/fluidfoam), [fluidsimfoam](https://foss.heptapod.net/fluiddyn/fluidsimfoam), and [Ofpp](https://github.com/xu-xianghua/ofpp), **foamlib** offers advantages such as modern Python compatibility, support for binary-formatted fields, a fully type-hinted API, and asynchronous operations; making OpenFOAM workflows more accessible and streamlined.
+- **🗄️ Intuitive file handling**: Read and write OpenFOAM configuration and field files as Python dictionaries
+- **⚡ High performance**: Standalone parser supporting both ASCII and binary formats with compression
+- **🔄 Async operations**: Run multiple cases concurrently with full async/await support
+- **🎯 Type safety**: Fully type-hinted API for better development experience
+- **🧬 Modern Python**: Compatible with Python 3.8+ and follows current best practices
+- **🔧 Workflow automation**: Reduce boilerplate code for pre/post-processing and simulation management
 
-## 👋 Basics
+Compared to [PyFoam](https://openfoamwiki.net/index.php/Contrib/PyFoam) and other tools like [fluidfoam](https://github.com/fluiddyn/fluidfoam), [fluidsimfoam](https://foss.heptapod.net/fluiddyn/fluidsimfoam), and [Ofpp](https://github.com/xu-xianghua/ofpp), **foamlib** offers significant advantages in performance, usability, and modern Python compatibility.
 
-**foamlib** offers the following Python classes:
+## 🧱 Core Components
 
-* [`FoamFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFile) (and [`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFieldFile)): read-write access to OpenFOAM configuration and field files as if they were Python `dict`s, using `foamlib`'s own parser and in-place editor. Supports ASCII and binary field formats (with or without compression).
-* [`FoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.FoamCase): a class for configuring, running, and accessing the results of OpenFOAM cases.
-* [`AsyncFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncFoamCase): variant of `FoamCase` with asynchronous methods for running multiple cases at once.
-* [`AsyncSlurmFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncSlurmFoamCase): subclass of `AsyncFoamCase` used for running cases on a Slurm cluster.
+**foamlib** provides these key classes for different aspects of OpenFOAM workflow automation:
+
+### File Handling
+* **[`FoamFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFile)** - Read and write OpenFOAM configuration files as Python dictionaries
+* **[`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFieldFile)** - Handle field files with support for ASCII and binary formats (with compression)
+
+### Case Management  
+* **[`FoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.FoamCase)** - Configure, run, and access results of OpenFOAM cases
+* **[`AsyncFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncFoamCase)** - Asynchronous version for running multiple cases concurrently
+* **[`AsyncSlurmFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncSlurmFoamCase)** - Specialized for Slurm-based HPC clusters
 
 ## ☑️ Get started
 
-### 📦 Install
+## 📦 Installation
 
-* With [pip](https://pypi.org/project/pip/):
+Choose your preferred installation method:
 
-    ```bash
-    pip install foamlib
-    ```
+<table>
+<tr>
+  <td><strong>📦 pip</strong></td>
+  <td><code>pip install foamlib</code></td>
+</tr>
+<tr>
+  <td><strong>🐍 conda</strong></td>
+  <td><code>conda install -c conda-forge foamlib</code></td>
+</tr>
+<tr>
+  <td><strong>🍺 Homebrew</strong></td>
+  <td><code>brew install gerlero/openfoam/foamlib</code></td>
+</tr>
+</table>
 
-* With [conda](https://docs.conda.io/en/latest/):
+**Requirements**: Python 3.8+ and a working OpenFOAM installation.
 
-    ```bash
-    conda install -c conda-forge foamlib
-    ```
+## 🚀 Quick Start
 
-* With [Homebrew](https://brew.sh):
+Here's a simple example to get you started:
 
-    ```bash
-    brew install gerlero/openfoam/foamlib
-    ```
+```python
+from pathlib import Path
+from foamlib import FoamCase
+
+# Clone and run a case
+case = FoamCase("$FOAM_TUTORIALS/incompressible/simpleFoam/pitzDaily").clone("myCase")
+case.run()
+
+# Access results
+latest_time = case[-1]
+pressure = latest_time["p"].internal_field
+velocity = latest_time["U"].internal_field
+
+print(f"Max pressure: {max(pressure)}")
+print(f"Velocity at first cell: {velocity[0]}")
+
+# Clean up
+case.clean()
+```
+
+## 📚 Detailed Examples
 
 ### 🐑 Clone a case
 
@@ -70,72 +108,80 @@ from pathlib import Path
 from foamlib import FoamCase
 
 pitz_tutorial = FoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily")
-
 my_pitz = pitz_tutorial.clone("myPitz")
 ```
 
-### 🏃 Run the case
+### 🏃 Run the case and access results
 
 ```python
+# Run the simulation
 my_pitz.run()
-```
 
-### 🔎 Access the results
-
-```python
+# Access the latest time step
 latest_time = my_pitz[-1]
-
 p = latest_time["p"]
 U = latest_time["U"]
 
-print(p.internal_field)
-print(U.internal_field)
+print(f"Pressure field: {p.internal_field}")
+print(f"Velocity field: {U.internal_field}")
 ```
 
-### 🧹 Clean the case
+### 🧹 Clean up and modify settings
 
 ```python
+# Clean the case
 my_pitz.clean()
-```
 
-### ⚙️ Edit the `controlDict` file
-
-```python
+# Modify control settings
 my_pitz.control_dict["writeInterval"] = 10
+my_pitz.control_dict["endTime"] = 2000
 ```
 
-### 📝 Make multiple file reads and writes in a single go
+### 📝 Batch file modifications
 
 ```python
+# Make multiple file changes efficiently
 with my_pitz.fv_schemes as f:
     f["gradSchemes"]["default"] = f["divSchemes"]["default"]
     f["snGradSchemes"]["default"] = "uncorrected"
 ```
 
-### ⏳ Run a case asynchronously
+### ⏳ Asynchronous execution
 
 ```python
 import asyncio
 from foamlib import AsyncFoamCase
 
-async def run_case():
-    my_pitz_async = AsyncFoamCase(my_pitz)
-    await my_pitz_async.run()
+async def run_multiple_cases():
+    """Run multiple cases concurrently."""
+    base_case = AsyncFoamCase(my_pitz)
+    
+    # Create and run multiple cases with different parameters
+    tasks = []
+    for i, velocity in enumerate([1, 2, 3]):
+        case = base_case.clone(f"case_{i}")
+        case[0]["U"].boundary_field["inlet"].value = [velocity, 0, 0]
+        tasks.append(case.run())
+    
+    # Wait for all cases to complete
+    await asyncio.gather(*tasks)
 
-asyncio.run(run_case())
+# Run the async function
+asyncio.run(run_multiple_cases())
 ```
 
-### 🔢 Parse a field using the [`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/#foamlib.FoamFieldFile) class directly
+### 🔢 Direct field file access
 
 ```python
 from foamlib import FoamFieldFile
 
-U = FoamFieldFile(Path(my_pitz) / "0/U")
-
-print(U.internal_field)
+# Read field data directly
+U = FoamFieldFile("0/U")
+print(f"Velocity field shape: {len(U.internal_field)}")
+print(f"Boundary conditions: {list(U.boundary_field.keys())}")
 ```
 
-### 🔁 Run an optimization loop on a Slurm-based cluster
+### 🎯 Optimization with HPC clusters
 
 ```python
 import os
@@ -143,27 +189,54 @@ from pathlib import Path
 from foamlib import AsyncSlurmFoamCase
 from scipy.optimize import differential_evolution
 
+# Set up base case for optimization
 base = AsyncSlurmFoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily")
 
-async def cost(x):
-    async with base.clone() as clone:
-        clone[0]["U"].boundary_field["inlet"].value = [x[0], 0, 0]
-        await clone.run(fallback=True) # Run locally if Slurm is not available
-        return abs(clone[-1]["U"].internal_field[0][0])
+async def objective_function(x):
+    """Objective function for optimization."""
+    async with base.clone() as case:
+        # Set inlet velocity based on optimization parameters
+        case[0]["U"].boundary_field["inlet"].value = [x[0], 0, 0]
+        
+        # Run with fallback to local execution if Slurm unavailable
+        await case.run(fallback=True)
+        
+        # Return objective (minimize velocity magnitude at outlet)
+        return abs(case[-1]["U"].internal_field[0][0])
 
-result = differential_evolution(cost, bounds=[(-1, 1)], workers=AsyncSlurmFoamCase.map, polish=False)
+# Run optimization with parallel workers
+result = differential_evolution(
+    objective_function, 
+    bounds=[(-1, 1)], 
+    workers=AsyncSlurmFoamCase.map, 
+    polish=False
+)
+print(f"Optimal inlet velocity: {result.x[0]}")
 ```
 
-### 📄 Use it to create a `run` (or `clean`) script
-    
+### 📄 Create executable scripts
+
 ```python
 #!/usr/bin/env python3
+"""Automated OpenFOAM case runner."""
+
 from pathlib import Path
 from foamlib import FoamCase
 
+# Initialize case from current directory
 case = FoamCase(Path(__file__).parent)
-# Any additional configuration here
+
+# Configure simulation parameters
+case.control_dict["endTime"] = 1000
+case.control_dict["writeInterval"] = 100
+
+# Run the simulation
+print("Starting OpenFOAM simulation...")
 case.run()
+print("Simulation completed successfully!")
+
+# Optionally clean up
+# case.clean()
 ```
 
 ## 📘 Documentation
@@ -180,14 +253,16 @@ If you believe you have found a bug in **foamlib**, please open an [issue](https
 
 You're welcome to contribute to **foamlib**! Check out the [contributing guidelines](CONTRIBUTING.md) for more information.
 
-## 🖋️Citation
+## 🖋️ Citation
 
-If you find **foamlib** useful for your work, don't forget to cite it!
+**foamlib** has been published in the [Journal of Open Source Software](https://joss.theoj.org/papers/10.21105/joss.07633)! 
 
-Citations help us a lot. You may find the following snippets useful:
+If you use **foamlib** in your research, please cite our paper:
+
+> Gerlero, G. S., & Kler, P. A. (2025). foamlib: A modern Python package for working with OpenFOAM. *Journal of Open Source Software*, 10(109), 7633. https://doi.org/10.21105/joss.07633
 
 <details>
-<summary>BibTeX</summary>
+<summary>📋 BibTeX</summary>
 
 ```bibtex
 @article{foamlib,
@@ -206,13 +281,6 @@ Citations help us a lot. You may find the following snippets useful:
 
 </details>
 
-<details>
-<summary>APA</summary>
-
-Gerlero, G. S., & Kler, P. A. (2025). foamlib: A modern Python package for working with OpenFOAM. Journal of Open Source Software, 10(109), 7633. https://doi.org/10.21105/joss.07633
-
-</details>
-
 ## 👟 Footnotes
 
-<a id="benchmark">[1]</a> foamlib 0.8.1 vs PyFoam 2023.7 on a MacBook Air (2020, M1) with 8 GB of RAM. [Benchmark script](benchmark/benchmark.py).
+<a id="benchmark">[1]</a> foamlib 1.2.0 vs PyFoam 2023.7 on a MacBook Air (2020, M1) with 8 GB of RAM. [Benchmark script](benchmark/benchmark.py).
