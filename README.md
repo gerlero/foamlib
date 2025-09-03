@@ -16,12 +16,12 @@
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.07633/status.svg)](https://doi.org/10.21105/joss.07633)
 
 
-**foamlib** is a modern, high-performance Python package that provides a simple and elegant interface for interacting with [OpenFOAM](https://www.openfoam.com). Published in the [Journal of Open Source Software](https://joss.theoj.org/papers/10.21105/joss.07633), it's designed to make OpenFOAM workflows more accessible and efficient for researchers and engineers.
+**foamlib** is a modern Python package that provides a simple, elegant and fast interface for interacting with OpenFOAM. Published in the [Journal of Open Source Software](https://joss.theoj.org/papers/10.21105/joss.07633), it's designed to make OpenFOAM workflows more accessible and efficient for researchers and engineers.
 
 <div align="center">
 <img alt="benchmark" src="https://github.com/gerlero/foamlib/raw/main/benchmark/benchmark.png" height="250">
 
-Parsing a volVectorField with 200k cells.<sup>[1](#benchmark)</sup>
+Parsing a `volVectorField` with 200k cells.<sup>[1](#benchmark)</sup>
 </div>
 
 
@@ -29,29 +29,28 @@ Parsing a volVectorField with 200k cells.<sup>[1](#benchmark)</sup>
 
 **foamlib** is a Python package designed to simplify and streamline OpenFOAM workflows. It provides:
 
-- **🗄️ Intuitive file handling**: Read and write OpenFOAM configuration and field files as Python dictionaries
-- **⚡ High performance**: Standalone parser supporting both ASCII and binary formats with compression
-- **🔄 Async operations**: Run multiple cases concurrently with full async/await support
-- **🎯 Type safety**: Fully type-hinted API for better development experience
-- **🧬 Modern Python**: Compatible with Python 3.8+ and follows current best practices
-- **🔧 Workflow automation**: Reduce boilerplate code for pre/post-processing and simulation management
+- **🗄️ Intuitive file handling**: Read and write OpenFOAM configuration and field files as if they were Python dictionaries
+- **⚡ High performance**: Standalone parser supporting both ASCII and binary formats with or without compression
+- **🔄 Async operations**: Run multiple cases concurrently with full [`asyncio`](https://docs.python.org/3/library/asyncio.html) support
+- **🎯 Type safety**: A fully typed API for validation and a better development experience
+- **⚙️ Workflow automation**: Reduce boilerplate code for pre/post-processing and simulation management
+- **🧩 Fully compatible**: Works with OpenFOAM from both [openfoam.com](https://www.openfoam.com/) and [openfoam.org](https://www.openfoam.org/)
+- And more!
 
-Compared to [PyFoam](https://openfoamwiki.net/index.php/Contrib/PyFoam) and other tools like [fluidfoam](https://github.com/fluiddyn/fluidfoam), [fluidsimfoam](https://foss.heptapod.net/fluiddyn/fluidsimfoam), and [Ofpp](https://github.com/xu-xianghua/ofpp), **foamlib** offers significant advantages in performance, usability, and modern Python compatibility.
+Compared to [PyFoam](https://openfoamwiki.net/index.php/Contrib/PyFoam) and other similar tools like [fluidfoam](https://github.com/fluiddyn/fluidfoam), [fluidsimfoam](https://foss.heptapod.net/fluiddyn/fluidsimfoam), and [Ofpp](https://github.com/xu-xianghua/ofpp), **foamlib** offers significant advantages in performance, usability, and modern Python compatibility.
 
-## 🧱 Core Components
+## 🧱 Core components
 
 **foamlib** provides these key classes for different aspects of OpenFOAM workflow automation:
 
 ### File Handling
-* **[`FoamFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFile)** - Read and write OpenFOAM configuration files as Python dictionaries
-* **[`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFieldFile)** - Handle field files with support for ASCII and binary formats (with compression)
+* **[`FoamFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFile)** - Read and write OpenFOAM configuration files as if they were Python `dict`s
+* **[`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFieldFile)** - Handle field files with support for ASCII and binary formats (with or without compression)
 
 ### Case Management  
 * **[`FoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.FoamCase)** - Configure, run, and access results of OpenFOAM cases
 * **[`AsyncFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncFoamCase)** - Asynchronous version for running multiple cases concurrently
 * **[`AsyncSlurmFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncSlurmFoamCase)** - Specialized for Slurm-based HPC clusters
-
-## ☑️ Get started
 
 ## 📦 Installation
 
@@ -59,7 +58,7 @@ Choose your preferred installation method:
 
 <table>
 <tr>
-  <td><strong>📦 pip</strong></td>
+  <td><strong>✨ pip</strong></td>
   <td><code>pip install foamlib</code></td>
 </tr>
 <tr>
@@ -72,22 +71,21 @@ Choose your preferred installation method:
 </tr>
 </table>
 
-**Requirements**: Python 3.8+ and a working OpenFOAM installation.
-
 ## 🚀 Quick Start
 
 Here's a simple example to get you started:
 
 ```python
+import os
 from pathlib import Path
 from foamlib import FoamCase
 
 # Clone and run a case
-case = FoamCase("$FOAM_TUTORIALS/incompressible/simpleFoam/pitzDaily").clone("myCase")
-case.run()
+my_case = FoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily").clone("myCase")
+my_case.run()
 
 # Access results
-latest_time = case[-1]
+latest_time = my_case[-1]
 pressure = latest_time["p"].internal_field
 velocity = latest_time["U"].internal_field
 
@@ -95,7 +93,7 @@ print(f"Max pressure: {max(pressure)}")
 print(f"Velocity at first cell: {velocity[0]}")
 
 # Clean up
-case.clean()
+my_case.clean()
 ```
 
 ## 📚 Detailed Examples
@@ -204,7 +202,7 @@ async def objective_function(x):
         # Return objective (minimize velocity magnitude at outlet)
         return abs(case[-1]["U"].internal_field[0][0])
 
-# Run optimization with parallel workers
+# Run optimization with parallel jobs
 result = differential_evolution(
     objective_function, 
     bounds=[(-1, 1)], 
@@ -214,19 +212,19 @@ result = differential_evolution(
 print(f"Optimal inlet velocity: {result.x[0]}")
 ```
 
-### 📄 Create executable scripts
+### 📄 Create Python-based `run`/`Allrun` scripts
 
 ```python
 #!/usr/bin/env python3
-"""Automated OpenFOAM case runner."""
+"""Run the OpenFOAM case in this directory."""
 
 from pathlib import Path
 from foamlib import FoamCase
 
-# Initialize case from current directory
+# Initialize case from this directory
 case = FoamCase(Path(__file__).parent)
 
-# Configure simulation parameters
+# Adjust simulation parameters
 case.control_dict["endTime"] = 1000
 case.control_dict["writeInterval"] = 100
 
@@ -234,14 +232,11 @@ case.control_dict["writeInterval"] = 100
 print("Starting OpenFOAM simulation...")
 case.run()
 print("Simulation completed successfully!")
-
-# Optionally clean up
-# case.clean()
 ```
 
 ## 📘 Documentation
 
-For details on how to use **foamlib**, check out the [documentation](https://foamlib.readthedocs.io/).
+For more details on how to use **foamlib**, check out the [documentation](https://foamlib.readthedocs.io/).
 
 ## 🙋 Support
 
@@ -283,4 +278,4 @@ If you use **foamlib** in your research, please cite our paper:
 
 ## 👟 Footnotes
 
-<a id="benchmark">[1]</a> foamlib 1.2.0 vs PyFoam 2023.7 on a MacBook Air (2020, M1) with 8 GB of RAM. [Benchmark script](benchmark/benchmark.py).
+<a id="benchmark">[1]</a> foamlib 0.8.1 vs PyFoam 2023.7 on a MacBook Air (2020, M1) with 8 GB of RAM. [Benchmark script](benchmark/benchmark.py).
