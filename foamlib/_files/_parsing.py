@@ -535,9 +535,7 @@ class Parsed(
                 ret[()] = Parsed._Entry(data[0], start, end)
             else:
                 assert isinstance(keyword, str)
-                if len(data) == 0 or (
-                    len(data) >= 1 and isinstance(data[0], ParseResults)
-                ):
+                if len(data) == 0 or isinstance(data[0], ParseResults):
                     assert (*_keywords, keyword) not in ret
                     ret[(*_keywords, keyword)] = Parsed._Entry(..., start, end)
                     ret.extend(
