@@ -18,7 +18,7 @@ import numpy as np
 from multicollections.abc import MutableMultiMapping, with_default
 
 from ._io import FoamFileIO
-from ._parsing import loads
+from ._parsing import Parsed
 from ._serialization import dumps, normalize_data, normalize_keyword
 from ._types import (
     Data,
@@ -615,7 +615,13 @@ class FoamFile(
         :param include_header: Whether to include the "FoamFile" header in the output.
             If `True`, the header will be included if it is present in the input object.
         """
-        ret = loads(s, keywords=())
+        file = Parsed(s).as_dict()
+
+        ret = (
+            cast("StandaloneData", file[None])
+            if len(file) == 1 and None in file
+            else file
+        )
 
         if not include_header and isinstance(ret, Mapping) and "FoamFile" in ret:
             del ret["FoamFile"]

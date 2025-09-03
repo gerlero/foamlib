@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import sys
 from typing import overload
 
@@ -10,7 +11,7 @@ else:
 
 import numpy as np
 
-from ._parsing import loads
+from ._parsing import Parsed
 from ._types import (
     Data,
     DataLike,
@@ -129,9 +130,10 @@ def normalize_data(
         return tuple(normalize_data(d, keywords=keywords) for d in data)  # type: ignore [misc]
 
     if isinstance(data, str):
-        s = loads(data, keywords=keywords)
-        if isinstance(s, (str, tuple, bool)):
-            return s
+        with contextlib.suppress(KeyError):
+            s = Parsed(data)[()]
+            if isinstance(s, (str, tuple, bool)):
+                return s
 
     if isinstance(
         data,
