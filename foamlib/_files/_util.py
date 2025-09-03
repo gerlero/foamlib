@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TypeVar
+from typing import Protocol, TypeVar
 
 if sys.version_info >= (3, 9):
     from collections.abc import Iterable, MutableMapping
@@ -13,6 +13,7 @@ from multicollections.abc import MutableMultiMapping
 
 _K = TypeVar("_K")
 _V = TypeVar("_V")
+_V_co = TypeVar("_V_co", covariant=True)
 _MM = TypeVar("_MM", bound=MutableMapping[_K, _V])  # type: ignore[valid-type]
 
 
@@ -43,3 +44,8 @@ def as_dict_check_unique(items: Iterable[tuple[_K, _V]]) -> dict[_K, _V]:
             raise ValueError(msg)
         ret[key] = value
     return ret
+
+
+class SupportsKeysAndGetItem(Protocol[_K, _V_co]):
+    def keys(self) -> Iterable[_K]: ...
+    def __getitem__(self, key: _K) -> _V_co: ...

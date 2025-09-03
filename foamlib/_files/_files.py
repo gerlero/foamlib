@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import sys
 from copy import deepcopy
-from typing import Any, Literal, Optional, Tuple, Union, cast, overload
+from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union, cast, overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Collection, Iterator, Mapping, Sequence
+    from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 else:
-    from typing import Collection, Iterator, Mapping, Sequence
+    from typing import Collection, Iterable, Iterator, Mapping, Sequence
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -35,6 +35,9 @@ from ._types import (
     SubDict,
     SubDictLike,
 )
+
+if TYPE_CHECKING:
+    from ._util import SupportsKeysAndGetItem
 
 
 def _tensor_kind_for_field(
@@ -196,9 +199,37 @@ class FoamFile(
             return len(list(iter(self)))
 
         @override
-        def update(self, *args: Any, **kwargs: Any) -> None:
+        def update(
+            self,
+            other: SupportsKeysAndGetItem[str, DataLike | SubDictLike]
+            | Iterable[tuple[str, DataLike | SubDictLike]] = (),
+            /,
+            **kwargs: DataLike | SubDictLike,
+        ) -> None:
             with self._file:
-                super().update(*args, **kwargs)
+                super().update(other, **kwargs)  # type: ignore [arg-type]
+
+        @override
+        def extend(
+            self,
+            other: SupportsKeysAndGetItem[str, DataLike | SubDictLike]
+            | Iterable[tuple[str, DataLike | SubDictLike]] = (),
+            /,
+            **kwargs: DataLike | SubDictLike,
+        ) -> None:
+            with self._file:
+                super().extend(other, **kwargs)  # type: ignore [arg-type]
+
+        @override
+        def merge(
+            self,
+            other: SupportsKeysAndGetItem[str, DataLike | SubDictLike]
+            | Iterable[tuple[str, DataLike | SubDictLike]] = (),
+            /,
+            **kwargs: DataLike | SubDictLike,
+        ) -> None:
+            with self._file:
+                super().merge(other, **kwargs)  # type: ignore [arg-type]
 
         @override
         def clear(self) -> None:
@@ -211,15 +242,15 @@ class FoamFile(
 
         def as_dict(self) -> SubDict:
             """Return a nested dict representation of the sub-dictionary."""
-            ret = self._file.as_dict(include_header=True)
+            file = self._file.as_dict(include_header=True)
 
-            for k in self._keywords:
-                assert isinstance(ret, dict)
-                v = ret[k]
-                assert isinstance(v, dict)
-                ret = cast("File", v)
+            ret = file[self._keywords[0]]
+            assert isinstance(ret, Mapping)
+            for k in self._keywords[1:]:
+                ret = ret[k]
+                assert isinstance(ret, Mapping)
 
-            return cast("SubDict", ret)
+            return ret
 
     @property
     def version(self) -> float:
@@ -576,9 +607,58 @@ class FoamFile(
         return len(list(iter(self)))
 
     @override
-    def update(self, *args: Any, **kwargs: Any) -> None:
+    def update(
+        self,
+        other: SupportsKeysAndGetItem[
+            str | tuple[str, ...] | None, DataLike | StandaloneDataLike | SubDictLike
+        ]
+        | Iterable[
+            tuple[
+                str | tuple[str, ...] | None,
+                DataLike | StandaloneDataLike | SubDictLike,
+            ]
+        ] = (),
+        /,
+        **kwargs: DataLike | StandaloneDataLike | SubDictLike,
+    ) -> None:
         with self:
-            super().update(*args, **kwargs)
+            super().update(other, **kwargs)  # type: ignore[arg-type]
+
+    @override
+    def extend(
+        self,
+        other: SupportsKeysAndGetItem[
+            str | tuple[str, ...] | None, DataLike | StandaloneDataLike | SubDictLike
+        ]
+        | Iterable[
+            tuple[
+                str | tuple[str, ...] | None,
+                DataLike | StandaloneDataLike | SubDictLike,
+            ]
+        ] = (),
+        /,
+        **kwargs: DataLike | StandaloneDataLike | SubDictLike,
+    ) -> None:
+        with self:
+            super().extend(other, **kwargs)  # type: ignore[arg-type]
+
+    @override
+    def merge(
+        self,
+        other: SupportsKeysAndGetItem[
+            str | tuple[str, ...] | None, DataLike | StandaloneDataLike | SubDictLike
+        ]
+        | Iterable[
+            tuple[
+                str | tuple[str, ...] | None,
+                DataLike | StandaloneDataLike | SubDictLike,
+            ]
+        ] = (),
+        /,
+        **kwargs: DataLike | StandaloneDataLike | SubDictLike,
+    ) -> None:
+        with self:
+            super().merge(other, **kwargs)  # type: ignore[arg-type]
 
     @override
     def clear(self) -> None:
