@@ -13,10 +13,10 @@ Documentation
    :maxdepth: 2
 
    example
-   parametricstudy
-   postprocessing
    cases
    files
+   parametricstudy
+   postprocessing
 
 
 Indices and tables
