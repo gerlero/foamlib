@@ -22,7 +22,7 @@ else:
 
 import numpy as np
 from multicollections import MultiDict
-from multicollections.abc import MultiMapping, MutableMultiMapping, with_default
+from multicollections.abc import MutableMultiMapping, with_default
 from pyparsing import (
     CaselessKeyword,
     CharsNotIn,
@@ -499,54 +499,50 @@ class Parsed(
         end: int
 
     def __init__(self, contents: bytes | str) -> None:
-        self._parsed: MultiDict[
-            tuple[str, ...],
-            Parsed._Entry,
-        ] = MultiDict()
         if isinstance(contents, bytes):
             contents_str = contents.decode("latin-1")
         else:
             contents_str = contents
             contents = contents.encode("latin-1")
 
-        for parse_result in _FILE.parse_string(contents_str, parse_all=True):
-            self._parsed.extend(self._flatten_result(parse_result))
+        parse_results = _FILE.parse_string(contents_str, parse_all=True)
+
+        self._parsed = self._flatten_results(parse_results)
 
         self.contents = contents
         self.modified = False
 
     @staticmethod
-    def _flatten_result(
-        parse_result: ParseResults, *, _keywords: tuple[str, ...] = ()
-    ) -> MultiMapping[tuple[str, ...], Parsed._Entry]:
+    def _flatten_results(
+        parse_results: ParseResults | Sequence[ParseResults],
+        *,
+        _keywords: tuple[str, ...] = (),
+    ) -> MultiDict[tuple[str, ...], Parsed._Entry]:
         ret: MultiDict[tuple[str, ...], Parsed._Entry] = MultiDict()
-        value = parse_result.value
-        assert isinstance(value, Sequence)
-        start = parse_result.locn_start
-        assert isinstance(start, int)
-        end = parse_result.locn_end
-        assert isinstance(end, int)
-        keyword, *data = value
-        if keyword is None:
-            assert not _keywords
-            assert len(data) == 1
-            assert not isinstance(data[0], ParseResults)
-            assert () not in ret
-            ret[()] = Parsed._Entry(data[0], start, end)
-        else:
-            assert isinstance(keyword, str)
-            assert (*_keywords, keyword) not in ret
-            if not data:
-                ret[(*_keywords, keyword)] = Parsed._Entry(..., start, end)
+        for parse_result in parse_results:
+            value = parse_result.value
+            assert isinstance(value, Sequence)
+            start = parse_result.locn_start
+            assert isinstance(start, int)
+            end = parse_result.locn_end
+            assert isinstance(end, int)
+            keyword, *data = value
+            if keyword is None:
+                assert not _keywords
+                assert len(data) == 1
+                assert not isinstance(data[0], ParseResults)
+                assert () not in ret
+                ret[()] = Parsed._Entry(data[0], start, end)
             else:
-                for d in data:
-                    if isinstance(d, ParseResults):
-                        ret[(*_keywords, keyword)] = Parsed._Entry(..., start, end)
-                        ret.extend(
-                            Parsed._flatten_result(d, _keywords=(*_keywords, keyword))
-                        )
-                    else:
-                        ret.add((*_keywords, keyword), Parsed._Entry(d, start, end))
+                assert isinstance(keyword, str)
+                if len(data) == 0 or isinstance(data[0], ParseResults):
+                    assert (*_keywords, keyword) not in ret
+                    ret[(*_keywords, keyword)] = Parsed._Entry(..., start, end)
+                    ret.extend(
+                        Parsed._flatten_results(data, _keywords=(*_keywords, keyword))
+                    )
+                else:
+                    ret.add((*_keywords, keyword), Parsed._Entry(data[0], start, end))
         return ret
 
     @override
