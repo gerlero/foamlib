@@ -1,10 +1,13 @@
-# ruff: noqa: UP006, D100
+# ruff: noqa: D100
 from __future__ import annotations
 
 from pathlib import Path  # noqa: TC003
-from typing import List
 
-from pydantic import BaseModel
+try:
+    from pydantic import BaseModel
+except ImportError as e:
+    msg = "The preprocessing module requires extra dependencies. Install 'foamlib[preprocessing]' to use it."
+    raise ImportError(msg) from e
 
 from foamlib import FoamCase
 from foamlib.preprocessing.of_dict import FoamDictAssignment  # noqa: TC001
@@ -22,8 +25,8 @@ class CaseModifier(BaseModel):
 
     template_case: Path
     output_case: Path
-    key_value_pairs: List[FoamDictAssignment]
-    case_parameters: List[CaseParameter]
+    key_value_pairs: list[FoamDictAssignment]
+    case_parameters: list[CaseParameter]
 
     def create_case(self) -> FoamCase:
         """Create a new case by copying the template case to the output case directory."""

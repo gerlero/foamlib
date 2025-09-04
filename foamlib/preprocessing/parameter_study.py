@@ -1,14 +1,18 @@
 """Parameter study module for generating multiple cases based on parameter combinations."""
 
-# ruff: noqa: UP006
 from __future__ import annotations
 
 import itertools
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Hashable, List
 
-import pandas as pd
-from pydantic import BaseModel
+
+try:
+    import pandas as pd
+    from pydantic import BaseModel
+except ImportError as e:
+    msg = "The preprocessing module requires extra dependencies. Install 'foamlib[preprocessing]' to use it."
+    raise ImportError(msg) from e
 
 from foamlib import FoamFile
 from foamlib.preprocessing.case_modifier import CaseModifier, CaseParameter
@@ -21,7 +25,7 @@ if TYPE_CHECKING:
 class ParameterStudy(BaseModel):
     """Class to handle a parameter study by creating multiple cases based on parameter combinations."""
 
-    cases: List[CaseModifier]
+    cases: list[CaseModifier]
 
     def create_study(self, study_base_folder: Path = Path()) -> None:
         """Create multiple cases based on the parameter combinations."""
@@ -96,7 +100,7 @@ def csv_generator(
 
 
 def grid_generator(
-    parameters: List[GridParameter],
+    parameters: list[GridParameter],
     template_case: str | Path,
     output_folder: str | Path = Path("Cases"),
 ) -> ParameterStudy:

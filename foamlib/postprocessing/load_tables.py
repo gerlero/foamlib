@@ -9,7 +9,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError as e:
+    msg = "The postprocessing module requires extra dependencies. Install 'foamlib[postprocessing]' to use it."
+    raise ImportError(msg) from e
 
 from .table_reader import TableReader
 
