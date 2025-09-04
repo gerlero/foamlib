@@ -277,7 +277,6 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     @override
     @awaitableasynccontextmanager
-    @asynccontextmanager
     async def copy(
         self, dst: os.PathLike[str] | str | None = None
     ) -> AsyncGenerator[Self, None]:
@@ -312,10 +311,9 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     @override
     @awaitableasynccontextmanager
-    @asynccontextmanager
     async def clone(
         self, dst: os.PathLike[str] | str | None = None
-    ) -> AsyncGenerator[Self, None]:
+    ) -> AsyncGenerator[Self]:
         """
         Clone this case (make a clean copy).
 
