@@ -5,7 +5,6 @@ from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
 import numpy as np
 from multicollections import MultiDict
-from multicollections.abc import MutableMultiMapping
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
@@ -84,7 +83,6 @@ Tensor = Union[
     float,
     "np.ndarray[tuple[int], np.dtype[np.float64]]",
 ]
-
 TensorLike = Union[
     Tensor,
     Sequence[float],
@@ -202,7 +200,6 @@ Field = Union[
     float,
     "np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]",
 ]
-
 FieldLike = Union[
     Field,
     TensorLike,
@@ -276,8 +273,6 @@ SubDict = Union[
     Dict[str, Union[Data, "SubDict"]], MultiDict[str, Union[Data, "SubDict"]]
 ]
 SubDictLike = Mapping[str, Union[DataLike, "SubDictLike"]]
-MutableSubDict = MutableMultiMapping[str, Union[Data, "MutableSubDict"]]
-
 
 File = Union[
     Dict[Optional[str], Union[StandaloneData, Data, SubDict]],

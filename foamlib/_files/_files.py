@@ -29,7 +29,6 @@ from ._types import (
     FieldLike,
     File,
     FileLike,
-    MutableSubDict,
     StandaloneData,
     StandaloneDataLike,
     SubDict,
@@ -68,7 +67,7 @@ def _tensor_kind_for_field(
 class FoamFile(
     MutableMultiMapping[
         Optional[Union[str, Tuple[str, ...]]],
-        Union[Data, StandaloneData, MutableSubDict],
+        Union[Data, StandaloneData, "FoamFile.SubDict"],
     ],
     FoamFileIO,
 ):
@@ -123,7 +122,7 @@ class FoamFile(
     DimensionSet = DimensionSet
 
     class SubDict(
-        MutableMultiMapping[str, Union[Data, MutableSubDict]],
+        MutableMultiMapping[str, Union[Data, "FoamFile.SubDict"]],
     ):
         """
         An OpenFOAM sub-dictionary within a file.
