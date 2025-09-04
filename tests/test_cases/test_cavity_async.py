@@ -12,7 +12,7 @@ else:
 import numpy as np
 import pytest
 import pytest_asyncio
-from foamlib import AsyncFoamCase
+from foamlib import AsyncFoamCase, FoamFieldFile
 
 
 @pytest_asyncio.fixture(params=[False, True])
@@ -73,12 +73,29 @@ async def test_cell_centers(cavity: AsyncFoamCase) -> None:
 def test_map(cavity: AsyncFoamCase) -> None:
     async def f(x: Sequence[float]) -> float:
         async with cavity.clone() as clone:
-            clone[0]["U"].boundary_field["movingWall"].value = [x[0], 0, 0]
+            assert isinstance(clone, AsyncFoamCase)
+            first_time = clone[0]
+            assert isinstance(first_time, AsyncFoamCase.TimeDirectory)
+            U = first_time["U"]
+            assert isinstance(U, FoamFieldFile)
+            boundary_field = U.boundary_field
+            assert isinstance(boundary_field, FoamFieldFile.BoundariesSubDict)
+            moving_wall = boundary_field["movingWall"]
+            assert isinstance(moving_wall, FoamFieldFile.BoundarySubDict)
+            moving_wall.value = [x[0], 0, 0]
             await clone.run(parallel=False)
-            U = clone[-1]["U"].boundary_field["movingWall"].value
-            assert not isinstance(U, (int, float))
+            latest_time = clone[-1]
+            assert isinstance(latest_time, AsyncFoamCase.TimeDirectory)
+            U = latest_time["U"]
+            assert isinstance(U, FoamFieldFile)
+            boundary_field = U.boundary_field
+            assert isinstance(boundary_field, FoamFieldFile.BoundariesSubDict)
+            moving_wall = boundary_field["movingWall"]
+            assert isinstance(moving_wall, FoamFieldFile.BoundarySubDict)
+            value = moving_wall.value
+            assert not isinstance(value, (int, float))
             assert len(U) == 3
-            ret = U[0]
+            ret = value[0]
             assert isinstance(ret, (int, float))
             return ret
 

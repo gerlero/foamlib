@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import sys
 import threading
+from contextlib import asynccontextmanager
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -12,11 +13,11 @@ from typing import (
 )
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Awaitable, Callable, Generator
+    from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
     from contextlib import AbstractAsyncContextManager, AbstractContextManager
 else:
     from typing import AsyncContextManager as AbstractAsyncContextManager
-    from typing import Awaitable, Callable, Generator
+    from typing import AsyncGenerator, Awaitable, Callable, Generator
     from typing import ContextManager as AbstractContextManager
 
 if sys.version_info >= (3, 12):
@@ -34,7 +35,7 @@ R = TypeVar("R")
 
 
 class ValuedGenerator(Generic[Y, S, R]):
-    def __init__(self, generator: Generator[Y, S, R]) -> None:
+    def __init__(self, generator: Generator[Y, S, R], /) -> None:
         self._generator = generator
 
     def __iter__(self) -> Generator[Y, S, R]:
@@ -42,8 +43,8 @@ class ValuedGenerator(Generic[Y, S, R]):
         return self.value
 
 
-class _AwaitableAsyncContextManager(AbstractAsyncContextManager[R], Awaitable[R]):
-    def __init__(self, cm: AbstractAsyncContextManager[R]) -> None:
+class AwaitableAsyncContextManager(AbstractAsyncContextManager[R], Awaitable[R]):
+    def __init__(self, cm: AbstractAsyncContextManager[R], /) -> None:
         self._cm = cm
 
     @override
@@ -65,17 +66,17 @@ class _AwaitableAsyncContextManager(AbstractAsyncContextManager[R], Awaitable[R]
 
 
 def awaitableasynccontextmanager(
-    cm: Callable[..., AbstractAsyncContextManager[R]],
-) -> Callable[..., _AwaitableAsyncContextManager[R]]:
-    @functools.wraps(cm)
-    def f(*args: Any, **kwargs: Any) -> _AwaitableAsyncContextManager[R]:
-        return _AwaitableAsyncContextManager(cm(*args, **kwargs))
+    func: Callable[..., AsyncGenerator[R]], /
+) -> Callable[..., AwaitableAsyncContextManager[R]]:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> AwaitableAsyncContextManager[R]:
+        return AwaitableAsyncContextManager(asynccontextmanager(func)(*args, **kwargs))
 
-    return f
+    return wrapper
 
 
 class SingletonContextManager(AbstractContextManager[R]):
-    def __init__(self, factory: Callable[[], AbstractContextManager[R]]) -> None:
+    def __init__(self, factory: Callable[[], AbstractContextManager[R]], /) -> None:
         self._factory = factory
         self._users = 0
         self._cm: AbstractContextManager[R] | None = None
