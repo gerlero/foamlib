@@ -10,8 +10,12 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Optional
 if TYPE_CHECKING:
     import xml.etree.ElementTree as ET
 
-import pandas as pd
-from defusedxml.ElementTree import parse
+try:
+    import pandas as pd
+    from defusedxml.ElementTree import parse
+except ImportError as e:
+    msg = "The postprocessing module requires extra dependencies. Install 'foamlib[postprocessing]' to use it."
+    raise ImportError(msg) from e
 
 
 class ReaderNotRegisteredError(Exception):

@@ -7,8 +7,12 @@ import itertools
 from pathlib import Path
 from typing import TYPE_CHECKING, List
 
-import pandas as pd
-from pydantic import BaseModel
+try:
+    import pandas as pd
+    from pydantic import BaseModel
+except ImportError as e:
+    msg = "The preprocessing module requires extra dependencies. Install 'foamlib[preprocessing]' to use it."
+    raise ImportError(msg) from e
 
 from foamlib import FoamFile
 from foamlib.preprocessing.case_modifier import CaseModifier, CaseParameter

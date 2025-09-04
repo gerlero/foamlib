@@ -4,7 +4,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, List, Optional
 
-from pydantic import BaseModel
+try:
+    from pydantic import BaseModel
+except ImportError as e:
+    msg = "The preprocessing module requires extra dependencies. Install 'foamlib[preprocessing]' to use it."
+    raise ImportError(msg) from e
 
 from foamlib import FoamFile
 

@@ -4,7 +4,11 @@ from __future__ import annotations
 from pathlib import Path  # noqa: TC003
 from typing import List
 
-from pydantic import BaseModel
+try:
+    from pydantic import BaseModel
+except ImportError as e:
+    msg = "The preprocessing module requires extra dependencies. Install 'foamlib[preprocessing]' to use it."
+    raise ImportError(msg) from e
 
 from foamlib import FoamCase
 from foamlib.preprocessing.of_dict import FoamDictAssignment  # noqa: TC001
