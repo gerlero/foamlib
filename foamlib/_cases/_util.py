@@ -6,18 +6,23 @@ import threading
 from typing import (
     TYPE_CHECKING,
     Any,
-    AsyncContextManager,
-    Callable,
-    ContextManager,
     Generic,
     TypeVar,
     cast,
 )
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Generator
+    from collections.abc import Awaitable, Callable, Generator
+    from contextlib import AbstractAsyncContextManager, AbstractContextManager
 else:
-    from typing import Generator
+    from typing import AsyncContextManager as AbstractAsyncContextManager
+    from typing import Awaitable, Callable, Generator
+    from typing import ContextManager as AbstractContextManager
+
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -37,16 +42,19 @@ class ValuedGenerator(Generic[Y, S, R]):
         return self.value
 
 
-class _AwaitableAsyncContextManager(Generic[R]):
-    def __init__(self, cm: AsyncContextManager[R]) -> None:
+class _AwaitableAsyncContextManager(AbstractAsyncContextManager[R], Awaitable[R]):
+    def __init__(self, cm: AbstractAsyncContextManager[R]) -> None:
         self._cm = cm
 
+    @override
     def __await__(self) -> Generator[Any, Any, R]:
         return self._cm.__aenter__().__await__()
 
+    @override
     async def __aenter__(self) -> R:
         return await self._cm.__aenter__()
 
+    @override
     async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
@@ -57,7 +65,7 @@ class _AwaitableAsyncContextManager(Generic[R]):
 
 
 def awaitableasynccontextmanager(
-    cm: Callable[..., AsyncContextManager[R]],
+    cm: Callable[..., AbstractAsyncContextManager[R]],
 ) -> Callable[..., _AwaitableAsyncContextManager[R]]:
     @functools.wraps(cm)
     def f(*args: Any, **kwargs: Any) -> _AwaitableAsyncContextManager[R]:
@@ -66,14 +74,15 @@ def awaitableasynccontextmanager(
     return f
 
 
-class SingletonContextManager(Generic[R]):
-    def __init__(self, factory: Callable[[], ContextManager[R]]) -> None:
+class SingletonContextManager(AbstractContextManager[R]):
+    def __init__(self, factory: Callable[[], AbstractContextManager[R]]) -> None:
         self._factory = factory
         self._users = 0
-        self._cm: ContextManager[R] | None = None
+        self._cm: AbstractContextManager[R] | None = None
         self._ret: R | None = None
         self._lock = threading.Lock()
 
+    @override
     def __enter__(self) -> R:
         with self._lock:
             if self._users == 0:
@@ -82,6 +91,7 @@ class SingletonContextManager(Generic[R]):
             self._users += 1
             return cast("R", self._ret)
 
+    @override
     def __exit__(
         self,
         exc_type: type[BaseException] | None,

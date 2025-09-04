@@ -1,7 +1,7 @@
-# ruff: noqa: UP006, D100
+# ruff: noqa: D100
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 try:
     from pydantic import BaseModel
@@ -16,16 +16,16 @@ class CaseParameter(BaseModel):
     """Class to represent a parameter for a case."""
 
     name: str
-    values: List[Any]
+    values: list[Any]
 
 
 class GridParameter(BaseModel):
     """Class to handle a grid parameter sweep by creating multiple cases based on parameter combinations."""
 
     parameter_name: str
-    modify_dict: List[FoamDictInstruction]
-    parameters: List[CaseParameter]
+    modify_dict: list[FoamDictInstruction]
+    parameters: list[CaseParameter]
 
-    def case_names(self) -> List[str]:
+    def case_names(self) -> list[str]:
         """Return the names of the cases."""
         return [param.name for param in self.parameters]
