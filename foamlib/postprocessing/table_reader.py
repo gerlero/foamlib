@@ -66,7 +66,7 @@ class TableReader:
             extension (str): The file extension (e.g., ".dat", ".raw") to register the reader for.
 
         Returns:
-            Callable[[Callable[[str, list[str] | None] | pd.DataFrame]], Callable[[str, list[str] | None], pd.DataFrame]]:
+            Callable[[Callable[[str | Path, list[str] | None], pd.DataFrame]], Callable[[str | Path, list[str] | None], pd.DataFrame]]:
                 A decorator that registers the function as a reader for the specified extension.
         """
 
