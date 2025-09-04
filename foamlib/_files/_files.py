@@ -32,6 +32,7 @@ from ._types import (
     MutableSubDict,
     StandaloneData,
     StandaloneDataLike,
+    StringDimensionSet,
     SubDict,
     SubDictLike,
 )
@@ -121,6 +122,7 @@ class FoamFile(
 
     Dimensioned = Dimensioned
     DimensionSet = DimensionSet
+    StringDimensionSet = StringDimensionSet
 
     class SubDict(
         MutableMultiMapping[str, Union[Data, MutableSubDict]],

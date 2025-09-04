@@ -100,3 +100,40 @@ def test_loads() -> None:
     assert np.array_equal(
         faces[1][faces[0][1] : faces[0][2]], [3516631, 3516634, 3516633, 3516632]
     )
+
+
+def test_string_dimensions() -> None:
+    """Test parsing of string-based dimensions like [ Pa ], addressing issue #332."""
+    # Test simple string dimensions
+    assert FoamFile.loads("[ Pa ]") == "Pa"
+    assert FoamFile.loads("[Pa]") == "Pa"
+    
+    # Test complex string dimensions
+    assert FoamFile.loads("[Pa mm^2 s^-2]") == "Pa mm^2 s^-2"
+    assert FoamFile.loads("[ kg m s^-2 ]") == "kg m s^-2"
+    
+    # Test string dimensions in dimensioned values
+    dimensioned = FoamFile.loads("g [ Pa ] 9.81")
+    assert isinstance(dimensioned, FoamFile.Dimensioned)
+    assert isinstance(dimensioned.dimensions, FoamFile.StringDimensionSet)
+    assert dimensioned.dimensions.units == "Pa"
+    assert dimensioned.value == 9.81
+    assert dimensioned.name == "g"
+    
+    # Test that numeric dimensions still work as before
+    assert FoamFile.loads("[1 1 -2 0 0 0 0]") == FoamFile.DimensionSet(
+        mass=1, length=1, time=-2
+    )
+    
+    # Test in a dictionary context (the original issue scenario)
+    result = FoamFile.loads("""
+    functions
+    {
+        test
+        {
+            type        exprField;
+            dimensions  [ Pa ];
+        }
+    }
+    """)
+    assert result["functions"]["test"]["dimensions"] == "Pa"
