@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import itertools
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Hashable, List
-
+from typing import TYPE_CHECKING, Any, Hashable
 
 try:
     import pandas as pd
@@ -41,7 +40,7 @@ class ParameterStudy(BaseModel):
         return ParameterStudy(cases=self.cases + other.cases)
 
 def record_generator(
-    records: List[dict[Hashable, Any]],
+    records: list[dict[Hashable, Any]],
     template_case: str | Path,
     output_folder: str | Path = Path("Cases"),
 ) -> ParameterStudy:
