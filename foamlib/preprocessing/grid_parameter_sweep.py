@@ -3,7 +3,11 @@ from __future__ import annotations
 
 from typing import Any, List
 
-from pydantic import BaseModel
+try:
+    from pydantic import BaseModel
+except ImportError as e:
+    msg = "The preprocessing module requires extra dependencies. Install 'foamlib[preprocessing]' to use it."
+    raise ImportError(msg) from e
 
 from foamlib.preprocessing.of_dict import FoamDictInstruction  # noqa: TC001
 
