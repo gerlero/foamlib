@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import itertools
 from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any, Hashable, List
 
 import pandas as pd
 from pydantic import BaseModel
@@ -36,23 +36,28 @@ class ParameterStudy(BaseModel):
         """Combine two ParameterStudy instances."""
         return ParameterStudy(cases=self.cases + other.cases)
 
-
-def csv_generator(
-    csv_file: str,
+def record_generator(
+    records: List[dict[Hashable, Any]],
     template_case: str | Path,
     output_folder: str | Path = Path("Cases"),
 ) -> ParameterStudy:
-    """Generate a parameter study from a CSV file."""
-    parastudy = pd.read_csv(csv_file).to_dict(orient="records")
+    """Generate a parameter study based on records.
+
+    Example records: [
+        {'case_name': '3DCube_N10', 'Res': 10, 'MeshType': '3DCube', 'Resolution': 'N10'},
+        {'case_name': '3DCube_N20', 'Res': 20, 'MeshType': '3DCube', 'Resolution': 'N20'},
+        {'case_name': '3DCube_N50', 'Res': 50, 'MeshType': '3DCube', 'Resolution': 'N50'},
+    ]
+    """
     parameter = FoamFile(
         Path(template_case) / "system" / "simulationParameters"
     ).as_dict()
     parameter_keys = set(parameter.keys())
-    case_keys = set(parastudy[0].keys())
+    case_keys = set(records[0].keys())
     category_keys = case_keys - parameter_keys - {"case_name"}
 
     cases = []
-    for of_case in parastudy:
+    for of_case in records:
         case_mod = CaseModifier(
             template_case=Path(template_case),
             output_case=Path(output_folder) / of_case["case_name"],
@@ -75,6 +80,19 @@ def csv_generator(
         cases.append(case_mod)
 
     return ParameterStudy(cases=cases)
+
+def csv_generator(
+    csv_file: str | Path,
+    template_case: str | Path,
+    output_folder: str | Path = Path("Cases"),
+) -> ParameterStudy:
+    """Generate a parameter study from a CSV file."""
+    parastudy = pd.read_csv(str(Path(csv_file))).to_dict(orient="records")
+    return record_generator(
+        parastudy,
+        template_case,
+        output_folder,
+    )
 
 
 def grid_generator(
