@@ -1,12 +1,21 @@
-Parametric Study
+Parametric study
 ================
 
+*Functionality contributed by* `Henning Scheufler <https://github.com/HenningScheufler>`_.
+
 This functionality allows users to set up and run a parametric study in OpenFOAM, where multiple simulations are executed with varying parameters to analyze their effects on the results. The study can be configured to modify specific fields or solver settings across different runs.
+
+Installing extra dependencies
+-----------------------------
+
+To use the parametric study functionality, you need to install the extra dependencies for the :mod:`foamlib.preprocessing` module. You can do this by running the following command: ::
+
+    pip install foamlib[preprocessing]
 
 Overview
 --------
 
-The general workflow for a parametric study in OpenFOAM using foamlib is as follows:
+The general workflow for a parametric study in OpenFOAM using **foamlib** is as follows:
 
 .. mermaid::
 
