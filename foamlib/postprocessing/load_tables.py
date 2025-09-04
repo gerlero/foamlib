@@ -1,4 +1,3 @@
-# ruff: noqa: UP045
 """Load OpenFOAM post-processing tables."""
 
 from __future__ import annotations
@@ -7,7 +6,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 try:
     import pandas as pd
@@ -176,11 +175,10 @@ def datafile(
 def load_tables(
     source: DataSource,
     dir_name: str | Path,
-    filter_table: Optional[
-        Callable[[pd.DataFrame, list[dict[str, str]]], pd.DataFrame]
-    ] = None,
-    reader_fn: Optional[Callable[[Path], Optional[pd.DataFrame]]] = None,
-) -> Optional[pd.DataFrame]:
+    filter_table: Callable[[pd.DataFrame, list[dict[str, str]]], pd.DataFrame]
+    | None = None,
+    reader_fn: Callable[[Path], pd.DataFrame | None] | None = None,
+) -> pd.DataFrame | None:
     """
     Load and concatenate all available dataframes for a DataTarget across cases and time steps.
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import re
 import sys
-from typing import TYPE_CHECKING, Tuple, Union, cast
+from typing import TYPE_CHECKING, cast
 
 if sys.version_info >= (3, 9):
     from collections.abc import Collection, Iterator, Sequence
@@ -491,7 +491,7 @@ _FILE = (
 
 
 class Parsed(
-    MutableMultiMapping[Tuple[str, ...], Union[Data, StandaloneData, EllipsisType]]
+    MutableMultiMapping["tuple[str, ...]", "Data | StandaloneData | EllipsisType"]
 ):
     @dataclasses.dataclass
     class _Entry:

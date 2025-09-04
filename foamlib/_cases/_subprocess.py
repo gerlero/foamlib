@@ -16,6 +16,12 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Callable, Mapping, Sequence
 
+if sys.version_info >= (3, 10):
+    from contextlib import AbstractAsyncContextManager, AbstractContextManager
+else:
+    from typing import AsyncContextManager as AbstractAsyncContextManager
+    from typing import ContextManager as AbstractContextManager
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -216,7 +222,7 @@ async def run_async(
                 await monitor_task
 
 
-class LogFileMonitor:
+class LogFileMonitor(AbstractContextManager["LogFileMonitor"]):
     """Monitor log files for progress information."""
 
     def __init__(
@@ -236,10 +242,12 @@ class LogFileMonitor:
         self._monitored_files: dict[Path, int] = {}
         self._monitoring = False
 
+    @override
     def __enter__(self) -> Self:
         """Enter context manager."""
         return self
 
+    @override
     def __exit__(
         self,
         exc_type: type[BaseException] | None,
@@ -295,7 +303,9 @@ class LogFileMonitor:
         self._monitoring = False
 
 
-class AsyncLogFileMonitor(LogFileMonitor):
+class AsyncLogFileMonitor(
+    LogFileMonitor, AbstractAsyncContextManager["AsyncLogFileMonitor"]
+):
     """Asynchronous version of log file monitor."""
 
     def __init__(
@@ -306,10 +316,12 @@ class AsyncLogFileMonitor(LogFileMonitor):
         super().__init__(case_path, process_line)
         self._monitor_task: asyncio.Task[None] | None = None
 
+    @override
     async def __aenter__(self) -> Self:
         """Enter async context manager."""
         return self
 
+    @override
     async def __aexit__(
         self,
         exc_type: type[BaseException] | None,

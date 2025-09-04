@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import numpy as np
-from multicollections import MultiDict
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping, Sequence
@@ -12,14 +11,17 @@ else:
     from typing import Mapping, Sequence
 
 if sys.version_info >= (3, 10):
-    from typing import TypeGuard
+    from typing import TypeAlias, TypeGuard
 else:
-    from typing_extensions import TypeGuard
+    from typing_extensions import TypeAlias, TypeGuard
 
 if sys.version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
+
+if TYPE_CHECKING:
+    from multicollections import MultiDict
 
 
 class DimensionSet(NamedTuple):
@@ -79,14 +81,8 @@ class DimensionSet(NamedTuple):
         return any(v != 0 for v in self)
 
 
-Tensor = Union[
-    float,
-    "np.ndarray[tuple[int], np.dtype[np.float64]]",
-]
-TensorLike = Union[
-    Tensor,
-    Sequence[float],
-]
+Tensor: TypeAlias = "float | np.ndarray[tuple[int], np.dtype[np.float64]]"
+TensorLike: TypeAlias = "Tensor | Sequence[float]"
 
 
 class Dimensioned:
@@ -196,66 +192,34 @@ class Dimensioned:
         return np.array(self.value, dtype=dtype, copy=copy)
 
 
-Field = Union[
-    float,
-    "np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]",
-]
-FieldLike = Union[
-    Field,
-    TensorLike,
-    Sequence[TensorLike],
-]
+Field: TypeAlias = "float | np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]"
+FieldLike: TypeAlias = "Field | TensorLike | Sequence[TensorLike]"
 
-KeywordEntry = Tuple["DataEntry", Union["DataEntry", "SubDict"]]
-KeywordEntryLike = Tuple["DataEntryLike", Union["DataEntryLike", "SubDictLike"]]
+KeywordEntry: TypeAlias = "tuple[DataEntry, DataEntry | SubDict]"
+KeywordEntryLike: TypeAlias = "tuple[DataEntryLike, DataEntryLike | SubDictLike]"
 
-DataEntry = Union[
-    str,
-    int,
-    float,
-    bool,
-    Dimensioned,
-    DimensionSet,
-    List[Union["DataEntry", KeywordEntry]],
-    Field,
-]
-DataEntryLike = Union[
-    DataEntry,
-    Sequence[
-        Union[
-            "DataEntryLike",
-            "KeywordEntryLike",
-        ]
-    ],
-    FieldLike,
-]
+DataEntry: TypeAlias = "str | int | float | bool | Dimensioned | DimensionSet | list[DataEntry | KeywordEntry] | Field"
+DataEntryLike: TypeAlias = (
+    "DataEntry | Sequence[DataEntryLike | KeywordEntryLike] | FieldLike"
+)
 
-Data = Union[
-    DataEntry,
-    Tuple[DataEntry, ...],
-]
-DataLike = Union[
-    DataEntryLike,
-    Tuple["DataEntryLike", ...],
-]
+Data: TypeAlias = "DataEntry | tuple[DataEntry, ...]"
+DataLike: TypeAlias = "DataEntryLike | tuple[DataEntryLike, ...]"
 
-StandaloneData = Union[
-    Data,
-    "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
-    "np.ndarray[tuple[int, int], np.dtype[np.float64 | np.float32]]",
-    List["np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]"],
-    Tuple[
-        "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
-        "np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]",
-    ],
-]
-StandaloneDataLike = Union[
-    StandaloneData,
-    DataLike,
-    Sequence["np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]"],
-    Sequence[Sequence[int]],
-    Tuple[Sequence[int], Sequence[int]],
-]
+StandaloneData: TypeAlias = (
+    "Data"
+    "| np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]"
+    "| np.ndarray[tuple[int, int], np.dtype[np.float64 | np.float32]]"
+    "| list[np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]]"
+    "| tuple[np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]], np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]]"
+)
+StandaloneDataLike: TypeAlias = (
+    "StandaloneData"
+    "| DataLike"
+    "| Sequence[np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]]"
+    "| Sequence[Sequence[int]]"
+    "| tuple[Sequence[int], Sequence[int]]"
+)
 
 
 def is_sequence(
@@ -269,13 +233,10 @@ def is_sequence(
     )
 
 
-SubDict = Union[
-    Dict[str, Union[Data, "SubDict"]], MultiDict[str, Union[Data, "SubDict"]]
-]
-SubDictLike = Mapping[str, Union[DataLike, "SubDictLike"]]
+SubDict: TypeAlias = "dict[str, Data | SubDict] | MultiDict[str, Data | SubDict]"
+SubDictLike = Mapping[str, "DataLike | SubDictLike"]
 
-File = Union[
-    Dict[Optional[str], Union[StandaloneData, Data, SubDict]],
-    MultiDict[Optional[str], Union[StandaloneData, Data, SubDict]],
+File: TypeAlias = "dict[str | None, StandaloneData | Data | SubDict] | MultiDict[str | None, StandaloneData | Data | SubDict]"
+FileLike: TypeAlias = Mapping[
+    "str | None", "StandaloneDataLike | DataLike | SubDictLike"
 ]
-FileLike = Mapping[Optional[str], Union[StandaloneDataLike, DataLike, SubDictLike]]

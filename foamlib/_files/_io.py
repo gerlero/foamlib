@@ -10,6 +10,11 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+if sys.version_info >= (3, 10):
+    from contextlib import AbstractContextManager
+else:
+    from typing import ContextManager as AbstractContextManager
+
 if sys.version_info >= (3, 12):
     from typing import override
 else:
@@ -22,7 +27,7 @@ if TYPE_CHECKING:
 from ._parsing import Parsed
 
 
-class FoamFileIO:
+class FoamFileIO(AbstractContextManager["FoamFileIO"]):
     def __init__(self, path: os.PathLike[str] | str) -> None:
         self.path = Path(path).absolute()
 
@@ -30,12 +35,14 @@ class FoamFileIO:
         self.__missing: bool | None = None
         self.__defer_io = 0
 
+    @override
     def __enter__(self) -> Self:
         if self.__defer_io == 0:
             self._get_parsed(missing_ok=True)
         self.__defer_io += 1
         return self
 
+    @override
     def __exit__(
         self,
         exc_type: type[BaseException] | None,
