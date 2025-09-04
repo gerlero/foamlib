@@ -39,6 +39,7 @@ class ParameterStudy(BaseModel):
         """Combine two ParameterStudy instances."""
         return ParameterStudy(cases=self.cases + other.cases)
 
+
 def record_generator(
     records: list[dict[Hashable, Any]],
     template_case: str | Path,
@@ -83,6 +84,7 @@ def record_generator(
         cases.append(case_mod)
 
     return ParameterStudy(cases=cases)
+
 
 def csv_generator(
     csv_file: str | Path,
