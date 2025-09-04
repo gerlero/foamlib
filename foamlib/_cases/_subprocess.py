@@ -9,7 +9,6 @@ import sys
 import time
 from io import StringIO
 from pathlib import Path
-from typing import IO
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable, Mapping, Sequence
@@ -51,10 +50,10 @@ PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
 
 
-def _env(case: os.PathLike[str]) -> Mapping[str, str]:
+def _env(case: Path) -> Mapping[str, str]:
     env = os.environ.copy()
 
-    env["PWD"] = str(Path(case))
+    env["PWD"] = str(case)
 
     if os.environ.get("FOAM_LD_LIBRARY_PATH", "") and not os.environ.get(
         "DYLD_LIBRARY_PATH", ""
@@ -67,10 +66,10 @@ def _env(case: os.PathLike[str]) -> Mapping[str, str]:
 def run_sync(
     cmd: Sequence[str | os.PathLike[str]],
     *,
-    case: os.PathLike[str],
+    case: Path,
     check: bool = True,
-    stdout: int | IO[str] = DEVNULL,
-    stderr: int | IO[str] = STDOUT,
+    stdout: int | StringIO = DEVNULL,
+    stderr: int | StringIO = STDOUT,
     process_stdout: Callable[[str], None] = lambda _: None,
 ) -> CompletedProcess[str]:
     # Set up log file monitoring
@@ -145,10 +144,10 @@ def run_sync(
 async def run_async(
     cmd: Sequence[str | os.PathLike[str]],
     *,
-    case: os.PathLike[str],
+    case: Path,
     check: bool = True,
-    stdout: int | IO[str] = DEVNULL,
-    stderr: int | IO[str] = STDOUT,
+    stdout: int | StringIO = DEVNULL,
+    stderr: int | StringIO = STDOUT,
     process_stdout: Callable[[str], None] = lambda _: None,
 ) -> CompletedProcess[str]:
     # Set up log file monitoring
@@ -227,7 +226,7 @@ class LogFileMonitor(AbstractContextManager["LogFileMonitor"]):
 
     def __init__(
         self,
-        case_path: os.PathLike[str],
+        case_path: Path,
         process_line: Callable[[str], None] | None = None,
     ) -> None:
         """
@@ -310,7 +309,7 @@ class AsyncLogFileMonitor(
 
     def __init__(
         self,
-        case_path: os.PathLike[str],
+        case_path: Path,
         process_line: Callable[[str], None] | None = None,
     ) -> None:
         super().__init__(case_path, process_line)
