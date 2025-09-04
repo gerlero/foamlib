@@ -1,8 +1,8 @@
-# ruff: noqa: UP006, D100, UP045
+# ruff: noqa: D100
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 try:
     from pydantic import BaseModel
@@ -17,7 +17,7 @@ class FoamDictInstruction(BaseModel):
     """Class representing an instruction to get a value from a FoamFile."""
 
     file_name: str | Path
-    keys: List[str]
+    keys: list[str]
 
     def get_value(self) -> Any:
         """Get the value from the FoamFile based on the instruction."""
@@ -31,7 +31,7 @@ class FoamDictAssignment(BaseModel):
     instruction: FoamDictInstruction
     value: Any
 
-    def set_value(self, case_path: Optional[Path] = None) -> FoamFile:
+    def set_value(self, case_path: Path | None = None) -> FoamFile:
         """Set the value in the FoamFile with the given value and instruction."""
         of_file = Path(self.instruction.file_name)
         if case_path is not None:

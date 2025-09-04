@@ -1,8 +1,7 @@
-# ruff: noqa: UP006, D100
+# ruff: noqa: D100
 from __future__ import annotations
 
 from pathlib import Path  # noqa: TC003
-from typing import List
 
 try:
     from pydantic import BaseModel
@@ -26,8 +25,8 @@ class CaseModifier(BaseModel):
 
     template_case: Path
     output_case: Path
-    key_value_pairs: List[FoamDictAssignment]
-    case_parameters: List[CaseParameter]
+    key_value_pairs: list[FoamDictAssignment]
+    case_parameters: list[CaseParameter]
 
     def create_case(self) -> FoamCase:
         """Create a new case by copying the template case to the output case directory."""
