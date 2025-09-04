@@ -99,6 +99,6 @@ However, the resulting dataframe may contain a lot of data, so these dataframe c
         index=False,
     )
 
-Generally, the `load_tables` functions should be stored in a seperate file and the resulting tables should be written to disc as e.g csv feater or formats. The post-processing module can then be used to load the data from the files and visualize it in a user-friendly manner.
+Generally, the `load_tables` functions should be stored in a separate file and the resulting tables should be written to disk as e.g csv feather or formats. The post-processing module can then be used to load the data from the files and visualize it in a user-friendly manner.
 
-This allows the implementation of dashboards to quickly explore the data. Additionally, the table gathering process can be easily outgenerate from the CLI.
+This allows the implementation of dashboards to quickly explore the data. Additionally, the table gathering process can be easily auto-generated from the CLI.
