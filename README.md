@@ -16,7 +16,7 @@
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.07633/status.svg)](https://doi.org/10.21105/joss.07633)
 
 
-**foamlib** is a modern Python package that provides a simple, elegant and fast interface for interacting with OpenFOAM. Published in the [Journal of Open Source Software](https://joss.theoj.org/papers/10.21105/joss.07633), it's designed to make OpenFOAM workflows more accessible and efficient for researchers and engineers.
+**foamlib** is a modern Python package that provides an elegant, streamlined interface for interacting with OpenFOAM. It's designed to make OpenFOAM-based workflows more accessible, reproducible, and precise for researchers and engineers.
 
 <div align="center">
 <img alt="benchmark" src="https://github.com/gerlero/foamlib/raw/main/benchmark/benchmark.png" height="250">
