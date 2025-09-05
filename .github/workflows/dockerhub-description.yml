@@ -1,4 +1,6 @@
 name: Update Docker Hub description
+permissions:
+  contents: read
 on:
   push:
     branches:
