@@ -34,6 +34,7 @@ def control_dict(keys: list[str]) -> FoamDictInstruction:
         keys=keys,
     )
 
+
 @deprecated("Use 'control_dict' instead")
 def controlDict(keys: list[str]) -> FoamDictInstruction:  # noqa: N802
     """
@@ -51,6 +52,7 @@ def fv_schemes(keys: list[str]) -> FoamDictInstruction:
         keys=keys,
     )
 
+
 @deprecated("Use 'fv_schemes' instead")
 def fvSchemes(keys: list[str]) -> FoamDictInstruction:  # noqa: N802
     """
@@ -67,6 +69,7 @@ def fv_solution(keys: list[str]) -> FoamDictInstruction:
         file_name=Path("system/fvSolution"),
         keys=keys,
     )
+
 
 @deprecated("Use 'fv_solution' instead")
 def fvSolution(keys: list[str]) -> FoamDictInstruction:  # noqa: N802
