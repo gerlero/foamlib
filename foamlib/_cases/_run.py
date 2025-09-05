@@ -7,8 +7,9 @@ import sys
 import tempfile
 from abc import abstractmethod
 from contextlib import contextmanager
+from io import StringIO
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any
 
 from rich.progress import Progress
 
@@ -278,7 +279,7 @@ class FoamCaseRunBase(FoamCaseBase):
     @contextmanager
     def __output(
         self, cmd: Sequence[str | os.PathLike[str]] | str, *, log: bool
-    ) -> Generator[tuple[int | IO[str], int | IO[str]], None, None]:
+    ) -> Generator[tuple[int | StringIO, int | StringIO], None, None]:
         if log:
             with (self.path / f"log.{self.__cmd_name(cmd)}").open("a") as stdout:
                 yield stdout, STDOUT
