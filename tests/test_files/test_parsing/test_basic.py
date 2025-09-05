@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from foamlib import FoamFile
 from foamlib._files._parsing import Parsed
-from foamlib._files._types import is_sequence
+from foamlib._files._util import is_sequence
 
 
 def test_parse_value() -> None:

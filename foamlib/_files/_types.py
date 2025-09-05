@@ -11,9 +11,9 @@ else:
     from typing import Mapping, Sequence
 
 if sys.version_info >= (3, 10):
-    from typing import TypeAlias, TypeGuard
+    from typing import TypeAlias
 else:
-    from typing_extensions import TypeAlias, TypeGuard
+    from typing_extensions import TypeAlias
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -22,6 +22,8 @@ else:
 
 if TYPE_CHECKING:
     from multicollections import MultiDict
+
+from ._util import is_sequence
 
 
 class DimensionSet(NamedTuple):
@@ -220,18 +222,6 @@ StandaloneDataLike: TypeAlias = (
     "| Sequence[Sequence[int]]"
     "| tuple[Sequence[int], Sequence[int]]"
 )
-
-
-def is_sequence(
-    value: DataLike | StandaloneDataLike | SubDictLike,
-) -> TypeGuard[
-    Sequence[DataLike | tuple[DataLike, DataLike | SubDictLike]]
-    | np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]
-]:
-    return (isinstance(value, Sequence) and not isinstance(value, str)) or (
-        isinstance(value, np.ndarray) and value.ndim > 0
-    )
-
 
 SubDict: TypeAlias = "dict[str, Data | SubDict] | MultiDict[str, Data | SubDict]"
 SubDictLike = Mapping[str, "DataLike | SubDictLike"]

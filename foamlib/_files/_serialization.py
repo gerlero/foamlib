@@ -22,9 +22,8 @@ from ._types import (
     StandaloneDataLike,
     SubDict,
     SubDictLike,
-    is_sequence,
 )
-from ._util import as_dict_check_unique
+from ._util import as_dict_check_unique, is_sequence
 
 
 @overload
@@ -273,7 +272,7 @@ def dumps(
 
     if is_sequence(data):
         return (
-            b"(" + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data) + b")"
+            b"(" + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data) + b")"  # type: ignore [arg-type]
         )
 
     if data is True:
