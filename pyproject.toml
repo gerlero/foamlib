@@ -53,13 +53,6 @@ examples = [
     "foamlib[preprocessing]",
     "foamlib[postprocessing]",
 ]
-docs = [
-    "foamlib[preprocessing]",
-    "foamlib[postprocessing]",
-    "sphinx>=5,<9",
-    "sphinx_rtd_theme",
-    "sphinxcontrib-mermaid"
-]
 
 [project.urls]
 Homepage = "https://github.com/gerlero/foamlib"
@@ -87,7 +80,13 @@ test = [
     "pytest-cov",
     "scipy>=1,<2",
 ]
-docs = ["foamlib[docs]"]
+docs = [
+    "foamlib[preprocessing]",
+    "foamlib[postprocessing]",
+    "sphinx>=5,<9",
+    "sphinx_rtd_theme",
+    "sphinxcontrib-mermaid"
+]
 dev = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
@@ -96,10 +95,6 @@ dev = [
     {include-group = "typing"},
     {include-group = "test"},
     {include-group = "docs"},
-]
-parameter_sweep = [
-    "foamlib[preprocessing]",
-    "foamlib[postprocessing]",
 ]
 
 [tool.uv.build-backend]
