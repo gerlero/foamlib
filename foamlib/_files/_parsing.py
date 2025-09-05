@@ -272,6 +272,29 @@ def _list_of(entry: ParserElement) -> ParserElement:
     )
 
 
+def _apply_directive_logic(
+    keyword_entry: ParserElement,
+    directive: ParserElement | None,
+    data_entry: ParserElement | None,
+) -> ParserElement:
+    """Apply directive handling logic to a keyword entry."""
+    if directive is not None:
+        assert data_entry is not None
+        keyword_entry |= directive + data_entry + LineEnd().suppress()
+    return keyword_entry
+
+
+def _apply_located_logic(
+    keyword_entry: ParserElement,
+    *,
+    located: bool,
+) -> ParserElement:
+    """Apply located wrapper logic to a keyword entry."""
+    if located:
+        keyword_entry = Located(keyword_entry)
+    return keyword_entry
+
+
 def _dict_of(
     keyword: ParserElement,
     data: ParserElement,
@@ -283,13 +306,8 @@ def _dict_of(
     dict_ = Forward()
 
     keyword_entry = keyword + (dict_ | (data + Literal(";").suppress()))
-
-    if directive is not None:
-        assert data_entry is not None
-        keyword_entry |= directive + data_entry + LineEnd().suppress()
-
-    if located:
-        keyword_entry = Located(keyword_entry)
+    keyword_entry = _apply_directive_logic(keyword_entry, directive, data_entry)
+    keyword_entry = _apply_located_logic(keyword_entry, located=located)
 
     dict_ <<= (
         Literal("{").suppress() + Group(keyword_entry)[...] + Literal("}").suppress()
@@ -316,13 +334,10 @@ def _keyword_entry_of(
         | (data + Literal(";").suppress())
     )
 
-    if directive is not None:
-        assert data_entry is not None
-        keyword_entry |= directive + data_entry + LineEnd().suppress()
+    keyword_entry = _apply_directive_logic(keyword_entry, directive, data_entry)
+    keyword_entry = _apply_located_logic(keyword_entry, located=located)
 
-    if located:
-        keyword_entry = Located(keyword_entry)
-    else:
+    if not located:
         keyword_entry = keyword_entry.copy().set_parse_action(lambda tks: tuple(tks))
 
     return keyword_entry
