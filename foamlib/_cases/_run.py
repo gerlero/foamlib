@@ -8,11 +8,7 @@ import tempfile
 from abc import abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any
-
-from rich.progress import Progress
-
-from ._util import SingletonContextManager
+from typing import TYPE_CHECKING, Any
 
 if sys.version_info >= (3, 9):
     from collections.abc import (
@@ -32,6 +28,13 @@ else:
         Generator,
         Sequence,
     )
+
+if TYPE_CHECKING:
+    from io import TextIOBase
+
+from rich.progress import Progress
+
+from ._util import SingletonContextManager
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -278,7 +281,7 @@ class FoamCaseRunBase(FoamCaseBase):
     @contextmanager
     def __output(
         self, cmd: Sequence[str | os.PathLike[str]] | str, *, log: bool
-    ) -> Generator[tuple[int | IO[str], int | IO[str]], None, None]:
+    ) -> Generator[tuple[int | TextIOBase, int | TextIOBase], None, None]:
         if log:
             with (self.path / f"log.{self.__cmd_name(cmd)}").open("a") as stdout:
                 yield stdout, STDOUT

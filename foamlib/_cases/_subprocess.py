@@ -7,7 +7,7 @@ import selectors
 import subprocess
 import sys
 import time
-from io import StringIO
+from io import StringIO, TextIOBase
 from pathlib import Path
 
 if sys.version_info >= (3, 9):
@@ -68,8 +68,8 @@ def run_sync(
     *,
     case: Path,
     check: bool = True,
-    stdout: int | StringIO = DEVNULL,
-    stderr: int | StringIO = STDOUT,
+    stdout: int | TextIOBase = DEVNULL,
+    stderr: int | TextIOBase = STDOUT,
     process_stdout: Callable[[str], None] = lambda _: None,
 ) -> CompletedProcess[str]:
     # Set up log file monitoring
@@ -146,8 +146,8 @@ async def run_async(
     *,
     case: Path,
     check: bool = True,
-    stdout: int | StringIO = DEVNULL,
-    stderr: int | StringIO = STDOUT,
+    stdout: int | TextIOBase = DEVNULL,
+    stderr: int | TextIOBase = STDOUT,
     process_stdout: Callable[[str], None] = lambda _: None,
 ) -> CompletedProcess[str]:
     # Set up log file monitoring
