@@ -40,8 +40,8 @@ from ._util import ValuedGenerator, awaitableasynccontextmanager
 if TYPE_CHECKING:
     from .._files import FoamFieldFile
 
-X = TypeVar("X")
-Y = TypeVar("Y")
+_X = TypeVar("_X")
+_Y = TypeVar("_Y")
 
 
 class AsyncFoamCase(FoamCaseRunBase):
@@ -347,7 +347,9 @@ class AsyncFoamCase(FoamCaseRunBase):
         await self._rmtree(calls.value.path)
 
     @staticmethod
-    def map(coro: Callable[[X], Awaitable[Y]], iterable: Iterable[X]) -> Iterable[Y]:
+    def map(
+        coro: Callable[[_X], Awaitable[_Y]], iterable: Iterable[_X]
+    ) -> Iterable[_Y]:
         """Run an async function on each element of an iterable concurrently."""
         return asyncio.get_event_loop().run_until_complete(
             asyncio.gather(*(coro(arg) for arg in iterable))
