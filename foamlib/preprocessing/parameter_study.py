@@ -53,6 +53,10 @@ def record_generator(
         {'case_name': '3DCube_N50', 'Res': 50, 'MeshType': '3DCube', 'Resolution': 'N50'},
     ]
     """
+    if len(records) == 0:
+        msg = "Cannot generate ParameterStudy from empty list of records."
+        raise ValueError(msg)
+
     parameter = FoamFile(
         Path(template_case) / "system" / "simulationParameters"
     ).as_dict()
@@ -92,7 +96,7 @@ def csv_generator(
     output_folder: str | Path = Path("Cases"),
 ) -> ParameterStudy:
     """Generate a parameter study from a CSV file."""
-    parastudy = pd.read_csv(str(Path(csv_file))).to_dict(orient="records")
+    parastudy = pd.read_csv(csv_file).to_dict(orient="records")
     return record_generator(
         parastudy,
         template_case,
