@@ -19,9 +19,11 @@ def simulation_parameters(keys: list[str]) -> FoamDictInstruction:
         keys=keys,
     )
 
-@deprecated("Use 'simulation_parameters' instead")
-def simulationParameters(keys: list[str]) -> FoamDictInstruction:  # noqa: N802
-    """Alias for :func:`simulation_parameters`."""
+    """
+    Alias for :func:`simulation_parameters`.
+
+    Deprecated since version 1.3.0: use :func:`simulation_parameters` instead.
+    """
     return simulation_parameters(keys)
 
 
