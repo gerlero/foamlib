@@ -8,7 +8,6 @@ from ._cases import (
     CalledProcessError,
     FoamCase,
     FoamCaseBase,
-    FoamCaseRunBase,
 )
 from ._files import FoamFieldFile, FoamFile
 
@@ -20,7 +19,6 @@ __all__ = [
     "CalledProcessError",
     "FoamCase",
     "FoamCaseBase",
-    "FoamCaseRunBase",
     "FoamFieldFile",
     "FoamFile",
 ]

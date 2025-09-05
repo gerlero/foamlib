@@ -1,9 +1,8 @@
-from ._async import AsyncFoamCase
-from ._base import FoamCaseBase
-from ._run import FoamCaseRunBase
-from ._slurm import AsyncSlurmFoamCase
 from ._subprocess import CalledProcessError
-from ._sync import FoamCase
+from .async_ import AsyncFoamCase
+from .base import FoamCaseBase
+from .slurm import AsyncSlurmFoamCase
+from .sync import FoamCase
 
 __all__ = [
     "AsyncFoamCase",
@@ -11,5 +10,4 @@ __all__ = [
     "CalledProcessError",
     "FoamCase",
     "FoamCaseBase",
-    "FoamCaseRunBase",
 ]

@@ -1,5 +1,5 @@
 import pytest
-from foamlib._files._files import FoamFile
+from foamlib import FoamFile
 from foamlib._files._parsing import Parsed
 from multicollections import MultiDict
 

@@ -1,4 +1,4 @@
-from ._files import FoamFieldFile, FoamFile
+from .files import FoamFieldFile, FoamFile
 
 __all__ = [
     "FoamFieldFile",

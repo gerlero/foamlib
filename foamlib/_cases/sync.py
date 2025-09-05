@@ -24,10 +24,10 @@ if TYPE_CHECKING:
     import os
     from types import TracebackType
 
-from ._base import FoamCaseBase
 from ._run import FoamCaseRunBase
 from ._subprocess import run_sync
 from ._util import ValuedGenerator
+from .base import FoamCaseBase
 
 if TYPE_CHECKING:
     from .._files import FoamFieldFile
