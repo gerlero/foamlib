@@ -43,20 +43,14 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
-from ._base import FoamCaseBase
 from ._subprocess import DEVNULL, STDOUT, LogFileMonitor
+from .base import FoamCaseBase
 
 if TYPE_CHECKING:
     from .._files import FoamFieldFile
 
 
 class FoamCaseRunBase(FoamCaseBase):
-    """
-    Abstract base class of :class:`FoamCase` and :class:`AsyncFoamCase`.
-
-    Do not use this class directly: use :class:`FoamCase` or :class:`AsyncFoamCase` instead.
-    """
-
     class TimeDirectory(FoamCaseBase.TimeDirectory):
         @abstractmethod
         def cell_centers(

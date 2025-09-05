@@ -17,8 +17,8 @@ else:
 if TYPE_CHECKING:
     import os
 
-from ._async import AsyncFoamCase
 from ._subprocess import run_async
+from .async_ import AsyncFoamCase
 
 
 class AsyncSlurmFoamCase(AsyncFoamCase):

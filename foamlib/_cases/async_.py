@@ -32,10 +32,10 @@ if TYPE_CHECKING:
 
 import aioshutil
 
-from ._base import FoamCaseBase
 from ._run import FoamCaseRunBase
 from ._subprocess import run_async
 from ._util import ValuedGenerator, awaitableasynccontextmanager
+from .base import FoamCaseBase
 
 if TYPE_CHECKING:
     from .._files import FoamFieldFile
