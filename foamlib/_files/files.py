@@ -118,10 +118,7 @@ class FoamFile(
     """
 
     Dimensioned = Dimensioned
-    """Alias of :class:`Dimensioned`."""
-
     DimensionSet = DimensionSet
-    """Alias of :class:`DimensionSet`."""
 
     class SubDict(
         MutableMultiMapping[str, "Data | FoamFile.SubDict"],
