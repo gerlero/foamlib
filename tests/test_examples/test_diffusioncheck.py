@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from foamlib import FoamCase
+from foamlib import Dimensioned, DimensionSet, FoamCase
 from scipy.special import erfc
 
 
@@ -105,10 +105,10 @@ def test_example(tmp_path: Path) -> None:
         f["mergePatchPairs"] = []
 
     with case.transport_properties as f:
-        f["DT"] = f.Dimensioned(1e-3, f.DimensionSet(length=2, time=-1), "DT")
+        f["DT"] = Dimensioned(1e-3, DimensionSet(length=2, time=-1), "DT")
 
     with case[0]["U"] as f:
-        f.dimensions = f.DimensionSet(length=1, time=-1)
+        f.dimensions = DimensionSet(length=1, time=-1)
         f.internal_field = [1, 0, 0]
         f.boundary_field = {
             "inletUp": {"type": "fixedValue", "value": [1, 0, 0]},
@@ -120,7 +120,7 @@ def test_example(tmp_path: Path) -> None:
         }
 
     with case[0]["T"] as f:
-        f.dimensions = f.DimensionSet(temperature=1)
+        f.dimensions = DimensionSet(temperature=1)
         f.internal_field = 0
         f.boundary_field = {
             "inletUp": {"type": "fixedValue", "value": 0},

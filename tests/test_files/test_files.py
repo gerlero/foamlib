@@ -9,7 +9,7 @@ else:
 
 import numpy as np
 import pytest
-from foamlib import FoamCase, FoamFieldFile, FoamFile
+from foamlib import Dimensioned, DimensionSet, FoamCase, FoamFieldFile, FoamFile
 
 
 def test_write_read(tmp_path: Path) -> None:
@@ -77,12 +77,12 @@ def test_write_read(tmp_path: Path) -> None:
     sd["nestedList"] = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
     assert sd["nestedList"] == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
-    sd["g"] = FoamFile.Dimensioned(
+    sd["g"] = Dimensioned(
         name="g", dimensions=[0, 1, -2, 0, 0, 0, 0], value=[0, 0, -9.81]
     )
-    assert isinstance(sd["g"], FoamFile.Dimensioned)
+    assert isinstance(sd["g"], Dimensioned)
     assert sd["g"].name == "g"
-    assert sd["g"].dimensions == FoamFile.DimensionSet(length=1, time=-2)
+    assert sd["g"].dimensions == DimensionSet(length=1, time=-2)
     assert np.array_equal(sd["g"].value, [0, 0, -9.81])
 
     sd["n"] = 1
@@ -123,12 +123,12 @@ def cavity() -> Generator[FoamCase, None, None]:
 
 
 def test_dimensions(cavity: FoamCase) -> None:
-    assert cavity[0]["p"].dimensions == FoamFile.DimensionSet(length=2, time=-2)
-    assert cavity[0]["U"].dimensions == FoamFile.DimensionSet(length=1, time=-1)
+    assert cavity[0]["p"].dimensions == DimensionSet(length=2, time=-2)
+    assert cavity[0]["U"].dimensions == DimensionSet(length=1, time=-1)
 
-    cavity[0]["p"].dimensions = FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    cavity[0]["p"].dimensions = DimensionSet(mass=1, length=1, time=-2)
 
-    assert cavity[0]["p"].dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert cavity[0]["p"].dimensions == DimensionSet(mass=1, length=1, time=-2)
 
 
 def test_boundary_field(cavity: FoamCase) -> None:

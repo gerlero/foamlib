@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import sys
-from typing import overload
+from typing import TYPE_CHECKING, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Mapping
@@ -12,18 +12,19 @@ else:
 import numpy as np
 
 from ._parsing import Parsed
-from ._types import (
-    Data,
-    DataLike,
-    Dimensioned,
-    DimensionSet,
-    KeywordEntryLike,
-    StandaloneData,
-    StandaloneDataLike,
-    SubDict,
-    SubDictLike,
-)
 from ._util import as_dict_check_unique, is_sequence
+from .types import Dimensioned, DimensionSet
+
+if TYPE_CHECKING:
+    from ._typing import (
+        Data,
+        DataLike,
+        KeywordEntryLike,
+        StandaloneData,
+        StandaloneDataLike,
+        SubDict,
+        SubDictLike,
+    )
 
 
 @overload

@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from foamlib import FoamFile
+from foamlib import Dimensioned, DimensionSet
 from foamlib._files._parsing import Parsed
 from foamlib._files._util import is_sequence
 
@@ -93,17 +93,15 @@ def test_parse_value() -> None:
     field = Parsed(b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(field, [1, 2])
-    assert Parsed(b"[1 1 -2 0 0 0 0]")[()] == FoamFile.DimensionSet(
-        mass=1, length=1, time=-2
-    )
+    assert Parsed(b"[1 1 -2 0 0 0 0]")[()] == DimensionSet(mass=1, length=1, time=-2)
     dimensioned = Parsed(b"g [1 1 -2 0 0 0 0] (0 0 -9.81)")[()]
-    assert isinstance(dimensioned, FoamFile.Dimensioned)
-    assert dimensioned.dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert isinstance(dimensioned, Dimensioned)
+    assert dimensioned.dimensions == DimensionSet(mass=1, length=1, time=-2)
     assert np.array_equal(dimensioned.value, [0, 0, -9.81])
     assert dimensioned.name == "g"
     dimensioned = Parsed(b"[1 1 -2 0 0 0 0] 9.81")[()]
-    assert isinstance(dimensioned, FoamFile.Dimensioned)
-    assert dimensioned.dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert isinstance(dimensioned, Dimensioned)
+    assert dimensioned.dimensions == DimensionSet(mass=1, length=1, time=-2)
     assert dimensioned.value == 9.81
     assert dimensioned.name is None
     tpl = Parsed(b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")[()]
@@ -132,7 +130,7 @@ def test_parse_value() -> None:
     assert Parsed(b"((air and water) { type constant; sigma 0.07; })")[()] == [
         (["air", "and", "water"], {"type": "constant", "sigma": 0.07})
     ]
-    assert Parsed(b"[]")[()] == FoamFile.DimensionSet()
+    assert Parsed(b"[]")[()] == DimensionSet()
     assert Parsed(b"object f.1;")[("object",)] == "f.1"
 
 

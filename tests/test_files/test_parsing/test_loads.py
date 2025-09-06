@@ -1,5 +1,5 @@
 import numpy as np
-from foamlib import FoamFile
+from foamlib import Dimensioned, DimensionSet, FoamFile
 
 
 def test_loads() -> None:
@@ -55,17 +55,15 @@ def test_loads() -> None:
         FoamFile.loads(b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)"),  # type: ignore[arg-type]
         [1, 2],
     )
-    assert FoamFile.loads("[1 1 -2 0 0 0 0]") == FoamFile.DimensionSet(
-        mass=1, length=1, time=-2
-    )
+    assert FoamFile.loads("[1 1 -2 0 0 0 0]") == DimensionSet(mass=1, length=1, time=-2)
     dimensioned = FoamFile.loads("g [1 1 -2 0 0 0 0] (0 0 -9.81)")
-    assert isinstance(dimensioned, FoamFile.Dimensioned)
-    assert dimensioned.dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert isinstance(dimensioned, Dimensioned)
+    assert dimensioned.dimensions == DimensionSet(mass=1, length=1, time=-2)
     assert np.array_equal(dimensioned.value, [0, 0, -9.81])
     assert dimensioned.name == "g"
     dimensioned = FoamFile.loads("[1 1 -2 0 0 0 0] 9.81")
-    assert isinstance(dimensioned, FoamFile.Dimensioned)
-    assert dimensioned.dimensions == FoamFile.DimensionSet(mass=1, length=1, time=-2)
+    assert isinstance(dimensioned, Dimensioned)
+    assert dimensioned.dimensions == DimensionSet(mass=1, length=1, time=-2)
     assert dimensioned.value == 9.81
     assert dimensioned.name is None
     assert FoamFile.loads("a {b c; d e;}") == {"a": {"b": "c", "d": "e"}}

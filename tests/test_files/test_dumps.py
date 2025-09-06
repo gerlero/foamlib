@@ -1,5 +1,5 @@
 import numpy as np
-from foamlib import FoamFile
+from foamlib import Dimensioned, DimensionSet, FoamFile
 from foamlib._files._serialization import dumps
 
 
@@ -61,14 +61,12 @@ def test_serialize_data() -> None:
         )
         == b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)"
     )
-    assert (
-        dumps(FoamFile.DimensionSet(mass=1, length=1, time=-2)) == b"[1 1 -2 0 0 0 0]"
-    )
+    assert dumps(DimensionSet(mass=1, length=1, time=-2)) == b"[1 1 -2 0 0 0 0]"
     assert (
         dumps(
-            FoamFile.Dimensioned(
+            Dimensioned(
                 name="g",
-                dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2),
+                dimensions=DimensionSet(mass=1, length=1, time=-2),
                 value=9.81,
             )
         )
@@ -76,9 +74,7 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            FoamFile.Dimensioned(
-                dimensions=FoamFile.DimensionSet(mass=1, length=1, time=-2), value=9.81
-            )
+            Dimensioned(dimensions=DimensionSet(mass=1, length=1, time=-2), value=9.81)
         )
         == b"[1 1 -2 0 0 0 0] 9.81"
     )
