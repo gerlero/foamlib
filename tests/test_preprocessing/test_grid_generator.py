@@ -14,7 +14,7 @@ import pytest
 from foamlib.preprocessing.grid_parameter_sweep import CaseParameter, GridParameter
 from foamlib.preprocessing.of_dict import FoamDictInstruction
 from foamlib.preprocessing.parameter_study import grid_generator
-from foamlib.preprocessing.system import simulationParameters
+from foamlib.preprocessing.system import simulation_parameters
 
 CSV_FILE = "tests/test_preprocessing/test_parastudy.csv"
 OUTPUT_FOLDER = "tests/test_preprocessing/Cases/"
@@ -49,7 +49,7 @@ def test_grid_parameter() -> None:
         #         file_name=Path("system/simulationParameters"),
         #         keys=[f"res{i}"],
         #      )
-        modify_dict=[simulationParameters(keys=[f"res{i}"]) for i in range(1, 6)],
+        modify_dict=[simulation_parameters(keys=[f"res{i}"]) for i in range(1, 6)],
         parameters=[
             CaseParameter(name="coarse", values=grid_parameters(1)),
             CaseParameter(name="mid", values=grid_parameters(2)),
