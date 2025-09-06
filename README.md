@@ -29,9 +29,9 @@ Parsing a `volVectorField` with 200k cells.<sup>[1](#benchmark)</sup>
 
 **foamlib** is a Python package designed to simplify and streamline OpenFOAM workflows. It provides:
 
-- **🗄️ Intuitive file handling**: Read and write OpenFOAM configuration and field files as if they were Python dictionaries
+- **🗄️ Intuitive file handling**: Read and write OpenFOAM configuration and field files as if they were Python objects
 - **⚡ High performance**: Standalone parser supporting both ASCII and binary formats with or without compression
-- **🔄 Async operations**: Run multiple cases concurrently with full [`asyncio`](https://docs.python.org/3/library/asyncio.html) support
+- **🔄 Async operations**: Run multiple cases in parallel with full [`asyncio`](https://docs.python.org/3/library/asyncio.html) support
 - **🎯 Type safety**: A fully typed API for validation and a better development experience
 - **⚙️ Workflow automation**: Reduce boilerplate code for pre/post-processing and simulation management
 - **🧩 Fully compatible**: Works with OpenFOAM from both [openfoam.com](https://www.openfoam.com/) and [openfoam.org](https://www.openfoam.org/)
