@@ -46,9 +46,11 @@ _Y = TypeVar("_Y")
 
 class AsyncFoamCase(FoamCaseRunBase):
     """
-    An OpenFOAM case with asynchronous support.
+    An OpenFOAM case with asynchronous execution capabilities.
 
-    Provides methods for running and cleaning cases, as well as accessing files.
+    Extends :class:`FoamCaseRunBase` to provide methods for running and cleaning cases
+    asynchronously, as well as accessing files. This allows for non-blocking execution
+    and concurrent operations.
 
     Access the time directories of the case as a sequence, e.g. ``case[0]`` or ``case[-1]``.
     These will return :class:`AsyncFoamCase.TimeDirectory` objects.

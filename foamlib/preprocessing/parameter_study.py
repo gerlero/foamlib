@@ -22,12 +22,31 @@ if TYPE_CHECKING:
 
 
 class ParameterStudy(BaseModel):
-    """Class to handle a parameter study by creating multiple cases based on parameter combinations."""
+    """Class to handle a parameter study by creating multiple cases based on parameter combinations.
+
+    A parameter study contains a list of :class:`CaseModifier` objects that define
+    how to generate and modify OpenFOAM cases with different parameter values.
+
+    Attributes
+    ----------
+    cases : list[CaseModifier]
+        List of case modifiers that define the parameter combinations.
+    """
 
     cases: list[CaseModifier]
 
     def create_study(self, study_base_folder: Path = Path()) -> None:
-        """Create multiple cases based on the parameter combinations."""
+        """Create multiple cases based on the parameter combinations.
+
+        Generates all case directories and applies parameter modifications.
+        Also creates a parameter_study.json file containing the study configuration.
+
+        Parameters
+        ----------
+        study_base_folder : Path, optional
+            Base directory where the study configuration file will be saved
+            (default: current directory).
+        """
         with (study_base_folder / "parameter_study.json").open("w") as json_file:
             json_file.write(self.model_dump_json(indent=2))
 
@@ -47,11 +66,32 @@ def record_generator(
 ) -> ParameterStudy:
     """Generate a parameter study based on records.
 
-    Example records: [
-        {'case_name': '3DCube_N10', 'Res': 10, 'MeshType': '3DCube', 'Resolution': 'N10'},
-        {'case_name': '3DCube_N20', 'Res': 20, 'MeshType': '3DCube', 'Resolution': 'N20'},
-        {'case_name': '3DCube_N50', 'Res': 50, 'MeshType': '3DCube', 'Resolution': 'N50'},
-    ]
+    Create a :class:`ParameterStudy` from a list of parameter dictionaries.
+    Each record should contain a 'case_name' key and parameter key-value pairs.
+
+    Parameters
+    ----------
+    records : list[dict[Hashable, Any]]
+        List of parameter dictionaries. Each dictionary must contain a 'case_name' key.
+    template_case : str | Path
+        Path to the template case directory.
+    output_folder : str | Path, optional
+        Directory where generated cases will be created (default: "Cases").
+
+    Returns
+    -------
+    ParameterStudy
+        A parameter study configured with the provided records.
+
+    Example
+    -------
+    Example records::
+
+        [
+            {'case_name': '3DCube_N10', 'Res': 10, 'MeshType': '3DCube', 'Resolution': 'N10'},
+            {'case_name': '3DCube_N20', 'Res': 20, 'MeshType': '3DCube', 'Resolution': 'N20'},
+            {'case_name': '3DCube_N50', 'Res': 50, 'MeshType': '3DCube', 'Resolution': 'N50'},
+        ]
     """
     if not records:
         msg = "Cannot generate ParameterStudy from empty list of records."
