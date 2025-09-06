@@ -20,7 +20,7 @@
    .. automethod:: foamlib.FoamCaseBase.__len__
 
    .. autoclass:: foamlib.FoamCaseBase.TimeDirectory
-   :show-inheritance:
+      :show-inheritance:
 
       .. autoproperty:: foamlib.FoamCaseBase.TimeDirectory.name
       .. autoproperty:: foamlib.FoamCaseBase.TimeDirectory.time
