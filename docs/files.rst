@@ -25,6 +25,8 @@
    .. automethod:: foamlib.FoamFile.extend
    .. automethod:: foamlib.FoamFile.merge
    .. automethod:: foamlib.FoamFile.as_dict
+   .. automethod:: foamlib.FoamFile.__enter__
+   .. automethod:: foamlib.FoamFile.__exit__
    .. automethod:: foamlib.FoamFile.loads
    .. automethod:: foamlib.FoamFile.dumps
 
@@ -52,6 +54,18 @@
       .. automethod:: foamlib.FoamFile.SubDict.extend
       .. automethod:: foamlib.FoamFile.SubDict.merge
       .. automethod:: foamlib.FoamFile.SubDict.as_dict
+
+   .. class:: foamlib.FoamFile.Dimensioned
+
+      Alias of :class:`Dimensioned` provided for backward compatibility.
+
+      Prefer using :class:`foamlib.Dimensioned` directly.
+
+   .. class:: foamlib.FoamFile.DimensionSet
+
+      Alias of :class:`DimensionSet` provided for backward compatibility.
+
+      Prefer using :class:`foamlib.DimensionSet` directly.
 
 .. autoclass:: foamlib.FoamFieldFile
    :show-inheritance:
