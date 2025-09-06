@@ -53,7 +53,7 @@ def record_generator(
         {'case_name': '3DCube_N50', 'Res': 50, 'MeshType': '3DCube', 'Resolution': 'N50'},
     ]
     """
-    if len(records) == 0:
+    if not records:
         msg = "Cannot generate ParameterStudy from empty list of records."
         raise ValueError(msg)
 
