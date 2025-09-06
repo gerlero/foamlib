@@ -1,6 +1,7 @@
 import numpy as np
 from foamlib import Dimensioned, DimensionSet, FoamFile
 from foamlib._files._serialization import dumps
+from multicollections import MultiDict
 
 
 def test_serialize_data() -> None:
@@ -138,4 +139,11 @@ def test_serialize_file() -> None:
             ensure_header=False,
         )
         == b"FoamFile {format binary;} 3(\x00\x00\x00\x00\x03\x00\x00\x00\x07\x00\x00\x00) 7(h\xcb\r\x00\x1f\xcd\r\x00\x08\x1b\x0e\x00\xd7\xa85\x00\xda\xa85\x00\xd9\xa85\x00\xd8\xa85\x00)"
+    )
+    assert (
+        FoamFile.dumps(
+            MultiDict([("#includeFunc", '"func1"'), ("#includeFunc", '"func2"')]),
+            ensure_header=False,
+        )
+        == b'\n#includeFunc "func1"\n \n#includeFunc "func2"\n'
     )

@@ -10,6 +10,7 @@ else:
     from typing import Mapping
 
 import numpy as np
+from multicollections import MultiDict
 
 from ._parsing import Parsed
 from ._util import as_dict_check_unique, is_sequence
@@ -51,9 +52,10 @@ def normalize_data(
     keywords: tuple[str, ...] | None = None,
 ) -> Data | StandaloneData | SubDict:
     if isinstance(data, Mapping):
-        return as_dict_check_unique(
-            ((normalize_keyword(k), normalize_data(v)) for k, v in data.items())  # type: ignore [arg-type, misc]
-        )
+        items = ((normalize_keyword(k), normalize_data(v)) for k, v in data.items())  # type: ignore [arg-type, misc]
+        if keywords is None:
+            return as_dict_check_unique(items)  # type: ignore [arg-type]
+        return MultiDict(items)  # type: ignore [arg-type]
 
     if keywords == () and is_sequence(data) and not isinstance(data, tuple):
         try:
