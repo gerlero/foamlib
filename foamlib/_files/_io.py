@@ -37,6 +37,7 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
 
     @override
     def __enter__(self) -> Self:
+        """Read the file from disk if not already read, and defer writing of changes until the context is exited."""
         if self.__defer_io == 0:
             self._get_parsed(missing_ok=True)
         self.__defer_io += 1
@@ -49,6 +50,7 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
+        """If this is the outermost context, write any deferred file changes to disk."""
         self.__defer_io -= 1
         if self.__defer_io == 0:
             assert self.__parsed is not None
