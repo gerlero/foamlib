@@ -87,7 +87,7 @@ This simple generator specifies the above requirements in the csv file, where th
 
     // ************************************************************************* //
 
-The file can be included in every openfoam dictionary by adding the following line and can be referenced with a dollar sign in the dictionary:
+The file can be included in every OpenFOAM dictionary by adding the following line and can be referenced with a dollar sign in the dictionary:
 
 .. code-block:: c++
 
@@ -157,7 +157,7 @@ The most important class for the grid generator is the `GridParameter`. This cla
             )]
     )
 
-The modify_dict varaible stores the instructions for the OpenFOAM dictionary that will be modified. The `keys` parameter specifies the keys in the dictionary that will be modified. The `parameters` variable stores the parameters that will be used to modify the keys in the dictionary. Each `CaseParameter` contains a name and a list of values that will be used to modify the keys in the dictionary.
+The modify_dict variable stores the instructions for the OpenFOAM dictionary that will be modified. The `keys` parameter specifies the keys in the dictionary that will be modified. The `parameters` variable stores the parameters that will be used to modify the keys in the dictionary. Each `CaseParameter` contains a name and a list of values that will be used to modify the keys in the dictionary.
 
 .. code-block:: python
 

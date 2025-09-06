@@ -44,7 +44,7 @@ def of_cases(dir_name: str | Path) -> list[str]:
 
     Returns
     ofcases : List[str]
-        pathes of the OpenFOAM directories
+        paths of the OpenFOAM directories
     """
     cases = []
     for path, dirnames, _ in os.walk(dir_name):
@@ -124,18 +124,19 @@ class DataSource:
 
 def functionobject(file_name: str, folder: str | Path) -> DataSource:
     """
-    Create a DataTarget for a standard OpenFOAM function object.
+    Create a DataSource for a standard OpenFOAM function object.
 
     Parameters
     ----------
-    name : str
-        The function object name (and default folder).
-    file_name : str, optional
-        The file name to look for (defaults to '<name>.dat').
+    file_name : str
+        The file name to look for.
+    folder : str | Path
+        The function object name (and folder).
 
     Returns
     -------
-    DataTarget
+    DataSource
+        A DataSource object configured for the function object.
     """
     return DataSource(
         file_name=file_name,
@@ -149,7 +150,7 @@ def datafile(
     file_name: str, folder: str | Path, *, time_resolved: bool = False
 ) -> DataSource:
     """
-    Create a DataTarget for a custom or non-OpenFOAM output file.
+    Create a DataSource for a custom or non-OpenFOAM output file.
 
     Parameters
     ----------
@@ -162,7 +163,8 @@ def datafile(
 
     Returns
     -------
-    DataTarget
+    DataSource
+        A DataSource object configured for the custom file.
     """
     return DataSource(
         file_name=file_name,

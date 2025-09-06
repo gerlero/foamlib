@@ -93,7 +93,7 @@ class DimensionSet(NamedTuple):
 class Dimensioned:
     """A numerical value with associated physical dimensions.
 
-    Corresponds to the  `dimensioned<...>` type in OpenFOAM.
+    Corresponds to the `dimensioned<...>` type in OpenFOAM.
 
     The `value` can be a single number (scalar) or a 1D array (vector or tensor).
 

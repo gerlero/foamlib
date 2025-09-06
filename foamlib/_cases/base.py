@@ -31,7 +31,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
     :class:`FoamCase` or :class:`AsyncFoamCase` instead of this class.
 
     Access the time directories of the case as a sequence, e.g. ``case[0]`` or ``case[-1]``.
-    These will return class:`FoamCaseBase.TimeDirectory` objects.
+    These will return :class:`FoamCaseBase.TimeDirectory` objects.
 
     :param path: The path to the case directory. Defaults to the current working
         directory.
@@ -161,12 +161,12 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         return self.path.name
 
     def file(self, path: os.PathLike[str] | str) -> FoamFile:
-        """Return a FoamFile object for the given path in the case."""
+        """Return a :class:`FoamFile` object for the given path in the case."""
         return FoamFile(self.path / path)
 
     @property
     def _nsubdomains(self) -> int | None:
-        """Return the number of subdomains as set in the decomposeParDict, or ``None`` if no decomposeParDict is found."""
+        """Return the number of subdomains as set in the :attr:`decompose_par_dict`, or ``None`` if no decomposeParDict is found."""
         try:
             nsubdomains = self.decompose_par_dict["numberOfSubdomains"]
             if not isinstance(nsubdomains, int):

@@ -19,7 +19,7 @@ The general concept is that the post-processing cases are all located in the sam
 
 The post-processing module can be used to extract data from the post-processing files and visualize it in a user-friendly manner. 
 
-The main idea is to gather all the post-processing files from different cases into a single dataframe that stores the data in a long format. This allows for easy manipulation and visualization of the data using libraries like seaborn, ploty.express or altair or numerous other plotting libraries.
+The main idea is to gather all the post-processing files from different cases into a single dataframe that stores the data in a long format. This allows for easy manipulation and visualization of the data using libraries like seaborn, plotly.express or altair or numerous other plotting libraries.
 
 Installing extra dependencies
 -----------------------------
@@ -99,6 +99,6 @@ However, the resulting dataframe may contain a lot of data, so these dataframe c
         index=False,
     )
 
-Generally, the `load_tables` functions should be stored in a separate file and the resulting tables should be written to disk as e.g csv feather or formats. The post-processing module can then be used to load the data from the files and visualize it in a user-friendly manner.
+Generally, the `load_tables` functions should be stored in a separate file and the resulting tables should be written to disk as e.g., CSV, feather, or other formats. The post-processing module can then be used to load the data from the files and visualize it in a user-friendly manner.
 
 This allows the implementation of dashboards to quickly explore the data. Additionally, the table gathering process can be easily auto-generated from the CLI.
