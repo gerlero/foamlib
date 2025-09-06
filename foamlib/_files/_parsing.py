@@ -48,11 +48,14 @@ from pyparsing import (
     printables,
 )
 
-from ._types import Data, Dimensioned, DimensionSet, File, StandaloneData, SubDict
-from ._util import add_to_mapping, as_dict_check_unique
-
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
+
+from ._util import add_to_mapping, as_dict_check_unique
+from .types import Dimensioned, DimensionSet
+
+if TYPE_CHECKING:
+    from ._typing import Data, File, StandaloneData, SubDict
 
 
 def _ascii_numeric_list(

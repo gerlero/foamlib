@@ -20,22 +20,21 @@ from multicollections.abc import MutableMultiMapping, with_default
 from ._io import FoamFileIO
 from ._parsing import Parsed
 from ._serialization import dumps, normalize_data, normalize_keyword
-from ._types import (
-    Data,
-    DataLike,
-    Dimensioned,
-    DimensionSet,
-    Field,
-    FieldLike,
-    File,
-    FileLike,
-    StandaloneData,
-    StandaloneDataLike,
-    SubDict,
-    SubDictLike,
-)
+from .types import Dimensioned, DimensionSet
 
 if TYPE_CHECKING:
+    from ._typing import (
+        Data,
+        DataLike,
+        Field,
+        FieldLike,
+        File,
+        FileLike,
+        StandaloneData,
+        StandaloneDataLike,
+        SubDict,
+        SubDictLike,
+    )
     from ._util import SupportsKeysAndGetItem
 
 
@@ -119,7 +118,10 @@ class FoamFile(
     """
 
     Dimensioned = Dimensioned
+    """Alias of :class:`Dimensioned`."""
+
     DimensionSet = DimensionSet
+    """Alias of :class:`DimensionSet`."""
 
     class SubDict(
         MutableMultiMapping[str, "Data | FoamFile.SubDict"],

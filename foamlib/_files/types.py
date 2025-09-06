@@ -6,27 +6,34 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 import numpy as np
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 else:
-    from typing import Mapping, Sequence
-
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing_extensions import TypeAlias
-
+    from typing import Sequence
 if sys.version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
 
-if TYPE_CHECKING:
-    from multicollections import MultiDict
-
 from ._util import is_sequence
+
+if TYPE_CHECKING:
+    from ._typing import Tensor, TensorLike
 
 
 class DimensionSet(NamedTuple):
+    """Set of physical dimensions represented as powers of base SI units.
+
+    Corresponds to the `dimensionSet` type in OpenFOAM.
+
+    :param mass: Power of the mass dimension.
+    :param length: Power of the length dimension.
+    :param time: Power of the time dimension.
+    :param temperature: Power of the temperature dimension.
+    :param moles: Power of the amount of substance dimension.
+    :param current: Power of the electric current dimension.
+    :param luminous_intensity: Power of the luminous intensity dimension.
+    """
+
     mass: float = 0
     length: float = 0
     time: float = 0
@@ -83,11 +90,18 @@ class DimensionSet(NamedTuple):
         return any(v != 0 for v in self)
 
 
-Tensor: TypeAlias = "float | np.ndarray[tuple[int], np.dtype[np.float64]]"
-TensorLike: TypeAlias = "Tensor | Sequence[float]"
-
-
 class Dimensioned:
+    """A numerical value with associated physical dimensions.
+
+    Corresponds to the  `dimensioned<...>` type in OpenFOAM.
+
+    The `value` can be a single number (scalar) or a 1D array (vector or tensor).
+
+    :param value: The numerical value.
+    :param dimensions: The physical dimensions as a :class:`DimensionSet` or a sequence of up to 7 numbers.
+    :param name: An optional name for the dimensioned quantity.
+    """
+
     def __init__(
         self,
         value: TensorLike,
@@ -192,41 +206,3 @@ class Dimensioned:
             msg = f"Cannot convert non-dimensionless Dimensioned object to array: {self.dimensions}"
             raise ValueError(msg)
         return np.array(self.value, dtype=dtype, copy=copy)
-
-
-Field: TypeAlias = "float | np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]"
-FieldLike: TypeAlias = "Field | TensorLike | Sequence[TensorLike]"
-
-KeywordEntry: TypeAlias = "tuple[DataEntry, DataEntry | SubDict]"
-KeywordEntryLike: TypeAlias = "tuple[DataEntryLike, DataEntryLike | SubDictLike]"
-
-DataEntry: TypeAlias = "str | int | float | bool | Dimensioned | DimensionSet | list[DataEntry | KeywordEntry] | Field"
-DataEntryLike: TypeAlias = (
-    "DataEntry | Sequence[DataEntryLike | KeywordEntryLike] | FieldLike"
-)
-
-Data: TypeAlias = "DataEntry | tuple[DataEntry, ...]"
-DataLike: TypeAlias = "DataEntryLike | tuple[DataEntryLike, ...]"
-
-StandaloneData: TypeAlias = (
-    "Data"
-    "| np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]"
-    "| np.ndarray[tuple[int, int], np.dtype[np.float64 | np.float32]]"
-    "| list[np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]]"
-    "| tuple[np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]], np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]]"
-)
-StandaloneDataLike: TypeAlias = (
-    "StandaloneData"
-    "| DataLike"
-    "| Sequence[np.ndarray[tuple[int], np.dtype[np.int64 | np.int32]]]"
-    "| Sequence[Sequence[int]]"
-    "| tuple[Sequence[int], Sequence[int]]"
-)
-
-SubDict: TypeAlias = "dict[str, Data | SubDict] | MultiDict[str, Data | SubDict]"
-SubDictLike = Mapping[str, "DataLike | SubDictLike"]
-
-File: TypeAlias = "dict[str | None, StandaloneData | Data | SubDict] | MultiDict[str | None, StandaloneData | Data | SubDict]"
-FileLike: TypeAlias = Mapping[
-    "str | None", "StandaloneDataLike | DataLike | SubDictLike"
-]

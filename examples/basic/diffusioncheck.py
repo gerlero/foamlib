@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 import numpy as np
-from foamlib import FoamCase, FoamFile
+from foamlib import Dimensioned, DimensionSet, FoamCase
 from scipy.special import erfc
 
 path = Path(__file__).parent / "diffusionCheck"
@@ -101,10 +101,10 @@ with case.block_mesh_dict as f:
     f["mergePatchPairs"] = []
 
 with case.transport_properties as f:
-    f["DT"] = FoamFile.Dimensioned(1e-3, f.DimensionSet(length=2, time=-1), "DT")
+    f["DT"] = Dimensioned(1e-3, DimensionSet(length=2, time=-1), "DT")
 
 with case[0]["U"] as f:
-    f.dimensions = FoamFile.DimensionSet(length=1, time=-1)
+    f.dimensions = DimensionSet(length=1, time=-1)
     f.internal_field = [1, 0, 0]
     f.boundary_field = {
         "inletUp": {"type": "fixedValue", "value": [1, 0, 0]},
@@ -116,7 +116,7 @@ with case[0]["U"] as f:
     }
 
 with case[0]["T"] as f:
-    f.dimensions = FoamFile.DimensionSet(temperature=1)
+    f.dimensions = DimensionSet(temperature=1)
     f.internal_field = 0
     f.boundary_field = {
         "inletUp": {"type": "fixedValue", "value": 0},

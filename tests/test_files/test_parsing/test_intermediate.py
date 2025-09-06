@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from foamlib import FoamFile
+from foamlib import Dimensioned, DimensionSet
 from foamlib._files._parsing import Parsed
 
 
@@ -378,15 +378,13 @@ def test_dimension_set() -> None:
             rhoMin    rhoMin [1 -3 0 0 0 0 0] 0.3;
         }
     """)
-    assert parsed[("dimensions",)] == FoamFile.DimensionSet(length=2, time=-1)
-    assert isinstance(parsed[("nu",)], FoamFile.Dimensioned)
-    assert parsed[("nu",)].dimensions == FoamFile.DimensionSet(length=2, time=-1)
-    assert isinstance(parsed[("nu1",)], FoamFile.Dimensioned)
-    assert parsed[("nu1",)].dimensions == FoamFile.DimensionSet(length=2, time=-1)
-    assert isinstance(parsed[("SIMPLE", "rhoMin")], FoamFile.Dimensioned)
-    assert parsed[("SIMPLE", "rhoMin")].dimensions == FoamFile.DimensionSet(
-        mass=1, length=-3
-    )
+    assert parsed[("dimensions",)] == DimensionSet(length=2, time=-1)
+    assert isinstance(parsed[("nu",)], Dimensioned)
+    assert parsed[("nu",)].dimensions == DimensionSet(length=2, time=-1)
+    assert isinstance(parsed[("nu1",)], Dimensioned)
+    assert parsed[("nu1",)].dimensions == DimensionSet(length=2, time=-1)
+    assert isinstance(parsed[("SIMPLE", "rhoMin")], Dimensioned)
+    assert parsed[("SIMPLE", "rhoMin")].dimensions == DimensionSet(mass=1, length=-3)
 
 
 def test_named_values() -> None:
