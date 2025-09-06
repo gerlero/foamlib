@@ -23,12 +23,11 @@ if TYPE_CHECKING:
 Tensor: TypeAlias = "float | np.ndarray[tuple[int], np.dtype[np.float64]]"
 TensorLike: TypeAlias = "Tensor | Sequence[float]"
 
-
 Field: TypeAlias = "float | np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.float64 | np.float32]]"
 FieldLike: TypeAlias = "Field | TensorLike | Sequence[TensorLike]"
 
-KeywordEntry: TypeAlias = "tuple[DataEntry, DataEntry | SubDict]"
-KeywordEntryLike: TypeAlias = "tuple[DataEntryLike, DataEntryLike | SubDictLike]"
+KeywordEntry: TypeAlias = "tuple[DataEntry, DataEntry | Dict]"
+KeywordEntryLike: TypeAlias = "tuple[DataEntryLike, DataEntryLike | DictLike]"
 
 DataEntry: TypeAlias = "str | int | float | bool | Dimensioned | DimensionSet | list[DataEntry | KeywordEntry] | Field"
 DataEntryLike: TypeAlias = (
@@ -53,8 +52,11 @@ StandaloneDataLike: TypeAlias = (
     "| tuple[Sequence[int], Sequence[int]]"
 )
 
+Dict: TypeAlias = "dict[str, DataEntry | Dict]"
+DictLike: TypeAlias = "Mapping[str, DataEntryLike | DictLike]"
+
 SubDict: TypeAlias = "dict[str, Data | SubDict] | MultiDict[str, Data | SubDict]"
-SubDictLike = Mapping[str, "DataLike | SubDictLike"]
+SubDictLike: TypeAlias = DictLike
 
 File: TypeAlias = "dict[str | None, StandaloneData | Data | SubDict] | MultiDict[str | None, StandaloneData | Data | SubDict]"
 FileLike: TypeAlias = Mapping[
