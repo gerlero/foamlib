@@ -1,0 +1,103 @@
+/* Custom CSS for foamlib documentation */
+
+/* Improve code block styling */
+.highlight {
+    border-radius: 4px;
+    margin: 1em 0;
+}
+
+/* Better spacing for admonitions */
+.admonition {
+    margin: 1.5em 0;
+    padding: 1em;
+    border-radius: 4px;
+}
+
+/* Improve table styling */
+table.docutils {
+    border: none;
+    border-collapse: collapse;
+    margin: 1em 0;
+    width: 100%;
+}
+
+table.docutils th,
+table.docutils td {
+    padding: 8px 12px;
+    border: 1px solid #e1e4e5;
+}
+
+table.docutils th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+
+/* Better styling for code inline */
+code.literal {
+    background-color: #f8f9fa;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 90%;
+}
+
+/* Logo and header improvements */
+.wy-side-nav-search {
+    background-color: #2980B9;
+}
+
+.wy-side-nav-search img {
+    max-width: 150px;
+    height: auto;
+}
+
+/* Content improvements */
+.rst-content .section > h1 {
+    margin-bottom: 1.5em;
+}
+
+.rst-content .section > h2 {
+    margin-top: 2em;
+    margin-bottom: 1em;
+}
+
+/* API documentation improvements */
+.rst-content dl.class > dt,
+.rst-content dl.function > dt,
+.rst-content dl.method > dt {
+    background-color: #f8f9fa;
+    border-left: 3px solid #2980B9;
+    padding: 6px 10px;
+}
+
+/* Better parameter list styling */
+.rst-content dl.field-list {
+    margin-bottom: 1em;
+}
+
+.rst-content dl.field-list > dt {
+    background-color: transparent;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+/* Mermaid diagram styling */
+.mermaid {
+    text-align: center;
+    margin: 2em 0;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .wy-side-nav-search img {
+        max-width: 120px;
+    }
+}
+
+/* Navigation improvements */
+.wy-menu-vertical a {
+    padding: 0.4045em 1.618em;
+}
+
+.wy-menu-vertical .current a {
+    border-right: 2px solid #2980B9;
+}

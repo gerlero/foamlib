@@ -1,11 +1,9 @@
 Case manipulation
 =================
 
-.. autoclass:: foamlib.FoamCaseBase
-   :members:
-   :show-inheritance:
+foamlib provides powerful classes for managing OpenFOAM cases, from simple synchronous operations to advanced asynchronous and HPC workflows.
 
-.. autoclass:: foamlib.FoamCaseRunBase
+.. autoclass:: foamlib.FoamCaseBase
    :members:
    :show-inheritance:
 
