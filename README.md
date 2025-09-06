@@ -58,19 +58,19 @@ Choose your preferred installation method:
 
 <table>
 <tr>
-  <td><strong>✨ pip</strong></td>
+  <td><strong>✨ <a href="https://pypi.org/project/foamlib/">pip</a></strong></td>
   <td><code>pip install foamlib</code></td>
 </tr>
 <tr>
-  <td><strong>🐍 conda</strong></td>
+  <td><strong>🐍 <a href="https://anaconda.org/conda-forge/foamlib">conda</a></strong></td>
   <td><code>conda install -c conda-forge foamlib</code></td>
 </tr>
 <tr>
-  <td><strong>🍺 Homebrew</strong></td>
+  <td><strong>🍺 <a href="https://github.com/gerlero/homebrew-openfoam">Homebrew</a></strong></td>
   <td><code>brew install gerlero/openfoam/foamlib</code></td>
 </tr>
 <tr>
-  <td><strong>🐳 Docker</strong></td>
+  <td><strong>🐳 <a href="https://hub.docker.com/r/microfluidica/foamlib/">Docker</a></strong></td>
   <td><code>docker pull microfluidica/foamlib</code></td>
 </table>
 
