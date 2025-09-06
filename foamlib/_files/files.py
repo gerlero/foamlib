@@ -886,7 +886,7 @@ class FoamFieldFile(FoamFile):
         return ret
 
     @property
-    def dimensions(self) -> DimensionSet | Sequence[float]:
+    def dimensions(self) -> DimensionSet:
         """Alias of ``self["dimensions"]``."""
         ret = self["dimensions"]
         if not isinstance(ret, DimensionSet):
