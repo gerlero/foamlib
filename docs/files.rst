@@ -1,5 +1,5 @@
-File manipulation
-=================
+📄 File manipulation
+====================
 
 .. autoclass:: foamlib.FoamFile
    :members:

@@ -1,5 +1,5 @@
-Parametric study
-================
+🗃️ Parametric study (:py:mod:`foamlib.preprocessing`)
+=====================================================
 
 *Functionality contributed by* `Henning Scheufler <https://github.com/HenningScheufler>`_.
 

@@ -1,11 +1,7 @@
-Case manipulation
-=================
+📁 Case manipulation
+====================
 
 .. autoclass:: foamlib.FoamCaseBase
-   :members:
-   :show-inheritance:
-
-.. autoclass:: foamlib.FoamCaseRunBase
    :members:
    :show-inheritance:
 
@@ -20,3 +16,6 @@ Case manipulation
 .. autoclass:: foamlib.AsyncSlurmFoamCase
    :members:
    :show-inheritance:
+
+.. autoclass:: foamlib.CalledProcessError
+   :members:
