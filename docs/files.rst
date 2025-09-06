@@ -1,6 +1,8 @@
 File manipulation
 =================
 
+foamlib provides comprehensive support for reading, writing, and manipulating OpenFOAM files.
+
 .. autoclass:: foamlib.FoamFile
    :members:
 
