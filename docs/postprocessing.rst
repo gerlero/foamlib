@@ -1,5 +1,5 @@
-Post-processing
-===============
+👓 Post-processing (:py:mod:`foamlib.postprocessing`)
+=====================================================
 
 *Functionality contributed by* `Henning Scheufler <https://github.com/HenningScheufler>`_.
 

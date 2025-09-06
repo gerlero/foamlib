@@ -1,5 +1,5 @@
-Example
-=======
+▶️ Example
+==========
 
 This example script sets up and runs a validation test case for the ``scalarTransportFoam`` solver, verifying the diffusion of a scalar field in a simplified 2D domain.
 
