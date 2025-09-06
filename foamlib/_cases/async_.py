@@ -346,6 +346,50 @@ class AsyncFoamCase(FoamCaseRunBase):
 
         await self._rmtree(calls.value.path)
 
+    @awaitableasynccontextmanager
+    async def run_context(
+        self,
+        cmd: Sequence[str | os.PathLike[str]] | str | None = None,
+        *,
+        parallel: bool | None = None,
+        cpus: int | None = None,
+        check: bool = True,
+        log: bool = True,
+    ) -> AsyncGenerator[Self, None]:
+        """
+        Run this case as an async context manager that cleans the case on exit.
+
+        This method provides the same functionality as :meth:`run()` but returns an async context manager.
+        When used with an ``async with`` statement, the case will be cleaned automatically when exiting
+        the context.
+
+        :param cmd: The command to run. If ``None``, run the case. If a sequence, the first element
+            is the command and the rest are arguments. If a string, ``cmd`` is executed in a shell.
+        :param parallel: If ``True``, run in parallel using MPI. If None, autodetect whether to run
+            in parallel.
+        :param cpus: The number of CPUs to use. If ``None``, autodetect from to the case.
+        :param check: If ``True``, raise a :class:`CalledProcessError` if any command returns a non-zero
+            exit code.
+        :param log: If ``True``, log the command output to ``log.*`` files in the case directory.
+
+        :return: An async context manager that yields the case instance.
+
+        Example usage: ::
+
+            from foamlib import AsyncFoamCase
+
+            case = AsyncFoamCase("path/to/case")
+            async with case.run_context(parallel=False) as running_case:
+                # Case has been run and is ready for analysis
+                print(f"Simulation completed with {len(running_case)} time steps")
+                # Case will be cleaned automatically when exiting this block
+        """
+        await self.run(cmd=cmd, parallel=parallel, cpus=cpus, check=check, log=log)
+        try:
+            yield self
+        finally:
+            await self.clean()
+
     @staticmethod
     def map(
         coro: Callable[[_X], Awaitable[_Y]], iterable: Iterable[_X]

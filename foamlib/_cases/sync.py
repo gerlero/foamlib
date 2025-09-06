@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import shutil
 import sys
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Callable, overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Collection, Sequence
+    from collections.abc import Collection, Generator, Sequence
 else:
-    from typing import Collection, Sequence
+    from typing import Collection, Generator, Sequence
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -303,3 +304,47 @@ class FoamCase(FoamCaseRunBase):
             pass
 
         return calls.value
+
+    @contextmanager
+    def run_context(
+        self,
+        cmd: Sequence[str | os.PathLike[str]] | str | None = None,
+        *,
+        parallel: bool | None = None,
+        cpus: int | None = None,
+        check: bool = True,
+        log: bool = True,
+    ) -> Generator[Self, None, None]:
+        """
+        Run this case as a context manager that cleans the case on exit.
+
+        This method provides the same functionality as :meth:`run()` but returns a context manager.
+        When used with a ``with`` statement, the case will be cleaned automatically when exiting
+        the context.
+
+        :param cmd: The command to run. If ``None``, run the case. If a sequence, the first element
+            is the command and the rest are arguments. If a string, ``cmd`` is executed in a shell.
+        :param parallel: If ``True``, run in parallel using MPI. If None, autodetect whether to run
+            in parallel.
+        :param cpus: The number of CPUs to use. If ``None``, autodetect from to the case.
+        :param check: If ``True``, raise a :class:`CalledProcessError` if any command returns a non-zero
+            exit code.
+        :param log: If ``True``, log the command output to ``log.*`` files in the case directory.
+
+        :return: A context manager that yields the case instance.
+
+        Example usage: ::
+
+            from foamlib import FoamCase
+
+            case = FoamCase("path/to/case")
+            with case.run_context(parallel=False) as running_case:
+                # Case has been run and is ready for analysis
+                print(f"Simulation completed with {len(running_case)} time steps")
+                # Case will be cleaned automatically when exiting this block
+        """
+        self.run(cmd=cmd, parallel=parallel, cpus=cpus, check=check, log=log)
+        try:
+            yield self
+        finally:
+            self.clean()
