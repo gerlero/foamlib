@@ -17,5 +17,9 @@
    :members:
    :show-inheritance:
 
+
+Exceptions
+----------
+
 .. autoclass:: foamlib.CalledProcessError
    :members:
