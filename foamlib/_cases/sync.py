@@ -37,7 +37,7 @@ class FoamCase(FoamCaseRunBase):
     """
     An OpenFOAM case with synchronous execution capabilities.
 
-    Extends :class:`FoamCaseRunBase` to provide methods for running and cleaning cases,
+    Extends :class:`FoamCaseBase` to provide methods for running and cleaning cases,
     as well as accessing files.
 
     Access the time directories of the case as a sequence, e.g. ``case[0]`` or ``case[-1]``.

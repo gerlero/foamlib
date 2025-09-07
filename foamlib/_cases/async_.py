@@ -48,9 +48,8 @@ class AsyncFoamCase(FoamCaseRunBase):
     """
     An OpenFOAM case with asynchronous execution capabilities.
 
-    Extends :class:`FoamCaseRunBase` to provide methods for running and cleaning cases
-    asynchronously, as well as accessing files. This allows for non-blocking execution
-    and concurrent operations.
+    Extends :class:`FoamCaseBase` with methods for running and cleaning cases asynchronously.
+    This allows for non-blocking execution and parallel execution of multiple cases.
 
     Access the time directories of the case as a sequence, e.g. ``case[0]`` or ``case[-1]``.
     These will return :class:`AsyncFoamCase.TimeDirectory` objects.
