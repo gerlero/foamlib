@@ -146,6 +146,9 @@
 # VS Code
 **/.vscode
 
+# Created folders in example 
+examples/parametricStudy/Cases
+
 # Docker
 **/Dockerfile
 **/.dockerignore
