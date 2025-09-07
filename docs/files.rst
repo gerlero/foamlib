@@ -3,6 +3,12 @@
 
 .. autoclass:: foamlib.FoamFile
    :show-inheritance:
+   
+   .. autoproperty:: foamlib.FoamFile.version
+   .. autoproperty:: foamlib.FoamFile.format
+   .. autoproperty:: foamlib.FoamFile.class_
+   .. autoproperty:: foamlib.FoamFile.location
+   .. autoproperty:: foamlib.FoamFile.object_
 
    .. automethod:: foamlib.FoamFile.__getitem__
    .. automethod:: foamlib.FoamFile.__setitem__
@@ -73,7 +79,6 @@
    .. autoproperty:: foamlib.FoamFieldFile.internal_field
    .. autoproperty:: foamlib.FoamFieldFile.boundary_field
    .. autoproperty:: foamlib.FoamFieldFile.dimensions
-
 
    .. autoclass:: foamlib.FoamFieldFile.BoundariesSubDict
       :show-inheritance:
