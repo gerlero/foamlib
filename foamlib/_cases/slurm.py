@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import shutil
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 else:
-    from typing import Sequence
+    from typing import Callable, Sequence
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -16,8 +17,9 @@ else:
 
 if TYPE_CHECKING:
     import os
+    from io import TextIOBase
 
-from ._subprocess import run_async
+from ._subprocess import DEVNULL, STDOUT, run_async
 from .async_ import AsyncFoamCase
 
 
@@ -39,11 +41,23 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
         cmd: Sequence[str | os.PathLike[str]] | str,
         *,
         cpus: int,
+        case: os.PathLike[str],
+        check: bool = True,
+        stdout: int | TextIOBase = DEVNULL,
+        stderr: int | TextIOBase = STDOUT,
+        process_stdout: Callable[[str], None] = lambda _: None,
         fallback: bool = False,
-        **kwargs: Any,
     ) -> None:
         if fallback and shutil.which("salloc") is None:
-            await AsyncFoamCase._run(cmd, cpus=cpus, **kwargs)
+            await AsyncFoamCase._run(
+                cmd,
+                case=case,
+                check=check,
+                stdout=stdout,
+                stderr=stderr,
+                process_stdout=process_stdout,
+                cpus=cpus,
+            )
             return
 
         if isinstance(cmd, str):
@@ -55,7 +69,14 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
 
             cmd = ["salloc", "-n", str(cpus), "--job-name", "foamlib", *cmd]
 
-        await run_async(cmd, **kwargs)
+        await run_async(
+            cmd,
+            case=case,
+            check=check,
+            stdout=stdout,
+            stderr=stderr,
+            process_stdout=process_stdout,
+        )
 
     @override
     async def run(
@@ -86,4 +107,5 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
             log=log,
             fallback=fallback,
         ):
+            assert asyncio.iscoroutine(coro)
             await coro

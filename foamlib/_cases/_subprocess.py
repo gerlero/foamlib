@@ -50,10 +50,10 @@ PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
 
 
-def _env(case: Path) -> Mapping[str, str]:
+def _env(case: os.PathLike[str]) -> Mapping[str, str]:
     env = os.environ.copy()
 
-    env["PWD"] = str(case)
+    env["PWD"] = str(Path(case))
 
     if os.environ.get("FOAM_LD_LIBRARY_PATH", "") and not os.environ.get(
         "DYLD_LIBRARY_PATH", ""
@@ -66,7 +66,7 @@ def _env(case: Path) -> Mapping[str, str]:
 def run_sync(
     cmd: Sequence[str | os.PathLike[str]],
     *,
-    case: Path,
+    case: os.PathLike[str],
     check: bool = True,
     stdout: int | TextIOBase = DEVNULL,
     stderr: int | TextIOBase = STDOUT,
@@ -144,7 +144,7 @@ def run_sync(
 async def run_async(
     cmd: Sequence[str | os.PathLike[str]],
     *,
-    case: Path,
+    case: os.PathLike[str],
     check: bool = True,
     stdout: int | TextIOBase = DEVNULL,
     stderr: int | TextIOBase = STDOUT,
@@ -226,7 +226,7 @@ class LogFileMonitor(AbstractContextManager["LogFileMonitor"]):
 
     def __init__(
         self,
-        case_path: Path,
+        case_path: os.PathLike[str],
         process_line: Callable[[str], None] | None = None,
     ) -> None:
         """
@@ -309,7 +309,7 @@ class AsyncLogFileMonitor(
 
     def __init__(
         self,
-        case_path: Path,
+        case_path: os.PathLike[str],
         process_line: Callable[[str], None] | None = None,
     ) -> None:
         super().__init__(case_path, process_line)
