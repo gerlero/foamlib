@@ -146,6 +146,5 @@ uv.lock
 # VS Code
 .vscode
 
-
-# create folders in example 
-example/parametricStudy/Cases
+# Created folders in example 
+./examples/parametricStudy/Cases
