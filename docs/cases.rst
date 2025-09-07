@@ -13,6 +13,7 @@
    .. autoproperty:: foamlib.FoamCaseBase.transport_properties
    .. autoproperty:: foamlib.FoamCaseBase.turbulence_properties
    .. autoproperty:: foamlib.FoamCaseBase.application
+
    .. automethod:: foamlib.FoamCaseBase.file
    .. automethod:: foamlib.FoamCaseBase.__getitem__
    .. automethod:: foamlib.FoamCaseBase.__iter__
@@ -24,6 +25,7 @@
 
       .. autoproperty:: foamlib.FoamCaseBase.TimeDirectory.name
       .. autoproperty:: foamlib.FoamCaseBase.TimeDirectory.time
+
       .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__getitem__
       .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__iter__
       .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__contains__
