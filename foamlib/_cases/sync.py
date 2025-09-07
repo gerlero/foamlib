@@ -252,7 +252,7 @@ class FoamCase(FoamCaseRunBase):
         If used as a context manager (i.e., within a ``with`` block) the copy will be deleted
         automatically when exiting the block.
 
-        :param dst: The destination path. If ``None``, clone to ``$FOAM_RUN/foamlib``.
+        :param dst: The destination path. If ``None``, copy to a new directory in ``$FOAM_RUN/foamlib``.
 
         :return: The copy of the case.
 
@@ -284,7 +284,7 @@ class FoamCase(FoamCaseRunBase):
         If used as a context manager (i.e., within a ``with`` block) the cloned copy will be deleted
         automatically when exiting the block.
 
-        :param dst: The destination path. If ``None``, clone to ``$FOAM_RUN/foamlib``.
+        :param dst: The destination path. If ``None``, clone to a new directory in ``$FOAM_RUN/foamlib``.
 
         :return: The clone of the case.
 

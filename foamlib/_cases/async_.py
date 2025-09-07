@@ -280,14 +280,14 @@ class AsyncFoamCase(FoamCaseRunBase):
     @awaitableasynccontextmanager
     async def copy(
         self, dst: os.PathLike[str] | str | None = None
-    ) -> AsyncGenerator[Self, None]:
+    ) -> AsyncGenerator[Self]:
         """
         Make a copy of this case.
 
-        If used as an asynchronous context manager (i.e., within an `async with` block) the copy
+        If used as an asynchronous context manager (i.e., within an ``async with`` block) the copy
         will be deleted automatically when exiting the block.
 
-        :param dst: The destination path. If `None`, clone to `$FOAM_RUN/foamlib`.
+        :param dst: The destination path. If ``None``, copy to a new directory in ``$FOAM_RUN/foamlib``.
 
         :return: The copy of the case.
 
@@ -318,13 +318,13 @@ class AsyncFoamCase(FoamCaseRunBase):
         """
         Clone this case (make a clean copy).
 
-        This is equivalent to running `(await self.copy()).clean()`, but it can be more efficient
+        This is equivalent to running ``(await self.copy()).clean()``, but it can be more efficient
         in cases that do not contain custom clean scripts.
 
-        If used as an asynchronous context manager (i.e., within an `async with` block) the cloned
+        If used as an asynchronous context manager (i.e., within an ``async with`` block) the cloned
         copy will be deleted automatically when exiting the block.
 
-        :param dst: The destination path. If `None`, clone to `$FOAM_RUN/foamlib`.
+        :param dst: The destination path. If ``None``, clone to a new directory in ``$FOAM_RUN/foamlib``.
 
         :return: The clone of the case.
 
