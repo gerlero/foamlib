@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gzip
+import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -21,13 +22,12 @@ else:
     from typing_extensions import override
 
 if TYPE_CHECKING:
-    import os
     from types import TracebackType
 
 from ._parsing import Parsed
 
 
-class FoamFileIO(AbstractContextManager["FoamFileIO"]):
+class FoamFileIO(AbstractContextManager["FoamFileIO"], os.PathLike[str]):
     def __init__(self, path: os.PathLike[str] | str) -> None:
         self.path = Path(path).absolute()
 
@@ -86,6 +86,10 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
             raise FileNotFoundError(self.path)
 
         return self.__parsed
+
+    @override
+    def __fspath__(self) -> str:
+        return str(self.path)
 
     @override
     def __repr__(self) -> str:

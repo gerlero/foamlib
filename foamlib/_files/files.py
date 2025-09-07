@@ -663,9 +663,6 @@ class FoamFile(
         with self:
             super().clear()
 
-    def __fspath__(self) -> str:
-        return str(self.path)
-
     def as_dict(self, *, include_header: bool = False) -> File:
         """
         Return a nested dict representation of the file.
