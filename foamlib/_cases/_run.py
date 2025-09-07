@@ -88,7 +88,11 @@ class FoamCaseRunBase(FoamCaseBase):
         cmd: Sequence[str | os.PathLike[str]] | str,
         *,
         cpus: int,
-        **kwargs: Any,
+        case: os.PathLike[str],
+        check: bool = True,
+        stdout: int | TextIOBase = DEVNULL,
+        stderr: int | TextIOBase = STDOUT,
+        process_stdout: Callable[[str], None] = lambda _: None,
     ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
@@ -334,7 +338,7 @@ class FoamCaseRunBase(FoamCaseBase):
 
     def _copy_calls(
         self, dst: os.PathLike[str] | str | None
-    ) -> Generator[Any, None, Self]:
+    ) -> Generator[object | Coroutine[None, None, object], None, Self]:
         if dst is None:
             dst = self.__mkrundir()
 
@@ -342,7 +346,9 @@ class FoamCaseRunBase(FoamCaseBase):
 
         return type(self)(dst)
 
-    def _clean_calls(self, *, check: bool) -> Generator[Any, None, None]:
+    def _clean_calls(
+        self, *, check: bool
+    ) -> Generator[object | Coroutine[None, None, object], None, None]:
         if (script_path := self.__clean_script()) is not None:
             yield self.run([script_path], cpus=0, check=check, log=False)
         else:
@@ -368,26 +374,30 @@ class FoamCaseRunBase(FoamCaseBase):
 
         return type(self)(dst)
 
-    def _restore_0_dir_calls(self) -> Generator[Any, None, None]:
+    def _restore_0_dir_calls(
+        self,
+    ) -> Generator[object | Coroutine[None, None, object], None, None]:
         yield self._rmtree(self.path / "0", ignore_errors=True)
         yield self._copytree(self.path / "0.orig", self.path / "0", symlinks=True)
 
     def _block_mesh_calls(
         self, *, check: bool, log: bool
-    ) -> Generator[Any, None, None]:
+    ) -> Generator[object | Coroutine[None, None, object], None, None]:
         yield self.run(["blockMesh"], cpus=0, check=check, log=log)
 
     def _decompose_par_calls(
         self, *, check: bool, log: bool
-    ) -> Generator[Any, None, None]:
+    ) -> Generator[object | Coroutine[None, None, object], None, None]:
         yield self.run(["decomposePar"], cpus=0, check=check, log=log)
 
     def _reconstruct_par_calls(
         self, *, check: bool, log: bool
-    ) -> Generator[Any, None, None]:
+    ) -> Generator[object | Coroutine[None, None, object], None, None]:
         yield self.run(["reconstructPar"], cpus=0, check=check, log=log)
 
-    def _prepare_calls(self, *, check: bool, log: bool) -> Generator[Any, None, None]:
+    def _prepare_calls(
+        self, *, check: bool, log: bool
+    ) -> Generator[object | Coroutine[None, None, object], None, None]:
         if (script_path := self.__prepare_script()) is not None:
             yield self.run([script_path], log=log, check=check)
 
@@ -398,12 +408,12 @@ class FoamCaseRunBase(FoamCaseBase):
         self,
         cmd: Sequence[str | os.PathLike[str]] | str | None = None,
         *,
+        cpus: int | None = None,
         parallel: bool | None,
-        cpus: int | None,
         check: bool,
         log: bool,
         **kwargs: Any,
-    ) -> Generator[Any, None, None]:
+    ) -> Generator[object | Coroutine[None, None, object], None, None]:
         if cmd is not None:
             if parallel:
                 if cpus is None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shutil
 import sys
-from typing import TYPE_CHECKING, Any, Callable, overload
+from typing import TYPE_CHECKING, Callable, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Collection, Sequence
@@ -19,13 +19,13 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
-
 if TYPE_CHECKING:
     import os
+    from io import TextIOBase
     from types import TracebackType
 
 from ._run import FoamCaseRunBase
-from ._subprocess import run_sync
+from ._subprocess import DEVNULL, STDOUT, run_sync
 from ._util import ValuedGenerator
 from .base import FoamCaseBase
 
@@ -85,12 +85,23 @@ class FoamCase(FoamCaseRunBase):
         cmd: Sequence[str | os.PathLike[str]] | str,
         *,
         cpus: int,
-        **kwargs: Any,
+        case: os.PathLike[str],
+        check: bool = True,
+        stdout: int | TextIOBase = DEVNULL,
+        stderr: int | TextIOBase = STDOUT,
+        process_stdout: Callable[[str], None] = lambda _: None,
     ) -> None:
         if isinstance(cmd, str):
             cmd = [*FoamCase._SHELL, cmd]
 
-        run_sync(cmd, **kwargs)
+        run_sync(
+            cmd,
+            case=case,
+            check=check,
+            stdout=stdout,
+            stderr=stderr,
+            process_stdout=process_stdout,
+        )
 
     @override
     @staticmethod
