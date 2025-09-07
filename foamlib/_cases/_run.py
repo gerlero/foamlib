@@ -83,10 +83,6 @@ class FoamCaseRunBase(FoamCaseBase):
 
     __progress = SingletonContextManager(Progress)
 
-    @override
-    def __delitem__(self, key: int | float | str) -> None:
-        shutil.rmtree(self[key].path)
-
     @staticmethod
     @abstractmethod
     def _run(
