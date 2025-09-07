@@ -68,13 +68,15 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             """The name of this time directory (the time as a string)."""
             return self.path.name
 
-        def __getitem__(self, key: str) -> FoamFieldFile:
+        def __getitem__(self, key: str, /) -> FoamFieldFile:
+            """Return the field file with the given name in this time directory."""
             if (self.path / f"{key}.gz").is_file() and not (self.path / key).is_file():
                 return FoamFieldFile(self.path / f"{key}.gz")
             return FoamFieldFile(self.path / key)
 
         @override
-        def __contains__(self, obj: object) -> bool:
+        def __contains__(self, obj: object, /) -> bool:
+            """Return ``True`` if the given field file or name exists in this time directory."""
             if isinstance(obj, FoamFieldFile):
                 return obj.path.parent == self.path and obj.path.is_file()
             if isinstance(obj, str):
@@ -85,6 +87,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
         @override
         def __iter__(self) -> Iterator[FoamFieldFile]:
+            """Return an iterator over the field files in this time directory."""
             for p in self.path.iterdir():
                 if p.is_file() and (
                     p.suffix != ".gz" or not p.with_suffix("").is_file()
@@ -93,13 +96,17 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
         @override
         def __len__(self) -> int:
+            """Return the number of field files in this time directory."""
             return len(list(iter(self)))
 
-        def __delitem__(self, key: str) -> None:
-            if (self.path / f"{key}.gz").is_file() and not (self.path / key).is_file():
-                (self.path / f"{key}.gz").unlink()
+        def __delitem__(self, name: str, /) -> None:
+            """Delete the field file with the given name in this time directory."""
+            if (self.path / f"{name}.gz").is_file() and not (
+                self.path / name
+            ).is_file():
+                (self.path / f"{name}.gz").unlink()
             else:
-                (self.path / key).unlink()
+                (self.path / name).unlink()
 
         def __fspath__(self) -> str:
             return str(self.path)
@@ -129,15 +136,20 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         return times
 
     @overload
-    def __getitem__(self, index: int | float | str) -> FoamCaseBase.TimeDirectory: ...
+    def __getitem__(
+        self, index: int | float | str, /
+    ) -> FoamCaseBase.TimeDirectory: ...
 
     @overload
     def __getitem__(self, index: slice) -> Sequence[FoamCaseBase.TimeDirectory]: ...
 
     @override
     def __getitem__(
-        self, index: int | slice | float | str
+        self,
+        index: int | slice | float | str,
+        /,
     ) -> FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]:
+        """Return the time directory at the given index (``int``), indices (``slice``), name (``str``), or time (``float``)."""
         if isinstance(index, str):
             return FoamCaseBase.TimeDirectory(self.path / index)
         if isinstance(index, float):
@@ -149,10 +161,28 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         return self._times[index]
 
     @override
+    def __iter__(self) -> Iterator[FoamCaseBase.TimeDirectory]:
+        """Return an iterator over the time directories in the case."""
+        return iter(self._times)
+
+    @override
+    def __contains__(self, obj: object, /) -> bool:
+        """Return ``True`` if the given time directory, name, or time exists in the case."""
+        if isinstance(obj, FoamCaseBase.TimeDirectory):
+            return obj in self._times
+        if isinstance(obj, str):
+            return any(time.name == obj for time in self._times)
+        if isinstance(obj, float):
+            return any(time.time == obj for time in self._times)
+        return False
+
+    @override
     def __len__(self) -> int:
+        """Return the number of time directories in the case."""
         return len(self._times)
 
-    def __delitem__(self, key: int | float | str) -> None:
+    def __delitem__(self, key: int | float | str, /) -> None:
+        """Delete the time directory at the given index (``int``), name (``str``), or time (``float``)."""
         shutil.rmtree(self[key].path)
 
     @property
