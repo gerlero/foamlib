@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import shlex
-import shutil
 import sys
 import tempfile
 from abc import abstractmethod
@@ -82,10 +81,6 @@ class FoamCaseRunBase(FoamCaseBase):
     _SHELL = ("bash", "-c")
 
     __progress = SingletonContextManager(Progress)
-
-    @override
-    def __delitem__(self, key: int | float | str) -> None:
-        shutil.rmtree(self[key].path)
 
     @staticmethod
     @abstractmethod
