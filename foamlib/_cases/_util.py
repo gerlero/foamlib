@@ -4,6 +4,7 @@ import functools
 import sys
 import threading
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,6 +27,7 @@ else:
     from typing_extensions import override
 
 if TYPE_CHECKING:
+    import os
     from types import TracebackType
 
 
@@ -105,3 +107,13 @@ class SingletonContextManager(AbstractContextManager[_R]):
                 assert self._cm is not None
                 return self._cm.__exit__(exc_type, exc_val, exc_tb)
             return False
+
+
+def is_path_relative_to(path: os.PathLike[str], other: os.PathLike[str]) -> bool:
+    if sys.version_info >= (3, 9):
+        return Path(path).is_relative_to(Path(other))
+    try:
+        Path(path).relative_to(Path(other))
+    except ValueError:
+        return False
+    return True
