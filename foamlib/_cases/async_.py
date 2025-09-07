@@ -125,7 +125,7 @@ class AsyncFoamCase(FoamCaseRunBase):
         cmd: Sequence[str | os.PathLike[str]] | str,
         *,
         cpus: int,
-        **kwargs: Any,
+        **kwargs: Any,  # TODO: Could be more specific based on subprocess params
     ) -> None:
         if isinstance(cmd, str):
             cmd = [*AsyncFoamCase._SHELL, cmd]

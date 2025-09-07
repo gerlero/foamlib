@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 if sys.version_info >= (3, 9):
     from collections.abc import (
+        Awaitable,
         Callable,
         Collection,
         Coroutine,
@@ -21,6 +22,7 @@ if sys.version_info >= (3, 9):
 else:
     from typing import (
         AbstractSet,
+        Awaitable,
         Callable,
         Collection,
         Coroutine,
@@ -30,6 +32,7 @@ else:
 
 if TYPE_CHECKING:
     from io import TextIOBase
+
 
 from rich.progress import Progress
 
@@ -88,7 +91,7 @@ class FoamCaseRunBase(FoamCaseBase):
         cmd: Sequence[str | os.PathLike[str]] | str,
         *,
         cpus: int,
-        **kwargs: Any,
+        **kwargs: Any,  # TODO: Could be more specific based on subprocess params
     ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
@@ -116,11 +119,11 @@ class FoamCaseRunBase(FoamCaseBase):
         raise NotImplementedError
 
     @abstractmethod
-    def copy(self, dst: os.PathLike[str] | str | None = None) -> Any:
+    def copy(self, dst: os.PathLike[str] | str | None = None) -> Self | Awaitable[Self]:
         raise NotImplementedError
 
     @abstractmethod
-    def clone(self, dst: os.PathLike[str] | str | None = None) -> Any:
+    def clone(self, dst: os.PathLike[str] | str | None = None) -> Self | Awaitable[Self]:
         raise NotImplementedError
 
     @abstractmethod
@@ -402,7 +405,7 @@ class FoamCaseRunBase(FoamCaseBase):
         cpus: int | None,
         check: bool,
         log: bool,
-        **kwargs: Any,
+        **kwargs: Any,  # TODO: Could be more specific based on subprocess params
     ) -> Generator[Any, None, None]:
         if cmd is not None:
             if parallel:
