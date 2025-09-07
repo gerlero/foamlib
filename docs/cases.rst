@@ -19,6 +19,7 @@
    .. automethod:: foamlib.FoamCaseBase.__iter__
    .. automethod:: foamlib.FoamCaseBase.__contains__
    .. automethod:: foamlib.FoamCaseBase.__len__
+   .. automethod:: foamlib.FoamCaseBase.__delitem__
 
    .. autoclass:: foamlib.FoamCaseBase.TimeDirectory
       :show-inheritance:
@@ -30,6 +31,7 @@
       .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__iter__
       .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__contains__
       .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__len__
+      .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__delitem__
 
 
 .. autoclass:: foamlib.FoamCase
