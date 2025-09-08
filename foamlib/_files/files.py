@@ -14,8 +14,12 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
+import multicollections.abc
 import numpy as np
-from multicollections.abc import MutableMultiMapping, with_default
+from multicollections.abc import (
+    MutableMultiMapping,
+    with_default,
+)
 
 from ._io import FoamFileIO
 from ._parsing import Parsed
@@ -120,6 +124,80 @@ class FoamFile(
     Dimensioned = Dimensioned
     DimensionSet = DimensionSet
 
+    class KeysView(multicollections.abc.KeysView["str | None"]):
+        def __init__(self, file: FoamFile, *, include_header: bool = False) -> None:
+            self._file = file
+            self._include_header = include_header
+
+        @override
+        def __iter__(self) -> Iterator[str | None]:
+            return self._file._iter(include_header=self._include_header)
+
+        @override
+        def __len__(self) -> int:
+            return len(list(iter(self)))
+
+        @override
+        def __contains__(self, key: object) -> bool:
+            return any(k == key for k in iter(self))
+
+    class ValuesView(
+        multicollections.abc.ValuesView["Data | StandaloneData | FoamFile.SubDict"]
+    ):
+        def __init__(self, file: FoamFile, *, include_header: bool = False) -> None:
+            self._file = file
+            self._include_header = include_header
+
+        @override
+        def __iter__(self) -> Iterator[Data | StandaloneData | FoamFile.SubDict]:
+            for k, v in self._file._get_parsed().items():
+                if k != ("FoamFile",) or self._include_header:
+                    yield v if v is not ... else FoamFile.SubDict(self._file, k)
+
+        @override
+        def __len__(self) -> int:
+            return len(list(iter(self)))
+
+        @override
+        def __contains__(self, value: object) -> bool:
+            return value in list(iter(self))
+
+    class ItemsView(
+        multicollections.abc.ItemsView[
+            "str | None", "Data | StandaloneData | FoamFile.SubDict"
+        ]
+    ):
+        def __init__(
+            self,
+            file: FoamFile,
+            *,
+            include_header: bool = False,
+            keywords: tuple[str, ...] = (),
+        ) -> None:
+            assert keywords or include_header
+            self._file = file
+            self._include_header = include_header
+            self._keywords = keywords
+
+        @override
+        def __iter__(
+            self,
+        ) -> Iterator[tuple[str | None, Data | StandaloneData | FoamFile.SubDict]]:
+            for k, v in self._file._get_parsed().items():
+                if k != ("FoamFile",) or self._include_header:
+                    yield (
+                        k[-1] if k else None,
+                        v if v is not ... else FoamFile.SubDict(self._file, k),
+                    )
+
+        @override
+        def __len__(self) -> int:
+            return len(list(iter(self)))
+
+        @override
+        def __contains__(self, item: object) -> bool:
+            return item in list(iter(self))
+
     class SubDict(
         MutableMultiMapping[str, "Data | FoamFile.SubDict"],
     ):
@@ -151,6 +229,67 @@ class FoamFile(
                 print(file["ddtSchemes"]["default"])
                 file["ddtSchemes"]["default"] = "Euler"
         """
+
+        class KeysView(multicollections.abc.KeysView[str]):
+            def __init__(self, subdict: FoamFile.SubDict) -> None:
+                self._subdict = subdict
+
+            @override
+            def __iter__(self) -> Iterator[str]:
+                return self._subdict._file._iter(keywords=self._subdict._keywords)
+
+            @override
+            def __len__(self) -> int:
+                return len(list(iter(self)))
+
+            @override
+            def __contains__(self, key: object) -> bool:
+                return any(k == key for k in iter(self))
+
+        class ValuesView(multicollections.abc.ValuesView["Data | FoamFile.SubDict"]):
+            def __init__(self, subdict: FoamFile.SubDict) -> None:
+                self._subdict = subdict
+
+            @override
+            def __iter__(self) -> Iterator[Data | FoamFile.SubDict]:
+                for k, v in self._subdict._file._get_parsed().items():
+                    if k[:-1] == self._subdict._keywords:
+                        yield (
+                            v
+                            if v is not ...
+                            else FoamFile.SubDict(self._subdict._file, k)
+                        )  # type: ignore [misc]
+
+            @override
+            def __len__(self) -> int:
+                return len(list(iter(self)))
+
+            @override
+            def __contains__(self, value: object) -> bool:
+                return any(v == value for v in iter(self))
+
+        class ItemsView(multicollections.abc.ItemsView[str, "Data | FoamFile.SubDict"]):
+            def __init__(self, subdict: FoamFile.SubDict) -> None:
+                self._subdict = subdict
+
+            @override
+            def __iter__(self) -> Iterator[tuple[str, Data | FoamFile.SubDict]]:
+                for k, v in self._subdict._file._get_parsed().items():
+                    if k[:-1] == self._subdict._keywords:
+                        yield (
+                            k[-1] if k else None,
+                            v
+                            if v is not ...
+                            else FoamFile.SubDict(self._subdict._file, k),
+                        )  # type: ignore [misc]
+
+            @override
+            def __len__(self) -> int:
+                return len(list(iter(self)))
+
+            @override
+            def __contains__(self, item: object) -> bool:
+                return any(i == item for i in iter(self))
 
         def __init__(self, _file: FoamFile, _keywords: tuple[str, ...]) -> None:
             self._file = _file
@@ -197,16 +336,16 @@ class FoamFile(
             return len(list(iter(self)))
 
         @override
-        def keys(self) -> Collection[str]:  # type: ignore[override]
-            return self._file.keys(_keywords=self._keywords)
+        def keys(self) -> FoamFile.SubDict.KeysView:
+            return FoamFile.SubDict.KeysView(self)
 
         @override
-        def values(self) -> Collection[Data | FoamFile.SubDict]:  # type: ignore[override]
-            return self._file.values(_keywords=self._keywords)
+        def values(self) -> FoamFile.SubDict.ValuesView:
+            return FoamFile.SubDict.ValuesView(self)
 
         @override
-        def items(self) -> Collection[tuple[str | None, Data | FoamFile.SubDict]]:  # type: ignore[override]
-            return self._file.items(_keywords=self._keywords)
+        def items(self) -> FoamFile.SubDict.ItemsView:
+            return FoamFile.SubDict.ItemsView(self)
 
         @override
         def update(
@@ -640,74 +779,44 @@ class FoamFile(
         """Return the number of top-level keywords in the FoamFile (excluding the FoamFile header if present)."""
         return len(list(iter(self)))
 
-    @overload  # type: ignore[override]
-    def keys(
-        self, *, include_header: bool = False, _keywords: tuple[str, ...]
-    ) -> Collection[str]: ...
-
-    @overload
-    def keys(
-        self, *, include_header: bool = False, _keywords: tuple[()] = ()
-    ) -> Collection[str | None]: ...
-
     @override
-    def keys(
-        self, *, include_header: bool = False, _keywords: tuple[str, ...] = ()
-    ) -> Collection[str | None]:
+    def keys(  # type: ignore[override]
+        self,
+        *,
+        include_header: bool = False,
+    ) -> FoamFile.KeysView:
         """
         Return a collection of the keywords in the FoamFile.
 
         :param include_header: Whether to include the "FoamFile" header in the output.
         """
-        return list(self._iter(keywords=_keywords, include_header=include_header))
-
-    @overload  # type: ignore[override]
-    def values(
-        self, *, include_header: bool = False, _keywords: tuple[str, ...]
-    ) -> Collection[Data | FoamFile.SubDict]: ...
-
-    @overload
-    def values(
-        self, *, include_header: bool = False, _keywords: tuple[()] = ()
-    ) -> Collection[Data | StandaloneData | FoamFile.SubDict]: ...
+        return FoamFile.KeysView(self, include_header=include_header)
 
     @override
     def values(
-        self, *, include_header: bool = False, _keywords: tuple[str, ...] = ()
-    ) -> Collection[Data | StandaloneData | FoamFile.SubDict]:
+        self,
+        *,
+        include_header: bool = False,
+    ) -> FoamFile.ValuesView:
         """
         Return a collection of the values in the FoamFile.
 
         :param include_header: Whether to include the "FoamFile" header in the output.
         """
-        return [
-            v for _, v in self.items(include_header=include_header, _keywords=_keywords)
-        ]
-
-    @overload  # type: ignore[override]
-    def items(
-        self, *, include_header: bool = False, _keywords: tuple[str, ...]
-    ) -> Collection[tuple[str, Data | FoamFile.SubDict]]: ...
-
-    @overload
-    def items(
-        self, *, include_header: bool = False, _keywords: tuple[()] = ()
-    ) -> Collection[tuple[str | None, Data | StandaloneData | FoamFile.SubDict]]: ...
+        return FoamFile.ValuesView(self, include_header=include_header)
 
     @override
-    def items(
-        self, *, include_header: bool = False, _keywords: tuple[str, ...] = ()
-    ) -> Collection[tuple[str | None, Data | StandaloneData | FoamFile.SubDict]]:
+    def items(  # type: ignore[override]
+        self,
+        *,
+        include_header: bool = False,
+    ) -> FoamFile.ItemsView:
         """
         Return a collection of the items (keyword-value pairs) in the FoamFile.
 
         :param include_header: Whether to include the "FoamFile" header in the output.
         """
-        return [
-            (k[-1] if k else None, v if v is not ... else FoamFile.SubDict(self, k))
-            for k, v in self._get_parsed().items()
-            if k[:-1] == _keywords and (k != ("FoamFile",) or include_header)
-        ]
+        return FoamFile.ItemsView(self, include_header=include_header)
 
     @override
     def update(
