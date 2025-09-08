@@ -15,7 +15,13 @@ else:
     from typing_extensions import override
 
 import numpy as np
-from multicollections.abc import MutableMultiMapping, with_default
+from multicollections.abc import (
+    ItemsView,
+    KeysView,
+    MutableMultiMapping,
+    ValuesView,
+    with_default,
+)
 
 from ._io import FoamFileIO
 from ._parsing import Parsed
@@ -61,6 +67,131 @@ def _tensor_kind_for_field(
 
     msg = f"Invalid field shape: {shape}"
     raise ValueError(msg)
+
+
+class FoamFileKeysView(KeysView["str | None"]):
+    """Keys view for FoamFile that returns a subclass of MultiMappingView."""
+
+    def __init__(self, foam_file: FoamFile, *, include_header: bool = False, keywords: tuple[str, ...] = ()) -> None:
+        # Don't call super().__init__ since we're not providing a MultiMapping
+        # We'll implement the required methods directly
+        self._foam_file = foam_file
+        self._include_header = include_header
+        self._keywords = keywords
+
+    def __iter__(self) -> Iterator[str | None]:
+        return self._foam_file._iter(keywords=self._keywords, include_header=self._include_header)
+
+    def __len__(self) -> int:
+        return len(list(iter(self)))
+
+    def __contains__(self, key: object) -> bool:
+        return key in list(iter(self))
+
+
+class FoamFileValuesView(ValuesView["Data | StandaloneData | FoamFile.SubDict"]):
+    """Values view for FoamFile that returns a subclass of MultiMappingView."""
+
+    def __init__(self, foam_file: FoamFile, *, include_header: bool = False, keywords: tuple[str, ...] = ()) -> None:
+        # Don't call super().__init__ since we're not providing a MultiMapping
+        # We'll implement the required methods directly
+        self._foam_file = foam_file
+        self._include_header = include_header
+        self._keywords = keywords
+
+    def __iter__(self) -> Iterator[Data | StandaloneData | FoamFile.SubDict]:
+        for k, v in self._foam_file._get_parsed().items():
+            if k[:-1] == self._keywords and (k != ("FoamFile",) or self._include_header):
+                yield v if v is not ... else FoamFile.SubDict(self._foam_file, k)
+
+    def __len__(self) -> int:
+        return len(list(iter(self)))
+
+    def __contains__(self, value: object) -> bool:
+        return value in list(iter(self))
+
+
+class FoamFileItemsView(ItemsView["str | None", "Data | StandaloneData | FoamFile.SubDict"]):
+    """Items view for FoamFile that returns a subclass of MultiMappingView."""
+
+    def __init__(self, foam_file: FoamFile, *, include_header: bool = False, keywords: tuple[str, ...] = ()) -> None:
+        # Don't call super().__init__ since we're not providing a MultiMapping
+        # We'll implement the required methods directly
+        self._foam_file = foam_file
+        self._include_header = include_header
+        self._keywords = keywords
+
+    def __iter__(self) -> Iterator[tuple[str | None, Data | StandaloneData | FoamFile.SubDict]]:
+        for k, v in self._foam_file._get_parsed().items():
+            if k[:-1] == self._keywords and (k != ("FoamFile",) or self._include_header):
+                yield (k[-1] if k else None, v if v is not ... else FoamFile.SubDict(self._foam_file, k))
+
+    def __len__(self) -> int:
+        return len(list(iter(self)))
+
+    def __contains__(self, item: object) -> bool:
+        return item in list(iter(self))
+
+
+class FoamFileSubDictKeysView(KeysView["str"]):
+    """Keys view for FoamFile.SubDict that returns a subclass of MultiMappingView."""
+
+    def __init__(self, subdict: FoamFile.SubDict) -> None:
+        # Don't call super().__init__ since we're not providing a MultiMapping
+        # We'll implement the required methods directly
+        self._subdict = subdict
+
+    def __iter__(self) -> Iterator[str]:
+        for k in self._subdict._file._iter(self._subdict._keywords):
+            assert k is not None
+            yield k
+
+    def __len__(self) -> int:
+        return len(list(iter(self)))
+
+    def __contains__(self, key: object) -> bool:
+        return key in list(iter(self))
+
+
+class FoamFileSubDictValuesView(ValuesView["Data | FoamFile.SubDict"]):
+    """Values view for FoamFile.SubDict that returns a subclass of MultiMappingView."""
+
+    def __init__(self, subdict: FoamFile.SubDict) -> None:
+        # Don't call super().__init__ since we're not providing a MultiMapping
+        # We'll implement the required methods directly
+        self._subdict = subdict
+
+    def __iter__(self) -> Iterator[Data | FoamFile.SubDict]:
+        for k, v in self._subdict._file._get_parsed().items():
+            if k[:-1] == self._subdict._keywords and k != ("FoamFile",):
+                yield v if v is not ... else FoamFile.SubDict(self._subdict._file, k)
+
+    def __len__(self) -> int:
+        return len(list(iter(self)))
+
+    def __contains__(self, value: object) -> bool:
+        return value in list(iter(self))
+
+
+class FoamFileSubDictItemsView(ItemsView["str", "Data | FoamFile.SubDict"]):
+    """Items view for FoamFile.SubDict that returns a subclass of MultiMappingView."""
+
+    def __init__(self, subdict: FoamFile.SubDict) -> None:
+        # Don't call super().__init__ since we're not providing a MultiMapping
+        # We'll implement the required methods directly
+        self._subdict = subdict
+
+    def __iter__(self) -> Iterator[tuple[str, Data | FoamFile.SubDict]]:
+        for k, v in self._subdict._file._get_parsed().items():
+            if k[:-1] == self._subdict._keywords and k != ("FoamFile",):
+                assert k[-1] is not None
+                yield (k[-1], v if v is not ... else FoamFile.SubDict(self._subdict._file, k))
+
+    def __len__(self) -> int:
+        return len(list(iter(self)))
+
+    def __contains__(self, item: object) -> bool:
+        return item in list(iter(self))
 
 
 class FoamFile(
@@ -198,15 +329,15 @@ class FoamFile(
 
         @override
         def keys(self) -> Collection[str]:  # type: ignore[override]
-            return self._file.keys(_keywords=self._keywords)
+            return FoamFileSubDictKeysView(self)
 
         @override
         def values(self) -> Collection[Data | FoamFile.SubDict]:  # type: ignore[override]
-            return self._file.values(_keywords=self._keywords)
+            return FoamFileSubDictValuesView(self)
 
         @override
         def items(self) -> Collection[tuple[str | None, Data | FoamFile.SubDict]]:  # type: ignore[override]
-            return self._file.items(_keywords=self._keywords)
+            return FoamFileSubDictItemsView(self)
 
         @override
         def update(
@@ -659,7 +790,7 @@ class FoamFile(
 
         :param include_header: Whether to include the "FoamFile" header in the output.
         """
-        return list(self._iter(keywords=_keywords, include_header=include_header))
+        return FoamFileKeysView(self, include_header=include_header, keywords=_keywords)
 
     @overload  # type: ignore[override]
     def values(
@@ -680,9 +811,7 @@ class FoamFile(
 
         :param include_header: Whether to include the "FoamFile" header in the output.
         """
-        return [
-            v for _, v in self.items(include_header=include_header, _keywords=_keywords)
-        ]
+        return FoamFileValuesView(self, include_header=include_header, keywords=_keywords)
 
     @overload  # type: ignore[override]
     def items(
@@ -703,11 +832,7 @@ class FoamFile(
 
         :param include_header: Whether to include the "FoamFile" header in the output.
         """
-        return [
-            (k[-1] if k else None, v if v is not ... else FoamFile.SubDict(self, k))
-            for k, v in self._get_parsed().items()
-            if k[:-1] == _keywords and (k != ("FoamFile",) or include_header)
-        ]
+        return FoamFileItemsView(self, include_header=include_header, keywords=_keywords)
 
     @override
     def update(
