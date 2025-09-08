@@ -397,7 +397,11 @@ class FoamFile(
                 self.class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
 
     def _calculate_spacing(
-        self, keywords: tuple[str, ...], start: int, end: int, operation: Literal["put", "add"]
+        self,
+        keywords: tuple[str, ...],
+        start: int,
+        end: int,
+        operation: Literal["put", "add"],
     ) -> tuple[bytes, bytes]:
         """Calculate before/after spacing for entry operations."""
         parsed = self._get_parsed(missing_ok=True)
