@@ -55,7 +55,21 @@ def normalize_data(
         items = ((normalize_keyword(k), normalize_data(v)) for k, v in data.items())  # type: ignore [arg-type, misc]
         if keywords is None:
             return as_dict_check_unique(items)  # type: ignore [arg-type]
-        return MultiDict(items)  # type: ignore [arg-type]
+        ret1: SubDict = MultiDict(items)  # type: ignore [arg-type]
+        seen = set()
+        for k, v in ret1.items():
+            if k.startswith("#"):
+                if isinstance(v, Mapping):
+                    msg = f"Directive {k} cannot have a dictionary as value"
+                    raise ValueError(msg)
+            else:
+                if k in seen:
+                    msg = (
+                        f"Duplicate keyword {k} in dictionary with keywords {keywords}"
+                    )
+                    raise ValueError(msg)
+                seen.add(k)
+        return ret1
 
     if keywords == () and is_sequence(data) and not isinstance(data, tuple):
         try:
@@ -102,9 +116,9 @@ def normalize_data(
         return normalize_data(data)
 
     if isinstance(data, np.ndarray):
-        ret = data.tolist()
-        assert isinstance(ret, (int, float, list))
-        return ret  # type: ignore [return-value]
+        ret2 = data.tolist()
+        assert isinstance(ret2, (int, float, list))
+        return ret2  # type: ignore [return-value]
 
     if (
         not isinstance(data, DimensionSet)
@@ -117,12 +131,13 @@ def normalize_data(
         return DimensionSet(*data)
 
     if keywords is None and isinstance(data, tuple) and len(data) == 2:
-        k, v = data
-        assert not isinstance(k, Mapping)
-        return (  # type: ignore [return-value]
-            normalize_keyword(k),  # type: ignore [arg-type]
-            normalize_data(v) if not isinstance(v, Mapping) else v,  # type: ignore [arg-type]
-        )
+        k2, v2 = data
+        if isinstance(k2, Mapping):
+            msg = "Keyword in keyword entry cannot be a dictionary"
+            raise ValueError(msg)
+        k2 = normalize_keyword(k2)  # type: ignore [arg-type]
+        v2 = normalize_data(v2)  # type: ignore [arg-type]
+        return (k2, v2)  # type: ignore [return-value]
 
     if (
         is_sequence(data)
