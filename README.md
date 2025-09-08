@@ -25,7 +25,7 @@ Parsing a `volVectorField` with 200k cells.<sup>[1](#benchmark)</sup>
 </div>
 
 
-## 🚀 Introduction
+## 👋 Introduction
 
 **foamlib** is a Python package designed to simplify and streamline OpenFOAM workflows. It provides:
 
