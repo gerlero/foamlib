@@ -74,7 +74,7 @@ Choose your preferred installation method:
   <td><code>docker pull microfluidica/foamlib</code></td>
 </table>
 
-## 🚀 Quick Start
+## 🚀 Quick start
 
 Here's a simple example to get you started:
 
