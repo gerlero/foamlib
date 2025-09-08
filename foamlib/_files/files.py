@@ -197,6 +197,18 @@ class FoamFile(
             return len(list(iter(self)))
 
         @override
+        def keys(self) -> Collection[str]:  # type: ignore[override]
+            return self._file.keys(_keywords=self._keywords)
+
+        @override
+        def values(self) -> Collection[Data | FoamFile.SubDict]:  # type: ignore[override]
+            return self._file.values(_keywords=self._keywords)
+
+        @override
+        def items(self) -> Collection[tuple[str | None, Data | FoamFile.SubDict]]:  # type: ignore[override]
+            return self._file.items(_keywords=self._keywords)
+
+        @override
         def update(
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike]
@@ -589,17 +601,33 @@ class FoamFile(
         with self:
             return self._get_parsed().popone(keywords)  # type: ignore [return-value]
 
-    def _iter(self, keywords: tuple[str, ...] = ()) -> Iterator[str | None]:
+    @overload
+    def _iter(
+        self, keywords: tuple[str, ...], *, include_header: bool = False
+    ) -> Iterator[str]: ...
+
+    @overload
+    def _iter(
+        self, keywords: tuple[()] = (), *, include_header: bool = False
+    ) -> Iterator[str | None]: ...
+
+    def _iter(
+        self, keywords: tuple[str, ...] = (), *, include_header: bool = False
+    ) -> Iterator[str | None]:
         yield from (
-            k[-1] if k else None for k in self._get_parsed() if k[:-1] == keywords
+            k[-1] if k else None
+            for k in self._get_parsed()
+            if k[:-1] == keywords and (k != ("FoamFile",) or include_header)
         )
 
     @override
     def __iter__(self) -> Iterator[str | None]:
-        yield from (k for k in self._iter() if k != "FoamFile")
+        """Iterate over the top-level keys in the FoamFile (excluding the FoamFile header if present)."""
+        return self._iter()
 
     @override
     def __contains__(self, keywords: object) -> bool:
+        """Check if the FoamFile contains the given keyword or tuple of keywords."""
         if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -609,7 +637,77 @@ class FoamFile(
 
     @override
     def __len__(self) -> int:
+        """Return the number of top-level keywords in the FoamFile (excluding the FoamFile header if present)."""
         return len(list(iter(self)))
+
+    @overload  # type: ignore[override]
+    def keys(
+        self, *, include_header: bool = False, _keywords: tuple[str, ...]
+    ) -> Collection[str]: ...
+
+    @overload
+    def keys(
+        self, *, include_header: bool = False, _keywords: tuple[()] = ()
+    ) -> Collection[str | None]: ...
+
+    @override
+    def keys(
+        self, *, include_header: bool = False, _keywords: tuple[str, ...] = ()
+    ) -> Collection[str | None]:
+        """
+        Return a collection of the keywords in the FoamFile.
+
+        :param include_header: Whether to include the "FoamFile" header in the output.
+        """
+        return list(self._iter(keywords=_keywords, include_header=include_header))
+
+    @overload  # type: ignore[override]
+    def values(
+        self, *, include_header: bool = False, _keywords: tuple[str, ...]
+    ) -> Collection[Data | FoamFile.SubDict]: ...
+
+    @overload
+    def values(
+        self, *, include_header: bool = False, _keywords: tuple[()] = ()
+    ) -> Collection[Data | StandaloneData | FoamFile.SubDict]: ...
+
+    @override
+    def values(
+        self, *, include_header: bool = False, _keywords: tuple[str, ...] = ()
+    ) -> Collection[Data | StandaloneData | FoamFile.SubDict]:
+        """
+        Return a collection of the values in the FoamFile.
+
+        :param include_header: Whether to include the "FoamFile" header in the output.
+        """
+        return [
+            v for _, v in self.items(include_header=include_header, _keywords=_keywords)
+        ]
+
+    @overload  # type: ignore[override]
+    def items(
+        self, *, include_header: bool = False, _keywords: tuple[str, ...]
+    ) -> Collection[tuple[str, Data | FoamFile.SubDict]]: ...
+
+    @overload
+    def items(
+        self, *, include_header: bool = False, _keywords: tuple[()] = ()
+    ) -> Collection[tuple[str | None, Data | StandaloneData | FoamFile.SubDict]]: ...
+
+    @override
+    def items(
+        self, *, include_header: bool = False, _keywords: tuple[str, ...] = ()
+    ) -> Collection[tuple[str | None, Data | StandaloneData | FoamFile.SubDict]]:
+        """
+        Return a collection of the items (keyword-value pairs) in the FoamFile.
+
+        :param include_header: Whether to include the "FoamFile" header in the output.
+        """
+        return [
+            (k[-1] if k else None, v if v is not ... else FoamFile.SubDict(self, k))
+            for k, v in self._get_parsed().items()
+            if k[:-1] == _keywords and (k != ("FoamFile",) or include_header)
+        ]
 
     @override
     def update(
@@ -666,9 +764,17 @@ class FoamFile(
             super().merge(other, **kwargs)  # type: ignore[arg-type]
 
     @override
-    def clear(self) -> None:
+    def clear(self, include_header: bool = False) -> None:
+        """
+        Remove all entries from the FoamFile.
+
+        :param include_header: Whether to also remove the "FoamFile" header.
+        """
         with self:
-            super().clear()
+            if include_header:
+                self._get_parsed().clear()
+            else:
+                super().clear()
 
     def __fspath__(self) -> str:
         return str(self.path)
