@@ -171,15 +171,6 @@ def normalize(
     raise TypeError(msg)
 
 
-def normalize_keyword(data: DataLike) -> Data:
-    ret = normalize(data)
-
-    if isinstance(data, str) and isinstance(ret, bool):
-        return data
-
-    return ret
-
-
 def dumps(
     data: DataLike | StandaloneDataLike | KeywordEntryLike | SubDictLike,
     *,
