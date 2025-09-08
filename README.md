@@ -99,7 +99,7 @@ print(f"Velocity at first cell: {velocity[0]}")
 my_case.clean()
 ```
 
-## 📚 Detailed Examples
+## 📚 More usage examples
 
 ### 🐑 Clone a case
 
