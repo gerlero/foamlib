@@ -19,7 +19,7 @@ from multicollections.abc import MutableMultiMapping, with_default
 
 from ._io import FoamFileIO
 from ._parsing import Parsed
-from ._serialization import dumps, normalize_data, normalize_keyword
+from ._serialization import dumps, normalize, normalize_keyword
 from .types import Dimensioned, DimensionSet
 
 if TYPE_CHECKING:
@@ -346,7 +346,7 @@ class FoamFile(
         elif not isinstance(keywords, tuple):
             keywords = (keywords,)
 
-        if keywords and not isinstance(normalize_keyword(keywords[-1]), str):
+        if keywords and not isinstance(normalize(keywords[-1], bool_ok=False), str):
             msg = f"Invalid keyword: {keywords[-1]}"
             raise ValueError(msg)
 
@@ -472,7 +472,7 @@ class FoamFile(
             content = (
                 before
                 + indentation
-                + dumps(normalize_keyword(keywords[-1]))
+                + dumps(normalize(keywords[-1], bool_ok=False))
                 + b"\n"
                 + indentation
                 + b"{\n"
@@ -505,9 +505,9 @@ class FoamFile(
             )
 
             if operation == "put":
-                parsed.put(keywords, normalize_data(data, keywords=keywords), content)
+                parsed.put(keywords, normalize(data, keywords=keywords), content)
             else:  # operation == "add"
-                parsed.add(keywords, normalize_data(data, keywords=keywords), content)
+                parsed.add(keywords, normalize(data, keywords=keywords), content)
 
         else:
             header = self.get("FoamFile", None)
@@ -516,9 +516,9 @@ class FoamFile(
             content = before + dumps(data, keywords=(), header=header) + after
 
             if operation == "put":
-                parsed.put((), normalize_data(data, keywords=keywords), content)
+                parsed.put((), normalize(data, keywords=keywords), content)
             else:  # operation == "add"
-                parsed.add((), normalize_data(data, keywords=keywords), content)
+                parsed.add((), normalize(data, keywords=keywords), content)
 
     @overload  # type: ignore[override]
     def __setitem__(

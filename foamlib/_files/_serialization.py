@@ -29,30 +29,34 @@ if TYPE_CHECKING:
 
 
 @overload
-def normalize_data(
-    data: DataLike, *, keywords: tuple[str, ...] | None = None
+def normalize(
+    data: DataLike, *, keywords: tuple[str, ...] | None = None, bool_ok: bool = True
 ) -> Data: ...
 
 
 @overload
-def normalize_data(
-    data: StandaloneDataLike, *, keywords: tuple[str, ...] | None = None
+def normalize(
+    data: StandaloneDataLike,
+    *,
+    keywords: tuple[str, ...] | None = None,
+    bool_ok: bool = True,
 ) -> StandaloneData: ...
 
 
 @overload
-def normalize_data(
-    data: SubDictLike, *, keywords: tuple[str, ...] | None = None
+def normalize(
+    data: SubDictLike, *, keywords: tuple[str, ...] | None = None, bool_ok: bool = True
 ) -> SubDict: ...
 
 
-def normalize_data(
+def normalize(
     data: DataLike | StandaloneDataLike | SubDictLike,
     *,
     keywords: tuple[str, ...] | None = None,
+    bool_ok: bool = True,
 ) -> Data | StandaloneData | SubDict:
     if isinstance(data, Mapping):
-        items = ((normalize_keyword(k), normalize_data(v)) for k, v in data.items())  # type: ignore [arg-type, misc]
+        items = ((normalize(k, bool_ok=False), normalize(v)) for k, v in data.items())  # type: ignore [arg-type, misc]
         if keywords is None:
             return as_dict_check_unique(items)  # type: ignore [arg-type]
         ret1: SubDict = MultiDict(items)  # type: ignore [arg-type]
@@ -108,12 +112,12 @@ def normalize_data(
                 if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] in (3, 6, 9)):
                     return arr
 
-            return [normalize_data(d) for d in data]  # type: ignore [arg-type, return-value]
+            return [normalize(d) for d in data]  # type: ignore [arg-type, return-value]
 
         if isinstance(data, int):
             return float(data)
 
-        return normalize_data(data)
+        return normalize(data)
 
     if isinstance(data, np.ndarray):
         ret2 = data.tolist()
@@ -135,8 +139,8 @@ def normalize_data(
         if isinstance(k2, Mapping):
             msg = "Keyword in keyword entry cannot be a dictionary"
             raise ValueError(msg)
-        k2 = normalize_keyword(k2)  # type: ignore [arg-type]
-        v2 = normalize_data(v2)  # type: ignore [arg-type]
+        k2 = normalize(k2, bool_ok=False)  # type: ignore [arg-type]
+        v2 = normalize(v2)  # type: ignore [arg-type]
         return (k2, v2)  # type: ignore [return-value]
 
     if (
@@ -144,14 +148,16 @@ def normalize_data(
         and not isinstance(data, DimensionSet)
         and not isinstance(data, tuple)
     ):
-        return [normalize_data(d) for d in data]  # type: ignore [arg-type, return-value]
+        return [normalize(d) for d in data]  # type: ignore [arg-type, return-value]
 
     if isinstance(data, tuple) and not isinstance(data, DimensionSet):
-        return tuple(normalize_data(d, keywords=keywords) for d in data)  # type: ignore [misc]
+        return tuple(normalize(d, keywords=keywords) for d in data)  # type: ignore [misc]
 
     if isinstance(data, str):
         with contextlib.suppress(ValueError, KeyError):
             s = Parsed(data)[()]
+            if not bool_ok and isinstance(s, bool):
+                return data
             if isinstance(s, (str, tuple, bool)):
                 return s
 
@@ -166,7 +172,7 @@ def normalize_data(
 
 
 def normalize_keyword(data: DataLike) -> Data:
-    ret = normalize_data(data)
+    ret = normalize(data)
 
     if isinstance(data, str) and isinstance(ret, bool):
         return data
@@ -181,7 +187,7 @@ def dumps(
     header: SubDictLike | None = None,
     tuple_is_keyword_entry: bool = False,
 ) -> bytes:
-    data = normalize_data(data, keywords=keywords)  # type: ignore [arg-type, misc]
+    data = normalize(data, keywords=keywords)  # type: ignore [arg-type, misc]
 
     if isinstance(data, Mapping):
         return (
