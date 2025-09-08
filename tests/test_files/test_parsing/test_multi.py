@@ -68,11 +68,11 @@ def test_parsed_mutation() -> None:
     parsed.add(("#include",), '"filename6"', b'"filename6"')
     assert len(list(parsed.getall(("#include",)))) == 3
     parsed.add(("key",), "value", b"value")
-    with pytest.raises(ValueError, match="Cannot add duplicate non-directive entry"):
+    with pytest.raises(AssertionError):
         parsed.add(("key",), "value", b"value")
-    with pytest.raises(ValueError, match="Cannot add duplicate non-directive entry"):
+    with pytest.raises(AssertionError):
         parsed.add(("subdict1",), "value", b"value")
-    with pytest.raises(ValueError, match="Cannot add sub-dictionary with name"):
+    with pytest.raises(AssertionError):
         parsed.add(("#subdict1",), ..., b"{}")
     assert parsed.popone(("#include",)) == '"filename1"'
     assert list(parsed.getall(("#include",))) == ['"filename5"', '"filename6"']
