@@ -1,6 +1,7 @@
 import pytest
 from foamlib import FoamFile
 from foamlib._files._parsing import Parsed
+from foamlib._files._serialization import normalize
 from multicollections import MultiDict
 
 CONTENTS = b"""
@@ -79,13 +80,16 @@ def test_parsed_mutation() -> None:
 
 
 def test_invalid_duplicate_keywords() -> None:
-    with pytest.raises(ValueError, match="Duplicate entry found for keyword"):
+    with pytest.raises(ValueError, match="Duplicate"):
         Parsed(b"""
         key value1;
         key value2;
         """)
 
-    with pytest.raises(ValueError, match="Duplicate entry found for keyword"):
+    with pytest.raises(ValueError, match="Duplicate"):
+        normalize(MultiDict([("key", "value1"), ("key", "value2")]), keywords=())
+
+    with pytest.raises(ValueError, match="Duplicate"):
         Parsed(b"""
         subdict {
             key value;
@@ -95,7 +99,18 @@ def test_invalid_duplicate_keywords() -> None:
         }
         """)
 
-    with pytest.raises(ValueError, match="Duplicate entry found for keyword"):
+    with pytest.raises(ValueError, match="Duplicate"):
+        normalize(
+            MultiDict(
+                [
+                    ("subdict", {"key": "value"}),
+                    ("subdict", {"key2": "value2"}),
+                ]
+            ),
+            keywords=(),
+        )
+
+    with pytest.raises(ValueError, match="Duplicate"):
         Parsed(b"""
         dict1 {
             key value1;
@@ -103,7 +118,18 @@ def test_invalid_duplicate_keywords() -> None:
         }
         """)
 
-    with pytest.raises(ValueError, match="Duplicate key found"):
+    with pytest.raises(ValueError, match="Duplicate"):
+        normalize(
+            {"dict1": MultiDict([("key", "value1"), ("key", "value2")])},
+            keywords=(),
+        )
+
+    with pytest.raises(ValueError, match="Duplicate"):
         Parsed(b"""
         list (subdict { a b; a c; });
         """)
+
+    with pytest.raises(ValueError, match="Duplicate"):
+        normalize(
+            {"list": [("subdict", MultiDict([("a", "b"), ("a", "c")]))]}, keywords=()
+        )
