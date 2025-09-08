@@ -396,48 +396,33 @@ class FoamFile(
             else:
                 self.class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
 
-    def _calculate_spacing_for_add(
-        self, keywords: tuple[str, ...], start: int, end: int
+    def _calculate_spacing(
+        self, keywords: tuple[str, ...], start: int, end: int, operation: Literal["put", "add"]
     ) -> tuple[bytes, bytes]:
-        """Calculate before/after spacing for add operations."""
+        """Calculate before/after spacing for entry operations."""
         parsed = self._get_parsed(missing_ok=True)
-        if start and not parsed.contents[:start].endswith(b"\n\n"):
-            if parsed.contents[:start].endswith(b"\n"):
-                before = b"\n" if len(keywords) <= 1 else b""
+
+        # For setitem operations, check if this is an update to an existing entry
+        # and preserve existing spacing for sub-dictionary entries
+        if operation == "put":
+            is_update = keywords in parsed
+            if is_update and len(keywords) > 1:
+                # For existing sub-dictionary entries, preserve existing formatting
+                existing_content = parsed.contents[start:end]
+                if existing_content.startswith(b"\n"):
+                    before = b""  # Preserve existing leading newlines
+                elif parsed.contents[:start].endswith(b"\n"):
+                    before = b""  # Already have a newline before
+                else:
+                    before = b"\n"  # Need to add a newline
+            elif start and not parsed.contents[:start].endswith(b"\n\n"):
+                if parsed.contents[:start].endswith(b"\n"):
+                    before = b"\n" if len(keywords) <= 1 else b""
+                else:
+                    before = b"\n\n" if len(keywords) <= 1 else b"\n"
             else:
-                before = b"\n\n" if len(keywords) <= 1 else b"\n"
-        else:
-            before = b""
-
-        if not parsed.contents[end:].strip() or parsed.contents[end:].startswith(b"}"):
-            after = b"\n" + b"    " * (len(keywords) - 2)
-        else:
-            after = b""
-
-        return before, after
-
-    def _calculate_spacing_for_setitem(
-        self, keywords: tuple[str, ...], start: int, end: int
-    ) -> tuple[bytes, bytes]:
-        """Calculate before/after spacing for setitem operations."""
-        parsed = self._get_parsed(missing_ok=True)
-        # Check if this is an update to an existing entry
-        is_update = keywords in parsed
-
-        # For updates to existing sub-dictionary entries, preserve existing spacing
-        # to avoid accumulating blank lines
-        if is_update and len(keywords) > 1:
-            # For existing sub-dictionary entries, check if the existing entry
-            # already starts with any newlines - if so, preserve that formatting
-            existing_content = parsed.contents[start:end]
-            if existing_content.startswith(b"\n"):
-                # Entry already has leading newlines, preserve them exactly
                 before = b""
-            # If the existing entry doesn't start with newlines, add appropriate spacing
-            elif parsed.contents[:start].endswith(b"\n"):
-                before = b""  # Already have a newline before
-            else:
-                before = b"\n"  # Need to add a newline
+        # Add operations use simpler spacing logic
         elif start and not parsed.contents[:start].endswith(b"\n\n"):
             if parsed.contents[:start].endswith(b"\n"):
                 before = b"\n" if len(keywords) <= 1 else b""
@@ -446,12 +431,31 @@ class FoamFile(
         else:
             before = b""
 
+        # Calculate after spacing (same for both operations)
         if not parsed.contents[end:].strip() or parsed.contents[end:].startswith(b"}"):
             after = b"\n" + b"    " * (len(keywords) - 2)
         else:
             after = b""
 
         return before, after
+
+    def _perform_entry_operation(
+        self,
+        keywords: str | tuple[str, ...] | None,
+        data: DataLike | StandaloneDataLike | SubDictLike,
+        operation: Literal["put", "add"],
+    ) -> None:
+        """Shared method for performing entry operations (setitem and add)."""
+        keywords = self._normalize_and_validate_keywords(keywords)
+
+        with self:
+            self._write_header_if_needed(keywords)
+            self._update_class_for_field_if_needed(keywords, data)
+
+            parsed = self._get_parsed(missing_ok=True)
+            start, end = parsed.entry_location(keywords, add=(operation == "add"))
+            before, after = self._calculate_spacing(keywords, start, end, operation)
+            self._process_data_entry(keywords, data, before, after, operation)
 
     def _process_data_entry(
         self,
@@ -561,16 +565,7 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
-        keywords = self._normalize_and_validate_keywords(keywords)
-
-        with self:
-            self._write_header_if_needed(keywords)
-            self._update_class_for_field_if_needed(keywords, data)
-
-            parsed = self._get_parsed(missing_ok=True)
-            start, end = parsed.entry_location(keywords)
-            before, after = self._calculate_spacing_for_setitem(keywords, start, end)
-            self._process_data_entry(keywords, data, before, after, "put")
+        self._perform_entry_operation(keywords, data, "put")
 
     @override
     def add(
@@ -578,16 +573,7 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         data: Data | StandaloneData | SubDictLike,
     ) -> None:
-        keywords = self._normalize_and_validate_keywords(keywords)
-
-        with self:
-            self._write_header_if_needed(keywords)
-            self._update_class_for_field_if_needed(keywords, data)
-
-            parsed = self._get_parsed(missing_ok=True)
-            start, end = parsed.entry_location(keywords, add=True)
-            before, after = self._calculate_spacing_for_add(keywords, start, end)
-            self._process_data_entry(keywords, data, before, after, "add")
+        self._perform_entry_operation(keywords, data, "add")
 
     @with_default
     @override
