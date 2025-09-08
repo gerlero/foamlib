@@ -19,7 +19,7 @@ from multicollections.abc import MutableMultiMapping, with_default
 
 from ._io import FoamFileIO
 from ._parsing import Parsed
-from ._serialization import dumps, normalize, normalize_keyword
+from ._serialization import dumps, normalize
 from .types import Dimensioned, DimensionSet
 
 if TYPE_CHECKING:
@@ -347,8 +347,8 @@ class FoamFile(
             keywords = (keywords,)
 
         if keywords and not isinstance(normalize(keywords[-1], bool_ok=False), str):
-            msg = f"Invalid keyword: {keywords[-1]}"
-            raise ValueError(msg)
+            msg = f"Invalid keyword type: {keywords[-1]} (type {type(keywords[-1])})"
+            raise TypeError(msg)
 
         return keywords
 
@@ -459,20 +459,37 @@ class FoamFile(
         data: DataLike | StandaloneDataLike | SubDictLike,
         before: bytes,
         after: bytes,
-        operation: str,  # "put" or "add"
+        operation: Literal["put", "add"],
     ) -> None:
         """Process and write a data entry using either put or add operation."""
         parsed = self._get_parsed(missing_ok=True)
         indentation = b"    " * (len(keywords) - 1)
 
         if isinstance(data, Mapping):
-            if isinstance(data, (FoamFile, FoamFile.SubDict)):
-                data = data.as_dict()
+            if not keywords:
+                msg = "Cannot set a mapping at the root level of a FoamFile\nUse update(), extend(), or merge() instead."
+                raise ValueError(msg)
+
+            keyword = normalize(keywords[-1], bool_ok=False)
+
+            if not isinstance(keyword, str):
+                msg = (
+                    f"Invalid keyword type: {keywords[-1]} (type {type(keywords[-1])})"
+                )
+                raise TypeError(msg)
+
+            if keyword.startswith("#"):
+                msg = (
+                    f"Cannot set a directive as the keyword for a dictionary: {keyword}"
+                )
+                raise ValueError(msg)
+
+            data = normalize(data, keywords=keywords)
 
             content = (
                 before
                 + indentation
-                + dumps(normalize(keywords[-1], bool_ok=False))
+                + dumps(keyword)
                 + b"\n"
                 + indentation
                 + b"{\n"
@@ -481,14 +498,13 @@ class FoamFile(
                 + after
             )
 
-            if operation == "put":
-                parsed.put(keywords, ..., content)
-                for k, v in data.items():
-                    self[(*keywords, k)] = v
-            else:  # operation == "add"
-                parsed.add(keywords, ..., content)
-                for k, v in data.items():
-                    self.add((*keywords, k), v)  # type: ignore [arg-type]
+            if operation == "add" and keywords in parsed:
+                msg = f"Cannot add subdictionary entry with {keywords}: already exists"
+                raise KeyError(msg)
+
+            parsed.put(keywords, ..., content)
+            for k, v in data.items():
+                self[(*keywords, k)] = v
 
         elif keywords:
             header = self.get("FoamFile", None)
@@ -498,7 +514,7 @@ class FoamFile(
             content = (
                 before
                 + indentation
-                + dumps(normalize_keyword(keywords[-1]))
+                + dumps(normalize(keywords[-1], bool_ok=False))
                 + ((b" " + val) if val else b"")
                 + (b";" if not keywords[-1].startswith("#") else b"")
                 + after
@@ -507,18 +523,22 @@ class FoamFile(
             if operation == "put":
                 parsed.put(keywords, normalize(data, keywords=keywords), content)
             else:  # operation == "add"
+                if keywords in parsed and not keywords[-1].startswith("#"):
+                    msg = f"Cannot add non-directive entry with {keywords}: already exists"
+                    raise KeyError(msg)
                 parsed.add(keywords, normalize(data, keywords=keywords), content)
 
         else:
+            if operation == "add" and () in parsed:
+                msg = "Cannot add root-level entry: already exists"
+                raise KeyError(msg)
+
             header = self.get("FoamFile", None)
             assert header is None or isinstance(header, FoamFile.SubDict)
 
             content = before + dumps(data, keywords=(), header=header) + after
 
-            if operation == "put":
-                parsed.put((), normalize(data, keywords=keywords), content)
-            else:  # operation == "add"
-                parsed.add((), normalize(data, keywords=keywords), content)
+            parsed.put((), normalize(data, keywords=keywords), content)
 
     @overload  # type: ignore[override]
     def __setitem__(
