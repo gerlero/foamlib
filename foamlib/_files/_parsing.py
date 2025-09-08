@@ -590,13 +590,11 @@ class Parsed(
         data: Data | StandaloneData | EllipsisType,
         content: bytes,
     ) -> None:
-        if keywords:
-            if keywords in self._parsed and not keywords[-1].startswith("#"):
-                msg = f"Cannot add duplicate non-directive entry: {keywords}"
-                raise ValueError(msg)
-            if keywords[-1].startswith("#") and data is ...:
-                msg = f"Cannot add sub-dictionary with name: {keywords[-1]}"
-                raise ValueError(msg)
+        assert keywords not in self._parsed or (
+            keywords and keywords[-1].startswith("#")
+        )
+        assert not keywords or not keywords[-1].startswith("#") or data is not ...
+        assert keywords or data is not ...
 
         start, end = self.entry_location(keywords, add=True)
 
