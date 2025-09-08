@@ -499,8 +499,7 @@ class FoamFile(
             )
 
             if operation == "add" and keywords in parsed:
-                msg = f"Cannot add subdictionary entry with {keywords}: already exists"
-                raise KeyError(msg)
+                raise KeyError(keywords)
 
             parsed.put(keywords, ..., content)
             for k, v in data.items():
@@ -524,14 +523,12 @@ class FoamFile(
                 parsed.put(keywords, normalize(data, keywords=keywords), content)
             else:  # operation == "add"
                 if keywords in parsed and not keywords[-1].startswith("#"):
-                    msg = f"Cannot add non-directive entry with {keywords}: already exists"
-                    raise KeyError(msg)
+                    raise KeyError(keywords)
                 parsed.add(keywords, normalize(data, keywords=keywords), content)
 
         else:
             if operation == "add" and () in parsed:
-                msg = "Cannot add root-level entry: already exists"
-                raise KeyError(msg)
+                raise KeyError(())
 
             header = self.get("FoamFile", None)
             assert header is None or isinstance(header, FoamFile.SubDict)
