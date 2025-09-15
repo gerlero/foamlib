@@ -819,7 +819,7 @@ class FoamFile(
         return FoamFile.ItemsView(self, include_header=include_header)
 
     @override
-    def update(
+    def update(  # type: ignore[override]
         self,
         other: SupportsKeysAndGetItem[
             str | tuple[str, ...] | None, DataLike | StandaloneDataLike | SubDictLike
