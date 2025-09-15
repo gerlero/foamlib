@@ -678,20 +678,18 @@ class Parsed(
                     parent = sub
                 assert keywords[-1] not in parent
                 parent[keywords[-1]] = {}
+            elif len(keywords) == 1:
+                ret = add_to_mapping(ret, keywords[0], entry.data)
             else:
-                assert entry.data is not ...
-                if len(keywords) == 1:
-                    ret = add_to_mapping(ret, keywords[0], entry.data)
-                else:
-                    grandparent: File | SubDict = ret
-                    for k in keywords[:-2]:
-                        sub = grandparent[k]
-                        assert isinstance(sub, (dict, MultiDict))
-                        grandparent = sub
-                    sub = grandparent[keywords[-2]]
+                grandparent: File | SubDict = ret
+                for k in keywords[:-2]:
+                    sub = grandparent[k]
                     assert isinstance(sub, (dict, MultiDict))
-                    grandparent[keywords[-2]] = add_to_mapping(
-                        sub, keywords[-1], cast("Data", entry.data)
-                    )
+                    grandparent = sub
+                sub = grandparent[keywords[-2]]
+                assert isinstance(sub, (dict, MultiDict))
+                grandparent[keywords[-2]] = add_to_mapping(
+                    sub, keywords[-1], cast("Data", entry.data)
+                )
 
         return ret
