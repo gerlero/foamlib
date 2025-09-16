@@ -109,7 +109,7 @@ def ascii_numeric_list(
         return ret
 
     def to_full_array(
-        tks: ParseResults, *, dtype: type
+        tks: ParseResults, *, dtype: DTypeLike
     ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.integer | np.floating]]:
         count, lst = tks
         assert isinstance(count, int)
