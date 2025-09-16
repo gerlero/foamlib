@@ -121,7 +121,7 @@ def ascii_numeric_list(
 
     ret = ((Opt(common.integer).add_parse_action(process_count)).suppress() + list_) | (
         common.integer + Literal("{").suppress() + element + Literal("}").suppress()
-    ).add_parse_action(lambda tks: to_full_array(tks, dtype=float))
+    ).add_parse_action(lambda tks: to_full_array(tks, dtype=dtype))
 
     if ignore is not None:
         ret.ignore(ignore)
