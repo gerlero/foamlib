@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import sys
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -12,6 +13,7 @@ from pyparsing import (
     Located,
     NoMatch,
     Opt,
+    ParseException,
     ParserElement,
     ParseResults,
     Regex,
@@ -19,114 +21,134 @@ from pyparsing import (
     counted_array,
 )
 
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
 from .._util import as_dict_check_unique
 
 
-def ascii_numeric_list(
-    dtype: DTypeLike,
-    *,
-    nested: int | None = None,
-    ignore: Regex | None = None,
-    empty_ok: bool = False,
-) -> ParserElement:
-    dtype = np.dtype(dtype)
+class ASCIINumericList(ParserElement):
+    _FLOAT_PATTERN = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
+    _INT_PATTERN = r"(?:-?\d+)"
 
-    if np.issubdtype(dtype, np.floating):
-        element = common.ieee_float
-        element_pattern = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
-    elif np.issubdtype(dtype, np.integer):
-        element = common.integer
-        element_pattern = r"(?:-?\d+)"
-    else:
-        msg = f"Unsupported dtype: {dtype}"
-        raise TypeError(msg)
+    def __init__(
+        self,
+        dtype: DTypeLike,
+        elshape: tuple[()] | tuple[int] = (),
+        *,
+        empty_ok: bool = False,
+    ) -> None:
+        super().__init__()
+        self._dtype = np.dtype(dtype)
+        self._elshape = elshape
+        self._empty_ok = empty_ok
 
-    spacing_pattern = (
-        rf"(?:(?:\s|{ignore.re.pattern})+)" if ignore is not None else r"(?:\s+)"
-    )
+        self.name = f"ASCIINumericList({self._dtype})"
 
-    if nested is not None:
-        element = (
-            Literal("(").suppress() + Group(element[nested]) + Literal(")").suppress()
+    @override
+    def _generateDefaultName(self) -> str:
+        return self.name
+
+    @override
+    def parseImpl(
+        self, instring: str, loc: int, doActions: bool = True
+    ) -> tuple[int, ParseResults]:
+        ignore_pattern = (
+            "|".join(
+                rf"(?:{ignore_expr.expr.re.pattern})"  # type: ignore [attr-defined]
+                for ignore_expr in ignore_exprs
+            )
+            if (ignore_exprs := self.ignoreExprs)
+            else ""
         )
-        element_pattern = rf"(?:{spacing_pattern}?\({element_pattern}?(?:{element_pattern}{spacing_pattern}){{{nested - 1}}}{element_pattern}{spacing_pattern}?\))"
+        spacing_pattern = rf"\s|(?:{ignore_pattern})" if ignore_pattern else r"\s"
 
-    list_ = Forward()
-
-    def process_count(tks: ParseResults) -> None:
-        nonlocal list_
-
-        if not tks:
-            count = None
+        if np.issubdtype(self._dtype, np.floating):
+            base_pattern = self._FLOAT_PATTERN
+        elif np.issubdtype(self._dtype, np.integer):
+            base_pattern = self._INT_PATTERN
         else:
-            (count,) = tks
-            assert isinstance(count, int)
+            msg = f"Unsupported dtype {self._dtype}"
+            raise TypeError(msg)
 
-        if count is None:
-            if not empty_ok:
-                list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern})*{element_pattern}{spacing_pattern}?\)"
-            else:
-                list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern})*{element_pattern}?{spacing_pattern}?\)"
+        if self._elshape:
+            (dim,) = self._elshape
+            element_pattern = rf"\((?:{spacing_pattern})*(?:{base_pattern}(?:{spacing_pattern})*){{{dim}}}\)"
+        else:
+            element_pattern = base_pattern
 
-        elif count == 0:
-            if not empty_ok:
-                list_ <<= NoMatch()
-            else:
-                list_ <<= (Literal("(") + Literal(")")).add_parse_action(
-                    lambda: np.empty((0, nested) if nested else 0, dtype=dtype)
+        regular_pattern = re.compile(
+            rf"(\d*)(?:{spacing_pattern})*\((?:{spacing_pattern})*((?:{element_pattern}(?:{spacing_pattern})*)*)\)"
+        )
+        assert regular_pattern.groups == 2
+
+        if match := regular_pattern.match(instring, pos=loc):
+            count = int(c) if (c := match.group(1)) else None
+            contents = match.group(2)
+            if ignore_pattern:
+                contents = re.sub(ignore_pattern, " ", contents)
+            if self._elshape:
+                contents = contents.replace("(", " ").replace(")", " ")
+
+            arr = np.fromstring(contents, dtype=self._dtype, sep=" ")
+
+            if self._elshape:
+                arr = arr.reshape(-1, *self._elshape)
+
+            if count is not None and arr.shape[0] != count:
+                msg = f"Expected {count} elements, got {arr.shape[0]}"
+                raise ParseException(
+                    instring,
+                    loc,
+                    msg,
+                    self,
                 )
-            return
 
-        else:
-            list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern}){{{count - 1}}}{element_pattern}{spacing_pattern}?\)"
+            if arr.size == 0 and not self._empty_ok:
+                msg = "Expected at least one element"
+                raise ParseException(
+                    instring,
+                    loc,
+                    msg,
+                    self,
+                )
 
-        list_ <<= Regex(list_pattern).add_parse_action(
-            lambda tks: to_array(tks, dtype=dtype)
+            return match.end(), ParseResults(arr)
+
+        repeated_pattern = re.compile(
+            rf"(\d+)(?:{spacing_pattern})*{{(?:{spacing_pattern})*({element_pattern})(?:{spacing_pattern})*\}}"
         )
+        assert repeated_pattern.groups == 2
 
-    def to_array(
-        tks: ParseResults, *, dtype: DTypeLike
-    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.integer | np.floating]]:
-        (s,) = tks
-        assert s.startswith("(")
-        assert s.endswith(")")
-        s = s[1:-1]
-        if ignore is not None:
-            s = re.sub(ignore.re, " ", s)
-        if nested is not None:
-            s = s.replace("(", " ").replace(")", " ")
+        if match := repeated_pattern.match(instring, pos=loc):
+            count = int(match.group(1))
+            contents = match.group(2)
+            if ignore_pattern:
+                contents = re.sub(ignore_pattern, " ", contents)
+            if self._elshape:
+                contents = contents.replace("(", " ").replace(")", " ")
 
-        ret: np.ndarray[
-            tuple[int] | tuple[int, int], np.dtype[np.integer | np.floating]
-        ] = np.fromstring(s, sep=" ", dtype=dtype)
+            arr = np.fromstring(contents, dtype=self._dtype, sep=" ")
 
-        if nested is not None:
-            ret = ret.reshape(-1, nested)
+            if self._elshape:
+                arr = arr.reshape(-1, *self._elshape)
 
-        return ret
+            arr = np.repeat(arr, count, axis=0)
 
-    def to_full_array(
-        tks: ParseResults, *, dtype: DTypeLike
-    ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.integer | np.floating]]:
-        count, lst = tks
-        assert isinstance(count, int)
+            return match.end(), ParseResults(arr)
 
-        if nested is None:
-            return np.full(count, lst, dtype=dtype)
-
-        return np.full((count, nested), lst, dtype=dtype)  # type: ignore[return-value]
-
-    ret = ((Opt(common.integer).add_parse_action(process_count)).suppress() + list_) | (
-        common.integer + Literal("{").suppress() + element + Literal("}").suppress()
-    ).add_parse_action(lambda tks: to_full_array(tks, dtype=dtype))
-
-    if ignore is not None:
-        ret.ignore(ignore)
-
-    return ret
+        msg = "Expected ASCII numeric list"
+        raise ParseException(
+            instring,
+            loc,
+            msg,
+            self,
+        )
 
 
 def binary_numeric_list(
