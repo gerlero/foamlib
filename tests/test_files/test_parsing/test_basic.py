@@ -52,6 +52,13 @@ def test_parse_value() -> None:
             [4, 5, 6],
         ],
     )
+    lst = Parsed(b"2(3(1 2 3) 4(4 5 6 7))")[()]
+    assert isinstance(lst, list)
+    assert len(lst) == 2
+    assert isinstance(lst[0], np.ndarray)
+    assert np.array_equal(lst[0], [1, 2, 3])
+    assert isinstance(lst[1], np.ndarray)
+    assert np.array_equal(lst[1], [4, 5, 6, 7])
     lst = Parsed(b"2{(1 2 3)}")[()]
     assert isinstance(lst, np.ndarray)
     assert np.array_equal(
