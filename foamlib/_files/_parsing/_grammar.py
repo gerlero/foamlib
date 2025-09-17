@@ -22,8 +22,8 @@ from pyparsing import (
 
 from ..types import Dimensioned, DimensionSet
 from ._elements import (
+    ASCIINumericList,
     ascii_face_list,
-    ascii_numeric_list,
     binary_numeric_list,
     dict_of,
     keyword_entry_of,
@@ -80,7 +80,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("List") + Literal("<") + Literal("scalar") + Literal(">")
             ).suppress()
             + (
-                ascii_numeric_list(dtype=float, ignore=_COMMENT, empty_ok=True)
+                ASCIINumericList(dtype=float, empty_ok=True)
                 | binary_numeric_list(dtype=np.float64, empty_ok=True)
                 | binary_numeric_list(dtype=np.float32, empty_ok=True)
             )
@@ -90,9 +90,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("List") + Literal("<") + Literal("vector") + Literal(">")
             ).suppress()
             + (
-                ascii_numeric_list(
-                    dtype=float, nested=3, ignore=_COMMENT, empty_ok=True
-                )
+                ASCIINumericList(dtype=float, elshape=(3,), empty_ok=True)
                 | binary_numeric_list(np.float64, nested=3, empty_ok=True)
                 | binary_numeric_list(np.float32, nested=3, empty_ok=True)
             )
@@ -102,9 +100,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("List") + Literal("<") + Literal("symmTensor") + Literal(">")
             ).suppress()
             + (
-                ascii_numeric_list(
-                    dtype=float, nested=6, ignore=_COMMENT, empty_ok=True
-                )
+                ASCIINumericList(dtype=float, elshape=(6,), empty_ok=True)
                 | binary_numeric_list(np.float64, nested=6, empty_ok=True)
                 | binary_numeric_list(np.float32, nested=6, empty_ok=True)
             )
@@ -114,9 +110,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
                 Literal("List") + Literal("<") + Literal("tensor") + Literal(">")
             ).suppress()
             + (
-                ascii_numeric_list(
-                    dtype=float, nested=9, ignore=_COMMENT, empty_ok=True
-                )
+                ASCIINumericList(dtype=float, elshape=(9,), empty_ok=True)
                 | binary_numeric_list(np.float64, nested=9, empty_ok=True)
                 | binary_numeric_list(np.float32, nested=9, empty_ok=True)
             )
@@ -155,9 +149,9 @@ _DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
 )
 
 _STANDALONE_DATA = (
-    ascii_numeric_list(dtype=int, ignore=_COMMENT)
+    ASCIINumericList(dtype=int)
     | ascii_face_list(ignore=_COMMENT)
-    | ascii_numeric_list(dtype=float, nested=3, ignore=_COMMENT)
+    | ASCIINumericList(dtype=float, elshape=(3,))
     | (
         binary_numeric_list(dtype=np.int32) + Opt(binary_numeric_list(dtype=np.int32))
     ).add_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else tks[0])
