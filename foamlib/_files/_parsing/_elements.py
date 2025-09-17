@@ -151,39 +151,42 @@ class ASCIINumericList(ParserElement):
 
 
 def binary_numeric_list(
-    dtype: DTypeLike, *, nested: int | None = None, empty_ok: bool = False
+    dtype: DTypeLike, elshape: tuple[()] | tuple[int] = (), *, empty_ok: bool = False
 ) -> ParserElement:
     dtype = np.dtype(dtype)
-
-    elsize = nested if nested is not None else 1
 
     list_ = Forward()
 
     def process_count(tks: ParseResults) -> None:
         nonlocal list_
-        (size,) = tks
-        assert isinstance(size, int)
+        (count,) = tks
+        assert isinstance(count, int)
 
-        if size == 0 and not empty_ok:
+        if count == 0 and not empty_ok:
             list_ <<= NoMatch()
             return
 
-        list_ <<= Regex(rf"\((?s:{'.' * dtype.itemsize * elsize}){{{size}}}\)")
+        if not elshape:
+            elsize = 1
+        else:
+            (elsize,) = elshape
+
+        list_ <<= Regex(rf"\((?s:{'.' * dtype.itemsize * elsize}){{{count}}}\)")
 
     def to_array(
         tks: ParseResults,
     ) -> np.ndarray[tuple[int] | tuple[int, int], np.dtype[np.integer | np.floating]]:
-        size, s = tks
-        assert isinstance(size, int)
-        assert isinstance(s, str)
-        assert s[0] == "("
-        assert s[-1] == ")"
-        s = s[1:-1]
+        count, contents = tks
+        assert isinstance(count, int)
+        assert isinstance(contents, str)
+        assert contents[0] == "("
+        assert contents[-1] == ")"
+        contents = contents[1:-1]
 
-        ret = np.frombuffer(s.encode("latin-1"), dtype=dtype)
+        ret = np.frombuffer(contents.encode("latin-1"), dtype=dtype)
 
-        if nested is not None:
-            ret = ret.reshape(-1, nested)
+        if elshape:
+            ret = ret.reshape(count, *elshape)
 
         return ret
 
