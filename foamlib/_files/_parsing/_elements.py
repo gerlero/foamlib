@@ -12,7 +12,6 @@ from pyparsing import (
     Literal,
     Located,
     NoMatch,
-    Opt,
     ParseException,
     ParserElement,
     ParseResults,
@@ -193,58 +192,76 @@ def binary_numeric_list(
     ).add_parse_action(to_array)
 
 
-def ascii_face_list(*, ignore: Regex | None = None) -> ParserElement:
-    element_pattern = r"(?:-?\d+)"
-    spacing_pattern = (
-        rf"(?:(?:\s|{ignore.re.pattern})+)" if ignore is not None else r"(?:\s+)"
-    )
+class ASCIIFacesLikeList(ParserElement):
+    _INT_PATTERN = ASCIINumericList._INT_PATTERN
 
-    element_pattern = rf"(?:(?:3{spacing_pattern}?\((?:{element_pattern}{spacing_pattern}){{2}}{element_pattern}{spacing_pattern}?\))|(?:4{spacing_pattern}?\((?:{element_pattern}{spacing_pattern}){{3}}{element_pattern}{spacing_pattern}?\)))"
+    def __init__(self) -> None:
+        super().__init__()
+        self.name = "ASCIIFacesLikeList"
 
-    list_ = Forward()
+    @override
+    def _generateDefaultName(self) -> str:
+        return self.name
 
-    def process_count(tks: ParseResults) -> None:
-        nonlocal list_
-        if not tks:
-            count = None
-        else:
-            (count,) = tks
-            assert isinstance(count, int)
+    @override
+    def parseImpl(
+        self, instring: str, loc: int, doActions: bool = True
+    ) -> tuple[int, ParseResults]:
+        ignore_pattern = (
+            "|".join(
+                rf"(?:{ignore_expr.expr.re.pattern})"  # type: ignore [attr-defined]
+                for ignore_expr in ignore_exprs
+            )
+            if (ignore_exprs := self.ignoreExprs)
+            else ""
+        )
+        spacing_pattern = rf"\s|(?:{ignore_pattern})" if ignore_pattern else r"\s"
 
-        if count is None:
-            list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern})*{element_pattern}{spacing_pattern}?\)"
+        three_face_pattern = rf"3(?:{spacing_pattern})*\((?:{spacing_pattern})*(?:{self._INT_PATTERN}(?:{spacing_pattern})*){{3}}\)"
+        four_face_pattern = rf"4(?:{spacing_pattern})*\((?:{spacing_pattern})*(?:{self._INT_PATTERN}(?:{spacing_pattern})*){{4}}\)"
 
-        elif count == 0:
-            list_ <<= NoMatch()
-            return
+        face_pattern = rf"(?:{three_face_pattern})|(?:{four_face_pattern})"
 
-        else:
-            list_pattern = rf"\({spacing_pattern}?(?:{element_pattern}{spacing_pattern}){{{count - 1}}}{element_pattern}{spacing_pattern}?\)"
+        face_list_pattern = re.compile(
+            rf"(\d*)(?:{spacing_pattern})*\((?:{spacing_pattern})*((?:(?:{face_pattern})(?:{spacing_pattern})*)+)\)"
+        )
+        assert face_list_pattern.groups == 2
 
-        list_ <<= Regex(list_pattern).add_parse_action(to_face_list)
+        if match := face_list_pattern.match(instring, pos=loc):
+            count = int(c) if (c := match.group(1)) else None
+            contents = match.group(2)
+            if ignore_pattern:
+                contents = re.sub(ignore_pattern, " ", contents)
+            contents = contents.replace("(", " ").replace(")", " ")
 
-    def to_face_list(
-        tks: ParseResults,
-    ) -> list[list[np.ndarray[tuple[int], np.dtype[np.int64]]]]:
-        (s,) = tks
-        assert s.startswith("(")
-        assert s.endswith(")")
-        if ignore is not None:
-            s = re.sub(ignore.re, " ", s)
-        s = s.replace("(", " ").replace(")", " ")
+            raw = np.fromstring(contents, sep=" ", dtype=int)
+            assert raw.size > 0
 
-        raw = np.fromstring(s, sep=" ", dtype=int)
+            values: list[np.ndarray[tuple[int], np.dtype[np.int64]]] = []
+            i = 0
+            while i < raw.size:
+                assert raw[i] in (3, 4)
+                values.append(raw[i + 1 : i + raw[i] + 1])
+                i += raw[i] + 1
 
-        values: list[np.ndarray[tuple[int], np.dtype[np.int64]]] = []
-        i = 0
-        while i < raw.size:
-            assert raw[i] in (3, 4)
-            values.append(raw[i + 1 : i + raw[i] + 1])
-            i += raw[i] + 1
+            if count is not None and len(values) != count:
+                msg = f"Expected {count} elements, got {len(values)}"
+                raise ParseException(
+                    instring,
+                    loc,
+                    msg,
+                    self,
+                )
 
-        return [values]
+            return match.end(), ParseResults([values])
 
-    return Opt(common.integer).add_parse_action(process_count).suppress() + list_
+        msg = "Expected ASCII faces-like list"
+        raise ParseException(
+            instring,
+            loc,
+            msg,
+            self,
+        )
 
 
 def list_of(entry: ParserElement) -> ParserElement:

@@ -22,8 +22,8 @@ from pyparsing import (
 
 from ..types import Dimensioned, DimensionSet
 from ._elements import (
+    ASCIIFacesLikeList,
     ASCIINumericList,
-    ascii_face_list,
     binary_numeric_list,
     dict_of,
     keyword_entry_of,
@@ -150,7 +150,7 @@ _DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
 
 _STANDALONE_DATA = (
     ASCIINumericList(dtype=int)
-    | ascii_face_list(ignore=_COMMENT)
+    | ASCIIFacesLikeList()
     | ASCIINumericList(dtype=float, elshape=(3,))
     | (
         binary_numeric_list(dtype=np.int32) + Opt(binary_numeric_list(dtype=np.int32))
