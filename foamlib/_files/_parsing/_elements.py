@@ -34,7 +34,7 @@ from .._util import as_dict_check_unique
 
 class ASCIINumericList(ParserElement):
     _FLOAT_PATTERN = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
-    _INT_PATTERN = r"(?:-?\d+)"
+    _INT_PATTERN = r"-?\d+"
 
     def __init__(
         self,
