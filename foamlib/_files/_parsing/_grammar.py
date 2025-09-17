@@ -60,7 +60,7 @@ _TENSOR = common.ieee_float | (
     Literal("(").suppress()
     + Group(common.ieee_float[3] | common.ieee_float[6] | common.ieee_float[9])
     + Literal(")").suppress()
-).add_parse_action(lambda tks: np.array(tks[0], dtype=float))
+).add_parse_action(lambda tks: np.array(tks[0]))
 _BALANCED = Forward()
 _BALANCED <<= Opt(CharsNotIn("()")) + Opt(
     Literal("(") + _BALANCED + Literal(")") + _BALANCED
