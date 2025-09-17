@@ -7,10 +7,16 @@ import timeit
 from foamlib import FoamFieldFile
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
-FoamFieldFile("U").internal_field = [[0.0, 0.0, 0.0]] * 200_000
+FoamFieldFile("U").internal_field = [[0.0, 0.0, 0.0]] * 1_000_000
+with FoamFieldFile("U_binary") as f:
+    f.format = "binary"
+    f.internal_field = [[0.0, 0.0, 0.0]] * 1_000_000
 
 print(
     f"foamlib: {min(timeit.repeat(lambda: FoamFieldFile('U').internal_field, number=1))} s"
+)
+print(
+    f"foamlib (binary): {min(timeit.repeat(lambda: FoamFieldFile('U_binary').internal_field, number=1))} s"
 )
 print(
     f"PyFoam: {min(timeit.repeat(lambda: ParsedParameterFile('U')['internalField'], number=1))} s"

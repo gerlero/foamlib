@@ -1,2 +1,2 @@
-foamlib==1.3.7
+foamlib==1.3.9
 PyFoam==2023.7

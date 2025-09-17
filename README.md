@@ -21,7 +21,7 @@
 <div align="center">
 <img alt="benchmark" src="https://github.com/gerlero/foamlib/raw/main/benchmark/benchmark.png" height="250">
 
-Parsing a `volVectorField` with 200k cells.<sup>[1](#benchmark)</sup>
+_Loading a_ volVectorField _with one million cells_<sup>[1](#benchmark)</sup>
 </div>
 
 
@@ -282,4 +282,4 @@ If you use **foamlib** in your research, please cite our paper:
 
 ## 👟 Footnotes
 
-<a id="benchmark">[1]</a> foamlib 1.3.7 vs PyFoam 2023.7 on an M3 MacBook Air. [Benchmark script](https://github.com/gerlero/foamlib/blob/main/benchmark/benchmark.py).
+<a id="benchmark">[1]</a> foamlib 1.3.9 vs. PyFoam 2023.7 (Python 3.11.13) on an M3 MacBook Air. [Benchmark script](https://github.com/gerlero/foamlib/blob/main/benchmark/benchmark.py).
