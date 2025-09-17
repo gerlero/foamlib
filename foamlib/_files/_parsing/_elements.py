@@ -152,7 +152,7 @@ class ASCIINumericList(ParserElement):
 
 
 def binary_numeric_list(
-    dtype: DTypeLike, *, nested: int | None = None, empty_ok: bool = False
+    dtype: DTypeLike, *, nested: int | None = None
 ) -> ParserElement:
     dtype = np.dtype(dtype)
 
@@ -164,10 +164,6 @@ def binary_numeric_list(
         nonlocal list_
         (size,) = tks
         assert isinstance(size, int)
-
-        if size == 0 and not empty_ok:
-            list_ <<= NoMatch()
-            return
 
         list_ <<= Regex(rf"\((?s:{'.' * dtype.itemsize * elsize}){{{size}}}\)")
 

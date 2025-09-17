@@ -81,8 +81,8 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
             ).suppress()
             + (
                 ASCIINumericList(dtype=float, empty_ok=True)
-                | binary_numeric_list(dtype=np.float64, empty_ok=True)
-                | binary_numeric_list(dtype=np.float32, empty_ok=True)
+                | binary_numeric_list(dtype=np.float64)
+                | binary_numeric_list(dtype=np.float32)
             )
         )
         | (
@@ -91,8 +91,8 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
             ).suppress()
             + (
                 ASCIINumericList(dtype=float, elshape=(3,), empty_ok=True)
-                | binary_numeric_list(np.float64, nested=3, empty_ok=True)
-                | binary_numeric_list(np.float32, nested=3, empty_ok=True)
+                | binary_numeric_list(np.float64, nested=3)
+                | binary_numeric_list(np.float32, nested=3)
             )
         )
         | (
@@ -101,8 +101,8 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
             ).suppress()
             + (
                 ASCIINumericList(dtype=float, elshape=(6,), empty_ok=True)
-                | binary_numeric_list(np.float64, nested=6, empty_ok=True)
-                | binary_numeric_list(np.float32, nested=6, empty_ok=True)
+                | binary_numeric_list(np.float64, nested=6)
+                | binary_numeric_list(np.float32, nested=6)
             )
         )
         | (
@@ -111,8 +111,8 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
             ).suppress()
             + (
                 ASCIINumericList(dtype=float, elshape=(9,), empty_ok=True)
-                | binary_numeric_list(np.float64, nested=9, empty_ok=True)
-                | binary_numeric_list(np.float32, nested=9, empty_ok=True)
+                | binary_numeric_list(np.float64, nested=9)
+                | binary_numeric_list(np.float32, nested=9)
             )
         )
     )
