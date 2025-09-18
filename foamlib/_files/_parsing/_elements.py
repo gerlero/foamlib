@@ -16,6 +16,7 @@ from pyparsing import (
     ParserElement,
     ParseResults,
     Regex,
+    Suppress,
     common,
     counted_array,
 )
@@ -57,15 +58,11 @@ class ASCIINumericList(ParserElement):
     def parseImpl(
         self, instring: str, loc: int, doActions: bool = True
     ) -> tuple[int, ParseResults]:
-        ignore_pattern = (
-            "|".join(
-                rf"(?:{ignore_expr.expr.re.pattern})"  # type: ignore [attr-defined]
-                for ignore_expr in ignore_exprs
-            )
-            if (ignore_exprs := self.ignoreExprs)
-            else ""
-        )
-        spacing_pattern = rf"\s|(?:{ignore_pattern})" if ignore_pattern else r"\s"
+        spacing_pattern = "|".join(re.escape(c) for c in self.whiteChars)
+        for ignore_expr in self.ignoreExprs:
+            assert isinstance(ignore_expr, Suppress)
+            assert isinstance(ignore_expr.expr, Regex)
+            spacing_pattern += f"|(?:{ignore_expr.expr.re.pattern})"
 
         if np.issubdtype(self._dtype, np.floating):
             base_pattern = self._FLOAT_PATTERN
@@ -89,8 +86,7 @@ class ASCIINumericList(ParserElement):
         if match := regular_pattern.match(instring, pos=loc):
             count = int(c) if (c := match.group(1)) else None
             contents = match.group(2)
-            if ignore_pattern:
-                contents = re.sub(ignore_pattern, " ", contents)
+            contents = re.sub(spacing_pattern, " ", contents)
             if self._elshape:
                 contents = contents.replace("(", " ").replace(")", " ")
 
@@ -127,8 +123,7 @@ class ASCIINumericList(ParserElement):
         if match := repeated_pattern.match(instring, pos=loc):
             count = int(match.group(1))
             contents = match.group(2)
-            if ignore_pattern:
-                contents = re.sub(ignore_pattern, " ", contents)
+            contents = re.sub(spacing_pattern, " ", contents)
             if self._elshape:
                 contents = contents.replace("(", " ").replace(")", " ")
 
@@ -210,15 +205,11 @@ class ASCIIFacesLikeList(ParserElement):
     def parseImpl(
         self, instring: str, loc: int, doActions: bool = True
     ) -> tuple[int, ParseResults]:
-        ignore_pattern = (
-            "|".join(
-                rf"(?:{ignore_expr.expr.re.pattern})"  # type: ignore [attr-defined]
-                for ignore_expr in ignore_exprs
-            )
-            if (ignore_exprs := self.ignoreExprs)
-            else ""
-        )
-        spacing_pattern = rf"\s|(?:{ignore_pattern})" if ignore_pattern else r"\s"
+        spacing_pattern = "|".join(re.escape(c) for c in self.whiteChars)
+        for ignore_expr in self.ignoreExprs:
+            assert isinstance(ignore_expr, Suppress)
+            assert isinstance(ignore_expr.expr, Regex)
+            spacing_pattern += f"|(?:{ignore_expr.expr.re.pattern})"
 
         three_face_pattern = rf"3(?:{spacing_pattern})*\((?:{spacing_pattern})*(?:{self._INT_PATTERN}(?:{spacing_pattern})*){{3}}\)"
         four_face_pattern = rf"4(?:{spacing_pattern})*\((?:{spacing_pattern})*(?:{self._INT_PATTERN}(?:{spacing_pattern})*){{4}}\)"
@@ -233,8 +224,7 @@ class ASCIIFacesLikeList(ParserElement):
         if match := face_list_pattern.match(instring, pos=loc):
             count = int(c) if (c := match.group(1)) else None
             contents = match.group(2)
-            if ignore_pattern:
-                contents = re.sub(ignore_pattern, " ", contents)
+            contents = re.sub(spacing_pattern, " ", contents)
             contents = contents.replace("(", " ").replace(")", " ")
 
             raw = np.fromstring(contents, sep=" ", dtype=int)
