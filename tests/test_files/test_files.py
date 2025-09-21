@@ -59,14 +59,14 @@ def test_write_read(tmp_path: Path) -> None:
     assert len(sd) == 1
     assert list(sd) == ["key"]
 
-    d["subdict2"] = d["subdict"]  # type: ignore [assignment]
+    d["subdict2"] = d["subdict"]
     sd2 = d["subdict2"]
     assert isinstance(sd2, FoamFile.SubDict)
     assert sd2["key"] == "value"
     assert len(sd) == 1
     assert list(sd) == ["key"]
 
-    sd["subsubdict"] = d["subdict"]  # type: ignore [assignment]
+    sd["subsubdict"] = d["subdict"]
     ssd = sd["subsubdict"]
     assert isinstance(ssd, FoamFile.SubDict)
     assert ssd["key"] == "value"
@@ -156,7 +156,7 @@ def test_mesh(cavity: FoamCase) -> None:
 
     assert isinstance(points, np.ndarray)
     assert points.ndim == 2
-    assert points.shape[-1] == 3
+    assert points.shape[-1] == 3  # ty: ignore[non-subscriptable]
 
 
 def test_internal_field(cavity: FoamCase) -> None:
@@ -164,7 +164,7 @@ def test_internal_field(cavity: FoamCase) -> None:
     assert isinstance(blocks, list)
     sizes = blocks[2]
     assert isinstance(sizes, list)
-    size = np.prod(sizes)  # type: ignore [arg-type]
+    size = np.prod(sizes)
 
     p_arr = np.zeros(size)
     U_arr = np.zeros((size, 3))
@@ -177,14 +177,14 @@ def test_internal_field(cavity: FoamCase) -> None:
     assert isinstance(U, np.ndarray)
     assert U_arr == pytest.approx(U)
 
-    p_arr = np.arange(size) * 1e-6  # type: ignore [assignment]
+    p_arr = np.arange(size) * 1e-6
     U_arr = np.full((size, 3), [-1e-6, 1e-6, 0]) * np.arange(size)[:, np.newaxis]
 
     cavity[0]["p"].internal_field = p_arr
     cavity[0]["U"].internal_field = U_arr
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
-    U = cavity[0]["U"].internal_field  # type: ignore [assignment]
+    U = cavity[0]["U"].internal_field
     assert isinstance(U, np.ndarray)
     assert U_arr == pytest.approx(U)
 

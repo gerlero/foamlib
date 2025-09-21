@@ -103,9 +103,9 @@ def run_sync(
                         timeout=0.1
                     ):  # Small timeout to allow log monitoring
                         assert key.fileobj in open_streams
-                        if not (line := key.fileobj.readline()):  # type: ignore [union-attr]
+                        if not (line := key.fileobj.readline()):
                             selector.unregister(key.fileobj)
-                            open_streams.remove(key.fileobj)  # type: ignore [arg-type]
+                            open_streams.remove(key.fileobj)
                         elif key.fileobj is proc.stdout:
                             process_stdout(line)
                             if output is not None:

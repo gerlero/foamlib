@@ -121,7 +121,7 @@ class Parsed(
         self._remove_child_entries(keywords)
 
     @override
-    def add(  # type: ignore[override]
+    def add(
         self,
         keywords: tuple[str, ...],
         data: Data | StandaloneData | EllipsisType,

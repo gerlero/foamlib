@@ -136,7 +136,7 @@ x = x[end]
 y = y[end]
 z = z[end]
 
-DT = case.transport_properties["DT"].value
+DT = case.transport_properties["DT"].value  # ty: ignore[possibly-unbound-attribute]
 U = case[0]["U"].internal_field[0]
 
 for time in case[1:]:

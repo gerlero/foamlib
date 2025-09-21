@@ -150,7 +150,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     async def _rmtree(
         path: os.PathLike[str] | str, *, ignore_errors: bool = False
     ) -> None:
-        await aioshutil.rmtree(path, ignore_errors=ignore_errors)  # type: ignore [call-arg]
+        await aioshutil.rmtree(path, ignore_errors=ignore_errors)
 
     @override
     @staticmethod

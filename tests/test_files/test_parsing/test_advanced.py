@@ -16,12 +16,12 @@ def test_dict_strange_name() -> None:
         }
     """
     )
-    assert parsed[
-        (("div(phi,ft_b_ha_hau)", "Gauss", "multivariateSelection"), "ft")  # type: ignore[index]
-    ] == ("limitedLinear01", 1)
-    assert parsed[
-        (("div(phi,ft_b_ha_hau)", "Gauss", "multivariateSelection"), "b")  # type: ignore[index]
-    ] == ("limitedLinear01", 1)
+    ft = parsed[("div(phi,ft_b_ha_hau)", "Gauss", "multivariateSelection", "ft")]
+    assert isinstance(ft, tuple)
+    assert ft == ("limitedLinear01", 1)
+    b = parsed[("div(phi,ft_b_ha_hau)", "Gauss", "multivariateSelection", "b")]
+    assert isinstance(b, tuple)
+    assert b == ("limitedLinear01", 1)
 
 
 def test_dict_strange_keys() -> None:
@@ -278,11 +278,10 @@ def test_assignment_strange_name() -> None:
     )
     assert parsed[("equations", '"(U|e|k).*"')] == 0.7
     assert isinstance(parsed[("equations", '"(U|e|k|epsilon).*"')], tuple)
-    assert parsed[("equations", '"(U|e|k|epsilon).*"')][0] == "table"
-    assert np.array_equal(
-        parsed[("equations", '"(U|e|k|epsilon).*"')][1],  # type: ignore[arg-type]
-        [[0, 0.4], [0.5, 0.7]],
-    )
+    table = parsed[("equations", '"(U|e|k|epsilon).*"')]
+    assert isinstance(table, tuple)
+    assert table[0] == "table"
+    assert np.array_equal(table[1], [[0, 0.4], [0.5, 0.7]])
 
 
 @pytest.mark.xfail(reason="Not currently supported")

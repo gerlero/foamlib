@@ -64,7 +64,7 @@ pytest
 Type check the code with:
 
 ```bash
-mypy
+ty check
 ```
 
 ### Linting

@@ -36,11 +36,9 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version-file: pyproject.toml
-    - name: Check types with mypy
+    - name: Check types with ty
       run: |
-        uv add pip
-        uv run mypy --install-types --non-interactive
-        uv run mypy
+        uv run ty check
 
   test:
     runs-on: ubuntu-22.04

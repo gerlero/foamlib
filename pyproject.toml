@@ -49,6 +49,7 @@ postprocessing = [
     "defusedxml>=0.7.1,<0.8",
 ]
 examples = [
+    "plotly>=6,<7",
     "scipy>=1,<2",
     "foamlib[preprocessing]",
     "foamlib[postprocessing]",
@@ -67,9 +68,9 @@ lint = ["ruff"]
 typing = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
-    "mypy>=1.16,<2; python_version>='3.9'",
     "pandas-stubs",
     "scipy-stubs; python_version>='3.10'",
+    "ty",
     "types-defusedxml",
 ]
 test = [
@@ -87,6 +88,7 @@ docs = [
     "sphinx_rtd_theme",
     "sphinxcontrib-mermaid"
 ]
+benchmark = ["PyFoam"]
 dev = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
@@ -95,18 +97,11 @@ dev = [
     {include-group = "typing"},
     {include-group = "test"},
     {include-group = "docs"},
+    {include-group = "benchmark"},
 ]
 
 [tool.uv.build-backend]
 module-root = "."
-
-[tool.mypy]
-packages = [
-    "foamlib",
-    "tests",
-]
-strict = true
-enable_error_code = "explicit-override"
 
 [tool.ruff.lint]
 extend-select = ["ALL"]

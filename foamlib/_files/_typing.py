@@ -59,6 +59,4 @@ SubDict: TypeAlias = "dict[str, Data | SubDict] | MultiDict[str, Data | SubDict]
 SubDictLike: TypeAlias = DictLike
 
 File: TypeAlias = "dict[str | None, StandaloneData | Data | SubDict] | MultiDict[str | None, StandaloneData | Data | SubDict]"
-FileLike: TypeAlias = Mapping[
-    "str | None", "StandaloneDataLike | DataLike | SubDictLike"
-]
+FileLike: TypeAlias = "Mapping[str | None, StandaloneDataLike | DataLike | SubDictLike]"
