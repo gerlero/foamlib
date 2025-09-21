@@ -56,10 +56,10 @@ def normalize(
     bool_ok: bool = True,
 ) -> Data | StandaloneData | SubDict:
     if isinstance(data, Mapping):
-        items = ((normalize(k, bool_ok=False), normalize(v)) for k, v in data.items())  # type: ignore [arg-type, misc]
+        items = ((normalize(k, bool_ok=False), normalize(v)) for k, v in data.items())
         if keywords is None:
-            return as_dict_check_unique(items)  # type: ignore [arg-type]
-        ret1: SubDict = MultiDict(items)  # type: ignore [arg-type]
+            return as_dict_check_unique(items)
+        ret1: SubDict = MultiDict(items)
         seen = set()
         for k, v in ret1.items():
             if k.startswith("#"):
@@ -112,7 +112,7 @@ def normalize(
                 if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] in (3, 6, 9)):
                     return arr
 
-            return [normalize(d) for d in data]  # type: ignore [arg-type, return-value]
+            return [normalize(d) for d in data]
 
         if isinstance(data, int):
             return float(data)
@@ -122,7 +122,7 @@ def normalize(
     if isinstance(data, np.ndarray):
         ret2 = data.tolist()
         assert isinstance(ret2, (int, float, list))
-        return ret2  # type: ignore [return-value]
+        return ret2
 
     if (
         not isinstance(data, DimensionSet)
@@ -139,19 +139,19 @@ def normalize(
         if isinstance(k2, Mapping):
             msg = "Keyword in keyword entry cannot be a dictionary"
             raise ValueError(msg)
-        k2 = normalize(k2, bool_ok=False)  # type: ignore [arg-type]
-        v2 = normalize(v2)  # type: ignore [arg-type]
-        return (k2, v2)  # type: ignore [return-value]
+        k2 = normalize(k2, bool_ok=False)
+        v2 = normalize(v2)
+        return (k2, v2)
 
     if (
         is_sequence(data)
         and not isinstance(data, DimensionSet)
         and not isinstance(data, tuple)
     ):
-        return [normalize(d) for d in data]  # type: ignore [arg-type, return-value]
+        return [normalize(d) for d in data]
 
     if isinstance(data, tuple) and not isinstance(data, DimensionSet):
-        return tuple(normalize(d, keywords=keywords) for d in data)  # type: ignore [misc]
+        return tuple(normalize(d, keywords=keywords) for d in data)
 
     if isinstance(data, str):
         with contextlib.suppress(ValueError, KeyError):
@@ -178,7 +178,7 @@ def dumps(
     header: SubDictLike | None = None,
     tuple_is_keyword_entry: bool = False,
 ) -> bytes:
-    data = normalize(data, keywords=keywords)  # type: ignore [arg-type, misc]
+    data = normalize(data, keywords=keywords)
 
     if isinstance(data, Mapping):
         return (
@@ -287,7 +287,7 @@ def dumps(
 
     if is_sequence(data):
         return (
-            b"(" + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data) + b")"  # type: ignore [arg-type]
+            b"(" + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data) + b")"
         )
 
     if data is True:

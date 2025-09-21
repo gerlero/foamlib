@@ -3,7 +3,7 @@ from pathlib import Path
 from foamlib.preprocessing.grid_parameter_sweep import CaseParameter, GridParameter
 from foamlib.preprocessing.of_dict import FoamDictInstruction
 from foamlib.preprocessing.parameter_study import grid_generator
-from foamlib.preprocessing.system import simulationParameters
+from foamlib.preprocessing.system import simulation_parameters
 
 # damBreak
 root = Path(__file__).parent
@@ -28,7 +28,7 @@ grid = GridParameter(
     #     file_name=Path("system/simulationParameters"),
     #     keys=[f"res{i}"],
     # )
-    modify_dict=[simulationParameters(keys=[f"res{i}"]) for i in range(1, 6)],
+    modify_dict=[simulation_parameters(keys=[f"res{i}"]) for i in range(1, 6)],
     parameters=[
         CaseParameter(name="coarse", values=grid_parameters(1)),
         CaseParameter(name="mid", values=grid_parameters(2)),
@@ -38,7 +38,7 @@ grid = GridParameter(
 
 init_height = GridParameter(
     parameter_name="initHeight",
-    modify_dict=[simulationParameters(keys=["initHeight"])],
+    modify_dict=[simulation_parameters(keys=["initHeight"])],
     parameters=[
         CaseParameter(name="height_02", values=[0.2]),
         CaseParameter(name="height_03", values=[0.3]),

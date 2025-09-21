@@ -21,9 +21,9 @@ def test_parse_value() -> None:
     assert Parsed(b"uniform 1.0e-3")[()] == 1.0e-3
     assert Parsed(b"(word word)")[()] == ["word", "word"]
     lst = Parsed(b"(1 2 3)")[()]
-    assert np.array_equal(lst, [1, 2, 3])  # type: ignore[arg-type]
+    assert np.array_equal(lst, [1, 2, 3])
     lst = Parsed(b"(1.0 2 3)")[()]
-    assert np.array_equal(lst, [1.0, 2.0, 3.0])  # type: ignore[arg-type]
+    assert np.array_equal(lst, [1.0, 2.0, 3.0])
     assert Parsed(b"()")[()] == []
     field = Parsed(b"uniform (1 2 3)")[()]
     assert isinstance(field, np.ndarray)
@@ -116,12 +116,12 @@ def test_parse_value() -> None:
     assert len(tpl) == 5
     assert tpl[0] == "hex"
     assert is_sequence(tpl[1])
-    assert np.array_equal(tpl[1], [0, 1, 2, 3, 4, 5, 6, 7])  # type: ignore[arg-type]
+    assert np.array_equal(tpl[1], [0, 1, 2, 3, 4, 5, 6, 7])
     assert is_sequence(tpl[2])
-    assert np.array_equal(tpl[2], [1, 1, 1])  # type: ignore[arg-type]
+    assert np.array_equal(tpl[2], [1, 1, 1])
     assert tpl[3] == "simpleGrading"
     assert is_sequence(tpl[4])
-    assert np.array_equal(tpl[4], [1, 1, 1])  # type: ignore[arg-type]
+    assert np.array_equal(tpl[4], [1, 1, 1])
     assert Parsed(b"(a b; c d;)")[()] == [("a", "b"), ("c", "d")]
     assert Parsed(b"(a {b c;} d {e g;})")[()] == [
         ("a", {"b": "c"}),

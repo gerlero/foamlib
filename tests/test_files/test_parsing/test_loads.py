@@ -22,17 +22,17 @@ def test_loads() -> None:
     assert FoamFile.loads("uniform 1") == 1
     assert FoamFile.loads("uniform 1.0") == 1.0
     assert FoamFile.loads("uniform 1.0e-3") == 1.0e-3
-    assert np.array_equal(FoamFile.loads("(1 2 3)"), [1, 2, 3])  # type: ignore[arg-type]
-    assert np.array_equal(FoamFile.loads("3(1 2 3)"), [1, 2, 3])  # type: ignore[arg-type]
+    assert np.array_equal(FoamFile.loads("(1 2 3)"), [1, 2, 3])
+    assert np.array_equal(FoamFile.loads("3(1 2 3)"), [1, 2, 3])
     assert np.array_equal(
-        FoamFile.loads("2((1 2 3) (4 5 6))"),  # type: ignore[arg-type]
+        FoamFile.loads("2((1 2 3) (4 5 6))"),
         [
             [1, 2, 3],
             [4, 5, 6],
         ],
     )
     assert np.array_equal(
-        FoamFile.loads("2{(1 2 3)}"),  # type: ignore[arg-type]
+        FoamFile.loads("2{(1 2 3)}"),
         [
             [1, 2, 3],
             [1, 2, 3],
@@ -42,17 +42,17 @@ def test_loads() -> None:
     assert np.array_equal(
         FoamFile.loads(
             b"nonuniform List<scalar> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@)"
-        ),  # type: ignore[arg-type]
+        ),
         [1, 2],
     )
     assert np.array_equal(
         FoamFile.loads(
             b"nonuniform List<vector> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@)"
-        ),  # type: ignore[arg-type]
+        ),
         [[1, 2, 3], [4, 5, 6]],
     )
     assert np.array_equal(
-        FoamFile.loads(b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)"),  # type: ignore[arg-type]
+        FoamFile.loads(b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)"),
         [1, 2],
     )
     assert FoamFile.loads("[1 1 -2 0 0 0 0]") == DimensionSet(mass=1, length=1, time=-2)

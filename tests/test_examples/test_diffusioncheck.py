@@ -133,23 +133,23 @@ def test_example(tmp_path: Path) -> None:
 
     case.run()
 
-    x, y, z = case[0].cell_centers().internal_field.T  # type: ignore [union-attr]
+    x, y, z = case[0].cell_centers().internal_field.T
 
     end = x == x.max()
     x = x[end]
     y = y[end]
     z = z[end]
 
-    DT = case.transport_properties["DT"].value  # type: ignore [union-attr]
+    DT = case.transport_properties["DT"].value  # ty: ignore[possibly-unbound-attribute]
     assert isinstance(DT, float)
 
-    U = case[0]["U"].internal_field[0]  # type: ignore [index]
+    U = case[0]["U"].internal_field[0]
     assert isinstance(U, (int, float))
 
     for time in case[1:]:
         if U * time.time < 2 * x.max():
             continue
 
-        numerical = time["T"].internal_field[end]  # type: ignore [index]
+        numerical = time["T"].internal_field[end]
         analytical = 0.5 * erfc((y - 0.5) / np.sqrt(4 * DT * x / U))
         assert numerical == pytest.approx(analytical, abs=1e-1)

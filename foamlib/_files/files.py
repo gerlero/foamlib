@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 def _tensor_kind_for_field(
     field: FieldLike,
 ) -> str:
-    if not (shape := np.shape(field)):  # type: ignore [arg-type]
+    if not (shape := np.shape(field)):
         return "scalar"
     if shape == (3,):
         return "vector"
@@ -258,7 +258,7 @@ class FoamFile(
                             v
                             if v is not ...
                             else FoamFile.SubDict(self._subdict._file, k)
-                        )  # type: ignore [misc]
+                        )
 
             @override
             def __len__(self) -> int:
@@ -281,7 +281,7 @@ class FoamFile(
                             v
                             if v is not ...
                             else FoamFile.SubDict(self._subdict._file, k),
-                        )  # type: ignore [misc]
+                        )
 
             @override
             def __len__(self) -> int:
@@ -298,7 +298,7 @@ class FoamFile(
         @override
         @with_default
         def getall(self, keyword: str) -> Collection[Data | FoamFile.SubDict]:
-            return self._file.getall((*self._keywords, keyword))  # type: ignore [return-value]
+            return self._file.getall((*self._keywords, keyword))
 
         @override
         def __setitem__(
@@ -310,12 +310,12 @@ class FoamFile(
 
         @override
         def add(self, keyword: str, data: DataLike | SubDictLike) -> None:
-            self._file.add((*self._keywords, keyword), data)  # type: ignore [arg-type]
+            self._file.add((*self._keywords, keyword), data)
 
         @override
         @with_default
         def popone(self, keyword: str) -> Data | FoamFile.SubDict:
-            return self._file.popone((*self._keywords, keyword))  # type: ignore [return-value]
+            return self._file.popone((*self._keywords, keyword))
 
         @override
         def __delitem__(self, keyword: str) -> None:
@@ -356,7 +356,7 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike,
         ) -> None:
             with self._file:
-                super().update(other, **kwargs)  # type: ignore [arg-type]
+                super().update(other, **kwargs)
 
         @override
         def extend(
@@ -367,7 +367,7 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike,
         ) -> None:
             with self._file:
-                super().extend(other, **kwargs)  # type: ignore [arg-type]
+                super().extend(other, **kwargs)
 
         @override
         def merge(
@@ -378,7 +378,7 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike,
         ) -> None:
             with self._file:
-                super().merge(other, **kwargs)  # type: ignore [arg-type]
+                super().merge(other, **kwargs)
 
         @override
         def clear(self) -> None:
@@ -541,7 +541,7 @@ class FoamFile(
             )
         ) and self.class_ == "dictionary":
             try:
-                tensor_kind = _tensor_kind_for_field(data)  # type: ignore [arg-type]
+                tensor_kind = _tensor_kind_for_field(data)
             except ValueError:
                 pass
             else:
@@ -696,7 +696,7 @@ class FoamFile(
 
             parsed.put((), normalize(data, keywords=keywords), content)
 
-    @overload  # type: ignore[override]
+    @overload
     def __setitem__(
         self, keywords: None | tuple[()], data: StandaloneDataLike
     ) -> None: ...
@@ -738,7 +738,7 @@ class FoamFile(
             keywords = (keywords,)
 
         with self:
-            return self._get_parsed().popone(keywords)  # type: ignore [return-value]
+            return self._get_parsed().popone(keywords)
 
     @overload
     def _iter(
@@ -780,7 +780,7 @@ class FoamFile(
         return len(list(iter(self)))
 
     @override
-    def keys(  # type: ignore[override]
+    def keys(
         self,
         *,
         include_header: bool = False,
@@ -806,7 +806,7 @@ class FoamFile(
         return FoamFile.ValuesView(self, include_header=include_header)
 
     @override
-    def items(  # type: ignore[override]
+    def items(
         self,
         *,
         include_header: bool = False,
@@ -819,7 +819,7 @@ class FoamFile(
         return FoamFile.ItemsView(self, include_header=include_header)
 
     @override
-    def update(  # type: ignore[override]
+    def update(
         self,
         other: SupportsKeysAndGetItem[
             str | tuple[str, ...] | None, DataLike | StandaloneDataLike | SubDictLike
@@ -834,7 +834,7 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
         with self:
-            super().update(other, **kwargs)  # type: ignore[arg-type]
+            super().update(other, **kwargs)
 
     @override
     def extend(
@@ -852,7 +852,7 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
         with self:
-            super().extend(other, **kwargs)  # type: ignore[arg-type]
+            super().extend(other, **kwargs)
 
     @override
     def merge(
@@ -870,7 +870,7 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
         with self:
-            super().merge(other, **kwargs)  # type: ignore[arg-type]
+            super().merge(other, **kwargs)
 
     @override
     def clear(self, include_header: bool = False) -> None:
@@ -977,7 +977,7 @@ class FoamFile(
             class_ = "dictionary"
             if isinstance(file, Mapping) and "internalField" in file:
                 try:
-                    tensor_kind = _tensor_kind_for_field(file["internalField"])  # type: ignore [arg-type]
+                    tensor_kind = _tensor_kind_for_field(file["internalField"])
                 except (ValueError, TypeError):
                     pass
                 else:
@@ -1043,7 +1043,7 @@ class FoamFieldFile(FoamFile):
             for r in ret:
                 if isinstance(r, FoamFile.SubDict):
                     assert isinstance(r, FoamFieldFile.BoundarySubDict)
-            return ret  # type: ignore [return-value]
+            return ret
 
     class BoundarySubDict(FoamFile.SubDict):
         """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""

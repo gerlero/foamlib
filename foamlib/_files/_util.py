@@ -21,7 +21,7 @@ from multicollections.abc import MutableMultiMapping
 _K = TypeVar("_K")
 _V = TypeVar("_V")
 _V_co = TypeVar("_V_co", covariant=True)
-_MM = TypeVar("_MM", bound=MutableMapping[_K, _V])  # type: ignore[valid-type]
+_MM = TypeVar("_MM", bound=MutableMapping)
 
 
 def is_sequence(
@@ -33,7 +33,7 @@ def is_sequence(
 
 
 def add_to_mapping(
-    d: _MM,
+    d: _MM[_K, _V],
     key: _K,
     value: _V,
     /,
