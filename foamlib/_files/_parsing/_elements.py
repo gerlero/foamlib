@@ -59,10 +59,20 @@ class ASCIINumericList(ParserElement):
         self, instring: str, loc: int, doActions: bool = True
     ) -> tuple[int, ParseResults]:
         spacing_pattern = "|".join(re.escape(c) for c in self.whiteChars)
-        for ignore_expr in self.ignoreExprs:
-            assert isinstance(ignore_expr, Suppress)
-            assert isinstance(ignore_expr.expr, Regex)
-            spacing_pattern += f"|(?:{ignore_expr.expr.re.pattern})"
+        assert spacing_pattern
+
+        assert all(
+            isinstance(ignore_expr, Suppress) for ignore_expr in self.ignoreExprs
+        )
+        assert all(
+            isinstance(ignore_expr.expr, Regex) for ignore_expr in self.ignoreExprs
+        )
+        ignore_pattern = "|".join(
+            ignore_expr.expr.re.pattern for ignore_expr in self.ignoreExprs
+        )
+
+        if ignore_pattern:
+            spacing_pattern = f"{spacing_pattern}|{ignore_pattern}"
 
         if np.issubdtype(self._dtype, np.floating):
             base_pattern = self._FLOAT_PATTERN
@@ -86,7 +96,12 @@ class ASCIINumericList(ParserElement):
         if match := regular_pattern.match(instring, pos=loc):
             count = int(c) if (c := match.group(1)) else None
             contents = match.group(2)
-            contents = re.sub(spacing_pattern, " ", contents)
+
+            if not all(c.isspace() for c in self.whiteChars):
+                contents = re.sub(spacing_pattern, " ", contents)
+            elif ignore_pattern:
+                contents = re.sub(ignore_pattern, " ", contents)  # Faster
+
             if self._elshape:
                 contents = contents.replace("(", " ").replace(")", " ")
 
@@ -206,10 +221,20 @@ class ASCIIFacesLikeList(ParserElement):
         self, instring: str, loc: int, doActions: bool = True
     ) -> tuple[int, ParseResults]:
         spacing_pattern = "|".join(re.escape(c) for c in self.whiteChars)
-        for ignore_expr in self.ignoreExprs:
-            assert isinstance(ignore_expr, Suppress)
-            assert isinstance(ignore_expr.expr, Regex)
-            spacing_pattern += f"|(?:{ignore_expr.expr.re.pattern})"
+        assert spacing_pattern
+
+        assert all(
+            isinstance(ignore_expr, Suppress) for ignore_expr in self.ignoreExprs
+        )
+        assert all(
+            isinstance(ignore_expr.expr, Regex) for ignore_expr in self.ignoreExprs
+        )
+        ignore_pattern = "|".join(
+            ignore_expr.expr.re.pattern for ignore_expr in self.ignoreExprs
+        )
+
+        if ignore_pattern:
+            spacing_pattern = f"{spacing_pattern}|{ignore_pattern}"
 
         three_face_pattern = rf"3(?:{spacing_pattern})*\((?:{spacing_pattern})*(?:{self._INT_PATTERN}(?:{spacing_pattern})*){{3}}\)"
         four_face_pattern = rf"4(?:{spacing_pattern})*\((?:{spacing_pattern})*(?:{self._INT_PATTERN}(?:{spacing_pattern})*){{4}}\)"
@@ -224,7 +249,12 @@ class ASCIIFacesLikeList(ParserElement):
         if match := face_list_pattern.match(instring, pos=loc):
             count = int(c) if (c := match.group(1)) else None
             contents = match.group(2)
-            contents = re.sub(spacing_pattern, " ", contents)
+
+            if not all(c.isspace() for c in self.whiteChars):
+                contents = re.sub(spacing_pattern, " ", contents)
+            elif ignore_pattern:
+                contents = re.sub(ignore_pattern, " ", contents)  # Faster
+
             contents = contents.replace("(", " ").replace(")", " ")
 
             raw = np.fromstring(contents, sep=" ", dtype=int)
