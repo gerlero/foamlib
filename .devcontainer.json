@@ -8,7 +8,7 @@
         "vscode": {
             "extensions": [
                 "github.vscode-github-actions",
-                "ms-python.mypy-type-checker",
+                "astral-sh.ty",
                 "charliermarsh.ruff"
             ]
         }
