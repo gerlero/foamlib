@@ -43,11 +43,11 @@ Compared to [PyFoam](https://openfoamwiki.net/index.php/Contrib/PyFoam) and othe
 
 **foamlib** provides these key classes for different aspects of OpenFOAM workflow automation:
 
-### File Handling
+### 📄 File handling
 * **[`FoamFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFile)** - Read and write OpenFOAM configuration files as if they were Python `dict`s
 * **[`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFieldFile)** - Handle field files with support for ASCII and binary formats (with or without compression)
 
-### Case Management  
+### 📁 Case management  
 * **[`FoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.FoamCase)** - Configure, run, and access results of OpenFOAM cases
 * **[`AsyncFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncFoamCase)** - Asynchronous version for running multiple cases concurrently
 * **[`AsyncSlurmFoamCase`](https://foamlib.readthedocs.io/en/stable/cases.html#foamlib.AsyncSlurmFoamCase)** - Specialized for Slurm-based HPC clusters
