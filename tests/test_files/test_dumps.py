@@ -100,19 +100,19 @@ def test_serialize_file() -> None:
     assert FoamFile.dumps(1.0, ensure_header=False) == b"1.0"
     assert (
         FoamFile.dumps(1.0)
-        == b"{FoamFile {version 2.0; format ascii; class dictionary;}} 1.0"
+        == b"FoamFile {version 2.0; format ascii; class dictionary;} 1.0"
     )
     assert (
         FoamFile.dumps({"a": "b", "c": "d", "n": "no", "y": "yes"})
-        == b"{FoamFile {version 2.0; format ascii; class dictionary;}} a b; c d; n no; y yes;"
+        == b"FoamFile {version 2.0; format ascii; class dictionary;} a b; c d; n no; y yes;"
     )
     assert (
         FoamFile.dumps({"internalField": [[1, 2, 3], [4, 5, 6]]})
-        == b"{FoamFile {version 2.0; format ascii; class volVectorField;}} internalField nonuniform List<vector> 2((1.0 2.0 3.0) (4.0 5.0 6.0));"
+        == b"FoamFile {version 2.0; format ascii; class volVectorField;} internalField nonuniform List<vector> 2((1.0 2.0 3.0) (4.0 5.0 6.0));"
     )
     assert (
         FoamFile.dumps([[1, 2, 3], [4, 5, 6]])
-        == b"{FoamFile {version 2.0; format ascii; class dictionary;}} ((1.0 2.0 3.0) (4.0 5.0 6.0))"
+        == b"FoamFile {version 2.0; format ascii; class dictionary;} ((1.0 2.0 3.0) (4.0 5.0 6.0))"
     )
     assert FoamFile.dumps([1, 2, 3], ensure_header=False) == b"(1 2 3)"
     assert (

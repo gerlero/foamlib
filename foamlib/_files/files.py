@@ -987,8 +987,8 @@ class FoamFile(
 
             ret = (
                 dumps(
-                    {"FoamFile": header},
-                    keywords=(),
+                    ("FoamFile", header),
+                    tuple_is_keyword_entry=True,
                 )
                 + b" "
                 + ret
