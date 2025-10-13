@@ -22,7 +22,7 @@ def max_height_filter(table: pd.DataFrame, parameters: list[dict[str, str]]) -> 
         "y": [table["y"].max()],
         "z": [table["z"].max()],
     }
-    d.update(parameters)
+    d.update(parameters)  # ty: ignore[no-matching-overload]
     return pd.DataFrame(d)
 
 
