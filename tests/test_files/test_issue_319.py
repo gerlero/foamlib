@@ -80,7 +80,7 @@ subDict
             updateDict = {"second_line": f"update_val_{i + 1}"}
             subdict = testDict["subDict"]
             assert isinstance(subdict, FoamFile.SubDict)
-            subdict.update(updateDict)
+            subdict.update(updateDict)  # ty: ignore[invalid-argument-type]
 
             # Count blank lines before second_line after update
             lines = (tmp_path / "file").read_text().split("\n")
