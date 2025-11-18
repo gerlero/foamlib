@@ -13,6 +13,7 @@ from pyparsing import (
     Located,
     NoMatch,
     ParseException,
+    ParseExpression,
     ParserElement,
     ParseResults,
     Regex,
@@ -27,9 +28,48 @@ else:
     from typing_extensions import override
 
 if TYPE_CHECKING:
+    if sys.version_info >= (3, 9):
+        from collections.abc import Iterable
+    else:
+        from typing import Iterable
+
     from numpy.typing import DTypeLike
 
 from .._util import as_dict_check_unique
+
+
+class MatchLongest(ParseExpression):
+    @override
+    def __init__(self, exprs: Iterable[ParserElement], savelist: bool = False) -> None:
+        super().__init__(exprs, savelist)
+
+    @override
+    def parseImpl(
+        self, instring: str, loc: int, doActions: bool = True
+    ) -> tuple[int, ParseResults]:
+        best_loc = -1
+        best_tks: ParseResults | None = None
+
+        for expr in self.exprs:
+            try:
+                next_loc, tks = expr._parse(instring, loc, doActions)
+            except ParseException:
+                continue
+
+            if next_loc > best_loc:
+                best_loc = next_loc
+                best_tks = tks
+
+        if best_loc >= 0:
+            return best_loc, best_tks
+
+        msg = "No alternatives matched"
+        raise ParseException(
+            instring,
+            loc,
+            msg,
+            self,
+        )
 
 
 class ASCIINumericList(ParserElement):
