@@ -423,6 +423,8 @@ class FoamCaseRunBase(FoamCaseBase):
                 if cpus is None:
                     cpus = 1
 
+            assert cpus is not None
+
             with self.__output(cmd, log=log) as (stdout, stderr), self.__process_stdout(
                 cmd
             ) as process_stdout:

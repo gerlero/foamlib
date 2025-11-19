@@ -52,7 +52,7 @@ class MatchLongest(ParseExpression):
 
         for expr in self.exprs:
             try:
-                next_loc, tks = expr._parse(instring, loc, doActions)
+                next_loc, tks = expr._parse(instring, loc, doActions)  # ty: ignore[call-non-callable]
             except ParseException:
                 continue
 
@@ -61,6 +61,7 @@ class MatchLongest(ParseExpression):
                 best_tks = tks
 
         if best_loc >= 0:
+            assert isinstance(best_tks, ParseResults)
             return best_loc, best_tks
 
         msg = "No alternatives matched"
@@ -102,13 +103,12 @@ class ASCIINumericList(ParserElement):
         assert spacing_pattern
 
         assert all(
-            isinstance(ignore_expr, Suppress) for ignore_expr in self.ignoreExprs
-        )
-        assert all(
-            isinstance(ignore_expr.expr, Regex) for ignore_expr in self.ignoreExprs
+            isinstance(ignore_expr, Suppress) and isinstance(ignore_expr.expr, Regex)
+            for ignore_expr in self.ignoreExprs
         )
         ignore_pattern = "|".join(
-            ignore_expr.expr.re.pattern for ignore_expr in self.ignoreExprs
+            ignore_expr.expr.re.pattern  # ty: ignore[unresolved-attribute]
+            for ignore_expr in self.ignoreExprs
         )
 
         if ignore_pattern:
@@ -264,13 +264,12 @@ class ASCIIFacesLikeList(ParserElement):
         assert spacing_pattern
 
         assert all(
-            isinstance(ignore_expr, Suppress) for ignore_expr in self.ignoreExprs
-        )
-        assert all(
-            isinstance(ignore_expr.expr, Regex) for ignore_expr in self.ignoreExprs
+            isinstance(ignore_expr, Suppress) and isinstance(ignore_expr.expr, Regex)
+            for ignore_expr in self.ignoreExprs
         )
         ignore_pattern = "|".join(
-            ignore_expr.expr.re.pattern for ignore_expr in self.ignoreExprs
+            ignore_expr.expr.re.pattern  # ty: ignore[unresolved-attribute]
+            for ignore_expr in self.ignoreExprs
         )
 
         if ignore_pattern:
