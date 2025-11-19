@@ -289,7 +289,7 @@ def _discover_function_objects(
             file_map[key].add_time(time)
 
 
-def list_function_objects(cases_folder: str = "Cases") -> dict[str, DataSource]:
+def list_function_objects(cases_folder: str | Path = "Cases") -> dict[str, DataSource]:
     """List all output files in OpenFOAM cases.
 
     Parameters
