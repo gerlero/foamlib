@@ -99,9 +99,6 @@ dev = [
     {include-group = "benchmark"},
 ]
 
-[tool.uv.build-backend]
-module-root = "."
-
 [tool.ruff.lint]
 extend-select = ["ALL"]
 extend-ignore = [
