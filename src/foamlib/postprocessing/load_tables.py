@@ -1,7 +1,5 @@
 """Load OpenFOAM post-processing tables."""
 
-from __future__ import annotations
-
 import json
 import os
 from dataclasses import dataclass, field
@@ -13,12 +11,9 @@ except ImportError as e:
     msg = "The postprocessing module requires extra dependencies. Install 'foamlib[postprocessing]' to use it."
     raise ImportError(msg) from e
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable
 
 from .table_reader import TableReader
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 def _of_case(dirnames: list[str]) -> bool:

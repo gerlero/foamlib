@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pandas as pd
 from foamlib.postprocessing.load_tables import (
     datafile,

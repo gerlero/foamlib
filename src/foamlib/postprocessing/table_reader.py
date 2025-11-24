@@ -1,14 +1,10 @@
 """This module provides a utility class for reading tabular data from files with various extensions."""
 
-from __future__ import annotations
-
+import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from itertools import islice
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
-
-if TYPE_CHECKING:
-    import xml.etree.ElementTree as ET
-    from collections.abc import Callable
+from typing import ClassVar
 
 try:
     import pandas as pd

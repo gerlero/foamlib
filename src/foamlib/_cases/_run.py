@@ -1,24 +1,20 @@
-from __future__ import annotations
-
 import os
 import shlex
 import sys
 import tempfile
 from abc import abstractmethod
+from collections.abc import (
+    Callable,
+    Collection,
+    Coroutine,
+    Generator,
+    Sequence,
+)
+from collections.abc import Set as AbstractSet
 from contextlib import contextmanager
+from io import TextIOBase
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from collections.abc import (
-        Callable,
-        Collection,
-        Coroutine,
-        Generator,
-        Sequence,
-    )
-    from collections.abc import Set as AbstractSet
-    from io import TextIOBase
+from typing import Any
 
 from rich.progress import Progress
 
@@ -34,11 +30,9 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
+from .._files import FoamFieldFile
 from ._subprocess import DEVNULL, STDOUT, LogFileMonitor
 from .base import FoamCaseBase
-
-if TYPE_CHECKING:
-    from .._files import FoamFieldFile
 
 
 class FoamCaseRunBase(FoamCaseBase):
@@ -52,7 +46,7 @@ class FoamCaseRunBase(FoamCaseBase):
         @override
         @property
         @abstractmethod
-        def _case(self) -> FoamCaseRunBase:
+        def _case(self) -> "FoamCaseRunBase":
             raise NotImplementedError
 
         def _cell_centers_calls(self) -> Generator[Any, None, FoamFieldFile]:

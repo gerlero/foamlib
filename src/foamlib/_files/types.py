@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import sys
 from typing import TYPE_CHECKING, Any, NamedTuple
 
@@ -10,11 +8,11 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
+from collections.abc import Sequence
+
 from ._util import is_sequence
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from ._typing import Tensor, TensorLike
 
 
@@ -45,7 +43,7 @@ class DimensionSet(NamedTuple):
         return f"{type(self).__name__}({', '.join(f'{n}={v}' for n, v in zip(self._fields, self, strict=True) if v != 0)})"
 
     @override
-    def __add__(self, other: DimensionSet, /) -> DimensionSet:
+    def __add__(self, other: "DimensionSet", /) -> "DimensionSet":
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
@@ -55,7 +53,7 @@ class DimensionSet(NamedTuple):
 
         return self
 
-    def __sub__(self, other: DimensionSet, /) -> DimensionSet:
+    def __sub__(self, other: "DimensionSet", /) -> "DimensionSet":
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
@@ -66,19 +64,19 @@ class DimensionSet(NamedTuple):
         return self
 
     @override
-    def __mul__(self, other: DimensionSet, /) -> DimensionSet:
+    def __mul__(self, other: "DimensionSet", /) -> "DimensionSet":
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
         return DimensionSet(*(a + b for a, b in zip(self, other, strict=True)))
 
-    def __truediv__(self, other: DimensionSet, /) -> DimensionSet:
+    def __truediv__(self, other: "DimensionSet", /) -> "DimensionSet":
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
         return DimensionSet(*(a - b for a, b in zip(self, other, strict=True)))
 
-    def __pow__(self, exponent: float, /) -> DimensionSet:
+    def __pow__(self, exponent: float, /) -> "DimensionSet":
         if not isinstance(exponent, (int, float)):
             return NotImplemented
 
@@ -102,7 +100,7 @@ class Dimensioned:
 
     def __init__(
         self,
-        value: TensorLike,
+        value: "TensorLike",
         dimensions: DimensionSet | Sequence[float],
         name: str | None = None,
     ) -> None:
@@ -127,7 +125,7 @@ class Dimensioned:
             )
         return f"{type(self).__name__}({self.value}, {self.dimensions})"
 
-    def __add__(self, other: Dimensioned | Tensor, /) -> Dimensioned:
+    def __add__(self, other: "Dimensioned | Tensor", /) -> "Dimensioned":
         if not isinstance(other, Dimensioned):
             other = Dimensioned(other, DimensionSet())
 
@@ -139,7 +137,7 @@ class Dimensioned:
             else None,
         )
 
-    def __sub__(self, other: Dimensioned | Tensor, /) -> Dimensioned:
+    def __sub__(self, other: "Dimensioned | Tensor", /) -> "Dimensioned":
         if not isinstance(other, Dimensioned):
             other = Dimensioned(other, DimensionSet())
 
@@ -151,7 +149,7 @@ class Dimensioned:
             else None,
         )
 
-    def __mul__(self, other: Dimensioned | Tensor, /) -> Dimensioned:
+    def __mul__(self, other: "Dimensioned | Tensor", /) -> "Dimensioned":
         if not isinstance(other, Dimensioned):
             other = Dimensioned(other, DimensionSet())
 
@@ -163,7 +161,7 @@ class Dimensioned:
             else None,
         )
 
-    def __truediv__(self, other: Dimensioned | Tensor, /) -> Dimensioned:
+    def __truediv__(self, other: "Dimensioned | Tensor", /) -> "Dimensioned":
         if not isinstance(other, Dimensioned):
             other = Dimensioned(other, DimensionSet())
 
@@ -175,7 +173,7 @@ class Dimensioned:
             else None,
         )
 
-    def __pow__(self, exponent: float, /) -> Dimensioned:
+    def __pow__(self, exponent: float, /) -> "Dimensioned":
         if not isinstance(exponent, (int, float)):
             return NotImplemented
 

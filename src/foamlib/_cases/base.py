@@ -1,19 +1,17 @@
-from __future__ import annotations
-
 import shutil
 import sys
 from collections.abc import Iterator, Sequence
 from collections.abc import Set as AbstractSet
 from pathlib import Path
-from typing import TYPE_CHECKING, overload
+from typing import overload
 
 if sys.version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
 
-if TYPE_CHECKING:
-    import os
+
+import os
 
 from .._files import FoamFieldFile, FoamFile
 
@@ -51,7 +49,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             self.path = Path(path).absolute()
 
         @property
-        def _case(self) -> FoamCaseBase:
+        def _case(self) -> "FoamCaseBase":
             return FoamCaseBase(self.path.parent)
 
         @property
@@ -116,7 +114,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             return str(self.path)
 
     @property
-    def _times(self) -> Sequence[FoamCaseBase.TimeDirectory]:
+    def _times(self) -> Sequence["FoamCaseBase.TimeDirectory"]:
         times = []
         for p in self.path.iterdir():
             if p.is_dir():
@@ -134,17 +132,19 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
     @overload
     def __getitem__(
         self, index: int | float | str, /
-    ) -> FoamCaseBase.TimeDirectory: ...
+    ) -> "FoamCaseBase.TimeDirectory": ...
 
     @overload
-    def __getitem__(self, index: slice, /) -> Sequence[FoamCaseBase.TimeDirectory]: ...
+    def __getitem__(
+        self, index: slice, /
+    ) -> Sequence["FoamCaseBase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
         self,
         index: int | slice | float | str,
         /,
-    ) -> FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]:
+    ) -> "FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]":
         """Return the time directory at the given index (``int``), indices (``slice``), name (``str``), or time (``float``)."""
         if isinstance(index, str):
             return FoamCaseBase.TimeDirectory(self.path / index)
@@ -157,7 +157,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         return self._times[index]
 
     @override
-    def __iter__(self) -> Iterator[FoamCaseBase.TimeDirectory]:
+    def __iter__(self) -> Iterator["FoamCaseBase.TimeDirectory"]:
         """Return an iterator over the time directories in the case."""
         return iter(self._times)
 

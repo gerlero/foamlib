@@ -1,26 +1,22 @@
-from __future__ import annotations
-
 import contextlib
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, overload
+from typing import overload
 
 import numpy as np
 from multicollections import MultiDict
 
 from ._parsing import Parsed
+from ._typing import (
+    Data,
+    DataLike,
+    KeywordEntryLike,
+    StandaloneData,
+    StandaloneDataLike,
+    SubDict,
+    SubDictLike,
+)
 from ._util import as_dict_check_unique, is_sequence
 from .types import Dimensioned, DimensionSet
-
-if TYPE_CHECKING:
-    from ._typing import (
-        Data,
-        DataLike,
-        KeywordEntryLike,
-        StandaloneData,
-        StandaloneDataLike,
-        SubDict,
-        SubDictLike,
-    )
 
 
 @overload

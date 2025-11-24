@@ -1,7 +1,5 @@
 # ruff: noqa: D100
-from __future__ import annotations
-
-from pathlib import Path  # noqa: TC003
+from pathlib import Path
 
 try:
     from pydantic import BaseModel
@@ -10,7 +8,7 @@ except ImportError as e:
     raise ImportError(msg) from e
 
 from foamlib import FoamCase
-from foamlib.preprocessing.of_dict import FoamDictAssignment  # noqa: TC001
+from foamlib.preprocessing.of_dict import FoamDictAssignment
 
 
 class CaseParameter(BaseModel):

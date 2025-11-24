@@ -1,10 +1,9 @@
 """Parameter study module for generating multiple cases based on parameter combinations."""
 
-from __future__ import annotations
-
 import itertools
+from collections.abc import Hashable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 try:
     import pandas as pd
@@ -15,12 +14,8 @@ except ImportError as e:
 
 from foamlib import FoamFile
 from foamlib.preprocessing.case_modifier import CaseModifier, CaseParameter
+from foamlib.preprocessing.grid_parameter_sweep import GridParameter
 from foamlib.preprocessing.of_dict import FoamDictAssignment, FoamDictInstruction
-
-if TYPE_CHECKING:
-    from collections.abc import Hashable
-
-    from foamlib.preprocessing.grid_parameter_sweep import GridParameter
 
 
 class ParameterStudy(BaseModel):
@@ -56,7 +51,7 @@ class ParameterStudy(BaseModel):
             of_case.create_case()
             of_case.modify_case()
 
-    def __add__(self, other: ParameterStudy) -> ParameterStudy:
+    def __add__(self, other: "ParameterStudy") -> "ParameterStudy":
         """Combine two ParameterStudy instances."""
         return ParameterStudy(cases=self.cases + other.cases)
 
@@ -65,7 +60,7 @@ def record_generator(
     records: list[dict[Hashable, Any]],
     template_case: str | Path,
     output_folder: str | Path = Path("Cases"),
-) -> ParameterStudy:
+) -> "ParameterStudy":
     """Generate a parameter study based on records.
 
     Create a :class:`ParameterStudy` from a list of parameter dictionaries.
@@ -136,7 +131,7 @@ def csv_generator(
     csv_file: str | Path,
     template_case: str | Path,
     output_folder: str | Path = Path("Cases"),
-) -> ParameterStudy:
+) -> "ParameterStudy":
     """Generate a parameter study from a CSV file."""
     parastudy = pd.read_csv(csv_file).to_dict(orient="records")
     return record_generator(
@@ -150,7 +145,7 @@ def grid_generator(
     parameters: list[GridParameter],
     template_case: str | Path,
     output_folder: str | Path = Path("Cases"),
-) -> ParameterStudy:
+) -> "ParameterStudy":
     """Generate a parameter study based on grid parameters."""
     cases = []
 

@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 import re
 import sys
-from typing import TYPE_CHECKING
 
 import numpy as np
 from pyparsing import (
@@ -27,10 +24,9 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
-if TYPE_CHECKING:
-    from collections.abc import Iterable
+from collections.abc import Iterable
 
-    from numpy.typing import DTypeLike
+from numpy.typing import DTypeLike
 
 from .._util import as_dict_check_unique
 

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Iterable, MutableMapping, Sequence
 from typing import Protocol, TypeGuard, TypeVar
 
@@ -22,7 +20,7 @@ def is_sequence(
 
 
 def add_to_mapping(
-    d: _MM[_K, _V],
+    d: "_MM[_K, _V]",
     key: _K,
     value: _V,
     /,

@@ -1,6 +1,4 @@
 # ruff: noqa: D100
-from __future__ import annotations
-
 from typing import Any
 
 try:
@@ -9,7 +7,7 @@ except ImportError as e:
     msg = "The preprocessing module requires extra dependencies. Install 'foamlib[preprocessing]' to use it."
     raise ImportError(msg) from e
 
-from foamlib.preprocessing.of_dict import FoamDictInstruction  # noqa: TC001
+from foamlib.preprocessing.of_dict import FoamDictInstruction
 
 
 class CaseParameter(BaseModel):
