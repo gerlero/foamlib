@@ -7,19 +7,13 @@ import selectors
 import subprocess
 import sys
 import time
+from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from io import StringIO, TextIOBase
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-if sys.version_info >= (3, 9):
+if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
-else:
-    from typing import Callable, Mapping, Sequence
-
-if sys.version_info >= (3, 10):
-    from contextlib import AbstractAsyncContextManager, AbstractContextManager
-else:
-    from typing import AsyncContextManager as AbstractAsyncContextManager
-    from typing import ContextManager as AbstractContextManager
 
 if sys.version_info >= (3, 11):
     from typing import Self

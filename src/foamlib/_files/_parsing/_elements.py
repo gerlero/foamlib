@@ -28,10 +28,7 @@ else:
     from typing_extensions import override
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):
-        from collections.abc import Iterable
-    else:
-        from typing import Iterable
+    from collections.abc import Iterable
 
     from numpy.typing import DTypeLike
 

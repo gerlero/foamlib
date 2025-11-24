@@ -1,19 +1,10 @@
 from __future__ import annotations
 
-import sys
-from typing import TYPE_CHECKING
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Mapping, Sequence
-else:
-    from typing import Mapping, Sequence
-
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     import numpy as np
     from multicollections import MultiDict
 

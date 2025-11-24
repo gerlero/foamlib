@@ -5,11 +5,6 @@ import shutil
 import sys
 from typing import TYPE_CHECKING
 
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable, Sequence
-else:
-    from typing import Callable, Sequence
-
 if sys.version_info >= (3, 12):
     from typing import override
 else:
@@ -17,6 +12,7 @@ else:
 
 if TYPE_CHECKING:
     import os
+    from collections.abc import Callable, Sequence
     from io import TextIOBase
 
 from ._subprocess import DEVNULL, STDOUT, run_async

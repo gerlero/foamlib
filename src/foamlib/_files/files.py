@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
 from typing import TYPE_CHECKING, Literal, cast, overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
-else:
-    from typing import Collection, Iterable, Iterator, Mapping, Sequence
 
 if sys.version_info >= (3, 12):
     from typing import override

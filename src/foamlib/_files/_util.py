@@ -1,20 +1,9 @@
 from __future__ import annotations
 
-import sys
-from typing import Protocol, Sequence, TypeVar
+from collections.abc import Iterable, MutableMapping, Sequence
+from typing import Protocol, TypeGuard, TypeVar
 
 import numpy as np
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Iterable, MutableMapping
-else:
-    from typing import Iterable, MutableMapping
-
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-else:
-    from typing_extensions import TypeGuard
-
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping
 

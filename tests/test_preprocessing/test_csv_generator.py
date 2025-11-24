@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import shutil
-import sys
 from pathlib import Path
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Generator
-else:
-    from typing import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 from foamlib.postprocessing.load_tables import functionobject, load_tables
 from foamlib.preprocessing.parameter_study import csv_generator
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 CSV_FILE = "tests/test_preprocessing/test_parastudy.csv"
 CSV_FILE2 = "tests/test_preprocessing/test_parastudy2.csv"

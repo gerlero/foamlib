@@ -2,19 +2,17 @@
 from __future__ import annotations
 
 import shutil
-import sys
 from pathlib import Path
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Generator
-else:
-    from typing import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 from foamlib.preprocessing.grid_parameter_sweep import CaseParameter, GridParameter
 from foamlib.preprocessing.of_dict import FoamDictInstruction
 from foamlib.preprocessing.parameter_study import grid_generator
 from foamlib.preprocessing.system import simulation_parameters
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 CSV_FILE = "tests/test_preprocessing/test_parastudy.csv"
 OUTPUT_FOLDER = "tests/test_preprocessing/Cases/"

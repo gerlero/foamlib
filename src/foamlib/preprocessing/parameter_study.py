@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import itertools
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Hashable
+from typing import TYPE_CHECKING, Any
 
 try:
     import pandas as pd
@@ -18,6 +18,8 @@ from foamlib.preprocessing.case_modifier import CaseModifier, CaseParameter
 from foamlib.preprocessing.of_dict import FoamDictAssignment, FoamDictInstruction
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable
+
     from foamlib.preprocessing.grid_parameter_sweep import GridParameter
 
 
