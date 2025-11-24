@@ -107,7 +107,6 @@ class Dimensioned:
         if is_sequence(value):
             self.value: Tensor = np.array(value, dtype=float)
         else:
-            assert isinstance(value, (int, float, np.ndarray))
             self.value = float(value)
 
         if not isinstance(dimensions, DimensionSet):
