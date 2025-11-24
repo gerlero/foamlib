@@ -66,7 +66,7 @@ typing = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
     "pandas-stubs",
-    "scipy-stubs; python_version>='3.10'",
+    "scipy-stubs",
     "ty",
     "types-defusedxml",
 ]
