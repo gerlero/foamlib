@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-if sys.version_info >= (3, 9):
+if TYPE_CHECKING:
     from collections.abc import (
         Callable,
         Collection,
@@ -18,17 +18,6 @@ if sys.version_info >= (3, 9):
         Sequence,
     )
     from collections.abc import Set as AbstractSet
-else:
-    from typing import (
-        AbstractSet,
-        Callable,
-        Collection,
-        Coroutine,
-        Generator,
-        Sequence,
-    )
-
-if TYPE_CHECKING:
     from io import TextIOBase
 
 from rich.progress import Progress
@@ -425,9 +414,10 @@ class FoamCaseRunBase(FoamCaseBase):
 
             assert cpus is not None
 
-            with self.__output(cmd, log=log) as (stdout, stderr), self.__process_stdout(
-                cmd
-            ) as process_stdout:
+            with (
+                self.__output(cmd, log=log) as (stdout, stderr),
+                self.__process_stdout(cmd) as process_stdout,
+            ):
                 if parallel:
                     if isinstance(cmd, str):
                         cmd = [

@@ -2,17 +2,8 @@ from __future__ import annotations
 
 import dataclasses
 import sys
+from collections.abc import Collection, Iterator, Sequence
 from typing import TYPE_CHECKING, cast
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Collection, Iterator, Sequence
-else:
-    from typing import Collection, Iterator, Sequence
-
-if sys.version_info >= (3, 10):
-    from types import EllipsisType
-else:
-    EllipsisType = type(...)
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -27,6 +18,8 @@ from .._util import add_to_mapping
 from ._grammar import FILE
 
 if TYPE_CHECKING:
+    from types import EllipsisType
+
     from .._typing import Data, File, StandaloneData, SubDict
 
 

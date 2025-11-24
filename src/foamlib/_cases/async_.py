@@ -4,18 +4,7 @@ import asyncio
 import multiprocessing
 import sys
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Callable, TypeVar, overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import (
-        AsyncGenerator,
-        Awaitable,
-        Collection,
-        Iterable,
-        Sequence,
-    )
-else:
-    from typing import AsyncGenerator, Awaitable, Collection, Iterable, Sequence
+from typing import TYPE_CHECKING, TypeVar, overload
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -29,6 +18,14 @@ else:
 
 if TYPE_CHECKING:
     import os
+    from collections.abc import (
+        AsyncGenerator,
+        Awaitable,
+        Callable,
+        Collection,
+        Iterable,
+        Sequence,
+    )
     from io import TextIOBase
 
 import aioshutil

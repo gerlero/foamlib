@@ -2,14 +2,10 @@ from __future__ import annotations
 
 import shutil
 import sys
+from collections.abc import Iterator, Sequence
+from collections.abc import Set as AbstractSet
 from pathlib import Path
 from typing import TYPE_CHECKING, overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Iterator, Sequence
-    from collections.abc import Set as AbstractSet
-else:
-    from typing import AbstractSet, Iterator, Sequence
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -20,7 +16,6 @@ if TYPE_CHECKING:
     import os
 
 from .._files import FoamFieldFile, FoamFile
-from ._util import is_path_relative_to
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
@@ -194,7 +189,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
     def file(self, path: os.PathLike[str] | str) -> FoamFile:
         """Return a :class:`FoamFile` object for the given path in the case."""
         ret = FoamFile(self.path / path)
-        if not is_path_relative_to(ret, self):
+        if not ret.path.is_relative_to(self.path):
             msg = f"Path {ret.path} is outside case path {self.path}\nUse FoamFile({path}) to open a file outside the case."
             raise ValueError(msg)
         return ret

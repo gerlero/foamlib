@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 import shutil
-import sys
 from pathlib import Path
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Generator
-else:
-    from typing import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 from foamlib import FoamCase
 from foamlib.preprocessing.case_modifier import CaseModifier, CaseParameter
 from foamlib.preprocessing.of_dict import FoamDictAssignment, FoamDictInstruction
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 OUTPUT_CASE = "tests/test_preprocessing/modifiedCase"
 

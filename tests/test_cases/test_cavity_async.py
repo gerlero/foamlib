@@ -1,13 +1,7 @@
 import os
 import stat
-import sys
+from collections.abc import AsyncGenerator, Sequence
 from pathlib import Path
-from typing import Sequence
-
-if sys.version_info >= (3, 9):
-    from collections.abc import AsyncGenerator
-else:
-    from typing import AsyncGenerator
 
 import numpy as np
 import pytest

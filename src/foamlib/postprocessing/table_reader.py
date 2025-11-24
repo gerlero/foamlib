@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from itertools import islice
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     import xml.etree.ElementTree as ET
+    from collections.abc import Callable
 
 try:
     import pandas as pd

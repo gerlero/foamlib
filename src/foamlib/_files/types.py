@@ -5,10 +5,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 import numpy as np
 
-if sys.version_info >= (3, 9):
-    from collections.abc import Sequence
-else:
-    from typing import Sequence
 if sys.version_info >= (3, 12):
     from typing import override
 else:
@@ -17,6 +13,8 @@ else:
 from ._util import is_sequence
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ._typing import Tensor, TensorLike
 
 
@@ -44,7 +42,7 @@ class DimensionSet(NamedTuple):
 
     @override
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({', '.join(f'{n}={v}' for n, v in zip(self._fields, self) if v != 0)})"
+        return f"{type(self).__name__}({', '.join(f'{n}={v}' for n, v in zip(self._fields, self, strict=True) if v != 0)})"
 
     @override
     def __add__(self, other: DimensionSet, /) -> DimensionSet:
@@ -72,13 +70,13 @@ class DimensionSet(NamedTuple):
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
-        return DimensionSet(*(a + b for a, b in zip(self, other)))
+        return DimensionSet(*(a + b for a, b in zip(self, other, strict=True)))
 
     def __truediv__(self, other: DimensionSet, /) -> DimensionSet:
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
-        return DimensionSet(*(a - b for a, b in zip(self, other)))
+        return DimensionSet(*(a - b for a, b in zip(self, other, strict=True)))
 
     def __pow__(self, exponent: float, /) -> DimensionSet:
         if not isinstance(exponent, (int, float)):
