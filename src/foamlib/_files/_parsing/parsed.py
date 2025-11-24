@@ -1,26 +1,22 @@
-from __future__ import annotations
-
 import dataclasses
 import sys
 from collections.abc import Collection, Iterator, Sequence
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 if sys.version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
 
+from types import EllipsisType
+
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
 from pyparsing import ParseException, ParseResults
 
+from .._typing import Data, File, StandaloneData, SubDict
 from .._util import add_to_mapping
 from ._grammar import FILE
-
-if TYPE_CHECKING:
-    from types import EllipsisType
-
-    from .._typing import Data, File, StandaloneData, SubDict
 
 
 class Parsed(
@@ -54,7 +50,7 @@ class Parsed(
         parse_results: ParseResults | Sequence[ParseResults],
         *,
         _keywords: tuple[str, ...] = (),
-    ) -> MultiDict[tuple[str, ...], Parsed._Entry]:
+    ) -> MultiDict[tuple[str, ...], "Parsed._Entry"]:
         ret: MultiDict[tuple[str, ...], Parsed._Entry] = MultiDict()
         for parse_result in parse_results:
             value = parse_result.value

@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 import asyncio
 import multiprocessing
 import sys
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TypeVar, overload
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -16,27 +14,25 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
-if TYPE_CHECKING:
-    import os
-    from collections.abc import (
-        AsyncGenerator,
-        Awaitable,
-        Callable,
-        Collection,
-        Iterable,
-        Sequence,
-    )
-    from io import TextIOBase
+
+import os
+from collections.abc import (
+    AsyncGenerator,
+    Awaitable,
+    Callable,
+    Collection,
+    Iterable,
+    Sequence,
+)
+from io import TextIOBase
 
 import aioshutil
 
+from .._files import FoamFieldFile
 from ._run import FoamCaseRunBase
 from ._subprocess import DEVNULL, STDOUT, run_async
 from ._util import ValuedGenerator, awaitableasynccontextmanager
 from .base import FoamCaseBase
-
-if TYPE_CHECKING:
-    from .._files import FoamFieldFile
 
 _X = TypeVar("_X")
 _Y = TypeVar("_Y")
@@ -70,7 +66,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     class TimeDirectory(FoamCaseRunBase.TimeDirectory):
         @override
         @property
-        def _case(self) -> AsyncFoamCase:
+        def _case(self) -> "AsyncFoamCase":
             return AsyncFoamCase(self.path.parent)
 
         @override
@@ -190,15 +186,17 @@ class AsyncFoamCase(FoamCaseRunBase):
             await coro
 
     @overload
-    def __getitem__(self, index: int | float | str) -> AsyncFoamCase.TimeDirectory: ...
+    def __getitem__(
+        self, index: int | float | str
+    ) -> "AsyncFoamCase.TimeDirectory": ...
 
     @overload
-    def __getitem__(self, index: slice) -> Sequence[AsyncFoamCase.TimeDirectory]: ...
+    def __getitem__(self, index: slice) -> Sequence["AsyncFoamCase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
         self, index: int | slice | float | str
-    ) -> AsyncFoamCase.TimeDirectory | Sequence[AsyncFoamCase.TimeDirectory]:
+    ) -> "AsyncFoamCase.TimeDirectory | Sequence[AsyncFoamCase.TimeDirectory]":
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):
             return AsyncFoamCase.TimeDirectory(ret)

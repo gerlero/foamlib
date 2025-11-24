@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import contextlib
 import os
@@ -7,13 +5,10 @@ import selectors
 import subprocess
 import sys
 import time
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from io import StringIO, TextIOBase
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
 
 if sys.version_info >= (3, 11):
     from typing import Self

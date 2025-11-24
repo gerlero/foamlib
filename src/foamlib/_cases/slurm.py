@@ -1,19 +1,15 @@
-from __future__ import annotations
-
 import asyncio
 import shutil
 import sys
-from typing import TYPE_CHECKING
 
 if sys.version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
 
-if TYPE_CHECKING:
-    import os
-    from collections.abc import Callable, Sequence
-    from io import TextIOBase
+import os
+from collections.abc import Callable, Sequence
+from io import TextIOBase
 
 from ._subprocess import DEVNULL, STDOUT, run_async
 from .async_ import AsyncFoamCase

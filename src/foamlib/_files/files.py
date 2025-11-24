@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import sys
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
-from typing import TYPE_CHECKING, Literal, cast, overload
+from typing import Literal, cast, overload
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -20,22 +18,20 @@ from multicollections.abc import (
 from ._io import FoamFileIO
 from ._parsing import Parsed
 from ._serialization import dumps, normalize
+from ._typing import (
+    Data,
+    DataLike,
+    Field,
+    FieldLike,
+    File,
+    FileLike,
+    StandaloneData,
+    StandaloneDataLike,
+    SubDict,
+    SubDictLike,
+)
+from ._util import SupportsKeysAndGetItem
 from .types import Dimensioned, DimensionSet
-
-if TYPE_CHECKING:
-    from ._typing import (
-        Data,
-        DataLike,
-        Field,
-        FieldLike,
-        File,
-        FileLike,
-        StandaloneData,
-        StandaloneDataLike,
-        SubDict,
-        SubDictLike,
-    )
-    from ._util import SupportsKeysAndGetItem
 
 
 def _tensor_kind_for_field(
@@ -121,7 +117,7 @@ class FoamFile(
     DimensionSet = DimensionSet
 
     class KeysView(multicollections.abc.KeysView["str | None"]):
-        def __init__(self, file: FoamFile, *, include_header: bool = False) -> None:
+        def __init__(self, file: "FoamFile", *, include_header: bool = False) -> None:
             self._file = file
             self._include_header = include_header
 
@@ -140,12 +136,12 @@ class FoamFile(
     class ValuesView(
         multicollections.abc.ValuesView["Data | StandaloneData | FoamFile.SubDict"]
     ):
-        def __init__(self, file: FoamFile, *, include_header: bool = False) -> None:
+        def __init__(self, file: "FoamFile", *, include_header: bool = False) -> None:
             self._file = file
             self._include_header = include_header
 
         @override
-        def __iter__(self) -> Iterator[Data | StandaloneData | FoamFile.SubDict]:
+        def __iter__(self) -> Iterator["Data | StandaloneData | FoamFile.SubDict"]:
             for k, v in self._file._get_parsed().items():
                 if k != ("FoamFile",) or self._include_header:
                     yield v if v is not ... else FoamFile.SubDict(self._file, k)
@@ -165,7 +161,7 @@ class FoamFile(
     ):
         def __init__(
             self,
-            file: FoamFile,
+            file: "FoamFile",
             *,
             include_header: bool = False,
             keywords: tuple[str, ...] = (),
@@ -178,7 +174,7 @@ class FoamFile(
         @override
         def __iter__(
             self,
-        ) -> Iterator[tuple[str | None, Data | StandaloneData | FoamFile.SubDict]]:
+        ) -> Iterator[tuple[str | None, "Data | StandaloneData | FoamFile.SubDict"]]:
             for k, v in self._file._get_parsed().items():
                 if k != ("FoamFile",) or self._include_header:
                     yield (
@@ -227,7 +223,7 @@ class FoamFile(
         """
 
         class KeysView(multicollections.abc.KeysView[str]):
-            def __init__(self, subdict: FoamFile.SubDict) -> None:
+            def __init__(self, subdict: "FoamFile.SubDict") -> None:
                 self._subdict = subdict
 
             @override
@@ -243,11 +239,11 @@ class FoamFile(
                 return any(k == key for k in iter(self))
 
         class ValuesView(multicollections.abc.ValuesView["Data | FoamFile.SubDict"]):
-            def __init__(self, subdict: FoamFile.SubDict) -> None:
+            def __init__(self, subdict: "FoamFile.SubDict") -> None:
                 self._subdict = subdict
 
             @override
-            def __iter__(self) -> Iterator[Data | FoamFile.SubDict]:
+            def __iter__(self) -> Iterator["Data | FoamFile.SubDict"]:
                 for k, v in self._subdict._file._get_parsed().items():
                     if k[:-1] == self._subdict._keywords:
                         yield (
@@ -265,11 +261,11 @@ class FoamFile(
                 return any(v == value for v in iter(self))
 
         class ItemsView(multicollections.abc.ItemsView[str, "Data | FoamFile.SubDict"]):
-            def __init__(self, subdict: FoamFile.SubDict) -> None:
+            def __init__(self, subdict: "FoamFile.SubDict") -> None:
                 self._subdict = subdict
 
             @override
-            def __iter__(self) -> Iterator[tuple[str, Data | FoamFile.SubDict]]:
+            def __iter__(self) -> Iterator[tuple[str, "Data | FoamFile.SubDict"]]:
                 for k, v in self._subdict._file._get_parsed().items():
                     if k[:-1] == self._subdict._keywords:
                         yield (
@@ -287,13 +283,13 @@ class FoamFile(
             def __contains__(self, item: object) -> bool:
                 return any(i == item for i in iter(self))
 
-        def __init__(self, _file: FoamFile, _keywords: tuple[str, ...]) -> None:
+        def __init__(self, _file: "FoamFile", _keywords: tuple[str, ...]) -> None:
             self._file = _file
             self._keywords = _keywords
 
         @override
         @with_default
-        def getall(self, keyword: str) -> Collection[Data | FoamFile.SubDict]:
+        def getall(self, keyword: str) -> Collection["Data | FoamFile.SubDict"]:
             return self._file.getall((*self._keywords, keyword))
 
         @override
@@ -310,7 +306,7 @@ class FoamFile(
 
         @override
         @with_default
-        def popone(self, keyword: str) -> Data | FoamFile.SubDict:
+        def popone(self, keyword: str) -> "Data | FoamFile.SubDict":
             return self._file.popone((*self._keywords, keyword))
 
         @override
@@ -332,15 +328,15 @@ class FoamFile(
             return len(list(iter(self)))
 
         @override
-        def keys(self) -> FoamFile.SubDict.KeysView:
+        def keys(self) -> "FoamFile.SubDict.KeysView":
             return FoamFile.SubDict.KeysView(self)
 
         @override
-        def values(self) -> FoamFile.SubDict.ValuesView:
+        def values(self) -> "FoamFile.SubDict.ValuesView":
             return FoamFile.SubDict.ValuesView(self)
 
         @override
-        def items(self) -> FoamFile.SubDict.ItemsView:
+        def items(self) -> "FoamFile.SubDict.ItemsView":
             return FoamFile.SubDict.ItemsView(self)
 
         @override
@@ -470,7 +466,7 @@ class FoamFile(
     def getall(
         self,
         keywords: str | tuple[str, ...] | None,
-    ) -> Collection[Data | StandaloneData | FoamFile.SubDict]:
+    ) -> Collection["Data | StandaloneData | FoamFile.SubDict"]:
         if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -727,7 +723,7 @@ class FoamFile(
     @override
     def popone(
         self, keywords: str | tuple[str, ...] | None
-    ) -> Data | StandaloneData | FoamFile.SubDict:
+    ) -> "Data | StandaloneData | FoamFile.SubDict":
         if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -780,7 +776,7 @@ class FoamFile(
         self,
         *,
         include_header: bool = False,
-    ) -> FoamFile.KeysView:
+    ) -> "FoamFile.KeysView":
         """
         Return a collection of the keywords in the FoamFile.
 
@@ -793,7 +789,7 @@ class FoamFile(
         self,
         *,
         include_header: bool = False,
-    ) -> FoamFile.ValuesView:
+    ) -> "FoamFile.ValuesView":
         """
         Return a collection of the values in the FoamFile.
 
@@ -806,7 +802,7 @@ class FoamFile(
         self,
         *,
         include_header: bool = False,
-    ) -> FoamFile.ItemsView:
+    ) -> "FoamFile.ItemsView":
         """
         Return a collection of the items (keyword-value pairs) in the FoamFile.
 
@@ -1034,7 +1030,7 @@ class FoamFieldFile(FoamFile):
         @with_default
         def getall(
             self, keyword: str
-        ) -> Collection[FoamFieldFile.BoundarySubDict | Data]:
+        ) -> Collection["FoamFieldFile.BoundarySubDict | Data"]:
             ret = super().getall(keyword)
             for r in ret:
                 if isinstance(r, FoamFile.SubDict):
@@ -1082,7 +1078,7 @@ class FoamFieldFile(FoamFile):
     @with_default
     def getall(
         self, keywords: str | tuple[str, ...] | None
-    ) -> Collection[Data | StandaloneData | FoamFieldFile.SubDict]:
+    ) -> Collection["Data | StandaloneData | FoamFieldFile.SubDict"]:
         if keywords is None:
             keywords = ()
         elif not isinstance(keywords, tuple):
@@ -1128,7 +1124,7 @@ class FoamFieldFile(FoamFile):
         self["internalField"] = value
 
     @property
-    def boundary_field(self) -> FoamFieldFile.BoundariesSubDict:
+    def boundary_field(self) -> "FoamFieldFile.BoundariesSubDict":
         """Alias of ``self["boundaryField"]``."""
         ret = self["boundaryField"]
         if not isinstance(ret, FoamFieldFile.BoundariesSubDict):

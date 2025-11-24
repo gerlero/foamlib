@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import functools
 import sys
 import threading
@@ -9,22 +7,15 @@ from contextlib import (
     AbstractContextManager,
     asynccontextmanager,
 )
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    TypeVar,
-    cast,
-)
+from typing import Any, Generic, TypeVar, cast
 
 if sys.version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
 
-if TYPE_CHECKING:
-    from types import TracebackType
 
+from types import TracebackType
 
 _Y = TypeVar("_Y")
 _S = TypeVar("_S")

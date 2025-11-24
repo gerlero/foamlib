@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import shutil
 import sys
-from typing import TYPE_CHECKING, overload
+from typing import overload
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -14,19 +12,16 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
-if TYPE_CHECKING:
-    import os
-    from collections.abc import Callable, Collection, Sequence
-    from io import TextIOBase
-    from types import TracebackType
+import os
+from collections.abc import Callable, Collection, Sequence
+from io import TextIOBase
+from types import TracebackType
 
+from .._files import FoamFieldFile
 from ._run import FoamCaseRunBase
 from ._subprocess import DEVNULL, STDOUT, run_sync
 from ._util import ValuedGenerator
 from .base import FoamCaseBase
-
-if TYPE_CHECKING:
-    from .._files import FoamFieldFile
 
 
 class FoamCase(FoamCaseRunBase):
@@ -57,7 +52,7 @@ class FoamCase(FoamCaseRunBase):
     class TimeDirectory(FoamCaseRunBase.TimeDirectory):
         @override
         @property
-        def _case(self) -> FoamCase:
+        def _case(self) -> "FoamCase":
             return FoamCase(self.path.parent)
 
         @override
@@ -117,15 +112,15 @@ class FoamCase(FoamCaseRunBase):
         shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
 
     @overload
-    def __getitem__(self, index: int | float | str) -> FoamCase.TimeDirectory: ...
+    def __getitem__(self, index: int | float | str) -> "FoamCase.TimeDirectory": ...
 
     @overload
-    def __getitem__(self, index: slice) -> Sequence[FoamCase.TimeDirectory]: ...
+    def __getitem__(self, index: slice) -> Sequence["FoamCase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
         self, index: int | slice | float | str
-    ) -> FoamCase.TimeDirectory | Sequence[FoamCase.TimeDirectory]:
+    ) -> "FoamCase.TimeDirectory | Sequence[FoamCase.TimeDirectory]":
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):
             return FoamCase.TimeDirectory(ret)

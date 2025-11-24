@@ -4,12 +4,7 @@ Test case for issue #319: FoamFile.update() inserts new line before updated entr
 This test ensures that repeated updates to sub-dictionary entries don't accumulate blank lines.
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:  # pragma: no cover
-    from pathlib import Path
+from pathlib import Path
 
 from foamlib import FoamFile
 

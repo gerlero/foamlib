@@ -1,10 +1,7 @@
-from __future__ import annotations
-
 import gzip
 import sys
 from contextlib import AbstractContextManager
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -16,9 +13,8 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
-if TYPE_CHECKING:
-    import os
-    from types import TracebackType
+import os
+from types import TracebackType
 
 from ._parsing import Parsed
 
