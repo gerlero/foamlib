@@ -13,13 +13,14 @@ from pyparsing import (
     Located,
     NoMatch,
     ParseException,
-    ParseExpression,
     ParserElement,
     ParseResults,
     Regex,
     Suppress,
+    Word,
     common,
     counted_array,
+    nums,
 )
 
 if sys.version_info >= (3, 12):
@@ -28,49 +29,9 @@ else:
     from typing_extensions import override
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):
-        from collections.abc import Iterable
-    else:
-        from typing import Iterable
-
     from numpy.typing import DTypeLike
 
 from .._util import as_dict_check_unique
-
-
-class MatchLongest(ParseExpression):
-    @override
-    def __init__(self, exprs: Iterable[ParserElement], savelist: bool = False) -> None:
-        super().__init__(exprs, savelist)
-
-    @override
-    def parseImpl(
-        self, instring: str, loc: int, doActions: bool = True
-    ) -> tuple[int, ParseResults]:
-        best_loc = -1
-        best_tks: ParseResults | None = None
-
-        for expr in self.exprs:
-            try:
-                next_loc, tks = expr._parse(instring, loc, doActions)  # ty: ignore[call-non-callable]
-            except ParseException:
-                continue
-
-            if next_loc > best_loc:
-                best_loc = next_loc
-                best_tks = tks
-
-        if best_loc >= 0:
-            assert isinstance(best_tks, ParseResults)
-            return best_loc, best_tks
-
-        msg = "No alternatives matched"
-        raise ParseException(
-            instring,
-            loc,
-            msg,
-            self,
-        )
 
 
 class ASCIINumericList(ParserElement):
@@ -200,6 +161,11 @@ class ASCIINumericList(ParserElement):
         )
 
 
+_EAGER_INTEGER = Word(nums).add_parse_action(
+    lambda tks: int(tks[0]), call_during_try=True
+)
+
+
 def binary_numeric_list(
     dtype: DTypeLike, elshape: tuple[()] | tuple[int] = (), *, empty_ok: bool = False
 ) -> ParserElement:
@@ -241,7 +207,7 @@ def binary_numeric_list(
         return ret
 
     return (
-        common.integer.copy().add_parse_action(process_count) + list_
+        _EAGER_INTEGER.copy().add_parse_action(process_count) + list_
     ).add_parse_action(to_array)
 
 
@@ -329,7 +295,7 @@ class ASCIIFacesLikeList(ParserElement):
 def list_of(entry: ParserElement) -> ParserElement:
     return (
         (
-            counted_array(entry, common.integer + Literal("(").suppress())
+            counted_array(entry, _EAGER_INTEGER + Literal("(").suppress())
             + Literal(")").suppress()
         ).set_parse_action(lambda tks: [tks.as_list()])
         | (
