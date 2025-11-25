@@ -59,21 +59,20 @@ def normalize(
         items = ((normalize(k, bool_ok=False), normalize(v)) for k, v in data.items())
         if keywords is None:
             return as_dict_check_unique(items)
-        ret1: SubDict = MultiDict(items)
+        md: SubDict = MultiDict(items)
         seen = set()
-        for k, v in ret1.items():
+        for k, v in md.items():
             if k.startswith("#"):
                 if isinstance(v, Mapping):
                     msg = f"Directive {k} cannot have a dictionary as value"
                     raise ValueError(msg)
-            else:
-                if k in seen:
-                    msg = (
-                        f"Duplicate keyword {k} in dictionary with keywords {keywords}"
-                    )
-                    raise ValueError(msg)
-                seen.add(k)
-        return ret1
+            elif k in seen:
+                msg = f"Duplicate keyword {k} in dictionary with keywords {keywords}"
+                raise ValueError(msg)
+            seen.add(k)
+        if len(md) == len(seen):
+            return dict(md)
+        return md
 
     if keywords == () and is_sequence(data) and not isinstance(data, tuple):
         try:
@@ -120,9 +119,9 @@ def normalize(
         return normalize(data)
 
     if isinstance(data, np.ndarray):
-        ret2 = data.tolist()
-        assert isinstance(ret2, (int, float, list))
-        return ret2
+        ret = data.tolist()
+        assert isinstance(ret, (int, float, list))
+        return ret
 
     if (
         not isinstance(data, DimensionSet)
