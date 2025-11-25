@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Protocol, Sequence, TypeVar
+from typing import Protocol, Sequence, TypeVar, overload
 
 import numpy as np
 
@@ -21,7 +21,6 @@ from multicollections.abc import MutableMultiMapping
 _K = TypeVar("_K")
 _V = TypeVar("_V")
 _V_co = TypeVar("_V_co", covariant=True)
-_MM = TypeVar("_MM", bound=MutableMapping)
 
 
 def is_sequence(
@@ -32,21 +31,39 @@ def is_sequence(
     )
 
 
+@overload
 def add_to_mapping(
-    d: _MM[_K, _V],
+    d: MutableMultiMapping[_K, _V],
     key: _K,
     value: _V,
     /,
-) -> _MM | MultiDict[_K, _V]:
+) -> MutableMultiMapping[_K, _V]: ...
+
+
+@overload
+def add_to_mapping(
+    d: MutableMapping[_K, _V],
+    key: _K,
+    value: _V,
+    /,
+) -> MutableMapping[_K, _V]: ...
+
+
+def add_to_mapping(
+    d: MutableMapping[_K, _V],
+    key: _K,
+    value: _V,
+    /,
+) -> MutableMapping[_K, _V]:
     if isinstance(d, MutableMultiMapping):
-        d.add(key, value)
+        d.add(key, value)  # ty: ignore[invalid-argument-type]
         return d
 
     if key not in d:
         d[key] = value
         return d
 
-    ret: MultiDict[_K, _V] = MultiDict(d)
+    ret = MultiDict(d)
     ret.add(key, value)
     return ret
 
