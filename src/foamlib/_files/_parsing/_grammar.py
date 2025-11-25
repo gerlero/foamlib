@@ -22,7 +22,6 @@ from ..types import Dimensioned, DimensionSet
 from ._elements import (
     ASCIIFacesLikeList,
     ASCIINumericList,
-    MatchLongest,
     binary_numeric_list,
     dict_of,
     keyword_entry_of,
@@ -151,7 +150,7 @@ _STANDALONE_DATA = (
     ASCIINumericList(dtype=int)
     | ASCIIFacesLikeList()
     | ASCIINumericList(dtype=float, elshape=(3,))
-    | MatchLongest(
+    | (
         (
             (
                 binary_numeric_list(dtype=np.int32)
@@ -159,9 +158,9 @@ _STANDALONE_DATA = (
             ).add_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else tks[0])
             | binary_numeric_list(dtype=np.float64)
             | binary_numeric_list(dtype=np.float64, elshape=(3,))
-            | binary_numeric_list(dtype=np.float32, elshape=(3,)),
-            _DATA,
+            | binary_numeric_list(dtype=np.float32, elshape=(3,))
         )
+        ^ _DATA
     )
 ).add_parse_action(lambda tks: [None, tks[0]])
 
