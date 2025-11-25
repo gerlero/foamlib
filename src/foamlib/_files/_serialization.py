@@ -3,19 +3,19 @@ from collections.abc import Mapping
 from typing import overload
 
 import numpy as np
-from multicollections import MultiDict
 
 from ._parsing import Parsed
 from ._typing import (
     Data,
     DataLike,
+    File,
     KeywordEntryLike,
     StandaloneData,
     StandaloneDataLike,
     SubDict,
     SubDictLike,
 )
-from ._util import as_dict_check_unique, is_sequence
+from ._util import add_to_mapping, as_dict_check_unique, is_sequence
 from .types import Dimensioned, DimensionSet
 
 
@@ -50,20 +50,17 @@ def normalize(
         items = ((normalize(k, bool_ok=False), normalize(v)) for k, v in data.items())
         if keywords is None:
             return as_dict_check_unique(items)
-        md: SubDict = MultiDict(items)
-        seen = set()
-        for k, v in md.items():
+        ret1: File | SubDict = {}
+        for k, v in items:
             if k.startswith("#"):
                 if isinstance(v, Mapping):
                     msg = f"Directive {k} cannot have a dictionary as value"
                     raise ValueError(msg)
-            elif k in seen:
+            elif k in ret1:
                 msg = f"Duplicate keyword {k} in dictionary with keywords {keywords}"
                 raise ValueError(msg)
-            seen.add(k)
-        if len(md) == len(seen):
-            return dict(md)
-        return md
+            ret1 = add_to_mapping(ret1, k, v)
+        return ret1
 
     if keywords == () and is_sequence(data) and not isinstance(data, tuple):
         try:
@@ -110,9 +107,9 @@ def normalize(
         return normalize(data)
 
     if isinstance(data, np.ndarray):
-        ret = data.tolist()
-        assert isinstance(ret, (int, float, list))
-        return ret
+        ret2 = data.tolist()
+        assert isinstance(ret2, (int, float, list))
+        return ret2
 
     if (
         not isinstance(data, DimensionSet)
