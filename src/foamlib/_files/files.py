@@ -480,21 +480,6 @@ class FoamFile(
             FoamFile.SubDict(self, keywords) if v is ... else deepcopy(v) for v in ret
         ]
 
-    def _normalize_and_validate_keywords(
-        self, keywords: str | tuple[str, ...] | None
-    ) -> tuple[str, ...]:
-        """Normalize keywords to tuple format and validate them."""
-        if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
-
-        if keywords and not isinstance(normalize(keywords[-1], bool_ok=False), str):
-            msg = f"Invalid keyword type: {keywords[-1]} (type {type(keywords[-1])})"
-            raise TypeError(msg)
-
-        return keywords
-
     def _write_header_if_needed(self, keywords: tuple[str, ...]) -> None:
         """Write FoamFile header if needed."""
         try:
@@ -517,41 +502,43 @@ class FoamFile(
     def _update_class_for_field_if_needed(
         self,
         keywords: tuple[str, ...],
-        data: DataLike | StandaloneDataLike | SubDictLike,
+        data: Data | StandaloneData | SubDict,
     ) -> None:
         """Update class field to appropriate field type if this is a field entry."""
         if (
-            keywords == ("internalField",)
-            or (
-                len(keywords) == 3
-                and keywords[0] == "boundaryField"
-                and (
-                    keywords[2] == "value"
-                    or keywords[2] == "gradient"
-                    or keywords[2].endswith(("Value", "Gradient"))
+            isinstance(data, (float, int, np.ndarray))
+            and (
+                keywords == ("internalField",)
+                or (
+                    len(keywords) == 3
+                    and keywords[0] == "boundaryField"
+                    and (
+                        keywords[2] == "value"
+                        or keywords[2] == "gradient"
+                        or keywords[2].endswith(("Value", "Gradient"))
+                    )
                 )
             )
-        ) and self.class_ == "dictionary":
-            try:
-                tensor_kind = _tensor_kind_for_field(data)  # ty: ignore[invalid-argument-type]
-            except ValueError:
-                pass
-            else:
-                self.class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
+            and self.class_ == "dictionary"
+        ):
+            tensor_kind = _tensor_kind_for_field(data)  # ty: ignore[invalid-argument-type]
+            self.class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
 
     def _calculate_spacing(
         self,
         keywords: tuple[str, ...],
         start: int,
         end: int,
-        operation: Literal["put", "add"],
+        /,
+        *,
+        add: bool,
     ) -> tuple[bytes, bytes]:
         """Calculate before/after spacing for entry operations."""
         parsed = self._get_parsed(missing_ok=True)
 
         # For setitem operations, check if this is an update to an existing entry
         # and preserve existing spacing for sub-dictionary entries
-        if operation == "put":
+        if not add:
             is_update = keywords in parsed
             if is_update and len(keywords) > 1:
                 # For existing sub-dictionary entries, preserve existing formatting
@@ -588,39 +575,14 @@ class FoamFile(
 
     def _perform_entry_operation(
         self,
-        keywords: str | tuple[str, ...] | None,
-        data: DataLike | StandaloneDataLike | SubDictLike,
-        operation: Literal["put", "add"],
-    ) -> None:
-        """Shared method for performing entry operations (setitem and add)."""
-        keywords = self._normalize_and_validate_keywords(keywords)
-
-        with self:
-            self._write_header_if_needed(keywords)
-            self._update_class_for_field_if_needed(keywords, data)
-
-            parsed = self._get_parsed(missing_ok=True)
-            start, end = parsed.entry_location(keywords, add=(operation == "add"))
-            before, after = self._calculate_spacing(keywords, start, end, operation)
-            self._process_data_entry(keywords, data, before, after, operation)
-
-    def _process_data_entry(
-        self,
         keywords: tuple[str, ...],
         data: DataLike | StandaloneDataLike | SubDictLike,
-        before: bytes,
-        after: bytes,
-        operation: Literal["put", "add"],
+        /,
+        *,
+        add: bool,
     ) -> None:
-        """Process and write a data entry using either put or add operation."""
-        parsed = self._get_parsed(missing_ok=True)
-        indentation = b"    " * (len(keywords) - 1)
-
-        if isinstance(data, Mapping):
-            if not keywords:
-                msg = "Cannot set a mapping at the root level of a FoamFile\nUse update(), extend(), or merge() instead."
-                raise ValueError(msg)
-
+        """Shared method for performing entry operations (setitem and add)."""
+        if keywords:
             keyword = normalize(keywords[-1], bool_ok=False)
 
             if not isinstance(keyword, str):
@@ -629,64 +591,83 @@ class FoamFile(
                 )
                 raise TypeError(msg)
 
-            if keyword.startswith("#"):
-                msg = (
-                    f"Cannot set a directive as the keyword for a dictionary: {keyword}"
-                )
+            if keyword != keywords[-1]:
+                msg = f"Invalid keyword: {keywords[-1]}"
                 raise ValueError(msg)
 
-            data = normalize(data, keywords=keywords)
+        data = normalize(data, keywords=keywords)
 
-            content = (
-                before
-                + indentation
-                + dumps(keyword)
-                + b"\n"
-                + indentation
-                + b"{\n"
-                + indentation
-                + b"}"
-                + after
-            )
+        indentation = b"    " * (len(keywords) - 1)
 
-            if operation == "add" and keywords in parsed:
-                raise KeyError(keywords)
+        with self:
+            self._write_header_if_needed(keywords)
+            self._update_class_for_field_if_needed(keywords, data)  # ty: ignore[invalid-argument-type]
 
-            parsed.put(keywords, ..., content)
-            for k, v in data.items():  # ty: ignore[possibly-missing-attribute]
-                self[(*keywords, k)] = v
+            parsed = self._get_parsed(missing_ok=True)
+            start, end = parsed.entry_location(keywords, add=add)
+            before, after = self._calculate_spacing(keywords, start, end, add=add)
 
-        elif keywords:
-            header = self.get("FoamFile", None)
-            assert header is None or isinstance(header, FoamFile.SubDict)
-            val = dumps(data, keywords=keywords, header=header)
+            try:
+                header = self["FoamFile"]
+                assert isinstance(header, FoamFile.SubDict)
+            except (KeyError, FileNotFoundError):
+                header = None
 
-            content = (
-                before
-                + indentation
-                + dumps(normalize(keywords[-1], bool_ok=False))
-                + ((b" " + val) if val else b"")
-                + (b";" if not keywords[-1].startswith("#") else b"")
-                + after
-            )
+            if isinstance(data, Mapping):
+                if not keywords:
+                    msg = "Cannot set a mapping at the root level of a FoamFile\nUse update(), extend(), or merge() instead."
+                    raise ValueError(msg)
 
-            if operation == "put":
-                parsed.put(keywords, normalize(data, keywords=keywords), content)
-            else:  # operation == "add"
-                if keywords in parsed and not keywords[-1].startswith("#"):
+                if keyword.startswith("#"):
+                    msg = f"Cannot set a directive as the keyword for a dictionary: {keyword}"
+                    raise ValueError(msg)
+
+                if add and keywords in parsed:
                     raise KeyError(keywords)
-                parsed.add(keywords, normalize(data, keywords=keywords), content)
 
-        else:
-            if operation == "add" and () in parsed:
-                raise KeyError(())
+                empty_dict_content = (
+                    before
+                    + indentation
+                    + dumps(keyword)
+                    + b"\n"
+                    + indentation
+                    + b"{\n"
+                    + indentation
+                    + b"}"
+                    + after
+                )
+                parsed.put(keywords, ..., empty_dict_content)
 
-            header = self.get("FoamFile", None)
-            assert header is None or isinstance(header, FoamFile.SubDict)
+                for k, v in data.items():
+                    self[(*keywords, k)] = v  # ty: ignore[invalid-assignment]
 
-            content = before + dumps(data, keywords=(), header=header) + after
+            elif keywords:
+                val = dumps(data, keywords=keywords, header=header)
 
-            parsed.put((), normalize(data, keywords=keywords), content)
+                content = (
+                    before
+                    + indentation
+                    + dumps(keyword)
+                    + ((b" " + val) if val else b"")
+                    + (b";" if not keywords[-1].startswith("#") else b"")
+                    + after
+                )
+
+                if add:
+                    if keywords in parsed and not keywords[-1].startswith("#"):
+                        raise KeyError(keywords)
+
+                    parsed.add(keywords, data, content)
+                else:
+                    parsed.put(keywords, data, content)
+
+            else:
+                if add and () in parsed:
+                    raise KeyError(None)
+
+                content = before + dumps(data, keywords=(), header=header) + after
+
+                parsed.put((), data, content)
 
     @overload
     def __setitem__(
@@ -709,7 +690,12 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
-        self._perform_entry_operation(keywords, data, "put")
+        if keywords is None:
+            keywords = ()
+        elif not isinstance(keywords, tuple):
+            keywords = (keywords,)
+
+        self._perform_entry_operation(keywords, data, add=False)
 
     @override
     def add(
@@ -717,7 +703,12 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
-        self._perform_entry_operation(keywords, data, "add")
+        if keywords is None:
+            keywords = ()
+        elif not isinstance(keywords, tuple):
+            keywords = (keywords,)
+
+        self._perform_entry_operation(keywords, data, add=True)
 
     @with_default
     @override
@@ -939,42 +930,30 @@ class FoamFile(
             If ``True``, a header will be included if it is not already present in the
             input object.
         """
-        header: SubDictLike | None
         if isinstance(file, Mapping):
-            h = file.get("FoamFile", None)  # ty: ignore[no-matching-overload]
-            assert h is None or isinstance(h, Mapping)
-            header = h
+            file = normalize(file, keywords=())
 
-            entries: list[bytes] = []
-            for k, v in file.items():
-                if k is not None:
-                    v = cast("Data | SubDict", v)
-                    entries.append(
-                        dumps(
-                            (k, v),
-                            keywords=(),
-                            header=header,
-                            tuple_is_keyword_entry=True,
-                        )
-                    )
-                else:
-                    assert not isinstance(v, Mapping)
-                    v = cast("StandaloneData", v)
-                    entries.append(dumps(v, keywords=(), header=header))
-            ret = b" ".join(entries)
+            header = file.get("FoamFile", None)  # ty: ignore[no-matching-overload,possibly-missing-attribute]
+            assert header is None or isinstance(header, Mapping)
+
+            ret = dumps(file, keywords=(), header=header)
         else:
             header = None
-            ret = dumps(file, keywords=(), header=header)
+            ret = dumps(file, keywords=None)
 
         if header is None and ensure_header:
             class_ = "dictionary"
-            if isinstance(file, Mapping) and "internalField" in file:
+            if isinstance(file, Mapping):
                 try:
-                    tensor_kind = _tensor_kind_for_field(file["internalField"])
-                except (ValueError, TypeError):
+                    internal_field = file["internalField"]
+                except KeyError:
                     pass
                 else:
-                    class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
+                    if isinstance(internal_field, (float, int, np.ndarray)):
+                        tensor_kind = _tensor_kind_for_field(internal_field)
+                        class_ = (
+                            "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
+                        )
 
             header = {"version": 2.0, "format": "ascii", "class": class_}
 

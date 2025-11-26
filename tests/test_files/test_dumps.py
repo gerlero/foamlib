@@ -82,7 +82,6 @@ def test_serialize_data() -> None:
     assert (
         dumps(
             ("hex", [0, 1, 2, 3, 4, 5, 6, 7], [1, 1, 1], "simpleGrading", [1, 1, 1]),
-            keywords=(),
         )
         == b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
@@ -112,7 +111,7 @@ def test_serialize_file() -> None:
     )
     assert (
         FoamFile.dumps([[1, 2, 3], [4, 5, 6]])
-        == b"FoamFile {version 2.0; format ascii; class dictionary;} ((1.0 2.0 3.0) (4.0 5.0 6.0))"
+        == b"FoamFile {version 2.0; format ascii; class dictionary;} ((1 2 3) (4 5 6))"
     )
     assert FoamFile.dumps([1, 2, 3], ensure_header=False) == b"(1 2 3)"
     assert (

@@ -8,6 +8,8 @@ from ._parsing import Parsed
 from ._typing import (
     Data,
     DataLike,
+    File,
+    FileLike,
     KeywordEntryLike,
     StandaloneData,
     StandaloneDataLike,
@@ -20,7 +22,21 @@ from .types import Dimensioned, DimensionSet
 
 @overload
 def normalize(
-    data: DataLike, *, keywords: tuple[str, ...] | None = None, bool_ok: bool = True
+    data: FileLike,
+    *,
+    keywords: tuple[()],
+    bool_ok: bool = True,
+    tuple_is_keyword_entry: bool = False,
+) -> File: ...
+
+
+@overload
+def normalize(
+    data: DataLike,
+    *,
+    keywords: tuple[str, ...] | None = None,
+    bool_ok: bool = True,
+    tuple_is_keyword_entry: bool = False,
 ) -> Data: ...
 
 
@@ -30,28 +46,50 @@ def normalize(
     *,
     keywords: tuple[str, ...] | None = None,
     bool_ok: bool = True,
+    tuple_is_keyword_entry: bool = False,
 ) -> StandaloneData: ...
 
 
 @overload
 def normalize(
-    data: SubDictLike, *, keywords: tuple[str, ...] | None = None, bool_ok: bool = True
-) -> SubDict: ...
-
-
-def normalize(
-    data: DataLike | StandaloneDataLike | SubDictLike,
+    data: SubDictLike,
     *,
     keywords: tuple[str, ...] | None = None,
     bool_ok: bool = True,
-) -> Data | StandaloneData | SubDict:
+    tuple_is_keyword_entry: bool = False,
+) -> SubDict: ...
+
+
+@overload
+def normalize(
+    data: None,
+    *,
+    keywords: tuple[()],
+    bool_ok: bool = True,
+    tuple_is_keyword_entry: bool = False,
+) -> None: ...
+
+
+def normalize(
+    data: FileLike | DataLike | StandaloneDataLike | SubDictLike | None,
+    *,
+    keywords: tuple[str, ...] | None = None,
+    bool_ok: bool = True,
+    tuple_is_keyword_entry: bool = False,
+) -> File | Data | StandaloneData | SubDict | None:
     if isinstance(data, Mapping):
-        items = ((normalize(k, bool_ok=False), normalize(v)) for k, v in data.items())  # ty: ignore[no-matching-overload]
+        items = (
+            (
+                normalize(k, keywords=keywords, bool_ok=False),  # ty: ignore[no-matching-overload]
+                normalize(v, keywords=(*keywords, k) if keywords is not None else None),  # ty: ignore[no-matching-overload]
+            )
+            for k, v in data.items()
+        )
         if keywords is None:
             return as_dict_check_unique(items)
         ret1: SubDict = {}
         for k, v in items:
-            if k.startswith("#"):
+            if k is not None and k.startswith("#"):
                 if isinstance(v, Mapping):
                     msg = f"Directive {k} cannot have a dictionary as value"
                     raise ValueError(msg)
@@ -103,9 +141,11 @@ def normalize(
         if isinstance(data, int):
             return float(data)
 
-        return normalize(data)
+        return normalize(data)  # ty: ignore[no-matching-overload]
 
     if isinstance(data, np.ndarray):
+        if keywords == (None,):
+            return data  # ty: ignore[invalid-return-type]
         ret2 = data.tolist()
         assert isinstance(ret2, (int, float, list))
         return ret2
@@ -120,14 +160,18 @@ def normalize(
     ):
         return DimensionSet(*data)  # ty: ignore[invalid-argument-type]
 
-    if keywords is None and isinstance(data, tuple) and len(data) == 2:
-        k2, v2 = data
-        if isinstance(k2, Mapping):
-            msg = "Keyword in keyword entry cannot be a dictionary"
-            raise ValueError(msg)
-        k2 = normalize(k2, bool_ok=False)  # ty: ignore[no-matching-overload]
-        v2 = normalize(v2)  # ty: ignore[no-matching-overload]
-        return (k2, v2)
+    if isinstance(data, tuple) and not isinstance(data, DimensionSet):
+        if tuple_is_keyword_entry:
+            k2, v2 = data
+            if isinstance(k2, Mapping):
+                msg = "Keyword in keyword entry cannot be a dictionary"
+                raise ValueError(msg)
+            k2 = normalize(k2, keywords=keywords, bool_ok=False)  # ty: ignore[no-matching-overload]
+            v2 = normalize(
+                v2, keywords=(*keywords, k2) if keywords is not None else keywords
+            )  # ty: ignore[no-matching-overload]
+            return (k2, v2)
+        return tuple(normalize(d, keywords=keywords) for d in data)  # ty: ignore[no-matching-overload]
 
     if (
         is_sequence(data)
@@ -135,9 +179,6 @@ def normalize(
         and not isinstance(data, tuple)
     ):
         return [normalize(d) for d in data]  # ty: ignore[not-iterable]
-
-    if isinstance(data, tuple) and not isinstance(data, DimensionSet):
-        return tuple(normalize(d, keywords=keywords) for d in data)  # ty: ignore[no-matching-overload]
 
     if isinstance(data, str):
         with contextlib.suppress(ValueError, KeyError):
@@ -153,34 +194,43 @@ def normalize(
     ):
         return data
 
+    if data is None:
+        if keywords != ():
+            msg = "Unexpected None key in subdictionary"
+            raise TypeError(msg)
+        return data
+
     msg = f"Unsupported data type: {type(data)}"
     raise TypeError(msg)
 
 
 def dumps(
-    data: DataLike | StandaloneDataLike | KeywordEntryLike | SubDictLike,
+    data: FileLike | DataLike | StandaloneDataLike | KeywordEntryLike | SubDictLike,
     *,
     keywords: tuple[str, ...] | None = None,
     header: SubDictLike | None = None,
     tuple_is_keyword_entry: bool = False,
 ) -> bytes:
-    data = normalize(data, keywords=keywords)
+    data = normalize(  # type: ignore[no-matching-overload]
+        data, keywords=keywords, tuple_is_keyword_entry=tuple_is_keyword_entry
+    )
 
     if isinstance(data, Mapping):
         return (
-            b"{"
+            (b"{" if keywords != () else b"")
             + b" ".join(
                 dumps(
                     (k, v),
                     keywords=keywords,
+                    header=header,
                     tuple_is_keyword_entry=True,
                 )
                 for k, v in data.items()
             )
-            + b"}"
+            + (b"}" if keywords != () else b"")
         )
 
-    if keywords == () and isinstance(data, np.ndarray):
+    if keywords == (None,) and isinstance(data, np.ndarray):
         if (header.get("format", "") if header else "") == "binary":
             return dumps(len(data)) + b"(" + data.tobytes() + b")"
 
@@ -254,18 +304,19 @@ def dumps(
         if tuple_is_keyword_entry:
             k, v = data
             ret = b"\n" if isinstance(k, str) and k[0] == "#" else b""
-            ret += dumps(k)
+            if k is not None:
+                ret += dumps(k, keywords=keywords)
             val = dumps(
                 v,
-                keywords=(*keywords, k)
-                if keywords is not None and isinstance(k, str)
-                else None,
+                keywords=(*keywords, k) if keywords is not None else None,
+                header=header,
             )
-            if val:
-                ret += b" " + val
+            if k is not None and val:
+                ret += b" "
+            ret += val
             if isinstance(k, str) and k[0] == "#":
                 ret += b"\n"
-            elif not isinstance(v, Mapping):
+            elif k is not None and not isinstance(v, Mapping):
                 ret += b";"
             return ret
 
