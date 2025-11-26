@@ -723,7 +723,7 @@ class FoamFile(
     def add(
         self,
         keywords: str | tuple[str, ...] | None,
-        data: Data | StandaloneData | SubDictLike,
+        data: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
         self._perform_entry_operation(keywords, data, "add")
 
