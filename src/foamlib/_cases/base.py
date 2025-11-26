@@ -69,14 +69,12 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             return FoamFieldFile(self.path / key)
 
         @override
-        def __contains__(self, obj: object, /) -> bool:
+        def __contains__(self, x: object) -> bool:
             """Return ``True`` if the given field file or name exists in this time directory."""
-            if isinstance(obj, FoamFieldFile):
-                return obj.path.parent == self.path and obj.path.is_file()
-            if isinstance(obj, str):
-                return (self.path / obj).is_file() or (
-                    self.path / f"{obj}.gz"
-                ).is_file()
+            if isinstance(x, FoamFieldFile):
+                return x.path.parent == self.path and x.path.is_file()
+            if isinstance(x, str):
+                return (self.path / x).is_file() or (self.path / f"{x}.gz").is_file()
             return False
 
         @override
@@ -131,19 +129,20 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
 
     @overload
     def __getitem__(
-        self, index: int | float | str, /
+        self,
+        index: int | float | str,
     ) -> "FoamCaseBase.TimeDirectory": ...
 
     @overload
     def __getitem__(
-        self, index: slice, /
+        self,
+        index: slice,
     ) -> Sequence["FoamCaseBase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
         self,
         index: int | slice | float | str,
-        /,
     ) -> "FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]":
         """Return the time directory at the given index (``int``), indices (``slice``), name (``str``), or time (``float``)."""
         if isinstance(index, str):
@@ -162,14 +161,14 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         return iter(self._times)
 
     @override
-    def __contains__(self, obj: object, /) -> bool:
+    def __contains__(self, value: object) -> bool:
         """Return ``True`` if the given time directory, name, or time exists in the case."""
-        if isinstance(obj, FoamCaseBase.TimeDirectory):
-            return obj in self._times
-        if isinstance(obj, str):
-            return any(time.name == obj for time in self._times)
-        if isinstance(obj, float):
-            return any(time.time == obj for time in self._times)
+        if isinstance(value, FoamCaseBase.TimeDirectory):
+            return value in self._times
+        if isinstance(value, str):
+            return any(time.name == value for time in self._times)
+        if isinstance(value, float):
+            return any(time.time == value for time in self._times)
         return False
 
     @override

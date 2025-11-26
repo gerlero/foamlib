@@ -8,7 +8,6 @@ from ._parsing import Parsed
 from ._typing import (
     Data,
     DataLike,
-    File,
     KeywordEntryLike,
     StandaloneData,
     StandaloneDataLike,
@@ -47,10 +46,10 @@ def normalize(
     bool_ok: bool = True,
 ) -> Data | StandaloneData | SubDict:
     if isinstance(data, Mapping):
-        items = ((normalize(k, bool_ok=False), normalize(v)) for k, v in data.items())
+        items = ((normalize(k, bool_ok=False), normalize(v)) for k, v in data.items())  # ty: ignore[no-matching-overload]
         if keywords is None:
             return as_dict_check_unique(items)
-        ret1: File | SubDict = {}
+        ret1: SubDict = {}
         for k, v in items:
             if k.startswith("#"):
                 if isinstance(v, Mapping):
@@ -59,7 +58,7 @@ def normalize(
             elif k in ret1:
                 msg = f"Duplicate keyword {k} in dictionary with keywords {keywords}"
                 raise ValueError(msg)
-            ret1 = add_to_mapping(ret1, k, v)
+            ret1 = add_to_mapping(ret1, k, v)  # ty: ignore[invalid-assignment]
         return ret1
 
     if keywords == () and is_sequence(data) and not isinstance(data, tuple):
@@ -99,7 +98,7 @@ def normalize(
                 if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] in (3, 6, 9)):
                     return arr
 
-            return [normalize(d) for d in data]
+            return [normalize(d) for d in data]  # ty: ignore[not-iterable]
 
         if isinstance(data, int):
             return float(data)
@@ -116,18 +115,18 @@ def normalize(
         and keywords is not None
         and keywords == ("dimensions",)
         and is_sequence(data)
-        and len(data) <= 7
-        and all(isinstance(d, (int, float)) for d in data)
+        and len(data) <= 7  # ty: ignore[invalid-argument-type]
+        and all(isinstance(d, (int, float)) for d in data)  # ty: ignore[not-iterable]
     ):
-        return DimensionSet(*data)
+        return DimensionSet(*data)  # ty: ignore[invalid-argument-type]
 
     if keywords is None and isinstance(data, tuple) and len(data) == 2:
         k2, v2 = data
         if isinstance(k2, Mapping):
             msg = "Keyword in keyword entry cannot be a dictionary"
             raise ValueError(msg)
-        k2 = normalize(k2, bool_ok=False)
-        v2 = normalize(v2)
+        k2 = normalize(k2, bool_ok=False)  # ty: ignore[no-matching-overload]
+        v2 = normalize(v2)  # ty: ignore[no-matching-overload]
         return (k2, v2)
 
     if (
@@ -135,10 +134,10 @@ def normalize(
         and not isinstance(data, DimensionSet)
         and not isinstance(data, tuple)
     ):
-        return [normalize(d) for d in data]
+        return [normalize(d) for d in data]  # ty: ignore[not-iterable]
 
     if isinstance(data, tuple) and not isinstance(data, DimensionSet):
-        return tuple(normalize(d, keywords=keywords) for d in data)
+        return tuple(normalize(d, keywords=keywords) for d in data)  # ty: ignore[no-matching-overload]
 
     if isinstance(data, str):
         with contextlib.suppress(ValueError, KeyError):
@@ -274,7 +273,7 @@ def dumps(
 
     if is_sequence(data):
         return (
-            b"(" + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data) + b")"
+            b"(" + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data) + b")"  # ty: ignore[not-iterable]
         )
 
     if data is True:

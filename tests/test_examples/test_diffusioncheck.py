@@ -133,7 +133,9 @@ def test_example(tmp_path: Path) -> None:
 
     case.run()
 
-    x, y, z = case[0].cell_centers().internal_field.T
+    internal_field = case[0].cell_centers().internal_field
+    assert isinstance(internal_field, np.ndarray)
+    x, y, z = internal_field.T
 
     end = x == x.max()
     x = x[end]
@@ -143,13 +145,17 @@ def test_example(tmp_path: Path) -> None:
     DT = case.transport_properties["DT"].value  # ty: ignore[possibly-missing-attribute]
     assert isinstance(DT, float)
 
-    U = case[0]["U"].internal_field[0]
+    internal_field = case[0]["U"].internal_field
+    assert isinstance(internal_field, np.ndarray)
+    U = internal_field[0]
     assert isinstance(U, (int, float))
 
     for time in case[1:]:
         if U * time.time < 2 * x.max():
             continue
 
-        numerical = time["T"].internal_field[end]
+        internal_field = time["T"].internal_field
+        assert isinstance(internal_field, np.ndarray)
+        numerical = internal_field[end]
         analytical = 0.5 * erfc((y - 0.5) / np.sqrt(4 * DT * x / U))
         assert numerical == pytest.approx(analytical, abs=1e-1)
