@@ -129,7 +129,9 @@ with case[0]["T"] as f:
 
 case.run()
 
-x, y, z = case[0].cell_centers().internal_field.T
+internal_field = case[0].cell_centers().internal_field
+assert isinstance(internal_field, np.ndarray)
+x, y, z = internal_field.T
 
 end = x == x.max()
 x = x[end]
@@ -137,13 +139,17 @@ y = y[end]
 z = z[end]
 
 DT = case.transport_properties["DT"].value  # ty: ignore[possibly-missing-attribute]
-U = case[0]["U"].internal_field[0]
+internal_field = case[0]["T"].internal_field
+assert isinstance(internal_field, np.ndarray)
+U = internal_field[0]
 
 for time in case[1:]:
     if U * time.time < 2 * x.max():
         continue
 
-    T = time["T"].internal_field[end]
+    internal_field = time["T"].internal_field
+    assert isinstance(internal_field, np.ndarray)
+    T = internal_field[end]
     analytical = 0.5 * erfc((y - 0.5) / np.sqrt(4 * DT * x / U))
     if np.allclose(T, analytical, atol=0.1):
         print(f"Time {time.time}: OK")

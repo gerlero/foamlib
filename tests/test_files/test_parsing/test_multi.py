@@ -22,7 +22,7 @@ key2 value2;
 def test_loads() -> None:
     parsed = FoamFile.loads(CONTENTS)
     assert isinstance(parsed, MultiDict)
-    items = list(parsed.items())
+    items = list(parsed.items())  # ty: ignore[invalid-argument-type]
     assert len(items) == 4
     assert items[0] == ("#include", '"filename1"')
     assert items[1][0] == "subdict1"

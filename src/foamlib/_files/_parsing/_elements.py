@@ -54,7 +54,7 @@ class ASCIINumericList(ParserElement):
 
     @override
     def parseImpl(
-        self, instring: str, loc: int, doActions: bool = True
+        self, instring: str, loc: int, do_actions: bool = True
     ) -> tuple[int, ParseResults]:
         spacing_pattern = "|".join(re.escape(c) for c in self.whiteChars)
         assert spacing_pattern
@@ -220,7 +220,7 @@ class ASCIIFacesLikeList(ParserElement):
 
     @override
     def parseImpl(
-        self, instring: str, loc: int, doActions: bool = True
+        self, instring: str, loc: int, do_actions: bool = True
     ) -> tuple[int, ParseResults]:
         spacing_pattern = "|".join(re.escape(c) for c in self.whiteChars)
         assert spacing_pattern

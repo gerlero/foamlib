@@ -92,6 +92,7 @@ def run_sync(
                         timeout=0.1
                     ):  # Small timeout to allow log monitoring
                         assert key.fileobj in open_streams
+                        assert isinstance(key.fileobj, TextIOBase)
                         if not (line := key.fileobj.readline()):
                             selector.unregister(key.fileobj)
                             open_streams.remove(key.fileobj)

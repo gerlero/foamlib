@@ -110,7 +110,7 @@ class Parsed(
         self._remove_child_entries(keywords)
 
     @override
-    def add(
+    def add(  # ty: ignore[invalid-method-override]
         self,
         keywords: tuple[str, ...],
         data: Data | StandaloneData | EllipsisType,
@@ -207,7 +207,7 @@ class Parsed(
                 assert keywords[-1] not in parent
                 parent[keywords[-1]] = {}
             elif len(keywords) == 1:
-                ret = add_to_mapping(ret, keywords[0], entry.data)
+                ret = add_to_mapping(ret, keywords[0], entry.data)  # ty: ignore[invalid-assignment]
             else:
                 grandparent: File | SubDict = ret
                 for k in keywords[:-2]:

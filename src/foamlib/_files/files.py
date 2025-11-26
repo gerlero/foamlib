@@ -130,8 +130,8 @@ class FoamFile(
             return len(list(iter(self)))
 
         @override
-        def __contains__(self, key: object) -> bool:
-            return any(k == key for k in iter(self))
+        def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
+            return any(k == x for k in iter(self))
 
     class ValuesView(
         multicollections.abc.ValuesView["Data | StandaloneData | FoamFile.SubDict"]
@@ -187,8 +187,8 @@ class FoamFile(
             return len(list(iter(self)))
 
         @override
-        def __contains__(self, item: object) -> bool:
-            return item in list(iter(self))
+        def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
+            return x in list(iter(self))
 
     class SubDict(
         MutableMultiMapping[str, "Data | FoamFile.SubDict"],
@@ -235,8 +235,8 @@ class FoamFile(
                 return len(list(iter(self)))
 
             @override
-            def __contains__(self, key: object) -> bool:
-                return any(k == key for k in iter(self))
+            def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
+                return any(k == x for k in iter(self))
 
         class ValuesView(multicollections.abc.ValuesView["Data | FoamFile.SubDict"]):
             def __init__(self, subdict: "FoamFile.SubDict") -> None:
@@ -280,8 +280,8 @@ class FoamFile(
                 return len(list(iter(self)))
 
             @override
-            def __contains__(self, item: object) -> bool:
-                return any(i == item for i in iter(self))
+            def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
+                return any(i == x for i in iter(self))
 
         def __init__(self, _file: "FoamFile", _keywords: tuple[str, ...]) -> None:
             self._file = _file
@@ -340,7 +340,7 @@ class FoamFile(
             return FoamFile.SubDict.ItemsView(self)
 
         @override
-        def update(
+        def update(  # ty: ignore[invalid-method-override]
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike]
             | Iterable[tuple[str, DataLike | SubDictLike]] = (),
@@ -351,7 +351,7 @@ class FoamFile(
                 super().update(other, **kwargs)
 
         @override
-        def extend(
+        def extend(  # ty: ignore[invalid-method-override]
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike]
             | Iterable[tuple[str, DataLike | SubDictLike]] = (),
@@ -362,7 +362,7 @@ class FoamFile(
                 super().extend(other, **kwargs)
 
         @override
-        def merge(
+        def merge(  # ty: ignore[invalid-method-override]
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike]
             | Iterable[tuple[str, DataLike | SubDictLike]] = (),
@@ -533,7 +533,7 @@ class FoamFile(
             )
         ) and self.class_ == "dictionary":
             try:
-                tensor_kind = _tensor_kind_for_field(data)
+                tensor_kind = _tensor_kind_for_field(data)  # ty: ignore[invalid-argument-type]
             except ValueError:
                 pass
             else:
@@ -653,7 +653,7 @@ class FoamFile(
                 raise KeyError(keywords)
 
             parsed.put(keywords, ..., content)
-            for k, v in data.items():
+            for k, v in data.items():  # ty: ignore[possibly-missing-attribute]
                 self[(*keywords, k)] = v
 
         elif keywords:
@@ -704,7 +704,7 @@ class FoamFile(
     ) -> None: ...
 
     @override
-    def __setitem__(
+    def __setitem__(  # ty: ignore[invalid-method-override]
         self,
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike,
@@ -715,7 +715,7 @@ class FoamFile(
     def add(
         self,
         keywords: str | tuple[str, ...] | None,
-        data: Data | StandaloneData | SubDictLike,
+        data: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
         self._perform_entry_operation(keywords, data, "add")
 
@@ -811,7 +811,7 @@ class FoamFile(
         return FoamFile.ItemsView(self, include_header=include_header)
 
     @override
-    def update(
+    def update(  # ty: ignore[invalid-method-override]
         self,
         other: SupportsKeysAndGetItem[
             str | tuple[str, ...] | None, DataLike | StandaloneDataLike | SubDictLike
@@ -829,7 +829,7 @@ class FoamFile(
             super().update(other, **kwargs)
 
     @override
-    def extend(
+    def extend(  # ty: ignore[invalid-method-override]
         self,
         other: SupportsKeysAndGetItem[
             str | tuple[str, ...] | None, DataLike | StandaloneDataLike | SubDictLike
@@ -847,7 +847,7 @@ class FoamFile(
             super().extend(other, **kwargs)
 
     @override
-    def merge(
+    def merge(  # ty: ignore[invalid-method-override]
         self,
         other: SupportsKeysAndGetItem[
             str | tuple[str, ...] | None, DataLike | StandaloneDataLike | SubDictLike
@@ -941,7 +941,7 @@ class FoamFile(
         """
         header: SubDictLike | None
         if isinstance(file, Mapping):
-            h = file.get("FoamFile", None)
+            h = file.get("FoamFile", None)  # ty: ignore[no-matching-overload]
             assert h is None or isinstance(h, Mapping)
             header = h
 
@@ -959,6 +959,7 @@ class FoamFile(
                     )
                 else:
                     assert not isinstance(v, Mapping)
+                    v = cast("StandaloneData", v)
                     entries.append(dumps(v, keywords=(), header=header))
             ret = b" ".join(entries)
         else:
