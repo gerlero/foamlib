@@ -1,6 +1,7 @@
 import contextlib
 from collections.abc import Mapping
 from typing import overload
+from warnings import warn
 
 import numpy as np
 
@@ -20,63 +21,209 @@ from ._util import add_to_mapping, as_dict_check_unique, is_sequence
 from .types import Dimensioned, DimensionSet
 
 
+def _expect_field(keywords: tuple[str, ...] | None) -> bool:
+    return (
+        keywords == ("internalField",)
+        or keywords == ("internalField",)
+        or (
+            keywords is not None
+            and len(keywords) == 3
+            and keywords[0] == "boundaryField"
+            and (
+                keywords[2] == "value"
+                or keywords[2] == "gradient"
+                or keywords[2].endswith(("Value", "Gradient"))
+            )
+        )
+    )
+
+
 @overload
 def normalize(
     data: FileLike,
     *,
     keywords: tuple[()],
     bool_ok: bool = True,
-    tuple_is_keyword_entry: bool = False,
 ) -> File: ...
 
 
 @overload
 def normalize(
     data: DataLike,
+    /,
     *,
     keywords: tuple[str, ...] | None = None,
     bool_ok: bool = True,
-    tuple_is_keyword_entry: bool = False,
 ) -> Data: ...
 
 
 @overload
 def normalize(
     data: StandaloneDataLike,
+    /,
     *,
     keywords: tuple[str, ...] | None = None,
     bool_ok: bool = True,
-    tuple_is_keyword_entry: bool = False,
 ) -> StandaloneData: ...
 
 
 @overload
 def normalize(
     data: SubDictLike,
+    /,
     *,
     keywords: tuple[str, ...] | None = None,
     bool_ok: bool = True,
-    tuple_is_keyword_entry: bool = False,
 ) -> SubDict: ...
 
 
 @overload
 def normalize(
     data: None,
+    /,
     *,
     keywords: tuple[()],
     bool_ok: bool = True,
-    tuple_is_keyword_entry: bool = False,
 ) -> None: ...
 
 
 def normalize(
     data: FileLike | DataLike | StandaloneDataLike | SubDictLike | None,
+    /,
     *,
     keywords: tuple[str, ...] | None = None,
     bool_ok: bool = True,
-    tuple_is_keyword_entry: bool = False,
 ) -> File | Data | StandaloneData | SubDict | None:
+    match data:
+        # Dictionary
+        case Mapping():
+            items = (
+                (
+                    normalize(k, keywords=keywords, bool_ok=False),
+                    normalize(
+                        v, keywords=(*keywords, k) if keywords is not None else None
+                    ),
+                )
+                for k, v in data.items()
+            )
+            if keywords is None:
+                return as_dict_check_unique(items)
+            ret1: SubDict = {}
+            for k, v in items:
+                if k is not None and k.startswith("#"):
+                    if isinstance(v, Mapping):
+                        msg = f"Directive {k} cannot have a dictionary as value"
+                        raise ValueError(msg)
+                elif k in ret1:
+                    msg = (
+                        f"Duplicate keyword {k} in dictionary with keywords {keywords}"
+                    )
+                    raise ValueError(msg)
+                ret1 = add_to_mapping(ret1, k, v)
+            return ret1
+
+        # Numeric standalone data (n integers)
+        case np.ndarray(shape=(_,), dtype=dtype) if keywords == () and np.issubdtype(
+            dtype, np.integer):
+            return data
+
+        # Numeric standalone data (n x 3 floats)
+        case np.ndarray(shape=(_,) | (_, 3)) if keywords == () and np.issubdtype(
+            data.dtype, np.floating):
+            return data
+
+        # Other possible numeric standalone data
+        case [*_] if keywords == () and not isinstance(data, tuple):
+            try:
+                return normalize(np.asarray(data), keywords=keywords, bool_ok=bool_ok)
+            except ValueError:
+                return normalize(data, bool_ok=bool_ok)
+
+        # Uniform field (scalar)
+        case float() | int() | np.ndarray(shape=()) if _expect_field(keywords):
+            return float(data)
+        
+        # Uniform field (non-scalar)
+        case np.ndarray(shape=(3,) | (6,) | (9,)) if _expect_field(keywords):
+            if not np.issubdtype(data.dtype, np.floating):
+                return data.astype(float)
+            return data
+        
+        # Non-uniform field
+        case np.ndarray(shape=(_,) | ( _, 3) | (_, 6) | (_, 9)) if _expect_field(keywords):
+            if not np.issubdtype(data.dtype, np.floating):
+                return data.astype(float)
+            return data
+        
+        # Other possible field
+        case [*_] if _expect_field(keywords) and not isinstance(data, tuple):
+            try:
+                return normalize(np.asarray(data, dtype=float), keywords=keywords, bool_ok=bool_ok)
+            except ValueError:
+                return [normalize(d, bool_ok=bool_ok) for d in data]
+            
+        # Dimension set from list of numbers
+        case [*_] if keywords == ("dimensions",) and all(
+            isinstance(d, (int, float)) for d in data
+        ) and len(data) <= 7:
+            return DimensionSet(*data)
+        
+        # List
+        case [*_] if not isinstance(data, tuple):
+            return [normalize(d, bool_ok=bool_ok) for d in data]
+        
+        # Other Numpy array (treated as list)
+        case np.ndarray():
+            return normalize(data.tolist(), bool_ok=bool_ok)
+        
+        # Keyword entry
+        case tuple((k, v)) if keywords is None:
+            return (normalize(k, bool_ok=False), normalize(v))
+
+        # Multiple data entries (tuple)
+        case tuple((_, _, *_)) if not isinstance(data, DimensionSet):
+            return tuple(normalize(d, keywords=keywords, bool_ok=bool_ok) for d in data)
+        
+        # Single data entry in a tuple
+        case tuple((d,)) if not isinstance(data, DimensionSet):
+            msg = f"One-element tuple {data!r} will be retrieved as {d!r} {type(d)}"
+            warn(msg)
+            return normalize(d, keywords=keywords, bool_ok=bool_ok)
+
+        # Empty tuple (unsupported)
+        case tuple(()) if not isinstance(data, DimensionSet):
+            msg = "Empty tuples are not supported"
+            raise ValueError(msg)
+
+        # String
+        case str():
+            parsed = Parsed(data)[()]
+            if not bool_ok and isinstance(data, bool):
+                return data
+
+            if not isinstance(parsed, str):
+                msg = f"String {data!r} will be retrieved as {parsed!r} {type(parsed)}"
+                warn(msg)
+
+            return parsed
+        
+        # None (only valid as top-level dictionary key)
+        case None if keywords == ():
+            return data
+        
+        # Boolean
+        case True | False if bool_ok:
+            return data
+        
+        # Other basic types
+        case int() | float() | DimensionSet() | Dimensioned():
+            return data
+
+    msg = f"Unsupported data type: {type(data)}"
+    raise TypeError(msg)
+
+
+"""
     if isinstance(data, Mapping):
         items = (
             (
@@ -202,6 +349,7 @@ def normalize(
 
     msg = f"Unsupported data type: {type(data)}"
     raise TypeError(msg)
+"""
 
 
 def dumps(
@@ -212,7 +360,7 @@ def dumps(
     tuple_is_keyword_entry: bool = False,
 ) -> bytes:
     data = normalize(  # type: ignore[no-matching-overload]
-        data, keywords=keywords, tuple_is_keyword_entry=tuple_is_keyword_entry
+        data, keywords=keywords
     )
 
     if isinstance(data, Mapping):
