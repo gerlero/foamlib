@@ -11,10 +11,7 @@ else:
 import multicollections.abc
 import numpy as np
 from multicollections import MultiDict
-from multicollections.abc import (
-    MutableMultiMapping,
-    with_default,
-)
+from multicollections.abc import MutableMultiMapping, with_default
 
 from ._io import FoamFileIO
 from ._parsing import Parsed
@@ -36,25 +33,17 @@ from .types import Dimensioned, DimensionSet
 
 
 def _tensor_kind_for_field(
-    field: FieldLike,
+    field: Field,
 ) -> str:
-    if not (shape := np.shape(field)):
-        return "scalar"
-    if shape == (3,):
-        return "vector"
-    if shape == (6,):
-        return "symmTensor"
-    if shape == (9,):
-        return "tensor"
-    if len(shape) == 1:
-        return "scalar"
-    if len(shape) == 2:
-        if shape[1] == 3:
+    match shape := np.shape(field):
+        case (3,) | (_, 3):
             return "vector"
-        if shape[1] == 6:
+        case (6,) | (_, 6):
             return "symmTensor"
-        if shape[1] == 9:
+        case (9,) | (_, 9):
             return "tensor"
+        case () | (_,):
+            return "scalar"
 
     msg = f"Invalid field shape: {shape}"
     raise ValueError(msg)
