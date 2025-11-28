@@ -12,11 +12,39 @@ from types import EllipsisType
 
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
-from pyparsing import ParseException, ParseResults
+from pyparsing import ParseException, ParseResults, TypeVar
 
 from .._typing import Data, File, StandaloneData, SubDict
 from .._util import add_to_mapping
-from ._grammar import FILE
+from ._grammar import DATA, LOCATED_FILE, STANDALONE_DATA, TOKEN
+
+_T = TypeVar("_T", str, Data, StandaloneData, File)
+
+
+def parse(s: bytes | str, *, target: type[_T]) -> _T:
+    if isinstance(s, bytes):
+        s = s.decode("latin-1")
+
+    if target is str:
+        element = TOKEN
+    elif target is Data:
+        element = DATA
+    elif target is StandaloneData:
+        element = STANDALONE_DATA
+    elif target is File:
+        return Parsed(s).as_dict()
+    else:
+        msg = f"Unsupported type for parsing: {target}"
+        raise TypeError(msg)
+
+    try:
+        parse_results = element.parse_string(s, parse_all=True)
+    except ParseException as e:
+        msg = f"Failed to parse {target}: {e}"
+        raise ValueError(msg) from e
+
+    (ret,) = parse_results
+    return ret
 
 
 class Parsed(
@@ -36,7 +64,7 @@ class Parsed(
             contents = contents.encode("latin-1")
 
         try:
-            parse_results = FILE.parse_string(contents_str, parse_all=True)
+            parse_results = LOCATED_FILE.parse_string(contents_str, parse_all=True)
         except ParseException as e:
             msg = f"Failed to parse contents: {e}"
             raise ValueError(msg) from e

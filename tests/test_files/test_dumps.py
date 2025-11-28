@@ -1,46 +1,84 @@
 import numpy as np
 from foamlib import Dimensioned, DimensionSet, FoamFile
-from foamlib._files._serialization import dumps
+from foamlib._files._serialization import dumps, normalize
 from multicollections import MultiDict
 
 
 def test_serialize_data() -> None:
-    assert dumps(1) == b"1"
-    assert dumps(1.0) == b"1.0"
-    assert dumps(1.0e-3) == b"0.001"
-    assert dumps(True) == b"yes"
-    assert dumps(False) == b"no"
-    assert dumps("word") == b"word"
-    assert dumps(("word", "word"), keywords=()) == b"word word"
-    assert dumps('"a string"') == b'"a string"'
-    assert dumps(1, keywords=("internalField",)) == b"uniform 1.0"
-    assert dumps(1.0, keywords=("internalField",)) == b"uniform 1.0"
-    assert dumps(1.0e-3, keywords=("internalField",)) == b"uniform 0.001"
-    assert dumps([1.0, 2.0, 3.0]) == b"(1.0 2.0 3.0)"
-    assert dumps([1, 2, 3], keywords=("internalField",)) == b"uniform (1.0 2.0 3.0)"
+    assert dumps(normalize(1)) == b"1"
+    assert dumps(normalize(1.0)) == b"1.0"
+    assert dumps(normalize(1.0e-3)) == b"0.001"
+    assert dumps(normalize(True)) == b"yes"
+    assert dumps(normalize(False)) == b"no"
+    assert dumps(normalize("word")) == b"word"
+    assert dumps(normalize(("word", "word"), keywords=())) == b"word word"
+    assert dumps(normalize('"a string"')) == b'"a string"'
     assert (
-        dumps([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], keywords=("internalField",))
-        == b"nonuniform List<scalar> 10(1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0)"
-    )
-    assert (
-        dumps([[1, 2, 3], [4, 5, 6]], keywords=("internalField",))
-        == b"nonuniform List<vector> 2((1.0 2.0 3.0) (4.0 5.0 6.0))"
-    )
-    assert (
-        dumps(1, keywords=("internalField",), header={"format": "binary"})
+        dumps(normalize(1, keywords=("internalField",)), keywords=("internalField",))
         == b"uniform 1.0"
     )
     assert (
-        dumps(1.0, keywords=("internalField",), header={"format": "binary"})
+        dumps(normalize(1.0, keywords=("internalField",)), keywords=("internalField",))
         == b"uniform 1.0"
     )
     assert (
-        dumps([1, 2, 3], keywords=("internalField",), header={"format": "binary"})
+        dumps(
+            normalize(1.0e-3, keywords=("internalField",)), keywords=("internalField",)
+        )
+        == b"uniform 0.001"
+    )
+    assert dumps(normalize([1.0, 2.0, 3.0])) == b"(1.0 2.0 3.0)"
+    assert (
+        dumps(
+            normalize([1, 2, 3], keywords=("internalField",)),
+            keywords=("internalField",),
+        )
         == b"uniform (1.0 2.0 3.0)"
     )
     assert (
         dumps(
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            normalize([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], keywords=("internalField",)),
+            keywords=("internalField",),
+        )
+        == b"nonuniform List<scalar> 10(1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0)"
+    )
+    assert (
+        dumps(
+            normalize([[1, 2, 3], [4, 5, 6]], keywords=("internalField",)),
+            keywords=("internalField",),
+        )
+        == b"nonuniform List<vector> 2((1.0 2.0 3.0) (4.0 5.0 6.0))"
+    )
+    assert (
+        dumps(
+            normalize(1, keywords=("internalField",)),
+            keywords=("internalField",),
+            header={"format": "binary"},
+        )
+        == b"uniform 1.0"
+    )
+    assert (
+        dumps(
+            normalize(1.0, keywords=("internalField",)),
+            keywords=("internalField",),
+            header={"format": "binary"},
+        )
+        == b"uniform 1.0"
+    )
+    assert (
+        dumps(
+            normalize([1, 2, 3], keywords=("internalField",)),
+            keywords=("internalField",),
+            header={"format": "binary"},
+        )
+        == b"uniform (1.0 2.0 3.0)"
+    )
+    assert (
+        dumps(
+            normalize(
+                [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                keywords=("internalField",),
+            ),
             keywords=("internalField",),
             header={"format": "binary"},
         )
@@ -48,7 +86,10 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            [[1, 2, 3], [4, 5, 6]],
+            normalize(
+                [[1, 2, 3], [4, 5, 6]],
+                keywords=("internalField",),
+            ),
             keywords=("internalField",),
             header={"format": "binary"},
         )
@@ -56,43 +97,68 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            np.array([1, 2], dtype=np.float32),
+            normalize(
+                np.array([1, 2], dtype=np.float32),
+                keywords=("internalField",),
+            ),
             keywords=("internalField",),
             header={"format": "binary"},
         )
         == b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)"
     )
-    assert dumps(DimensionSet(mass=1, length=1, time=-2)) == b"[1 1 -2 0 0 0 0]"
+    assert (
+        dumps(normalize(DimensionSet(mass=1, length=1, time=-2))) == b"[1 1 -2 0 0 0 0]"
+    )
     assert (
         dumps(
-            Dimensioned(
-                name="g",
-                dimensions=DimensionSet(mass=1, length=1, time=-2),
-                value=9.81,
+            normalize(
+                Dimensioned(
+                    name="g",
+                    dimensions=DimensionSet(mass=1, length=1, time=-2),
+                    value=9.81,
+                )
             )
         )
         == b"g [1 1 -2 0 0 0 0] 9.81"
     )
     assert (
         dumps(
-            Dimensioned(dimensions=DimensionSet(mass=1, length=1, time=-2), value=9.81)
+            normalize(
+                Dimensioned(
+                    dimensions=DimensionSet(mass=1, length=1, time=-2), value=9.81
+                )
+            )
         )
         == b"[1 1 -2 0 0 0 0] 9.81"
     )
     assert (
         dumps(
-            ("hex", [0, 1, 2, 3, 4, 5, 6, 7], [1, 1, 1], "simpleGrading", [1, 1, 1]),
+            normalize(
+                (
+                    "hex",
+                    [0, 1, 2, 3, 4, 5, 6, 7],
+                    [1, 1, 1],
+                    "simpleGrading",
+                    [1, 1, 1],
+                ),
+            )
         )
         == b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
     )
     assert (
-        dumps([("a", "b"), ("c", "d"), ("n", "no"), ("y", "yes")])
+        dumps(normalize([("a", "b"), ("c", "d"), ("n", "no"), ("y", "yes")]))
         == b"(a b; c d; n no; y yes;)"
     )
-    assert dumps([("a", {"b": "c"}), ("d", {"e": "g"})]) == b"(a {b c;} d {e g;})"
-    assert dumps([("a", [0, 1, 2]), ("b", {})]) == b"(a (0 1 2); b {})"
-    assert dumps(["water", "oil", "mercury", "air"]) == b"(water oil mercury air)"
-    assert dumps("div(phi,U)") == b"div(phi,U)"
+    assert (
+        dumps(normalize([("a", {"b": "c"}), ("d", {"e": "g"})]))
+        == b"(a {b c;} d {e g;})"
+    )
+    assert dumps(normalize([("a", [0, 1, 2]), ("b", {})])) == b"(a (0 1 2); b {})"
+    assert (
+        dumps(normalize(["water", "oil", "mercury", "air"]))
+        == b"(water oil mercury air)"
+    )
+    assert dumps(normalize("div(phi,U)")) == b"div(phi,U)"
 
 
 def test_serialize_file() -> None:
