@@ -283,7 +283,7 @@ def _discover_function_objects(
             key = f"{folder_str}--{fname}"
 
             if key not in file_map:
-                file_map[key] = functionobject(file_name=fname, folder=folder)
+                file_map[key] = functionobject(file_name=fname, folder=folder)  # ty: ignore[invalid-argument-type]
 
             file_map[key].add_time(time)
 

@@ -69,7 +69,8 @@ def test_list_simple() -> None:
             (2 3 4 5)
         );
     """)[("faces",)]
-    assert np.array_equal(faces, [[1, 5, 4, 0], [2, 3, 4, 5]])
+    assert isinstance(faces, list)
+    assert faces == [[1, 5, 4, 0], [2, 3, 4, 5]]
 
 
 def test_list_assignment() -> None:
@@ -82,6 +83,7 @@ def test_list_assignment() -> None:
             0
         );
     """)[("faces",)]
+    assert isinstance(faces, list)
     assert np.array_equal(faces, [1, 5, 4, 0])
 
 
@@ -135,7 +137,9 @@ def test_dict_with_list() -> None:
             pRefValue                   0;
         }
     """)
-    assert np.array_equal(parsed[("PISO", "pRefPoint")], [0, 0, 0])
+    ref = parsed[("PISO", "pRefPoint")]
+    assert isinstance(ref, list)
+    assert ref == [0, 0, 0]
 
 
 def test_list_with_dict() -> None:
@@ -230,7 +234,8 @@ def test_file() -> None:
     assert parsed[("a",)] == 1
     assert parsed[("b",)] == 2
     faces = parsed[("faces",)]
-    assert np.array_equal(faces, [[1, 5, 4, 0], [2, 3, 4, 5]])
+    assert isinstance(faces, list)
+    assert faces == [[1, 5, 4, 0], [2, 3, 4, 5]]
     assert parsed[("my_dict", "a")] == 1
 
 
