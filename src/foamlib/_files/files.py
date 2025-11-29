@@ -338,7 +338,7 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike,
         ) -> None:
             with self._file:
-                super().update(other, **kwargs)
+                super().update(other, **kwargs)  # ty: ignore[invalid-argument-type]
 
         @override
         def extend(  # ty: ignore[invalid-method-override]
@@ -349,7 +349,7 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike,
         ) -> None:
             with self._file:
-                super().extend(other, **kwargs)
+                super().extend(other, **kwargs)  # ty: ignore[invalid-argument-type]
 
         @override
         def merge(  # ty: ignore[invalid-method-override]
@@ -360,7 +360,7 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike,
         ) -> None:
             with self._file:
-                super().merge(other, **kwargs)
+                super().merge(other, **kwargs)  # ty: ignore[invalid-argument-type]
 
         @override
         def clear(self) -> None:
@@ -381,7 +381,7 @@ class FoamFile(
                 ret = ret[k]
                 assert isinstance(ret, Mapping)
 
-            return ret
+            return ret  # ty: ignore[invalid-return-type]
 
     @property
     def version(self) -> float:
@@ -807,7 +807,7 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
         with self:
-            super().update(other, **kwargs)
+            super().update(other, **kwargs)  # ty: ignore[invalid-argument-type]
 
     @override
     def extend(  # ty: ignore[invalid-method-override]
@@ -825,7 +825,7 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
         with self:
-            super().extend(other, **kwargs)
+            super().extend(other, **kwargs)  # ty: ignore[invalid-argument-type]
 
     @override
     def merge(  # ty: ignore[invalid-method-override]
@@ -843,7 +843,7 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike,
     ) -> None:
         with self:
-            super().merge(other, **kwargs)
+            super().merge(other, **kwargs)  # ty: ignore[invalid-argument-type]
 
     @override
     def clear(self, include_header: bool = False) -> None:
@@ -933,7 +933,7 @@ class FoamFile(
                 pass
             else:
                 if isinstance(internal_field, (float, int, np.ndarray)):
-                    tensor_kind = _tensor_kind_for_field(internal_field)
+                    tensor_kind = _tensor_kind_for_field(internal_field)  # ty: ignore[invalid-argument-type]
                     class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
 
             new = MultiDict(
