@@ -29,8 +29,8 @@ FieldLike: TypeAlias = "Field | TensorLike | Sequence[TensorLike]"
 Dict: TypeAlias = "dict[str, Data | Dict]"
 DictLike: TypeAlias = "Mapping[str, DataLike | DictLike]"
 
-KeywordEntry: TypeAlias = tuple["DataEntry", "Data | Dict"]
-KeywordEntryLike: TypeAlias = tuple["DataEntryLike", "Data | DictLike"]
+KeywordEntry: TypeAlias = "tuple[DataEntry, Data | Dict]"
+KeywordEntryLike: TypeAlias = "tuple[DataEntryLike, Data | DictLike]"
 
 DataEntry: TypeAlias = "str | int | float | bool | Dimensioned | DimensionSet | list[DataEntry | KeywordEntry | Dict] | Field"
 DataEntryLike: TypeAlias = (
