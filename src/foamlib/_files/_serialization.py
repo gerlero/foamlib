@@ -118,7 +118,7 @@ def normalize(
                 ret = add_to_mapping(ret, k, v)  # ty: ignore[invalid-assignment]
             return ret
 
-        # Dictionary
+        # Sub-dictionary
         case Mapping(), (_, *_), False:
             items = (
                 (
@@ -141,7 +141,7 @@ def normalize(
                 ret = add_to_mapping(ret, k, v)  # ty: ignore[invalid-assignment]
             return ret
 
-        # Other sub-dictionary
+        # Other dictionary
         case Mapping(), None, False:
             return as_dict_check_unique(
                 (

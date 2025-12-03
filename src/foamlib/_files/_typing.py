@@ -14,8 +14,11 @@ Field: TypeAlias = (
 )
 FieldLike: TypeAlias = Field | TensorLike | Sequence[TensorLike]
 
-KeywordEntry: TypeAlias = tuple["DataEntry", "DataEntry | Dict"]
-KeywordEntryLike: TypeAlias = tuple["DataEntryLike", "DataEntryLike | DictLike"]
+Dict: TypeAlias = dict[str, "Data | Dict"]
+DictLike: TypeAlias = Mapping[str, "DataLike | DictLike"]
+
+KeywordEntry: TypeAlias = tuple["DataEntry", "Data | Dict"]
+KeywordEntryLike: TypeAlias = tuple["DataEntryLike", "Data | DictLike"]
 
 DataEntry: TypeAlias = (
     str
@@ -24,11 +27,11 @@ DataEntry: TypeAlias = (
     | bool
     | Dimensioned
     | DimensionSet
-    | list["DataEntry | KeywordEntry"]
+    | list["DataEntry | KeywordEntry | Dict"]
     | Field
 )
 DataEntryLike: TypeAlias = (
-    DataEntry | Sequence["DataEntryLike | KeywordEntryLike"] | FieldLike
+    DataEntry | Sequence["DataEntryLike | KeywordEntryLike | DictLike"] | FieldLike
 )
 
 Data: TypeAlias = DataEntry | tuple[DataEntry, ...]
@@ -52,11 +55,8 @@ StandaloneDataLike: TypeAlias = (
     | tuple[Sequence[int], Sequence[int]]
 )
 
-Dict: TypeAlias = dict[str, "DataEntry | Dict"]
-DictLike: TypeAlias = Mapping[str, "DataEntryLike | DictLike"]
-
 SubDict: TypeAlias = dict[str, "Data | SubDict"] | MultiDict[str, "Data | SubDict"]
-SubDictLike: TypeAlias = DictLike
+SubDictLike: TypeAlias = Mapping[str, "DataLike | SubDictLike"]
 
 File: TypeAlias = (
     dict[str | None, StandaloneData | Data | SubDict]
