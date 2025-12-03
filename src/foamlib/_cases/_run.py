@@ -313,7 +313,7 @@ class FoamCaseRunBase(FoamCaseBase):
                 if line.startswith("Time = "):
                     try:
                         time = float(line.split()[2])
-                    except ValueError:
+                    except (ValueError, IndexError):
                         progress.update(task)
                     else:
                         progress.update(task, completed=time, total=end_time)
