@@ -14,7 +14,7 @@ from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
 
 from ._io import FoamFileIO
-from ._parsing import Parsed
+from ._parsing import parse
 from ._serialization import dumps, normalize
 from ._typing import (
     Data,
@@ -573,7 +573,7 @@ class FoamFile(
     ) -> None:
         """Shared method for performing entry operations (setitem and add)."""
         if keywords:
-            keyword = normalize(keywords[-1], bool_ok=False)
+            keyword = normalize(keywords[-1], force_token=True)
 
             if not isinstance(keyword, str):
                 msg = (
@@ -888,7 +888,7 @@ class FoamFile(
         :param include_header: Whether to include the "FoamFile" header in the output.
             If `True`, the header will be included if it is present in the input object.
         """
-        file = Parsed(s).as_dict()
+        file = parse(s, target=File)  # ty: ignore[invalid-argument-type]
 
         ret = (
             cast("StandaloneData", file[None])

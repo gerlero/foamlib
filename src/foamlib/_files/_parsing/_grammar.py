@@ -118,16 +118,16 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
 
 _DIRECTIVE = Word("#", _IDENTBODYCHARS)
 _KEYWORD = dbl_quoted_string | _IDENTIFIER
-_TOKEN = _KEYWORD | _DIRECTIVE
-_DATA = Forward()
+TOKEN = (_KEYWORD | _DIRECTIVE).ignore(_COMMENT).parse_with_tabs()
+DATA = Forward()
 _DATA_ENTRY = Forward()
 _KEYWORD_ENTRY = keyword_entry_of(
     _KEYWORD | list_of(_IDENTIFIER),
-    Opt(_DATA, default=""),
+    Opt(DATA, default=""),
     directive=_DIRECTIVE,
     data_entry=_DATA_ENTRY,
 )
-_DICT = dict_of(_KEYWORD, Opt(_DATA, default=""))
+_DICT = dict_of(_KEYWORD, Opt(DATA, default=""))
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = list_of(_LIST_ENTRY)
 _NUMBER = (
@@ -140,43 +140,51 @@ _NUMBER = (
         lambda: -np.inf
     )
 )
-_DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | _TOKEN
+_DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | TOKEN
 
-_DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
-    lambda tks: [tuple(tks)] if len(tks) > 1 else [tks[0]]
+DATA <<= (
+    _DATA_ENTRY[1, ...]
+    .set_parse_action(lambda tks: [tuple(tks)] if len(tks) > 1 else [tks[0]])
+    .ignore(_COMMENT)
+    .parse_with_tabs()
 )
 
-_STANDALONE_DATA = (
-    ASCIINumericList(dtype=int)
-    | ASCIIFacesLikeList()
-    | ASCIINumericList(dtype=float, elshape=(3,))
-    | (
-        (
+STANDALONE_DATA = (
+    (
+        ASCIINumericList(dtype=int)
+        | ASCIIFacesLikeList()
+        | ASCIINumericList(dtype=float, elshape=(3,))
+        | (
             (
-                binary_numeric_list(dtype=np.int32)
-                + Opt(binary_numeric_list(dtype=np.int32))
-            ).add_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else tks[0])
-            | binary_numeric_list(dtype=np.float64)
-            | binary_numeric_list(dtype=np.float64, elshape=(3,))
-            | binary_numeric_list(dtype=np.float32, elshape=(3,))
+                (
+                    binary_numeric_list(dtype=np.int32)
+                    + Opt(binary_numeric_list(dtype=np.int32))
+                ).add_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else tks[0])
+                | binary_numeric_list(dtype=np.float64)
+                | binary_numeric_list(dtype=np.float64, elshape=(3,))
+                | binary_numeric_list(dtype=np.float32, elshape=(3,))
+            )
+            ^ DATA
         )
-        ^ _DATA
     )
-).add_parse_action(lambda tks: [None, tks[0]])
-
+    .ignore(_COMMENT)
+    .parse_with_tabs()
+)
 
 _LOCATED_KEYWORD_ENTRIES = Group(
     keyword_entry_of(
         _KEYWORD,
-        Opt(_DATA, default=""),
+        Opt(DATA, default=""),
         directive=_DIRECTIVE,
         data_entry=_DATA_ENTRY,
         located=True,
     )
 )[...]
-_LOCATED_STANDALONE_DATA = Group(Located(_STANDALONE_DATA))
+_LOCATED_STANDALONE_DATA = Group(
+    Located(STANDALONE_DATA.copy().add_parse_action(lambda tks: [None, tks[0]]))
+)
 
-FILE = (
+LOCATED_FILE = (
     Dict(
         _LOCATED_KEYWORD_ENTRIES
         + Opt(_LOCATED_STANDALONE_DATA)
