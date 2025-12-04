@@ -17,7 +17,8 @@ from pyparsing import (
     printables,
 )
 
-from .._util import as_dict
+from .._common import dict_from_items
+from .._typing import File, SubDict
 from ..types import Dimensioned, DimensionSet
 from ._elements import (
     ASCIIFacesLikeList,
@@ -176,7 +177,7 @@ STANDALONE_KEYWORD_ENTRY = keyword_entry_of(
     Opt(DATA, default=""),
     directive=_DIRECTIVE,
     data_entry=_DATA_ENTRY,
-    nested_dict_multi_ok=True,
+    nested_dict_target=SubDict,
 )
 
 FILE = (
@@ -185,7 +186,7 @@ FILE = (
         + Opt(STANDALONE_DATA.copy().add_parse_action(lambda tks: [(None, tks[0])]))
         + STANDALONE_KEYWORD_ENTRY[...]
     )
-    .add_parse_action(lambda tks: as_dict(tks, multi_ok=True))
+    .add_parse_action(lambda tks: dict_from_items(tks, target=File))
     .ignore(_COMMENT)
     .parse_with_tabs()
 )
@@ -196,7 +197,6 @@ _LOCATED_KEYWORD_ENTRY = Group(
         Opt(DATA, default=""),
         directive=_DIRECTIVE,
         data_entry=_DATA_ENTRY,
-        nested_dict_multi_ok=True,
         located=True,
     )
 )

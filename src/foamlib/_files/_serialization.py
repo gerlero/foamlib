@@ -5,6 +5,7 @@ from warnings import warn
 
 import numpy as np
 
+from ._common import dict_from_items
 from ._parsing import parse
 from ._typing import (
     Data,
@@ -19,7 +20,7 @@ from ._typing import (
     SubDict,
     SubDictLike,
 )
-from ._util import add_to_mapping, as_dict, is_sequence
+from ._util import is_sequence
 from .types import Dimensioned, DimensionSet
 
 
@@ -106,18 +107,7 @@ def normalize(
                 )
                 for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
             )
-            ret: File = {}
-            for k, v in items:
-                if k is not None and k.startswith("#"):  # ty: ignore[possibly-missing-attribute]
-                    if isinstance(v, Mapping):
-                        msg = f"Directive {k} cannot have a dictionary as value"
-                        raise ValueError(msg)
-                elif k in ret:
-                    msg = f"Duplicate keyword {k} in file with keywords {keywords}"
-                    raise ValueError(msg)
-                ret = add_to_mapping(ret, k, v)  # ty: ignore[invalid-assignment]
-            return ret
-
+            return dict_from_items(items, target=File)
         # Sub-dictionary
         case Mapping(), (_, *_), False:
             items = (
@@ -127,23 +117,11 @@ def normalize(
                 )
                 for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
             )
-            ret: SubDict = {}
-            for k, v in items:
-                if k.startswith("#"):  # ty: ignore[possibly-missing-attribute]
-                    if isinstance(v, Mapping):
-                        msg = f"Directive {k} cannot have a dictionary as value"
-                        raise ValueError(msg)
-                elif k in ret:
-                    msg = (
-                        f"Duplicate keyword {k} in dictionary with keywords {keywords}"
-                    )
-                    raise ValueError(msg)
-                ret = add_to_mapping(ret, k, v)  # ty: ignore[invalid-assignment]
-            return ret
+            return dict_from_items(items, target=SubDict)
 
         # Other dictionary
         case Mapping(), None, False:
-            return as_dict(
+            return dict_from_items(
                 (
                     (
                         normalize(k, force_token=True),  # ty: ignore[no-matching-overload]
