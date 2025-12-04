@@ -27,7 +27,8 @@ else:
 
 from numpy.typing import DTypeLike
 
-from .._util import as_dict
+from .._common import dict_from_items
+from .._typing import Dict, SubDict
 
 
 class ASCIINumericList(ParserElement):
@@ -312,7 +313,7 @@ def dict_of(
     directive: ParserElement | None = None,
     data_entry: ParserElement | None = None,
     located: bool = False,
-    multi_ok: bool = False,
+    target: type[Dict] | type[SubDict] = Dict,
 ) -> ParserElement:
     dict_ = Forward()
 
@@ -330,7 +331,7 @@ def dict_of(
     )
 
     if not located:
-        dict_.set_parse_action(lambda tks: as_dict(tks, multi_ok=multi_ok))
+        dict_.set_parse_action(lambda tks: dict_from_items(tks, target=target))
 
     return dict_
 
@@ -342,7 +343,7 @@ def keyword_entry_of(
     directive: ParserElement | None = None,
     data_entry: ParserElement | None = None,
     located: bool = False,
-    nested_dict_multi_ok: bool = False,
+    nested_dict_target: type[Dict] | type[SubDict] = Dict,
 ) -> ParserElement:
     keyword_entry = keyword + (
         dict_of(
@@ -351,7 +352,7 @@ def keyword_entry_of(
             directive=directive,
             data_entry=data_entry,
             located=located,
-            multi_ok=nested_dict_multi_ok,
+            target=nested_dict_target,
         )
         | (data + Literal(";").suppress())
     )

@@ -1,5 +1,5 @@
 from collections.abc import Iterable, MutableMapping, Sequence
-from typing import Literal, Protocol, TypeGuard, TypeVar, overload
+from typing import Protocol, TypeGuard, TypeVar, overload
 
 import numpy as np
 from multicollections import MultiDict
@@ -53,40 +53,6 @@ def add_to_mapping(
 
     ret = MultiDict(d)
     ret.add(key, value)
-    return ret
-
-
-@overload
-def as_dict(
-    items: Iterable[tuple[_K, _V]],
-    *,
-    multi_ok: Literal[False] = ...,
-) -> dict[_K, _V]: ...
-
-
-@overload
-def as_dict(
-    items: Iterable[tuple[_K, _V]],
-    *,
-    multi_ok: Literal[True] = ...,
-) -> dict[_K, _V] | MultiDict[_K, _V]: ...
-
-
-def as_dict(
-    items: Iterable[tuple[_K, _V]], *, multi_ok: bool = False
-) -> dict[_K, _V] | MultiDict[_K, _V]:
-    if multi_ok:
-        ret: dict[_K, _V] | MultiDict[_K, _V] = {}
-        for key, value in items:
-            ret = add_to_mapping(ret, key, value)  # ty: ignore[invalid-assignment]
-        return ret
-
-    ret = {}
-    for key, value in items:
-        if key in ret:
-            msg = f"Duplicate key found: {key}"
-            raise ValueError(msg)
-        ret[key] = value
     return ret
 
 
