@@ -342,106 +342,103 @@ def dumps(
     header: SubDictLike | None = None,
     tuple_is_keyword_entry: bool = False,
 ) -> bytes:
-    if isinstance(data, Mapping):
-        return (
-            (b"{" if keywords != () else b"")
-            + b" ".join(
-                dumps(
-                    (k, v),  # ty: ignore[invalid-argument-type]
-                    keywords=keywords,
-                    header=header,
-                    tuple_is_keyword_entry=True,
+    match data, keywords, header, tuple_is_keyword_entry:
+        # Mapping
+        case Mapping(), _, _, False:
+            return (
+                (b"{" if keywords != () else b"")
+                + b" ".join(
+                    dumps(
+                        (k, v),  # ty: ignore[invalid-argument-type]
+                        keywords=keywords,
+                        header=header,
+                        tuple_is_keyword_entry=True,
+                    )
+                    if k is not None
+                    else dumps(
+                        v,  # ty: ignore[invalid-argument-type]
+                        keywords=keywords,
+                        header=header,
+                    )
+                    for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
                 )
-                if k is not None
-                else dumps(
-                    v,  # ty: ignore[invalid-argument-type]
-                    keywords=keywords,
-                    header=header,
-                )
-                for k, v in data.items()
+                + (b"}" if keywords != () else b"")
             )
-            + (b"}" if keywords != () else b"")
-        )
 
-    if keywords == () and isinstance(data, np.ndarray):
-        if (header.get("format", "") if header else "") == "binary":
-            return dumps(len(data)) + b"(" + data.tobytes() + b")"
+        # Numpy array at top level (binary format)
+        case np.ndarray(), (), _, False if (
+            header.get("format", "") if header else ""  # ty: ignore[possibly-missing-attribute]
+        ) == "binary":
+            return dumps(len(data)) + b"(" + data.tobytes() + b")"  # ty: ignore[possibly-missing-attribute]
 
-        return dumps(data.tolist())
+        # Numpy array at top level (non-binary)
+        case np.ndarray(), (), _, False:
+            return dumps(data.tolist())  # ty: ignore[possibly-missing-attribute]
 
-    if (
-        keywords is not None
-        and (
-            keywords == ("internalField",)
-            or (
-                len(keywords) == 3
-                and keywords[0] == "boundaryField"
-                and (
-                    keywords[2] == "value"
-                    or keywords[2] == "gradient"
-                    or keywords[2].endswith(("Value", "Gradient"))
-                )
-            )
-        )
-        and isinstance(data, (int, float, np.ndarray))
-    ):
-        data = np.asarray(data)
-        class_ = header.get("class", "") if header else ""
-        assert isinstance(class_, str)
-        scalar = "Scalar" in class_
+        # Field data (scalar/vector/tensor)
+        case int() | float() | np.ndarray(), _, _, False if _expect_field(keywords):
+            data = np.asarray(data)
+            class_ = header.get("class", "") if header else ""  # ty: ignore[possibly-missing-attribute]
+            assert isinstance(class_, str)
+            scalar = "Scalar" in class_
 
-        shape = np.shape(data)
-        if not shape or (not scalar and shape in ((3,), (6,), (9,))):
-            return b"uniform " + dumps(data)
+            shape = np.shape(data)
+            if not shape or (not scalar and shape in ((3,), (6,), (9,))):
+                return b"uniform " + dumps(data)
 
-        assert isinstance(data, np.ndarray)
-        ndim = np.ndim(data)
-        if ndim == 1:
-            tensor_kind = b"scalar"
+            # Non-uniform field
+            assert isinstance(data, np.ndarray)
+            ndim = np.ndim(data)
+            if ndim == 1:
+                tensor_kind = b"scalar"
 
-        elif ndim == 2:
-            assert len(shape) == 2
-            if shape[1] == 3:
-                tensor_kind = b"vector"
-            elif shape[1] == 6:
-                tensor_kind = b"symmTensor"
-            elif shape[1] == 9:
-                tensor_kind = b"tensor"
+            elif ndim == 2:
+                assert len(shape) == 2
+                if shape[1] == 3:
+                    tensor_kind = b"vector"
+                elif shape[1] == 6:
+                    tensor_kind = b"symmTensor"
+                elif shape[1] == 9:
+                    tensor_kind = b"tensor"
+                else:
+                    return dumps(data)
+
             else:
                 return dumps(data)
 
-        else:
-            return dumps(data)
+            binary = (header.get("format", "") if header else "") == "binary"  # ty: ignore[possibly-missing-attribute]
 
-        binary = (header.get("format", "") if header else "") == "binary"
+            contents = b"(" + data.tobytes() + b")" if binary else dumps(data)
 
-        contents = b"(" + data.tobytes() + b")" if binary else dumps(data)
+            return b"nonuniform List<" + tensor_kind + b"> " + dumps(len(data)) + contents
 
-        return b"nonuniform List<" + tensor_kind + b"> " + dumps(len(data)) + contents
+        # DimensionSet
+        case DimensionSet(), _, _, False:
+            return b"[" + b" ".join(dumps(v) for v in data) + b"]"  # ty: ignore[not-iterable]
 
-    if isinstance(data, DimensionSet):
-        return b"[" + b" ".join(dumps(v) for v in data) + b"]"
-
-    if isinstance(data, Dimensioned):
-        if data.name is not None:
+        # Dimensioned (with name)
+        case Dimensioned(), _, _, False if data.name is not None:  # ty: ignore[possibly-missing-attribute]
             return (
-                dumps(data.name)
+                dumps(data.name)  # ty: ignore[possibly-missing-attribute]
                 + b" "
-                + dumps(data.dimensions)
+                + dumps(data.dimensions)  # ty: ignore[possibly-missing-attribute]
                 + b" "
-                + dumps(data.value)
+                + dumps(data.value)  # ty: ignore[possibly-missing-attribute]
             )
-        return dumps(data.dimensions) + b" " + dumps(data.value)
 
-    if isinstance(data, tuple):
-        if tuple_is_keyword_entry:
-            k, v = data
+        # Dimensioned (without name)
+        case Dimensioned(), _, _, False:
+            return dumps(data.dimensions) + b" " + dumps(data.value)  # ty: ignore[possibly-missing-attribute]
+
+        # Tuple as keyword entry
+        case tuple(), _, _, True:
+            k, v = data  # ty: ignore[misc]
             ret = b"\n" if isinstance(k, str) and k[0] == "#" else b""
             if k is not None:
                 ret += dumps(k, keywords=keywords)
             val = dumps(
                 v,
-                keywords=(*keywords, k)
+                keywords=(*keywords, k)  # ty: ignore[not-iterable]
                 if keywords is not None and k is not None
                 else ()
                 if k is None
@@ -457,16 +454,23 @@ def dumps(
                 ret += b";"
             return ret
 
-        return b" ".join(dumps(v, keywords=keywords, header=header) for v in data)
+        # Tuple (not as keyword entry)
+        case tuple(), _, _, False:
+            return b" ".join(dumps(v, keywords=keywords, header=header) for v in data)  # ty: ignore[not-iterable]
 
+        # Boolean True
+        case True, _, _, False:
+            return b"yes"
+
+        # Boolean False
+        case False, _, _, False:
+            return b"no"
+
+    # Sequence
     if is_sequence(data):
         return (
             b"(" + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data) + b")"  # ty: ignore[not-iterable]
         )
 
-    if data is True:
-        return b"yes"
-    if data is False:
-        return b"no"
-
+    # Default case: convert to string
     return str(data).encode("latin-1")
