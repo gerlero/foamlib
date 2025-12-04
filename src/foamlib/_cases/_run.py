@@ -49,7 +49,7 @@ class FoamCaseRunBase(FoamCaseBase):
         def _case(self) -> "FoamCaseRunBase":
             raise NotImplementedError
 
-        def _cell_centers_calls(self) -> Generator[Any, None, FoamFieldFile]:
+        def _cell_centers_calls(self) -> Generator[object, None, FoamFieldFile]:
             ret = self["C"]
 
             if ret not in self:
@@ -103,11 +103,11 @@ class FoamCaseRunBase(FoamCaseBase):
         raise NotImplementedError
 
     @abstractmethod
-    def copy(self, dst: os.PathLike[str] | str | None = None) -> Any:
+    def copy(self, dst: os.PathLike[str] | str | None = None) -> object:
         raise NotImplementedError
 
     @abstractmethod
-    def clone(self, dst: os.PathLike[str] | str | None = None) -> Any:
+    def clone(self, dst: os.PathLike[str] | str | None = None) -> object:
         raise NotImplementedError
 
     @abstractmethod
@@ -343,7 +343,7 @@ class FoamCaseRunBase(FoamCaseBase):
 
     def _clone_calls(
         self, dst: os.PathLike[str] | str | None
-    ) -> Generator[Any, None, Self]:
+    ) -> Generator[object, None, Self]:
         if dst is None:
             dst = self.__mkrundir()
 

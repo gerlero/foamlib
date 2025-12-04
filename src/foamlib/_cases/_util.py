@@ -7,7 +7,7 @@ from contextlib import (
     AbstractContextManager,
     asynccontextmanager,
 )
-from typing import Any, Generic, TypeVar, cast
+from typing import Generic, TypeVar, cast
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -36,7 +36,7 @@ class AwaitableAsyncContextManager(AbstractAsyncContextManager[_R], Awaitable[_R
         self._cm = cm
 
     @override
-    def __await__(self) -> Generator[Any, Any, _R]:
+    def __await__(self) -> Generator[object, None, _R]:
         return self._cm.__aenter__().__await__()
 
     @override
@@ -57,7 +57,7 @@ def awaitableasynccontextmanager(
     func: Callable[..., AsyncGenerator[_R]], /
 ) -> Callable[..., AwaitableAsyncContextManager[_R]]:
     @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> AwaitableAsyncContextManager[_R]:
+    def wrapper(*args: object, **kwargs: object) -> AwaitableAsyncContextManager[_R]:
         return AwaitableAsyncContextManager(asynccontextmanager(func)(*args, **kwargs))
 
     return wrapper

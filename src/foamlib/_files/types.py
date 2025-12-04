@@ -1,5 +1,5 @@
 import sys
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
@@ -195,7 +195,7 @@ class Dimensioned:
         return int(self.value)
 
     def __array__(
-        self, dtype: Any = None, *, copy: Any = None
+        self, dtype: np.dtype | None = None, *, copy: bool | None = None
     ) -> np.ndarray[tuple[()] | tuple[int], np.dtype[np.float64]]:
         if self.dimensions:
             msg = f"Cannot convert non-dimensionless Dimensioned object to array: {self.dimensions}"
