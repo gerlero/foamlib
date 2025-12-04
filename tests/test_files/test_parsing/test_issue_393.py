@@ -1,6 +1,6 @@
 """Test for issue #393: Parsing issues with complex keys."""
 
-from foamlib._files._parsing import Parsed
+from foamlib._files._parsing import ParsedFile
 
 
 def test_issue_393_complex_keys() -> None:
@@ -11,7 +11,7 @@ def test_issue_393_complex_keys() -> None:
     """
 
     # Test case 1: dot in parentheses - was failing due to the period in .T()
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         divSchemes
         {
             div((muEff*dev2(grad(U).T()))) Gauss linear;
@@ -23,7 +23,7 @@ def test_issue_393_complex_keys() -> None:
     )
 
     # Test case 2: double asterisk in parentheses - was failing due to complex nesting
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         divSchemes
         {
             div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
@@ -35,7 +35,7 @@ def test_issue_393_complex_keys() -> None:
     )
 
     # Test case 3: complex expression with colon and pipe - was failing due to special chars
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         divSchemes
         {
             div(((rho*(thermo:mu|rho))*dev2(T(grad(U))))) Gauss linear;
@@ -47,7 +47,7 @@ def test_issue_393_complex_keys() -> None:
     )
 
     # Test case 4: comma in parentheses - was failing due to comma inside parentheses
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         laplacianSchemes
         {
             laplacian((rho*DomegaEff),omega) omegaGauss linear limited 0.333;
@@ -61,7 +61,7 @@ def test_issue_393_complex_keys() -> None:
     )
 
     # Test case 5: multiple comma cases from the original issue
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         laplacianSchemes
         {
             laplacian((rho*DkEff),k) Gauss linear limited 0.333;
@@ -91,7 +91,7 @@ def test_issue_393_complex_keys() -> None:
 
 def test_original_working_cases_still_work() -> None:
     """Ensure that the fix doesn't break originally working cases."""
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         divSchemes
         {
             div((rho*R)) Gauss linear;

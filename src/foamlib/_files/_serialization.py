@@ -19,7 +19,7 @@ from ._typing import (
     SubDict,
     SubDictLike,
 )
-from ._util import add_to_mapping, as_dict_check_unique, is_sequence
+from ._util import add_to_mapping, as_dict, is_sequence
 from .types import Dimensioned, DimensionSet
 
 
@@ -143,7 +143,7 @@ def normalize(
 
         # Other dictionary
         case Mapping(), None, False:
-            return as_dict_check_unique(
+            return as_dict(
                 (
                     (
                         normalize(k, force_token=True),  # ty: ignore[no-matching-overload]

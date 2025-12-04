@@ -16,14 +16,14 @@ else:
 import os
 from types import TracebackType
 
-from ._parsing import Parsed
+from ._parsing import ParsedFile
 
 
 class FoamFileIO(AbstractContextManager["FoamFileIO"]):
     def __init__(self, path: os.PathLike[str] | str) -> None:
         self.path = Path(path).absolute()
 
-        self.__parsed: Parsed | None = None
+        self.__parsed: ParsedFile | None = None
         self.__missing: bool | None = None
         self.__defer_io = 0
 
@@ -56,7 +56,7 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
                 self.__parsed.modified = False
                 self.__missing = False
 
-    def _get_parsed(self, *, missing_ok: bool = False) -> Parsed:
+    def _get_parsed(self, *, missing_ok: bool = False) -> ParsedFile:
         if not self.__defer_io:
             try:
                 contents = self.path.read_bytes()
@@ -69,7 +69,7 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
                     contents = gzip.decompress(contents)
 
             if self.__parsed is None or self.__parsed.contents != contents:
-                self.__parsed = Parsed(contents)
+                self.__parsed = ParsedFile(contents)
 
         assert self.__parsed is not None
         assert self.__missing is not None

@@ -3,7 +3,6 @@ from pyparsing import (
     CaselessKeyword,
     CharsNotIn,
     Combine,
-    Dict,
     Forward,
     Group,
     Keyword,
@@ -18,6 +17,7 @@ from pyparsing import (
     printables,
 )
 
+from .._util import as_dict
 from ..types import Dimensioned, DimensionSet
 from ._elements import (
     ASCIIFacesLikeList,
@@ -122,12 +122,12 @@ TOKEN = (_KEYWORD | _DIRECTIVE).ignore(_COMMENT).parse_with_tabs()
 DATA = Forward()
 _DATA_ENTRY = Forward()
 _KEYWORD_ENTRY = keyword_entry_of(
-    _KEYWORD | list_of(_IDENTIFIER),
-    Opt(DATA, default=""),
+    _DATA_ENTRY,
+    DATA,
     directive=_DIRECTIVE,
     data_entry=_DATA_ENTRY,
 )
-_DICT = dict_of(_KEYWORD, Opt(DATA, default=""))
+_DICT = dict_of(_KEYWORD, DATA)
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = list_of(_LIST_ENTRY)
 _NUMBER = (
@@ -171,24 +171,44 @@ STANDALONE_DATA = (
     .parse_with_tabs()
 )
 
-_LOCATED_KEYWORD_ENTRIES = Group(
+STANDALONE_KEYWORD_ENTRY = keyword_entry_of(
+    _KEYWORD,
+    Opt(DATA, default=""),
+    directive=_DIRECTIVE,
+    data_entry=_DATA_ENTRY,
+    nested_dict_multi_ok=True,
+)
+
+FILE = (
+    (
+        STANDALONE_KEYWORD_ENTRY[...]
+        + Opt(STANDALONE_DATA.copy().add_parse_action(lambda tks: [(None, tks[0])]))
+        + STANDALONE_KEYWORD_ENTRY[...]
+    )
+    .add_parse_action(lambda tks: as_dict(tks, multi_ok=True))
+    .ignore(_COMMENT)
+    .parse_with_tabs()
+)
+
+_LOCATED_KEYWORD_ENTRY = Group(
     keyword_entry_of(
         _KEYWORD,
         Opt(DATA, default=""),
         directive=_DIRECTIVE,
         data_entry=_DATA_ENTRY,
+        nested_dict_multi_ok=True,
         located=True,
     )
-)[...]
+)
 _LOCATED_STANDALONE_DATA = Group(
     Located(STANDALONE_DATA.copy().add_parse_action(lambda tks: [None, tks[0]]))
 )
 
 LOCATED_FILE = (
-    Dict(
-        _LOCATED_KEYWORD_ENTRIES
+    (
+        _LOCATED_KEYWORD_ENTRY[...]
         + Opt(_LOCATED_STANDALONE_DATA)
-        + _LOCATED_KEYWORD_ENTRIES
+        + _LOCATED_KEYWORD_ENTRY[...]
     )
     .ignore(_COMMENT)
     .parse_with_tabs()

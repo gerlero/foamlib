@@ -2,12 +2,12 @@
 
 import numpy as np
 import pytest
-from foamlib._files._parsing import Parsed
+from foamlib._files._parsing import ParsedFile
 
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_dict_strange_name() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         div(phi,ft_b_ha_hau) Gauss multivariateSelection
         {
@@ -25,7 +25,7 @@ def test_dict_strange_name() -> None:
 
 
 def test_dict_strange_keys() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         div(phi,U)      Gauss linear;
         divSchemes
@@ -57,7 +57,7 @@ def test_dict_strange_keys() -> None:
 
 
 def test_var_value_with_space() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         laplacianSchemes
         {
@@ -70,7 +70,7 @@ def test_var_value_with_space() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_strange_dict_macro() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         relaxationFactors { $relaxationFactors-SIMPLE }
         """
@@ -80,7 +80,7 @@ def test_strange_dict_macro() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_directive_eval() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         transform
         {
@@ -95,7 +95,7 @@ def test_directive_eval() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_directive_if() -> None:
-    Parsed(
+    ParsedFile(
         b"""
         #if 0
         xin     #eval{ $xin / 5 };
@@ -112,7 +112,7 @@ def test_directive_if() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_directive_if_in_file() -> None:
-    Parsed(
+    ParsedFile(
         b"""
         #if 0
         xin     #eval{ $xin / 5 };
@@ -131,7 +131,7 @@ def test_directive_if_in_file() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_macro_with_dict() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         rInner45    ${{ $rInner * sqrt(0.5) }};
         rOuter45    ${{ $rOuter * sqrt(0.5) }};
@@ -144,7 +144,7 @@ def test_macro_with_dict() -> None:
 
 
 def test_directive_strange() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         #remove ( "r(Inner|Outer).*"  "[xy](min|max)" )
         """
@@ -154,7 +154,7 @@ def test_directive_strange() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_directive_with_macro() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         timeStart       #eval{ 0.1 * ${/endTime} };
         """
@@ -163,7 +163,7 @@ def test_directive_with_macro() -> None:
 
 
 def test_strange_assignment() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         divSchemes
         {
@@ -197,7 +197,7 @@ def test_strange_assignment() -> None:
 
 
 def test_unnamed_dict_in_list() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         drag
         (
@@ -219,7 +219,7 @@ def test_unnamed_dict_in_list() -> None:
 
 
 def test_unnamed_dict_in_list1() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         features
         (
@@ -237,7 +237,7 @@ def test_unnamed_dict_in_list1() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_list_name_eq() -> None:
-    Parsed(
+    ParsedFile(
         b"""
         value #eval
         {
@@ -253,7 +253,7 @@ def test_list_name_eq() -> None:
 
 
 def test_list_triple_named() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         velocity-inlet-5
         {
@@ -267,7 +267,7 @@ def test_list_triple_named() -> None:
 
 
 def test_assignment_strange_name() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         equations
         {
@@ -286,7 +286,7 @@ def test_assignment_strange_name() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_code_with_directive_and_macro() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         timeStart  #eval #{ 1.0/3.0 * ${/endTime} #};
         U
@@ -305,7 +305,7 @@ def test_code_with_directive_and_macro() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_code_with_directive() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         nx  #eval #{ round(5 * $NSLABS) #};
         """
@@ -314,7 +314,7 @@ def test_code_with_directive() -> None:
 
 
 def test_list_u() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         FoamFile
         {
@@ -353,7 +353,7 @@ def test_list_u() -> None:
 
 
 def test_list_as_write_cell_centers() -> None:
-    parsed = Parsed(
+    parsed = ParsedFile(
         b"""
         value           nonuniform List<scalar>
         2
@@ -367,5 +367,7 @@ def test_list_as_write_cell_centers() -> None:
 
 
 def test_list_as_write_cell_centers_short() -> None:
-    parsed = Parsed(b"value           nonuniform List<scalar> 4(250 750 1250 1750);")
+    parsed = ParsedFile(
+        b"value           nonuniform List<scalar> 4(250 750 1250 1750);"
+    )
     assert parsed[("value",)] == pytest.approx([250, 750, 1250, 1750])
