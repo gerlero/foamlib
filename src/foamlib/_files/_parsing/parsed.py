@@ -16,12 +16,12 @@ from pyparsing import ParseException, ParseResults, TypeVar
 
 from .._typing import Data, File, StandaloneData, SubDict
 from .._util import add_to_mapping
-from ._grammar import DATA, LOCATED_FILE, STANDALONE_DATA, TOKEN
+from ._grammar import DATA, FILE, LOCATED_FILE, STANDALONE_DATA, TOKEN
 
 _T = TypeVar("_T", str, Data, StandaloneData, File)
 
 
-def parse(s: bytes | str, *, target: type[_T]) -> _T:
+def parse(s: bytes | str, /, *, target: type[_T]) -> _T:
     if isinstance(s, bytes):
         s = s.decode("latin-1")
 
@@ -32,7 +32,7 @@ def parse(s: bytes | str, *, target: type[_T]) -> _T:
     elif target is StandaloneData:
         element = STANDALONE_DATA
     elif target is File:
-        return Parsed(s).as_dict()
+        element = FILE
     else:
         msg = f"Unsupported type for parsing: {target}"
         raise TypeError(msg)
@@ -47,8 +47,8 @@ def parse(s: bytes | str, *, target: type[_T]) -> _T:
     return ret
 
 
-class Parsed(
-    MutableMultiMapping["tuple[str, ...]", "Data | StandaloneData | EllipsisType"]
+class ParsedFile(
+    MutableMultiMapping[tuple[str, ...], Data | StandaloneData | EllipsisType]
 ):
     @dataclasses.dataclass
     class _Entry:
@@ -56,7 +56,7 @@ class Parsed(
         start: int
         end: int
 
-    def __init__(self, contents: bytes | str) -> None:
+    def __init__(self, contents: bytes | str, /) -> None:
         if isinstance(contents, bytes):
             contents_str = contents.decode("latin-1")
         else:
@@ -76,10 +76,11 @@ class Parsed(
     @staticmethod
     def _flatten_results(
         parse_results: ParseResults | Sequence[ParseResults],
+        /,
         *,
         _keywords: tuple[str, ...] = (),
-    ) -> MultiDict[tuple[str, ...], "Parsed._Entry"]:
-        ret: MultiDict[tuple[str, ...], Parsed._Entry] = MultiDict()
+    ) -> MultiDict[tuple[str, ...], "ParsedFile._Entry"]:
+        ret: MultiDict[tuple[str, ...], ParsedFile._Entry] = MultiDict()
         for parse_result in parse_results:
             value = parse_result.value
             assert isinstance(value, Sequence)
@@ -93,28 +94,32 @@ class Parsed(
                 assert len(data) == 1
                 assert not isinstance(data[0], ParseResults)
                 assert () not in ret
-                ret[()] = Parsed._Entry(data[0], start, end)
+                ret[()] = ParsedFile._Entry(data[0], start, end)
             else:
                 assert isinstance(keyword, str)
                 if len(data) == 0 or isinstance(data[0], ParseResults):
                     if (*_keywords, keyword) in ret:
                         msg = f"Duplicate entry found for keyword: {keyword}"
                         raise ValueError(msg)
-                    ret[(*_keywords, keyword)] = Parsed._Entry(..., start, end)
+                    ret[(*_keywords, keyword)] = ParsedFile._Entry(..., start, end)
                     ret.extend(
-                        Parsed._flatten_results(data, _keywords=(*_keywords, keyword))
+                        ParsedFile._flatten_results(
+                            data, _keywords=(*_keywords, keyword)
+                        )
                     )
                 else:
                     if (*_keywords, keyword) in ret and not keyword.startswith("#"):
                         msg = f"Duplicate entry found for keyword: {keyword}"
                         raise ValueError(msg)
-                    ret.add((*_keywords, keyword), Parsed._Entry(data[0], start, end))
+                    ret.add(
+                        (*_keywords, keyword), ParsedFile._Entry(data[0], start, end)
+                    )
         return ret
 
     @override
     @with_default
     def getall(
-        self, keywords: tuple[str, ...]
+        self, keywords: tuple[str, ...], /
     ) -> Collection[Data | StandaloneData | EllipsisType]:
         return [entry.data for entry in self._parsed.getall(keywords)]
 
@@ -128,13 +133,14 @@ class Parsed(
     def put(
         self,
         keywords: tuple[str, ...],
+        /,
         data: Data | StandaloneData | EllipsisType,
         content: bytes,
     ) -> None:
         start, end = self.entry_location(keywords)
 
         self._update_content(start, end, content)
-        self._parsed[keywords] = Parsed._Entry(data, start, start + len(content))
+        self._parsed[keywords] = ParsedFile._Entry(data, start, start + len(content))
         self._remove_child_entries(keywords)
 
     @override
@@ -143,6 +149,7 @@ class Parsed(
         keywords: tuple[str, ...],
         data: Data | StandaloneData | EllipsisType,
         content: bytes,
+        /,
     ) -> None:
         assert keywords not in self._parsed or (
             keywords and keywords[-1].startswith("#")
@@ -152,12 +159,14 @@ class Parsed(
 
         start, end = self.entry_location(keywords, add=True)
 
-        self._parsed.add(keywords, Parsed._Entry(data, start, end))
+        self._parsed.add(keywords, ParsedFile._Entry(data, start, end))
         self._update_content(start, end, content)
 
     @override
     @with_default
-    def popone(self, keywords: tuple[str, ...]) -> Data | StandaloneData | EllipsisType:
+    def popone(
+        self, keywords: tuple[str, ...], /
+    ) -> Data | StandaloneData | EllipsisType:
         start, end = self.entry_location(keywords)
         entry = self._parsed.popone(keywords)
         self._remove_child_entries(keywords)
@@ -183,7 +192,7 @@ class Parsed(
         # Update positions of other entries if content length changed
         if diff != 0:
             for entry in self._parsed.values():
-                assert isinstance(entry, Parsed._Entry)
+                assert isinstance(entry, ParsedFile._Entry)
                 if entry.start >= end:
                     entry.start += diff
                     entry.end += diff
@@ -193,14 +202,14 @@ class Parsed(
         self.contents = self.contents[:start] + new_content + self.contents[end:]
         self.modified = True
 
-    def _remove_child_entries(self, keywords: tuple[str, ...]) -> None:
+    def _remove_child_entries(self, keywords: tuple[str, ...], /) -> None:
         """Remove all child entries of the given keywords."""
         for k in list(self._parsed):
             if keywords != k and keywords == k[: len(keywords)]:
                 del self._parsed[k]
 
     def entry_location(
-        self, keywords: tuple[str, ...], *, add: bool = False
+        self, keywords: tuple[str, ...], /, *, add: bool = False
     ) -> tuple[int, int]:
         if add or keywords not in self._parsed:
             if len(keywords) > 1:
@@ -221,7 +230,7 @@ class Parsed(
     def as_dict(self) -> File:
         ret: File = {}
         for keywords, entry in self._parsed.items():
-            assert isinstance(entry, Parsed._Entry)
+            assert isinstance(entry, ParsedFile._Entry)
             if not keywords:
                 assert entry.data is not ...
                 assert None not in ret

@@ -1,5 +1,5 @@
 from collections.abc import Iterable, MutableMapping, Sequence
-from typing import Protocol, TypeGuard, TypeVar, overload
+from typing import Literal, Protocol, TypeGuard, TypeVar, overload
 
 import numpy as np
 from multicollections import MultiDict
@@ -12,6 +12,7 @@ _V_co = TypeVar("_V_co", covariant=True)
 
 def is_sequence(
     value: object,
+    /,
 ) -> TypeGuard[Sequence[object] | np.ndarray[tuple[int, ...], np.dtype[np.generic]]]:
     return (isinstance(value, Sequence) and not isinstance(value, str)) or (
         isinstance(value, np.ndarray) and value.ndim > 0
@@ -55,7 +56,31 @@ def add_to_mapping(
     return ret
 
 
-def as_dict_check_unique(items: Iterable[tuple[_K, _V]]) -> dict[_K, _V]:
+@overload
+def as_dict(
+    items: Iterable[tuple[_K, _V]],
+    *,
+    multi_ok: Literal[False] = ...,
+) -> dict[_K, _V]: ...
+
+
+@overload
+def as_dict(
+    items: Iterable[tuple[_K, _V]],
+    *,
+    multi_ok: Literal[True] = ...,
+) -> dict[_K, _V] | MultiDict[_K, _V]: ...
+
+
+def as_dict(
+    items: Iterable[tuple[_K, _V]], *, multi_ok: bool = False
+) -> dict[_K, _V] | MultiDict[_K, _V]:
+    if multi_ok:
+        ret: dict[_K, _V] | MultiDict[_K, _V] = {}
+        for key, value in items:
+            ret = add_to_mapping(ret, key, value)  # ty: ignore[invalid-assignment]
+        return ret
+
     ret = {}
     for key, value in items:
         if key in ret:

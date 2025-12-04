@@ -27,7 +27,7 @@ else:
 
 from numpy.typing import DTypeLike
 
-from .._util import as_dict_check_unique
+from .._util import as_dict
 
 
 class ASCIINumericList(ParserElement):
@@ -312,6 +312,7 @@ def dict_of(
     directive: ParserElement | None = None,
     data_entry: ParserElement | None = None,
     located: bool = False,
+    multi_ok: bool = False,
 ) -> ParserElement:
     dict_ = Forward()
 
@@ -329,7 +330,7 @@ def dict_of(
     )
 
     if not located:
-        dict_.set_parse_action(lambda tks: as_dict_check_unique(tks.as_list()))
+        dict_.set_parse_action(lambda tks: as_dict(tks, multi_ok=multi_ok))
 
     return dict_
 
@@ -341,10 +342,16 @@ def keyword_entry_of(
     directive: ParserElement | None = None,
     data_entry: ParserElement | None = None,
     located: bool = False,
+    nested_dict_multi_ok: bool = False,
 ) -> ParserElement:
     keyword_entry = keyword + (
         dict_of(
-            keyword, data, directive=directive, data_entry=data_entry, located=located
+            keyword,
+            data,
+            directive=directive,
+            data_entry=data_entry,
+            located=located,
+            multi_ok=nested_dict_multi_ok,
         )
         | (data + Literal(";").suppress())
     )

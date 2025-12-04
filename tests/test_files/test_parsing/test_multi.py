@@ -1,6 +1,6 @@
 import pytest
 from foamlib import FoamFile
-from foamlib._files._parsing import Parsed
+from foamlib._files._parsing import ParsedFile
 from foamlib._files._serialization import normalize
 from multicollections import MultiDict
 
@@ -42,7 +42,7 @@ def test_loads() -> None:
 
 
 def test_parsed_as_dict() -> None:
-    parsed = Parsed(CONTENTS)
+    parsed = ParsedFile(CONTENTS)
     d = parsed.as_dict()
     assert isinstance(d, MultiDict)
     items = list(d.items())
@@ -65,7 +65,7 @@ def test_parsed_as_dict() -> None:
 
 
 def test_parsed_mutation() -> None:
-    parsed = Parsed(CONTENTS)
+    parsed = ParsedFile(CONTENTS)
     parsed.add(("#include",), '"filename6"', b'"filename6"')
     assert len(list(parsed.getall(("#include",)))) == 3
     parsed.add(("key",), "value", b"value")
@@ -81,7 +81,7 @@ def test_parsed_mutation() -> None:
 
 def test_invalid_duplicate_keywords() -> None:
     with pytest.raises(ValueError, match="Duplicate"):
-        Parsed(b"""
+        ParsedFile(b"""
         key value1;
         key value2;
         """)
@@ -90,7 +90,7 @@ def test_invalid_duplicate_keywords() -> None:
         normalize(MultiDict([("key", "value1"), ("key", "value2")]), keywords=())
 
     with pytest.raises(ValueError, match="Duplicate"):
-        Parsed(b"""
+        ParsedFile(b"""
         subdict {
             key value;
         }
@@ -111,7 +111,7 @@ def test_invalid_duplicate_keywords() -> None:
         )
 
     with pytest.raises(ValueError, match="Duplicate"):
-        Parsed(b"""
+        ParsedFile(b"""
         dict1 {
             key value1;
             key value2;
@@ -125,7 +125,7 @@ def test_invalid_duplicate_keywords() -> None:
         )
 
     with pytest.raises(ValueError, match="Duplicate"):
-        Parsed(b"""
+        ParsedFile(b"""
         list (subdict { a b; a c; });
         """)
 

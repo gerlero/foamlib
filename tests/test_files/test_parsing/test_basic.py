@@ -1,53 +1,53 @@
 import numpy as np
 import pytest
 from foamlib import Dimensioned, DimensionSet
-from foamlib._files._parsing import Parsed
+from foamlib._files._parsing import ParsedFile
 
 
 def test_parse_value() -> None:
-    assert Parsed(b"1")[()] == 1
-    assert Parsed(b"1")[()] == 1
-    assert Parsed(b"1.0")[()] == 1.0
-    assert Parsed(b"1.0e-3")[()] == 1.0e-3
-    assert Parsed(b"yes")[()] is True
-    assert Parsed(b"no")[()] is False
-    assert Parsed(b"word")[()] == "word"
-    assert Parsed(b"inference")[()] == "inference"
-    assert Parsed(b"word word")[()] == ("word", "word")
-    assert Parsed(b'"a string"')[()] == '"a string"'
-    assert Parsed(b"uniform 1")[()] == 1
-    assert Parsed(b"uniform 1.0")[()] == 1.0
-    assert Parsed(b"uniform 1.0e-3")[()] == 1.0e-3
-    assert Parsed(b"(word word)")[()] == ["word", "word"]
-    lst = Parsed(b"(1 2 3)")[()]
+    assert ParsedFile(b"1")[()] == 1
+    assert ParsedFile(b"1")[()] == 1
+    assert ParsedFile(b"1.0")[()] == 1.0
+    assert ParsedFile(b"1.0e-3")[()] == 1.0e-3
+    assert ParsedFile(b"yes")[()] is True
+    assert ParsedFile(b"no")[()] is False
+    assert ParsedFile(b"word")[()] == "word"
+    assert ParsedFile(b"inference")[()] == "inference"
+    assert ParsedFile(b"word word")[()] == ("word", "word")
+    assert ParsedFile(b'"a string"')[()] == '"a string"'
+    assert ParsedFile(b"uniform 1")[()] == 1
+    assert ParsedFile(b"uniform 1.0")[()] == 1.0
+    assert ParsedFile(b"uniform 1.0e-3")[()] == 1.0e-3
+    assert ParsedFile(b"(word word)")[()] == ["word", "word"]
+    lst = ParsedFile(b"(1 2 3)")[()]
     assert isinstance(lst, np.ndarray)
     assert np.array_equal(lst, [1, 2, 3])
-    lst = Parsed(b"(1.0 2 3)")[()]
+    lst = ParsedFile(b"(1.0 2 3)")[()]
     assert isinstance(lst, list)
     assert lst == [1.0, 2, 3]
     assert isinstance(lst[0], float)
     assert isinstance(lst[1], int)
     assert isinstance(lst[2], int)
-    assert Parsed(b"()")[()] == []
-    field = Parsed(b"uniform (1 2 3)")[()]
+    assert ParsedFile(b"()")[()] == []
+    field = ParsedFile(b"uniform (1 2 3)")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(field, [1, 2, 3])
-    field = Parsed(b"nonuniform List<scalar> 2(1 2)")[()]
+    field = ParsedFile(b"nonuniform List<scalar> 2(1 2)")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(field, [1, 2])
-    field = Parsed(b"nonuniform List<scalar> 2{1}")[()]
+    field = ParsedFile(b"nonuniform List<scalar> 2{1}")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(field, [1, 1])
-    field = Parsed(b"nonuniform List<symmTensor> 0()")[()]
+    field = ParsedFile(b"nonuniform List<symmTensor> 0()")[()]
     assert isinstance(field, np.ndarray)
     assert field.shape == (0, 6)
-    field = Parsed(b"nonuniform List<tensor> ()")[()]
+    field = ParsedFile(b"nonuniform List<tensor> ()")[()]
     assert isinstance(field, np.ndarray)
     assert field.shape == (0, 9)
-    lst = Parsed(b"3(1 2 3)")[()]
+    lst = ParsedFile(b"3(1 2 3)")[()]
     assert isinstance(lst, np.ndarray)
     assert np.array_equal(lst, [1, 2, 3])
-    lst = Parsed(b"2((1 2 3) (4 5 6))")[()]
+    lst = ParsedFile(b"2((1 2 3) (4 5 6))")[()]
     assert isinstance(lst, np.ndarray)
     assert np.array_equal(
         lst,
@@ -56,7 +56,7 @@ def test_parse_value() -> None:
             [4, 5, 6],
         ],
     )
-    lst = Parsed(b"2((1\n2 3)\t(4 5 6))")[()]
+    lst = ParsedFile(b"2((1\n2 3)\t(4 5 6))")[()]
     assert isinstance(lst, np.ndarray)
     assert np.array_equal(
         lst,
@@ -65,14 +65,14 @@ def test_parse_value() -> None:
             [4, 5, 6],
         ],
     )
-    lst = Parsed(b"2(3(1 2 3) 4(4 5 6 7))")[()]
+    lst = ParsedFile(b"2(3(1 2 3) 4(4 5 6 7))")[()]
     assert isinstance(lst, list)
     assert len(lst) == 2
     assert isinstance(lst[0], np.ndarray)
     assert np.array_equal(lst[0], [1, 2, 3])
     assert isinstance(lst[1], np.ndarray)
     assert np.array_equal(lst[1], [4, 5, 6, 7])
-    lst = Parsed(b"2{(1 2 3)}")[()]
+    lst = ParsedFile(b"2{(1 2 3)}")[()]
     assert isinstance(lst, np.ndarray)
     assert np.array_equal(
         lst,
@@ -81,8 +81,8 @@ def test_parse_value() -> None:
             [1, 2, 3],
         ],
     )
-    assert Parsed(b"0()")[()] == []
-    field = Parsed(b"nonuniform List<vector> 2((1 2 3) (4 5 6))")[()]
+    assert ParsedFile(b"0()")[()] == []
+    field = ParsedFile(b"nonuniform List<vector> 2((1 2 3) (4 5 6))")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(
         field,
@@ -91,7 +91,7 @@ def test_parse_value() -> None:
             [4, 5, 6],
         ],
     )
-    field = Parsed(b"nonuniform List<vector> 2{(1 2 3)}")[()]
+    field = ParsedFile(b"nonuniform List<vector> 2{(1 2 3)}")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(
         field,
@@ -100,31 +100,33 @@ def test_parse_value() -> None:
             [1, 2, 3],
         ],
     )
-    field = Parsed(
+    field = ParsedFile(
         b"nonuniform List<scalar> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@)"
     )[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(field, [1, 2])
-    field = Parsed(
+    field = ParsedFile(
         b"nonuniform List<vector> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@)"
     )[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(field, [[1, 2, 3], [4, 5, 6]])
-    field = Parsed(b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)")[()]
+    field = ParsedFile(b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)")[()]
     assert isinstance(field, np.ndarray)
     assert np.array_equal(field, [1, 2])
-    assert Parsed(b"[1 1 -2 0 0 0 0]")[()] == DimensionSet(mass=1, length=1, time=-2)
-    dimensioned = Parsed(b"g [1 1 -2 0 0 0 0] (0 0 -9.81)")[()]
+    assert ParsedFile(b"[1 1 -2 0 0 0 0]")[()] == DimensionSet(
+        mass=1, length=1, time=-2
+    )
+    dimensioned = ParsedFile(b"g [1 1 -2 0 0 0 0] (0 0 -9.81)")[()]
     assert isinstance(dimensioned, Dimensioned)
     assert dimensioned.dimensions == DimensionSet(mass=1, length=1, time=-2)
     assert np.array_equal(dimensioned.value, [0, 0, -9.81])
     assert dimensioned.name == "g"
-    dimensioned = Parsed(b"[1 1 -2 0 0 0 0] 9.81")[()]
+    dimensioned = ParsedFile(b"[1 1 -2 0 0 0 0] 9.81")[()]
     assert isinstance(dimensioned, Dimensioned)
     assert dimensioned.dimensions == DimensionSet(mass=1, length=1, time=-2)
     assert dimensioned.value == 9.81
     assert dimensioned.name is None
-    tpl = Parsed(b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")[()]
+    tpl = ParsedFile(b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")[()]
     assert isinstance(tpl, tuple)
     assert len(tpl) == 5
     assert tpl[0] == "hex"
@@ -135,29 +137,37 @@ def test_parse_value() -> None:
     assert tpl[3] == "simpleGrading"  # ty: ignore[index-out-of-bounds]
     assert isinstance(tpl[4], list)  # ty: ignore[index-out-of-bounds]
     assert tpl[4] == [1, 1, 1]  # ty: ignore[index-out-of-bounds]
-    assert Parsed(b"(a b; c d;)")[()] == [("a", "b"), ("c", "d")]
-    assert Parsed(b"(a {b c;} d {e g;})")[()] == [
+    assert ParsedFile(b"(a b; c d;)")[()] == [("a", "b"), ("c", "d")]
+    assert ParsedFile(b"(a {b c;} d {e g;})")[()] == [
         ("a", {"b": "c"}),
         ("d", {"e": "g"}),
     ]
-    assert Parsed(b"(a (b c d); e {})")[()] == [("a", ["b", "c", "d"]), ("e", {})]
-    assert Parsed(b"({a b; c d;} {e g;})")[()] == [{"a": "b", "c": "d"}, {"e": "g"}]
-    assert Parsed(b"(water oil mercury air)")[()] == ["water", "oil", "mercury", "air"]
-    assert Parsed(b"div(phi,U)")[()] == "div(phi,U)"
-    assert Parsed(b"U.component(1)")[()] == "U.component(1)"
-    assert Parsed(b"div(nuEff*dev(T(grad(U))))")[()] == "div(nuEff*dev(T(grad(U))))"
-    assert Parsed(b"div((nuEff*dev(T(grad(U)))))")[()] == "div((nuEff*dev(T(grad(U)))))"
-    assert Parsed(b"((air and water) { type constant; sigma 0.07; })")[()] == [
+    assert ParsedFile(b"(a (b c d); e {})")[()] == [("a", ["b", "c", "d"]), ("e", {})]
+    assert ParsedFile(b"({a b; c d;} {e g;})")[()] == [{"a": "b", "c": "d"}, {"e": "g"}]
+    assert ParsedFile(b"(water oil mercury air)")[()] == [
+        "water",
+        "oil",
+        "mercury",
+        "air",
+    ]
+    assert ParsedFile(b"div(phi,U)")[()] == "div(phi,U)"
+    assert ParsedFile(b"U.component(1)")[()] == "U.component(1)"
+    assert ParsedFile(b"div(nuEff*dev(T(grad(U))))")[()] == "div(nuEff*dev(T(grad(U))))"
+    assert (
+        ParsedFile(b"div((nuEff*dev(T(grad(U)))))")[()]
+        == "div((nuEff*dev(T(grad(U)))))"
+    )
+    assert ParsedFile(b"((air and water) { type constant; sigma 0.07; })")[()] == [
         (["air", "and", "water"], {"type": "constant", "sigma": 0.07})
     ]
-    assert Parsed(b"[]")[()] == DimensionSet()
-    assert Parsed(b"object f.1;")[("object",)] == "f.1"
+    assert ParsedFile(b"[]")[()] == DimensionSet()
+    assert ParsedFile(b"object f.1;")[("object",)] == "f.1"
 
 
 def test_parse_directive() -> None:
-    assert Parsed(b'#include "filename"')[("#include",)] == '"filename"'
+    assert ParsedFile(b'#include "filename"')[("#include",)] == '"filename"'
     assert (
-        Parsed(b"functions\n{\n#includeFunc funcName\nsubdict{}}")[
+        ParsedFile(b"functions\n{\n#includeFunc funcName\nsubdict{}}")[
             ("functions", "#includeFunc")
         ]
         == "funcName"
@@ -168,10 +178,10 @@ def test_parse_invalid_content() -> None:
     """Test that ValueError is raised for malformed content that causes ParseException."""
     # Test malformed syntax that will cause pyparsing to fail
     with pytest.raises(ValueError, match="Failed to parse contents"):
-        Parsed(b"key value; unclosed {")
+        ParsedFile(b"key value; unclosed {")
 
     with pytest.raises(ValueError, match="Failed to parse contents"):
-        Parsed(b"key { value; } extra }")
+        ParsedFile(b"key { value; } extra }")
 
     with pytest.raises(ValueError, match="Failed to parse contents"):
-        Parsed(b"{ orphaned brace")
+        ParsedFile(b"{ orphaned brace")

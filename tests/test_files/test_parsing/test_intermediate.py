@@ -3,16 +3,16 @@
 import numpy as np
 import pytest
 from foamlib import Dimensioned, DimensionSet
-from foamlib._files._parsing import Parsed
+from foamlib._files._parsing import ParsedFile
 
 
 def test_var_simple() -> None:
-    assert Parsed(b"a  b;")[("a",)] == "b"
+    assert ParsedFile(b"a  b;")[("a",)] == "b"
 
 
 def test_var_quoted_string() -> None:
     assert (
-        Parsed(b"""
+        ParsedFile(b"""
         laplacianSchemes
         {
             default    "Gauss linear corrected";
@@ -23,7 +23,7 @@ def test_var_quoted_string() -> None:
 
 
 def test_var_multiple() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         a    b;
 
         c    d;
@@ -33,7 +33,7 @@ def test_var_multiple() -> None:
 
 
 def test_strange_names() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         "(U|k|epsilon|R)Final"
         {
             $U;
@@ -62,7 +62,7 @@ def test_strange_names() -> None:
 
 
 def test_list_simple() -> None:
-    faces = Parsed(b"""
+    faces = ParsedFile(b"""
         faces
         (
             (1 5 4 0)
@@ -74,7 +74,7 @@ def test_list_simple() -> None:
 
 
 def test_list_assignment() -> None:
-    faces = Parsed(b"""
+    faces = ParsedFile(b"""
         faces
         (
             1
@@ -88,7 +88,7 @@ def test_list_assignment() -> None:
 
 
 def test_dict_simple() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         my_dict
         {
             version     2.0;
@@ -104,7 +104,7 @@ def test_dict_simple() -> None:
 
 
 def test_dict_nested() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         my_nested_dict
         {
             p
@@ -128,7 +128,7 @@ def test_dict_nested() -> None:
 
 
 def test_dict_with_list() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         PISO
         {
             nCorrectors                 2;
@@ -143,7 +143,7 @@ def test_dict_with_list() -> None:
 
 
 def test_list_with_dict() -> None:
-    boundary = Parsed(b"""
+    boundary = ParsedFile(b"""
         boundary
         (
             upperBoundary
@@ -168,7 +168,7 @@ def test_list_with_dict() -> None:
 
 
 def test_list_with_str() -> None:
-    blocks = Parsed(b"""
+    blocks = ParsedFile(b"""
         blocks
         (
             hex (0 1 2 3 4 5 6 7) (40 40 40) simpleGrading (1 1 1)
@@ -185,7 +185,7 @@ def test_list_with_str() -> None:
 
 
 def test_file_simple() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         FoamFile
         {
             version     2.0;
@@ -207,7 +207,7 @@ def test_file_simple() -> None:
 
 
 def test_file() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         FoamFile
         {
             version     2.0;
@@ -240,7 +240,7 @@ def test_file() -> None:
 
 
 def test_directive() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         FoamFile
         {
             version     2.0;
@@ -254,7 +254,7 @@ def test_directive() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_directives_in_dict() -> None:
-    Parsed(b"""
+    ParsedFile(b"""
         functions
         {
             #includeFunc fieldAverage(cylindrical(U))
@@ -310,7 +310,7 @@ def test_directives_in_dict() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_code() -> None:
-    Parsed(b"""
+    ParsedFile(b"""
         code_name
         #{
             -I$(LIB_SRC)/finiteVolume/lnInclude \
@@ -320,7 +320,7 @@ def test_code() -> None:
 
 
 def test_macro() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         FoamFile
         {
             version     2.0;
@@ -351,7 +351,7 @@ def test_macro() -> None:
 
 
 def test_empty_dict() -> None:
-    Parsed(b"""
+    ParsedFile(b"""
         solvers
         {
         }
@@ -361,7 +361,7 @@ def test_empty_dict() -> None:
 
 
 def test_dict_isolated_key() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         cache
         {
             grad(U);
@@ -371,7 +371,7 @@ def test_dict_isolated_key() -> None:
 
 
 def test_dimension_set() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         dimensions    [0 2 -1 0 0 0 0];
 
         nu            [0 2 -1 0 0 0 0] 1e-05;
@@ -396,7 +396,7 @@ def test_dimension_set() -> None:
 
 
 def test_named_values() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         a     b;
 
         ft    limitedLinear01 1;
@@ -407,7 +407,7 @@ def test_named_values() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_macro_ugly() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         relaxationFactors
         {
             ${_${FOAM_EXECUTABLE}};
@@ -417,7 +417,7 @@ def test_macro_ugly() -> None:
 
 
 def test_list_on_1_line() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         libs            (overset rigidBodyDynamics);
 
         functions
@@ -437,7 +437,7 @@ def test_list_on_1_line() -> None:
 
 
 def test_double_value() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         FoamFile
         {
             format    ascii;
@@ -449,7 +449,7 @@ def test_double_value() -> None:
 
 
 def test_for_blockmesh() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         negHalfWidth    #neg $halfWidth;
 
         blocks
@@ -469,7 +469,7 @@ def test_for_blockmesh() -> None:
 
 
 def test_for_u() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         internalField  uniform $include/caseSettings!internalField/U;
     """)
     assert parsed[("internalField",)] == (
@@ -479,7 +479,7 @@ def test_for_u() -> None:
 
 
 def test_blocks() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         blocks
         (
             hex (0 1 2 3 4 5 6 7) inletChannel (40 1 64) simpleGrading (1 1 1)
@@ -518,7 +518,7 @@ def test_blocks() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_macro_signed() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         vertices
         (
             ($x0 $y0 -$w2)
@@ -538,7 +538,7 @@ def test_macro_signed() -> None:
 @pytest.mark.xfail(reason="Should fail")
 def test_list_numbered() -> None:
     with pytest.raises(Exception, match="Expected"):
-        Parsed(b"""
+        ParsedFile(b"""
             internalField nonuniform
             List<vector>
             4096
@@ -552,7 +552,7 @@ def test_list_numbered() -> None:
 
 def test_list_numbered_u() -> None:
     with pytest.raises(Exception, match="Expected"):
-        Parsed(b"""
+        ParsedFile(b"""
             70
             (
                 (5.74803 0 0)
@@ -566,7 +566,7 @@ def test_list_numbered_u() -> None:
 
 
 def test_colon_double_name() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         DebugSwitches
         {
             compressible::alphatWallBoilingWallFunction                 0;
@@ -586,7 +586,7 @@ def test_colon_double_name() -> None:
 
 
 def test_list_edges() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         edges
         (
             spline 1 2 ((0.6 0.0124 0.0) (0.7 0.0395 0.0) (0.8 0.0724 0.0) (0.9 0.132 0.0) (1 0.172 0.0) (1.1 0.132 0.0) (1.2 0.0724 0.0) (1.3 0.0395 0.0) (1.4 0.0124 0.0))
@@ -634,7 +634,7 @@ def test_list_edges() -> None:
 
 
 def test_list_edges_arcs() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         edges
         (
             arc 0 5 origin (0 0 0)
@@ -657,7 +657,7 @@ def test_list_edges_arcs() -> None:
 
 
 def test_list_blocks() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
         blocks
         (
             hex (0 1 9 8 7 6 14 15) (50 100 1) simpleGrading (1 ((0.1 0.25 41.9) (0.9 0.75 1)) 1)
@@ -701,7 +701,7 @@ def test_list_blocks() -> None:
 
 @pytest.mark.xfail(reason="Not currently supported")
 def test_code_stream() -> None:
-    Parsed(b"""
+    ParsedFile(b"""
         internalField  #codeStream
         {
             codeInclude
@@ -737,7 +737,7 @@ def test_code_stream() -> None:
 
 
 def test_list_uniform() -> None:
-    parsed = Parsed(b"""
+    parsed = ParsedFile(b"""
             a    1;
 
             internalField uniform
