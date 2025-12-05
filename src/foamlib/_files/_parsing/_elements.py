@@ -1,5 +1,6 @@
 import re
 import sys
+import typing
 
 import numpy as np
 from pyparsing import (
@@ -262,7 +263,9 @@ class ASCIIFacesLikeList(ParserElement):
             raw = np.fromstring(contents, sep=" ", dtype=int)
             assert raw.size > 0
 
-            values: list[np.ndarray[tuple[int], np.dtype[np.int64]]] = []
+            values: list[
+                np.ndarray[tuple[typing.Literal[3, 4]], np.dtype[np.int64]]
+            ] = []
             i = 0
             while i < raw.size:
                 assert raw[i] in (3, 4)
