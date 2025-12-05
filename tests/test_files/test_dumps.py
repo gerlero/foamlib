@@ -212,3 +212,4 @@ def test_serialize_file() -> None:
         )
         == b'\n#includeFunc "func1"\n \n#includeFunc "func2"\n'
     )
+    assert FoamFile.dumps({"keyword": None}, ensure_header=False) == b"keyword;"

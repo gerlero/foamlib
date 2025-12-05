@@ -64,11 +64,15 @@ StandaloneDataLike: TypeAlias = (
     | tuple[Sequence[int], Sequence[int]]
 )
 
-SubDict: TypeAlias = dict[str, "Data | SubDict"] | MultiDict[str, "Data | SubDict"]
-SubDictLike: TypeAlias = Mapping[str, "DataLike | SubDictLike"]
+SubDict: TypeAlias = (
+    dict[str, "Data | SubDict | None"] | MultiDict[str, "Data | SubDict | None"]
+)
+SubDictLike: TypeAlias = Mapping[str, "DataLike | SubDictLike | None"]
 
 File: TypeAlias = (
-    dict[str | None, StandaloneData | Data | SubDict]
-    | MultiDict[str | None, StandaloneData | Data | SubDict]
+    dict[str | None, StandaloneData | Data | SubDict | None]
+    | MultiDict[str | None, StandaloneData | Data | SubDict | None]
 )
-FileLike: TypeAlias = Mapping[str | None, StandaloneDataLike | DataLike | SubDictLike]
+FileLike: TypeAlias = Mapping[
+    str | None, StandaloneDataLike | DataLike | SubDictLike | None
+]

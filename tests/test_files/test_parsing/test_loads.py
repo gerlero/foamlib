@@ -82,7 +82,7 @@ def test_loads() -> None:
     assert dimensioned.name is None
     assert FoamFile.loads("a {b c; d e;}") == {"a": {"b": "c", "d": "e"}}
     assert FoamFile.loads("(a b; c d;)") == [("a", "b"), ("c", "d")]
-    assert FoamFile.loads("keyword;") == {"keyword": ""}
+    assert FoamFile.loads("keyword;") == {"keyword": None}
     assert FoamFile.loads("#include $FOAM_CASE/simControls") == {
         "#include": "$FOAM_CASE/simControls"
     }

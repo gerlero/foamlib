@@ -174,7 +174,7 @@ STANDALONE_DATA = (
 
 STANDALONE_KEYWORD_ENTRY = keyword_entry_of(
     _KEYWORD,
-    Opt(DATA, default=""),
+    Opt(DATA, default=None),
     directive=_DIRECTIVE,
     data_entry=_DATA_ENTRY,
     nested_dict_target=SubDict,
@@ -194,7 +194,7 @@ FILE = (
 _LOCATED_KEYWORD_ENTRY = Group(
     keyword_entry_of(
         _KEYWORD,
-        Opt(DATA, default=""),
+        Opt(DATA, default=None),
         directive=_DIRECTIVE,
         data_entry=_DATA_ENTRY,
         located=True,

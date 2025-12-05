@@ -162,6 +162,7 @@ def test_parse_value() -> None:
     ]
     assert ParsedFile(b"[]")[()] == DimensionSet()
     assert ParsedFile(b"object f.1;")[("object",)] == "f.1"
+    assert ParsedFile(b"keyword;")[("keyword",)] is None
 
 
 def test_parse_directive() -> None:

@@ -55,7 +55,7 @@ def test_strange_names() -> None:
 
     """)
     # Note: quoted strings include the quotes in the key
-    assert parsed[('"(U|k|epsilon|R)Final"', "$U")] == ""
+    assert parsed[('"(U|k|epsilon|R)Final"', "$U")] is None
     assert parsed[("thermalPhaseChange:dmdtf",)] == 1.0
     assert parsed[("thermo:rho", "solver")] == "PCG"
     assert parsed[("alpha.water", "solver")] == "PCG"
@@ -343,8 +343,8 @@ def test_macro() -> None:
         relaxationFactors  $relaxationFactors-SIMPLE;
     """)
     assert parsed[("relTol",)] == "$p"
-    assert parsed[("Phi", "$p")] == ""
-    assert parsed[("p_rbghFinal", "$p_rbgh")] == ""
+    assert parsed[("Phi", "$p")] is None
+    assert parsed[("p_rbghFinal", "$p_rbgh")] is None
     assert parsed[("p_rbghFinal", "tolerance")] == 1e-08
     assert parsed[("p_rbghFinal", "relTol")] == 0
     assert parsed[("relaxationFactors",)] == "$relaxationFactors-SIMPLE"
@@ -367,7 +367,7 @@ def test_dict_isolated_key() -> None:
             grad(U);
         }
     """)
-    assert parsed[("cache", "grad(U)")] == ""
+    assert parsed[("cache", "grad(U)")] is None
 
 
 def test_dimension_set() -> None:
