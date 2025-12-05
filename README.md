@@ -1,4 +1,7 @@
-[<img alt="foamlib" src="https://github.com/gerlero/foamlib/raw/main/logo.png" height="65">](https://github.com/gerlero/foamlib)
+<div align="center">
+<a href="https://github.com/gerlero/foamlib"><img src="https://github.com/gerlero/foamlib/raw/main/logo.png" height="65"></a>
+
+---
 
 [![Documentation](https://img.shields.io/readthedocs/foamlib)](https://foamlib.readthedocs.io/)
 [![CI](https://github.com/gerlero/foamlib/actions/workflows/ci.yml/badge.svg)](https://github.com/gerlero/foamlib/actions/workflows/ci.yml)
@@ -15,10 +18,10 @@
 [![Docker image](https://img.shields.io/badge/docker%20image-microfluidica%2Ffoamlib-0085a0)](https://hub.docker.com/r/microfluidica/foamlib/)
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.07633/status.svg)](https://doi.org/10.21105/joss.07633)
 
+---
 
 **foamlib** is a modern Python package that provides an elegant, streamlined interface for interacting with OpenFOAM. It's designed to make OpenFOAM-based workflows more accessible, reproducible, and precise for researchers and engineers.
 
-<div align="center">
 <img alt="benchmark" src="https://github.com/gerlero/foamlib/raw/main/benchmark/benchmark.png" height="250">
 
 _Loading a_ volVectorField _with one million cells_<sup>[1](#benchmark)</sup>
