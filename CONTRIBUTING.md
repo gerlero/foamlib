@@ -16,7 +16,7 @@ git clone https://github.com/<your_username>/foamlib.git
 cd foamlib
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .[dev]
+pip install -e . --group dev
 ```
 
 ## Contributing changes via a pull request
