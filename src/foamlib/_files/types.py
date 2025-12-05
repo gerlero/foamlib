@@ -1,5 +1,6 @@
 import sys
-from typing import TYPE_CHECKING, NamedTuple
+from numbers import Real
+from typing import TYPE_CHECKING, Literal, NamedTuple, TypeVar, overload
 
 import numpy as np
 
@@ -10,10 +11,10 @@ else:
 
 from collections.abc import Sequence
 
-from ._util import is_sequence
-
 if TYPE_CHECKING:
     from ._typing import Tensor, TensorLike
+
+_T = TypeVar("_T", bound=np.floating | np.integer)
 
 
 class DimensionSet(NamedTuple):
@@ -104,10 +105,38 @@ class Dimensioned:
         dimensions: DimensionSet | Sequence[float],
         name: str | None = None,
     ) -> None:
-        if is_sequence(value):
-            self.value: Tensor = np.array(value, dtype=float)
-        else:
-            self.value = float(value)  # ty: ignore[invalid-argument-type]
+        match value:
+            case Real():
+                self.value = float(value)
+            case np.ndarray(
+                shape=(3 | 6 | 9,), dtype=np.float64 | np.float32 | np.int64 | np.int32
+            ):
+                self.value: Tensor = np.array(value, dtype=float)
+            case (
+                [Real(), Real(), Real()]
+                | [Real(), Real(), Real(), Real(), Real(), Real()]
+                | [
+                    Real(),
+                    Real(),
+                    Real(),
+                    Real(),
+                    Real(),
+                    Real(),
+                    Real(),
+                    Real(),
+                    Real(),
+                ]
+            ):
+                self.value: Tensor = np.array(value, dtype=float)
+            case np.ndarray():
+                msg = f"Invalid array for Dimensioned value: {value!r}"
+                raise ValueError(msg)
+            case [*_]:
+                msg = f"Invalid sequence for Dimensioned value: {value}"
+                raise ValueError(msg)
+            case _:
+                msg = f"Invalid type for Dimensioned value: {type(value)}"
+                raise TypeError(msg)
 
         if not isinstance(dimensions, DimensionSet):
             self.dimensions = DimensionSet(*dimensions)
@@ -194,9 +223,19 @@ class Dimensioned:
             raise ValueError(msg)
         return int(self.value)
 
+    @overload
+    def __array__(
+        self, dtype: None = ..., *, copy: bool | None = ...
+    ) -> np.ndarray[tuple[()] | tuple[Literal[3, 6, 9]], np.dtype[np.float64]]: ...
+
+    @overload
+    def __array__(
+        self, dtype: np.dtype[_T], *, copy: bool | None = ...
+    ) -> np.ndarray[tuple[()] | tuple[Literal[3, 6, 9]], np.dtype[_T]]: ...
+
     def __array__(
         self, dtype: np.dtype | None = None, *, copy: bool | None = None
-    ) -> np.ndarray[tuple[()] | tuple[int], np.dtype[np.float64]]:
+    ) -> np.ndarray[tuple[()] | tuple[Literal[3, 6, 9]], np.dtype[np.float64 | _T]]:
         if self.dimensions:
             msg = f"Cannot convert non-dimensionless Dimensioned object to array: {self.dimensions}"
             raise ValueError(msg)

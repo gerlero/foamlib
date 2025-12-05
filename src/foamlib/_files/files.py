@@ -923,12 +923,12 @@ class FoamFile(
         file = normalize(file, keywords=())
 
         if not isinstance(file, Mapping):
-            file = {None: file}
+            file = {None: file}  # ty: ignore[invalid-assignment]
 
-        if "FoamFile" not in file and ensure_header:
+        if "FoamFile" not in file and ensure_header:  # ty: ignore[invalid-argument-type,unsupported-operator]
             class_ = "dictionary"
             try:
-                internal_field = file["internalField"]
+                internal_field = file["internalField"]  # ty: ignore[invalid-argument-type,non-subscriptable]
             except KeyError:
                 pass
             else:
@@ -942,7 +942,7 @@ class FoamFile(
             new.extend(file)  # ty: ignore[invalid-argument-type]
             file = new
 
-        return dumps(file, keywords=(), header=file.get("FoamFile"))  # ty: ignore[invalid-argument-type]
+        return dumps(file, keywords=(), header=file.get("FoamFile"))  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
 
 
 class FoamFieldFile(FoamFile):

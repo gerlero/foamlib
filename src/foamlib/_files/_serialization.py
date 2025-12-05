@@ -107,7 +107,7 @@ def normalize(
                 )
                 for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
             )
-            return dict_from_items(items, target=File)
+            return dict_from_items(items, target=File)  # ty: ignore[invalid-return-type]
         # Sub-dictionary
         case Mapping(), (_, *_), False:
             items = (
