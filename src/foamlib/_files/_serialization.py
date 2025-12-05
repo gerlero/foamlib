@@ -9,9 +9,9 @@ from ._common import dict_from_items
 from ._parsing import parse
 from ._typing import (
     Data,
-    DataEntry,
-    DataEntryLike,
     DataLike,
+    Dict,
+    DictLike,
     File,
     FileLike,
     KeywordEntry,
@@ -41,7 +41,7 @@ def normalize(
     data: FileLike,
     *,
     keywords: tuple[()],
-    force_token: bool = False,
+    force_token: bool = ...,
 ) -> File: ...
 
 
@@ -50,8 +50,8 @@ def normalize(
     data: DataLike,
     /,
     *,
-    keywords: tuple[str, ...] | None = None,
-    force_token: bool = False,
+    keywords: tuple[str, ...] | None = ...,
+    force_token: bool = ...,
 ) -> Data: ...
 
 
@@ -60,19 +60,9 @@ def normalize(
     data: StandaloneDataLike,
     /,
     *,
-    keywords: tuple[str, ...] | None = None,
-    force_token: bool = False,
+    keywords: tuple[()] = ...,
+    force_token: bool = ...,
 ) -> StandaloneData: ...
-
-
-@overload
-def normalize(
-    data: DataEntryLike,
-    /,
-    *,
-    keywords: tuple[str, ...] | None = None,
-    force_token: bool = False,
-) -> DataEntry: ...
 
 
 @overload
@@ -80,18 +70,48 @@ def normalize(
     data: SubDictLike,
     /,
     *,
-    keywords: tuple[str, ...] | None = None,
-    force_token: bool = False,
+    keywords: tuple[str, ...] = ...,
+    force_token: bool = ...,
 ) -> SubDict: ...
 
 
+@overload
 def normalize(
-    data: FileLike | DataLike | StandaloneDataLike | SubDictLike,
+    data: DataLike,
+    /,
+    *,
+    keywords: tuple[str, ...] | None = ...,
+    force_token: bool = ...,
+) -> Data: ...
+
+
+@overload
+def normalize(
+    data: DictLike,
+    /,
+    *,
+    keywords: None = ...,
+    force_token: bool = ...,
+) -> Data: ...
+
+
+@overload
+def normalize(
+    data: None,
+    /,
+    *,
+    keywords: tuple[str, ...] = ...,
+    force_token: bool = ...,
+) -> None: ...
+
+
+def normalize(
+    data: FileLike | DataLike | StandaloneDataLike | SubDictLike | DictLike | None,
     /,
     *,
     keywords: tuple[str, ...] | None = None,
     force_token: bool = False,
-) -> File | Data | StandaloneData | SubDict:
+) -> File | Data | StandaloneData | SubDict | Dict | None:
     match data, keywords, force_token:
         # File
         case Mapping(), (), False:
@@ -305,6 +325,9 @@ def normalize(
                 msg = f"String {data!r} will be stored as {parsed!r}"
                 warn(msg, stacklevel=2)
                 return parsed
+            if not parsed:
+                msg = "Found unsupported empty string"
+                raise ValueError(msg)
             return data  # ty: ignore[invalid-return-type]
 
         # String
@@ -313,7 +336,14 @@ def normalize(
                 msg = f"String {data!r} will be stored as {parsed!r}"
                 warn(msg, stacklevel=2)
                 return parsed
+            if not parsed:
+                msg = "Found unsupported empty string"
+                raise ValueError(msg)
             return data  # ty: ignore[invalid-return-type]
+
+        # None
+        case None, (*_,), False:
+            return None
 
         # Boolean
         case True | False, _, False:
@@ -463,6 +493,9 @@ def dumps(
         return (
             b"(" + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data) + b")"  # ty: ignore[not-iterable]
         )
+
+    if data is None:
+        return b""
 
     if data is True:
         return b"yes"

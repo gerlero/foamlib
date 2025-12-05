@@ -69,4 +69,4 @@ def test_simple(tmp_path: Path) -> None:
     assert not fv_schemes["interpolationSchemes"]
     assert not fv_schemes["snGradSchemes"]
     assert fv_schemes["fluxRequired", "default"] is False
-    assert fv_schemes["fluxRequired", "p_rbgh"] == ""
+    assert fv_schemes["fluxRequired", "p_rbgh"] is None

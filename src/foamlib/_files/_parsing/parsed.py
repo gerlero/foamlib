@@ -48,11 +48,11 @@ def parse(s: bytes | str, /, *, target: type[_T]) -> _T:
 
 
 class ParsedFile(
-    MutableMultiMapping[tuple[str, ...], Data | StandaloneData | EllipsisType]
+    MutableMultiMapping[tuple[str, ...], Data | StandaloneData | EllipsisType | None]
 ):
     @dataclasses.dataclass
     class _Entry:
-        data: Data | StandaloneData | EllipsisType
+        data: Data | StandaloneData | EllipsisType | None
         start: int
         end: int
 
@@ -125,7 +125,7 @@ class ParsedFile(
 
     @override
     def __setitem__(
-        self, key: tuple[str, ...], value: Data | StandaloneData | EllipsisType
+        self, key: tuple[str, ...], value: Data | StandaloneData | EllipsisType | None
     ) -> None:  # pragma: no cover
         msg = "Use 'put' method instead"
         raise NotImplementedError(msg)
@@ -134,7 +134,7 @@ class ParsedFile(
         self,
         keywords: tuple[str, ...],
         /,
-        data: Data | StandaloneData | EllipsisType,
+        data: Data | StandaloneData | EllipsisType | None,
         content: bytes,
     ) -> None:
         start, end = self.entry_location(keywords)
@@ -147,7 +147,7 @@ class ParsedFile(
     def add(  # ty: ignore[invalid-method-override]
         self,
         keywords: tuple[str, ...],
-        data: Data | StandaloneData | EllipsisType,
+        data: Data | StandaloneData | EllipsisType | None,
         content: bytes,
         /,
     ) -> None:
@@ -166,7 +166,7 @@ class ParsedFile(
     @with_default
     def popone(
         self, keywords: tuple[str, ...], /
-    ) -> Data | StandaloneData | EllipsisType:
+    ) -> Data | StandaloneData | EllipsisType | None:
         start, end = self.entry_location(keywords)
         entry = self._parsed.popone(keywords)
         self._remove_child_entries(keywords)

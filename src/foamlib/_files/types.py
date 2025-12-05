@@ -14,6 +14,7 @@ from collections.abc import Sequence
 if TYPE_CHECKING:
     from ._typing import Tensor, TensorLike
 
+
 _T = TypeVar("_T", bound=np.floating | np.integer)
 
 
@@ -142,6 +143,19 @@ class Dimensioned:
             self.dimensions = DimensionSet(*dimensions)
         else:
             self.dimensions = dimensions
+
+        if name is not None:
+            if not isinstance(name, str):
+                msg = f"Invalid type for Dimensioned name: {type(name)}"
+                raise TypeError(msg)
+
+            from ._parsing import parse  # noqa: PLC0415
+
+            if name != parse(name, target=str):
+                msg = f"Invalid Dimensioned name: {name!r}"
+                raise ValueError(msg)
+
+            assert name
 
         self.name = name
 
