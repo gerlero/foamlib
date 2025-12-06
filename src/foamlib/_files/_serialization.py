@@ -37,7 +37,7 @@ def _expect_field(keywords: tuple[str, ...] | None) -> bool:
 
 
 @overload
-def normalize(
+def normalized(
     data: FileLike,
     *,
     keywords: tuple[()],
@@ -46,7 +46,7 @@ def normalize(
 
 
 @overload
-def normalize(
+def normalized(
     data: DataLike,
     /,
     *,
@@ -56,7 +56,7 @@ def normalize(
 
 
 @overload
-def normalize(
+def normalized(
     data: StandaloneDataLike,
     /,
     *,
@@ -66,7 +66,7 @@ def normalize(
 
 
 @overload
-def normalize(
+def normalized(
     data: SubDictLike,
     /,
     *,
@@ -76,7 +76,7 @@ def normalize(
 
 
 @overload
-def normalize(
+def normalized(
     data: DataLike,
     /,
     *,
@@ -86,7 +86,7 @@ def normalize(
 
 
 @overload
-def normalize(
+def normalized(
     data: DictLike,
     /,
     *,
@@ -96,7 +96,7 @@ def normalize(
 
 
 @overload
-def normalize(
+def normalized(
     data: None,
     /,
     *,
@@ -105,7 +105,7 @@ def normalize(
 ) -> None: ...
 
 
-def normalize(
+def normalized(
     data: FileLike | DataLike | StandaloneDataLike | SubDictLike | DictLike | None,
     /,
     *,
@@ -117,10 +117,10 @@ def normalize(
         case Mapping(), (), False:
             items = (
                 (
-                    normalize(k, keywords=(), force_token=True)
+                    normalized(k, keywords=(), force_token=True)
                     if k is not None
                     else None,
-                    normalize(
+                    normalized(
                         v,
                         keywords=(k,) if k is not None else (),  # ty: ignore[not-iterable]
                     ),  # ty: ignore[no-matching-overload]
@@ -132,8 +132,8 @@ def normalize(
         case Mapping(), (_, *_), False:
             items = (
                 (
-                    normalize(k, keywords=keywords, force_token=True),  # ty: ignore[no-matching-overload]
-                    normalize(v, keywords=(*keywords, k)),  # ty: ignore[no-matching-overload, not-iterable]
+                    normalized(k, keywords=keywords, force_token=True),  # ty: ignore[no-matching-overload]
+                    normalized(v, keywords=(*keywords, k)),  # ty: ignore[no-matching-overload, not-iterable]
                 )
                 for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
             )
@@ -144,8 +144,8 @@ def normalize(
             return dict_from_items(
                 (
                     (
-                        normalize(k, force_token=True),  # ty: ignore[no-matching-overload]
-                        normalize(v),  # ty: ignore[no-matching-overload]
+                        normalized(k, force_token=True),  # ty: ignore[no-matching-overload]
+                        normalized(v),  # ty: ignore[no-matching-overload]
                     )
                     for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
                 )
@@ -165,9 +165,9 @@ def normalize(
             *_,
         ], (), False:
             try:
-                return normalize(np.asarray(data), keywords=keywords)
+                return normalized(np.asarray(data), keywords=keywords)
             except ValueError:
-                return normalize(data)  # ty: ignore[no-matching-overload]
+                return normalized(data)  # ty: ignore[no-matching-overload]
 
         # Uniform field (scalar)
         case Real() | np.ndarray(
@@ -185,7 +185,7 @@ def normalize(
         case np.ndarray(
             shape=(3,) | (6,) | (9,), dtype=np.int64 | np.int32
         ), _, False if _expect_field(keywords):
-            return normalize(data.astype(float), keywords=keywords)  # ty: ignore[possibly-missing-attribute]
+            return normalized(data.astype(float), keywords=keywords)  # ty: ignore[possibly-missing-attribute]
 
         # Non-uniform field
         case np.ndarray(
@@ -197,7 +197,7 @@ def normalize(
         case np.ndarray(
             shape=(_,) | (_, 3) | (_, 6) | (_, 9), dtype=np.int64 | np.int32
         ), _, False if _expect_field(keywords):
-            return normalize(data.astype(float), keywords=keywords)  # ty: ignore[possibly-missing-attribute]
+            return normalized(data.astype(float), keywords=keywords)  # ty: ignore[possibly-missing-attribute]
 
         # Other possible field
         case [Real(), Real(), Real()] | [
@@ -245,9 +245,9 @@ def normalize(
             *_,
         ], _, False if _expect_field(keywords) and not isinstance(data, tuple):
             try:
-                return normalize(np.asarray(data), keywords=keywords)
+                return normalized(np.asarray(data), keywords=keywords)
             except ValueError:
-                return [normalize(d) for d in data]  # ty: ignore[no-matching-overload,not-iterable]
+                return [normalized(d) for d in data]  # ty: ignore[no-matching-overload,not-iterable]
 
         # Dimension set from list of numbers
         case [] | [Real()] | [Real(), Real()] | [
@@ -280,15 +280,15 @@ def normalize(
 
         # List
         case [*_], _, False if not isinstance(data, tuple):
-            return [normalize(d) for d in data]  # ty: ignore[no-matching-overload,not-iterable]
+            return [normalized(d) for d in data]  # ty: ignore[no-matching-overload,not-iterable]
 
         # Other Numpy array (treated as list)
         case np.ndarray(), _, False:
-            return normalize(data.tolist())  # ty: ignore[possibly-missing-attribute]
+            return normalized(data.tolist())  # ty: ignore[possibly-missing-attribute]
 
         # Keyword entry
         case tuple((k, v)), None, False:
-            return (normalize(k), normalize(v))  # ty: ignore[invalid-return-type]
+            return (normalized(k), normalized(v))  # ty: ignore[invalid-return-type]
 
         # Multiple data entries (tuple)
         case (
@@ -296,7 +296,7 @@ def normalize(
             _,
             False,
         ) if not isinstance(data, DimensionSet):
-            ret = tuple(normalize(d, keywords=keywords) for d in data)  # ty: ignore[no-matching-overload,not-iterable]
+            ret = tuple(normalized(d, keywords=keywords) for d in data)  # ty: ignore[no-matching-overload,not-iterable]
             if any(isinstance(d, tuple) for d in ret):
                 msg = f"Nested tuples not supported: {data!r}"
                 raise ValueError(msg)
