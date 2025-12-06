@@ -292,7 +292,7 @@ def normalized(
             ret = tuple(normalized(d, keywords=keywords) for d in data)  # ty: ignore[no-matching-overload,not-iterable]
             if any(isinstance(d, tuple) for d in ret):
                 msg = f"Nested tuples not supported: {data!r}"
-                raise TypeError(msg)
+                raise ValueError(msg)
             return ret  # ty: ignore[invalid-return-type]
 
         # One-element tuple (unsupported)
