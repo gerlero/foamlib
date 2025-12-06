@@ -13,6 +13,7 @@ import numpy as np
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
 
+from .._files import _common
 from ._io import FoamFileIO
 from ._parsing import parse
 from ._serialization import dumps, normalized
@@ -32,18 +33,18 @@ from ._util import SupportsKeysAndGetItem
 from .types import Dimensioned, DimensionSet
 
 
-def _tensor_kind_for_field(
+def _vol_field_class(
     field: Field,
 ) -> str:
     match shape := np.shape(field):
         case (3,) | (_, 3):
-            return "vector"
+            return "volVectorField"
         case (6,) | (_, 6):
-            return "symmTensor"
+            return "volSymmTensorField"
         case (9,) | (_, 9):
-            return "tensor"
+            return "volTensorField"
         case () | (_,):
-            return "scalar"
+            return "volScalarField"
 
     msg = f"Invalid field shape: {shape}"
     raise ValueError(msg)
@@ -505,24 +506,18 @@ class FoamFile(
         data: Data | StandaloneData | SubDict,
     ) -> None:
         """Update class field to appropriate field type if this is a field entry."""
-        if (
-            isinstance(data, (float, int, np.ndarray))
-            and (
-                keywords == ("internalField",)
-                or (
-                    len(keywords) == 3
-                    and keywords[0] == "boundaryField"
-                    and (
-                        keywords[2] == "value"
-                        or keywords[2] == "gradient"
-                        or keywords[2].endswith(("Value", "Gradient"))
-                    )
-                )
-            )
-            and self.class_ == "dictionary"
-        ):
-            tensor_kind = _tensor_kind_for_field(data)  # ty: ignore[invalid-argument-type]
-            self.class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
+        try:
+            class_ = self.class_
+        except (KeyError, FileNotFoundError):
+            class_ = None
+
+        match class_, data, keywords:
+            case (
+                "dictionary",
+                float() | np.ndarray(),
+                _common.FIELD_KEYWORDS,
+            ):
+                self.class_ = _vol_field_class(data)  # ty: ignore[invalid-argument-type]
 
     def _calculate_spacing(
         self,
@@ -947,9 +942,8 @@ class FoamFile(
             except KeyError:
                 pass
             else:
-                if isinstance(internal_field, (float, int, np.ndarray)):
-                    tensor_kind = _tensor_kind_for_field(internal_field)  # ty: ignore[invalid-argument-type]
-                    class_ = "vol" + tensor_kind[0].upper() + tensor_kind[1:] + "Field"
+                if isinstance(internal_field, (float, np.ndarray)):
+                    class_ = _vol_field_class(internal_field)  # ty: ignore[invalid-argument-type]
 
             new = MultiDict(
                 FoamFile={"version": 2.0, "format": "ascii", "class": class_}
@@ -957,7 +951,7 @@ class FoamFile(
             new.extend(file)  # ty: ignore[invalid-argument-type]
             file = new
 
-        return dumps(file, keywords=(), header=file.get("FoamFile"))  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+        return dumps(file, keywords=())  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
 
 
 class FoamFieldFile(FoamFile):
