@@ -1,7 +1,7 @@
 import pytest
 from foamlib import FoamFile
 from foamlib._files._parsing import ParsedFile
-from foamlib._files._serialization import normalize
+from foamlib._files._serialization import normalized
 from multicollections import MultiDict
 
 CONTENTS = b"""
@@ -87,7 +87,7 @@ def test_invalid_duplicate_keywords() -> None:
         """)
 
     with pytest.raises(ValueError, match="Duplicate"):
-        normalize(MultiDict([("key", "value1"), ("key", "value2")]), keywords=())
+        normalized(MultiDict([("key", "value1"), ("key", "value2")]), keywords=())
 
     with pytest.raises(ValueError, match="Duplicate"):
         ParsedFile(b"""
@@ -100,7 +100,7 @@ def test_invalid_duplicate_keywords() -> None:
         """)
 
     with pytest.raises(ValueError, match="Duplicate"):
-        normalize(
+        normalized(
             MultiDict(
                 [
                     ("subdict", {"key": "value"}),
@@ -119,7 +119,7 @@ def test_invalid_duplicate_keywords() -> None:
         """)
 
     with pytest.raises(ValueError, match="Duplicate"):
-        normalize(
+        normalized(
             {"dict1": MultiDict([("key", "value1"), ("key", "value2")])},
             keywords=(),
         )
@@ -130,6 +130,6 @@ def test_invalid_duplicate_keywords() -> None:
         """)
 
     with pytest.raises(ValueError, match="Duplicate"):
-        normalize(
+        normalized(
             {"list": [("subdict", MultiDict([("a", "b"), ("a", "c")]))]}, keywords=()
         )
