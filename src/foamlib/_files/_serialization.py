@@ -304,7 +304,7 @@ def normalize(
 
         # One-element tuple (unsupported)
         case tuple((_,)), _, False:
-            msg = f"One-element tuple {data!r} not supported."
+            msg = f"One-element tuple {data!r} not supported"
             raise ValueError(msg)
 
         # Empty tuple (unsupported)
@@ -321,25 +321,47 @@ def normalize(
 
         # Top-level string
         case str(), (), False:
-            if not isinstance(parsed := parse(data, target=StandaloneData), str):  # ty: ignore[invalid-argument-type]
-                msg = f"String {data!r} will be stored as {parsed!r}"
-                warn(msg, stacklevel=2)
-                return parsed
-            if not parsed:
-                msg = "Found unsupported empty string"
-                raise ValueError(msg)
-            return data  # ty: ignore[invalid-return-type]
+            match parsed := parse(data, target=StandaloneData):  # ty: ignore[invalid-argument-type]
+                case str():
+                    if not parsed:
+                        msg = "Found unsupported empty string"
+                        raise ValueError(msg)
+                    return parsed  # ty: ignore[invalid-return-type]
+                case bool():
+                    msg = f"{data!r} will be stored as {parsed!r}"
+                    warn(msg, stacklevel=2)
+                    return parsed
+                case tuple((str() | bool(), str() | bool(), *rest)) if all(
+                    isinstance(p, (str, bool)) for p in rest
+                ):
+                    msg = f"{data!r} will be stored as {parsed!r}"
+                    warn(msg, stacklevel=2)
+                    return parsed
+                case _:
+                    msg = f"{data!r} cannot be stored as string (would be stored as {parsed!r})"
+                    raise ValueError(msg)
 
         # String
         case str(), (_, *_) | None, False:
-            if not isinstance(parsed := parse(data, target=Data), str):  # ty: ignore[invalid-argument-type]
-                msg = f"String {data!r} will be stored as {parsed!r}"
-                warn(msg, stacklevel=2)
-                return parsed
-            if not parsed:
-                msg = "Found unsupported empty string"
-                raise ValueError(msg)
-            return data  # ty: ignore[invalid-return-type]
+            match parsed := parse(data, target=Data):  # ty: ignore[invalid-argument-type]
+                case str():
+                    if not parsed:
+                        msg = "Found unsupported empty string"
+                        raise ValueError(msg)
+                    return parsed  # ty: ignore[invalid-return-type]
+                case bool():
+                    msg = f"{data!r} will be stored as {parsed!r}"
+                    warn(msg, stacklevel=2)
+                    return parsed
+                case tuple((str() | bool(), str() | bool(), *rest)) if all(
+                    isinstance(p, (str, bool)) for p in rest
+                ):
+                    msg = f"{data!r} will be stored as {parsed!r}"
+                    warn(msg, stacklevel=2)
+                    return parsed
+                case _:
+                    msg = f"{data!r} cannot be stored as string (would be stored as {parsed!r})"
+                    raise ValueError(msg)
 
         # None
         case None, (*_,), False:
