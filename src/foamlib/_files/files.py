@@ -583,7 +583,7 @@ class FoamFile(
     ) -> None:
         """Shared method for performing entry operations (setitem and add)."""
         if keywords:
-            keyword = normalized(keywords[-1], force_token=True)
+            keyword = keywords[-1]
 
             if not isinstance(keyword, str):
                 msg = (
@@ -591,8 +591,8 @@ class FoamFile(
                 )
                 raise TypeError(msg)
 
-            if keyword != keywords[-1]:
-                msg = f"Invalid keyword: {keywords[-1]}"
+            if keyword != parse(keyword, target=str):
+                msg = f"Invalid keyword string: {keywords[-1]!r}"
                 raise ValueError(msg)
 
         data = normalized(data, keywords=keywords)  # ty: ignore[no-matching-overload]

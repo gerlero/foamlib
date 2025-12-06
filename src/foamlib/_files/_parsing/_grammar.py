@@ -18,7 +18,7 @@ from pyparsing import (
 )
 
 from .._common import dict_from_items
-from .._typing import File, SubDict
+from .._typing import Dict, File, SubDict
 from ..types import Dimensioned, DimensionSet
 from ._elements import (
     ASCIIFacesLikeList,
@@ -127,8 +127,9 @@ _KEYWORD_ENTRY = keyword_entry_of(
     DATA,
     directive=_DIRECTIVE,
     data_entry=_DATA_ENTRY,
+    nested_dict_target=Dict,
 )
-_DICT = dict_of(_KEYWORD, DATA)
+_DICT = dict_of(_KEYWORD, DATA, target=Dict)
 _LIST_ENTRY = _DICT | _KEYWORD_ENTRY | _DATA_ENTRY
 _LIST = list_of(_LIST_ENTRY)
 _NUMBER = (
@@ -190,6 +191,7 @@ _LOCATED_KEYWORD_ENTRY = Group(
         Opt(DATA, default=None),
         directive=_DIRECTIVE,
         data_entry=_DATA_ENTRY,
+        nested_dict_target=SubDict,
         located=True,
     )
 )
