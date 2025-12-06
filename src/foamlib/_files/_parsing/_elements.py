@@ -316,7 +316,7 @@ def dict_of(
     directive: ParserElement | None = None,
     data_entry: ParserElement | None = None,
     located: bool = False,
-    target: type[Dict] | type[SubDict] = Dict,
+    target: type[Dict] | type[SubDict],
 ) -> ParserElement:
     dict_ = Forward()
 
@@ -346,7 +346,7 @@ def keyword_entry_of(
     directive: ParserElement | None = None,
     data_entry: ParserElement | None = None,
     located: bool = False,
-    nested_dict_target: type[Dict] | type[SubDict] = Dict,
+    nested_dict_target: type[Dict] | type[SubDict],
 ) -> ParserElement:
     keyword_entry = keyword + (
         dict_of(

@@ -1,22 +1,12 @@
-from collections.abc import Iterable, MutableMapping, Sequence
-from typing import Protocol, TypeGuard, TypeVar, overload
+from collections.abc import Iterable, MutableMapping
+from typing import Protocol, TypeVar, overload
 
-import numpy as np
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping
 
 _K = TypeVar("_K")
 _V = TypeVar("_V")
 _V_co = TypeVar("_V_co", covariant=True)
-
-
-def is_sequence(
-    value: object,
-    /,
-) -> TypeGuard[Sequence[object] | np.ndarray[tuple[int, ...], np.dtype[np.generic]]]:
-    return (isinstance(value, Sequence) and not isinstance(value, str)) or (
-        isinstance(value, np.ndarray) and value.ndim > 0
-    )
 
 
 @overload

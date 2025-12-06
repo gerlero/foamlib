@@ -15,6 +15,7 @@ def dict_from_items(
     /,
     *,
     target: type[Dict] = ...,
+    check_keys: bool = ...,
 ) -> dict[str, _V]: ...
 
 
@@ -24,6 +25,7 @@ def dict_from_items(
     /,
     *,
     target: type[File] = ...,
+    check_keys: bool = ...,
 ) -> dict[str | None, _V] | MultiDict[str | None, _V]: ...
 
 
@@ -33,6 +35,7 @@ def dict_from_items(
     /,
     *,
     target: type[SubDict] = ...,
+    check_keys: bool = ...,
 ) -> dict[str, _V] | MultiDict[str, _V]: ...
 
 
@@ -40,7 +43,8 @@ def dict_from_items(
     items: Iterable[tuple[object, _V]],
     /,
     *,
-    target: type[Dict] | type[File] | type[SubDict] = Dict,
+    target: type[Dict] | type[File] | type[SubDict],
+    check_keys: bool = False,
 ) -> (
     dict[str, _V]
     | MultiDict[str, _V]
@@ -59,22 +63,30 @@ def dict_from_items(
     for k, v in items:
         match k:
             case None:
-                if not none_ok:
-                    msg = "None key is only allowed on top-level File dicts"
-                    raise TypeError(msg)
-                if None in ret:
-                    msg = "Duplicate None key found"
-                    raise ValueError(msg)
+                if check_keys:
+                    if not none_ok:
+                        msg = "None key is only allowed in top-level File dicts"
+                        raise TypeError(msg)
+                    if None in ret:
+                        msg = "Duplicate None key found"
+                        raise ValueError(msg)
                 ret[None] = v
 
             case str():
-                if k.startswith("#"):
-                    if not directive_ok:
-                        msg = f"#-directive {k!r} not allowed here"
+                if check_keys:
+                    from ._parsing import parse  # noqa: PLC0415
+
+                    if k != parse(k, target=str):
+                        msg = f"Invalid key string: {k!r}"
                         raise ValueError(msg)
-                    if isinstance(v, Mapping):
-                        msg = f"#-directive {k!r} cannot have a mapping as value; got value {v!r}"
-                        raise TypeError(msg)
+                if k.startswith("#"):
+                    if check_keys:
+                        if not directive_ok:
+                            msg = f"#-directive {k!r} not allowed here"
+                            raise ValueError(msg)
+                        if isinstance(v, Mapping):
+                            msg = f"#-directive {k!r} cannot have a mapping as value; got value {v!r}"
+                            raise TypeError(msg)
                     ret = add_to_mapping(ret, k, v)  # ty: ignore[invalid-assignment]
                 else:
                     if k in ret:
