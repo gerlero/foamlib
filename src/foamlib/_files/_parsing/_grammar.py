@@ -119,7 +119,7 @@ _FIELD = (Keyword("uniform", _IDENTBODYCHARS).suppress() + _TENSOR) | (
 
 _DIRECTIVE = Word("#", _IDENTBODYCHARS)
 _KEYWORD = dbl_quoted_string | _IDENTIFIER
-TOKEN = (_KEYWORD | _DIRECTIVE).ignore(_COMMENT).parse_with_tabs()
+TOKEN = _KEYWORD | _DIRECTIVE
 DATA = Forward()
 _DATA_ENTRY = Forward()
 _KEYWORD_ENTRY = keyword_entry_of(
@@ -143,33 +143,26 @@ _NUMBER = (
 )
 _DATA_ENTRY <<= _FIELD | _LIST | _DIMENSIONED | _DIMENSIONS | _NUMBER | _SWITCH | TOKEN
 
-DATA <<= (
-    _DATA_ENTRY[1, ...]
-    .set_parse_action(lambda tks: [tuple(tks)] if len(tks) > 1 else [tks[0]])
-    .ignore(_COMMENT)
-    .parse_with_tabs()
+DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
+    lambda tks: [tuple(tks)] if len(tks) > 1 else [tks[0]]
 )
 
 STANDALONE_DATA = (
-    (
-        ASCIINumericList(dtype=int)
-        | ASCIIFacesLikeList()
-        | ASCIINumericList(dtype=float, elshape=(3,))
-        | (
+    ASCIINumericList(dtype=int)
+    | ASCIIFacesLikeList()
+    | ASCIINumericList(dtype=float, elshape=(3,))
+    | (
+        (
             (
-                (
-                    binary_numeric_list(dtype=np.int32)
-                    + Opt(binary_numeric_list(dtype=np.int32))
-                ).add_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else tks[0])
-                | binary_numeric_list(dtype=np.float64)
-                | binary_numeric_list(dtype=np.float64, elshape=(3,))
-                | binary_numeric_list(dtype=np.float32, elshape=(3,))
-            )
-            ^ DATA
+                binary_numeric_list(dtype=np.int32)
+                + Opt(binary_numeric_list(dtype=np.int32))
+            ).add_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else tks[0])
+            | binary_numeric_list(dtype=np.float64)
+            | binary_numeric_list(dtype=np.float64, elshape=(3,))
+            | binary_numeric_list(dtype=np.float32, elshape=(3,))
         )
+        ^ DATA
     )
-    .ignore(_COMMENT)
-    .parse_with_tabs()
 )
 
 STANDALONE_KEYWORD_ENTRY = keyword_entry_of(
