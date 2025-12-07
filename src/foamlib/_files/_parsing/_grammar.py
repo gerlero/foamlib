@@ -148,22 +148,22 @@ DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
     lambda tks: [tuple(tks)] if len(tks) > 1 else [tks[0]]
 )
 
-STANDALONE_DATA = (
+_STANDALONE_DATA_ENTRY = (
     ASCIINumericList(dtype=int)
     | ASCIIFacesLikeList()
     | ASCIINumericList(dtype=float, elshape=(3,))
     | (
         (
-            (
-                binary_numeric_list(dtype=np.int32)
-                + Opt(binary_numeric_list(dtype=np.int32))
-            ).add_parse_action(lambda tks: tuple(tks) if len(tks) > 1 else tks[0])
+            binary_numeric_list(dtype=np.int32)
             | binary_numeric_list(dtype=np.float64)
             | binary_numeric_list(dtype=np.float64, elshape=(3,))
             | binary_numeric_list(dtype=np.float32, elshape=(3,))
         )
-        ^ DATA
+        ^ _DATA_ENTRY
     )
+)
+STANDALONE_DATA = _STANDALONE_DATA_ENTRY[1, ...].set_parse_action(
+    lambda tks: [tuple(tks)] if len(tks) > 1 else [tks[0]]
 )
 
 STANDALONE_KEYWORD_ENTRY = keyword_entry_of(

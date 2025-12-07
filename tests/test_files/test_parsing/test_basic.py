@@ -126,17 +126,19 @@ def test_parse_value() -> None:
     assert dimensioned.dimensions == DimensionSet(mass=1, length=1, time=-2)
     assert dimensioned.value == 9.81
     assert dimensioned.name is None
-    tpl = ParsedFile(b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)")[()]
-    assert isinstance(tpl, tuple)
-    assert len(tpl) == 5
-    assert tpl[0] == "hex"
-    assert isinstance(tpl[1], list)
-    assert tpl[1] == [0, 1, 2, 3, 4, 5, 6, 7]
-    assert isinstance(tpl[2], list)  # ty: ignore[index-out-of-bounds]
-    assert tpl[2] == [1, 1, 1]  # ty: ignore[index-out-of-bounds]
-    assert tpl[3] == "simpleGrading"  # ty: ignore[index-out-of-bounds]
-    assert isinstance(tpl[4], list)  # ty: ignore[index-out-of-bounds]
-    assert tpl[4] == [1, 1, 1]  # ty: ignore[index-out-of-bounds]
+    lst = ParsedFile(b"blocks (hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1));")[
+        ("blocks",)
+    ]
+    assert isinstance(lst, list)
+    assert len(lst) == 5
+    assert lst[0] == "hex"
+    assert isinstance(lst[1], list)
+    assert lst[1] == [0, 1, 2, 3, 4, 5, 6, 7]
+    assert isinstance(lst[2], list)  # ty: ignore[index-out-of-bounds]
+    assert lst[2] == [1, 1, 1]  # ty: ignore[index-out-of-bounds]
+    assert lst[3] == "simpleGrading"  # ty: ignore[index-out-of-bounds]
+    assert isinstance(lst[4], list)  # ty: ignore[index-out-of-bounds]
+    assert lst[4] == [1, 1, 1]  # ty: ignore[index-out-of-bounds]
     assert ParsedFile(b"(a b; c d;)")[()] == [("a", "b"), ("c", "d")]
     assert ParsedFile(b"(a {b c;} d {e g;})")[()] == [
         ("a", {"b": "c"}),
