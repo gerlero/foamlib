@@ -10,16 +10,11 @@ Tensor: TypeAlias = float | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.floa
 TensorLike: TypeAlias = (
     Tensor
     | Sequence[float]
-    | np.ndarray[
-        tuple[Literal[3, 6, 9]], np.dtype[np.float64 | np.float32 | np.int64 | np.int32]
-    ]
+    | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.floating | np.integer]]
 )
 
 Field: TypeAlias = (
-    float
-    | np.ndarray[
-        tuple[int] | tuple[int, Literal[3, 6, 9]], np.dtype[np.float64 | np.float32]
-    ]
+    float | np.ndarray[tuple[int] | tuple[int, Literal[3, 6, 9]], np.dtype[np.floating]]
 )
 FieldLike: TypeAlias = Field | TensorLike | Sequence[TensorLike]
 
@@ -55,9 +50,11 @@ StandaloneDataEntry: TypeAlias = (
 StandaloneDataEntryLike: TypeAlias = (
     StandaloneDataEntry
     | DataEntryLike
-    | Sequence[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64 | np.int32]]]
+    | Sequence[int]
+    | Sequence[float]
+    | Sequence[np.ndarray[tuple[Literal[3]], np.dtype[np.floating | np.integer]]]
+    | Sequence[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.integer]]]
     | Sequence[Sequence[int]]
-    | tuple[Sequence[int], Sequence[int]]
 )
 
 StandaloneData: TypeAlias = StandaloneDataEntry | tuple[StandaloneDataEntry, ...]

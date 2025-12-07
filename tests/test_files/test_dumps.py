@@ -51,25 +51,25 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            normalized(1, keywords=("internalField",)),
+            normalized(1, keywords=("internalField",), format_="binary"),
             keywords=("internalField",),
-            header={"format": "binary"},
+            format_="binary",
         )
         == b"uniform 1.0"
     )
     assert (
         dumps(
-            normalized(1.0, keywords=("internalField",)),
+            normalized(1.0, keywords=("internalField",), format_="binary"),
             keywords=("internalField",),
-            header={"format": "binary"},
+            format_="binary",
         )
         == b"uniform 1.0"
     )
     assert (
         dumps(
-            normalized([1, 2, 3], keywords=("internalField",)),
+            normalized([1, 2, 3], keywords=("internalField",), format_="binary"),
             keywords=("internalField",),
-            header={"format": "binary"},
+            format_="binary",
         )
         == b"uniform (1.0 2.0 3.0)"
     )
@@ -78,9 +78,10 @@ def test_serialize_data() -> None:
             normalized(
                 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 keywords=("internalField",),
+                format_="binary",
             ),
             keywords=("internalField",),
-            header={"format": "binary"},
+            format_="binary",
         )
         == b'nonuniform List<scalar> 10(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@\x00\x00\x00\x00\x00\x00\x1c@\x00\x00\x00\x00\x00\x00 @\x00\x00\x00\x00\x00\x00"@\x00\x00\x00\x00\x00\x00$@)'
     )
@@ -89,9 +90,10 @@ def test_serialize_data() -> None:
             normalized(
                 [[1, 2, 3], [4, 5, 6]],
                 keywords=("internalField",),
+                format_="binary",
             ),
             keywords=("internalField",),
-            header={"format": "binary"},
+            format_="binary",
         )
         == b"nonuniform List<vector> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@)"
     )
@@ -100,9 +102,10 @@ def test_serialize_data() -> None:
             normalized(
                 np.array([1, 2], dtype=np.float32),
                 keywords=("internalField",),
+                format_="binary",
             ),
             keywords=("internalField",),
-            header={"format": "binary"},
+            format_="binary",
         )
         == b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)"
     )
@@ -178,9 +181,9 @@ def test_serialize_file() -> None:
     )
     assert (
         FoamFile.dumps([1, 2, 3, 4, 5, 6])
-        == b"FoamFile {version 2.0; format ascii; class dictionary;} 6(1 2 3 4 5 6)"
+        == b"FoamFile {version 2.0; format ascii; class dictionary;} (1 2 3 4 5 6)"
     )
-    assert FoamFile.dumps([1, 2, 3], ensure_header=False) == b"3(1 2 3)"
+    assert FoamFile.dumps([1, 2, 3], ensure_header=False) == b"(1 2 3)"
     assert (
         FoamFile.dumps(
             {

@@ -1,13 +1,13 @@
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from numbers import Integral, Real
-from typing import overload
+from typing import Literal, overload
 from warnings import warn
 
 if sys.version_info >= (3, 11):
-    from typing import Never, assert_never
+    from typing import Never, assert_never, assert_type
 else:
-    from typing_extensions import Never, assert_never
+    from typing_extensions import Never, assert_never, assert_type
 
 import numpy as np
 
@@ -30,16 +30,12 @@ from ._typing import (
 from .types import Dimensioned, DimensionSet
 
 
-def raise_bad_type(arg: Never, /) -> Never:
-    msg = f"Unsupported data type: {arg!r} ({type(arg)})"
-    raise TypeError(msg)
-
-
 @overload
 def normalized(
     data: FileLike,
     *,
     keywords: tuple[()] = ...,
+    format_: Literal["ascii", "binary"] | None = ...,
 ) -> File: ...
 
 
@@ -49,6 +45,7 @@ def normalized(
     /,
     *,
     keywords: tuple[str, ...] | None = ...,
+    format_: Literal["ascii", "binary"] | None = ...,
 ) -> Data: ...
 
 
@@ -58,6 +55,7 @@ def normalized(
     /,
     *,
     keywords: tuple[()] = ...,
+    format_: Literal["ascii", "binary"] | None = ...,
 ) -> StandaloneData: ...
 
 
@@ -67,6 +65,7 @@ def normalized(
     /,
     *,
     keywords: tuple[str, ...] = ...,
+    format_: Literal["ascii", "binary"] | None = ...,
 ) -> SubDict: ...
 
 
@@ -76,6 +75,7 @@ def normalized(
     /,
     *,
     keywords: tuple[str, ...] = ...,
+    format_: Literal["ascii", "binary"] | None = ...,
 ) -> Data: ...
 
 
@@ -85,6 +85,7 @@ def normalized(
     /,
     *,
     keywords: None = ...,
+    format_: Literal["ascii", "binary"] | None = ...,
 ) -> Data: ...
 
 
@@ -94,6 +95,7 @@ def normalized(
     /,
     *,
     keywords: tuple[str, ...] = ...,
+    format_: Literal["ascii", "binary"] | None = ...,
 ) -> None: ...
 
 
@@ -101,11 +103,16 @@ def normalized(
     data: FileLike | DataLike | StandaloneDataLike | SubDictLike | DictLike | None,
     /,
     *,
-    keywords: tuple[str, ...] | None = None,
+    keywords: tuple[str, ...] | None = (),
+    format_: Literal["ascii", "binary"] | None = None,
 ) -> File | Data | StandaloneData | SubDict | Dict | None:
+    match data, keywords, format_:
+        case {"FoamFile": {"format": ("ascii" | "binary") as format_}}, (), None:
+            pass
+
     match data, keywords:
         # File
-        case Mapping(), ():
+        case {}, ():
             return dict_from_items(
                 (
                     (
@@ -113,6 +120,7 @@ def normalized(
                         normalized(
                             v,
                             keywords=(k,) if k is not None else (),  # ty: ignore[not-iterable]
+                            format_=format_,
                         ),  # ty: ignore[no-matching-overload]
                     )
                     for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
@@ -122,82 +130,144 @@ def normalized(
             )  # ty: ignore[invalid-return-type]
 
         # Sub-dictionary
-        case Mapping(), (_, *_):
+        case {}, (_, *_):
             return dict_from_items(
                 (
                     (
                         k,
-                        normalized(v, keywords=(*keywords, k)),  # ty: ignore[no-matching-overload, not-iterable]
+                        normalized(v, keywords=(*keywords, k), format_=format_),  # ty: ignore[no-matching-overload, not-iterable]
                     )
                     for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
                 ),
                 target=SubDict,
                 check_keys=True,
-            )  # ty: ignore[invalid-return-type]
+            )
 
         # Other dictionary
-        case Mapping(), None:
+        case {}, None:
             return dict_from_items(
                 (
                     (
                         k,
-                        normalized(v),  # ty: ignore[no-matching-overload]
+                        normalized(v, keywords=None, format_=format_),  # ty: ignore[no-matching-overload]
                     )
                     for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
                 ),
                 target=Dict,
                 check_keys=True,
-            )  # ty: ignore[invalid-return-type]
+            )
 
         # Numeric standalone data (n integers)
-        case np.ndarray(shape=(_,), dtype=np.int64 | np.int32), ():
-            return data  # ty: ignore[invalid-return-type]
+        case np.ndarray(shape=(_,)), () if np.issubdtype(data.dtype, np.integer):  # ty: ignore[possibly-missing-attribute]
+            if format_ == "binary":
+                if data.dtype != np.int32:  # ty: ignore[possibly-missing-attribute]
+                    msg = f"Only int32 data type is supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
+                    raise ValueError(msg)
+                return data  # ty: ignore[invalid-return-type]
+            return data.astype(int, copy=False)  # ty: ignore[possibly-missing-attribute]
+
+        # Binary numeric standalone data (n floats)
+        case np.ndarray(shape=(_,)), () if np.issubdtype(data.dtype, np.floating):  # ty: ignore[possibly-missing-attribute]
+            if format_ == "binary":
+                if data.dtype != np.float64:  # ty: ignore[possibly-missing-attribute]
+                    msg = f"Only float64 data type is supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
+                    raise ValueError(msg)
+                return data  # ty: ignore[invalid-return-type]
+            return data.astype(float, copy=False)  # ty: ignore[possibly-missing-attribute]
 
         # Numeric standalone data (n x 3 floats)
-        case np.ndarray(shape=(_,) | (_, 3), dtype=np.float64 | np.float32), ():
+        case np.ndarray(shape=(_,) | (_, 3)), () if np.issubdtype(
+            data.dtype,  # ty: ignore[possibly-missing-attribute]
+            np.floating,
+        ) or np.issubdtype(data.dtype, np.integer):  # ty: ignore[possibly-missing-attribute]
+            if format_ == "binary":
+                if data.dtype not in (np.float64, np.float32):  # ty: ignore[possibly-missing-attribute]
+                    msg = f"Only float64 or float32 data types are supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
+                    raise ValueError(msg)
+                return data  # ty: ignore[invalid-return-type]
+            return data.astype(float, copy=False)  # ty: ignore[possibly-missing-attribute]
+
+        # Other possible numeric standalone data (n integers)
+        case [Integral(), *rest], () if not isinstance(data, tuple) and all(
+            isinstance(r, Integral) for r in rest
+        ):
+            return normalized(np.asarray(data), keywords=keywords, format_=format_)
+
+        # Other possible numeric standalone data (n x 3 floats)
+        case [_, *_], () if not isinstance(data, tuple) and all(
+            (
+                isinstance(r, Sequence)
+                and not isinstance(r, tuple)
+                and len(r) == 3
+                and all(isinstance(x, Real) for x in r)
+            )
+            or (
+                isinstance(r, np.ndarray)
+                and r.shape == (3,)
+                and (
+                    np.issubdtype(r.dtype, np.floating)
+                    or np.issubdtype(r.dtype, np.integer)
+                )
+            )
+            for r in data  # ty: ignore[not-iterable]
+        ):
+            return normalized(np.asarray(data), keywords=keywords, format_=format_)
+
+        # ASCII faces-like list
+        case [*_], () if not isinstance(data, tuple) and all(
+            isinstance(e, np.ndarray)
+            and e.shape in ((3,), (4,))
+            and e.dtype == np.int32
+            for e in data  # ty: ignore[not-iterable]
+        ):
+            if not isinstance(data, list):
+                data = list(data)  # ty: ignore[invalid-argument-type]
             return data  # ty: ignore[invalid-return-type]
 
-        # Other possible numeric standalone data
-        case [Real(), *_] | [
-            [Real(), Real(), Real()],
-            *_,
-        ], ():
-            try:
-                return normalized(np.asarray(data), keywords=keywords)
-            except ValueError:
-                return normalized(data)  # ty: ignore[no-matching-overload]
+        # Other sequence convertible to ASCII faces-like list
+        case [*_], () if not isinstance(data, tuple) and all(
+            (
+                (
+                    isinstance(e, np.ndarray)
+                    and e.shape in ((3,), (4,))
+                    and np.issubdtype(e.dtype, np.integer)
+                )
+                or (
+                    isinstance(e, Sequence)
+                    and len(e) in (3, 4)
+                    and all(isinstance(n, Integral) for n in e)
+                )
+            )
+            for e in data  # ty: ignore[not-iterable]
+        ):
+            return [np.asarray(e) for e in data]  # ty: ignore[not-iterable]
 
         # Uniform field (scalar)
-        case Real() | np.ndarray(
-            shape=(), dtype=np.float64 | np.float32 | np.int64 | np.int32
-        ), _common.FIELD_KEYWORDS:
+        case Real(), _common.FIELD_KEYWORDS:
             return float(data)  # ty: ignore[invalid-argument-type]
 
         # Uniform field (non-scalar)
-        case np.ndarray(
-            shape=(3,) | (6,) | (9,), dtype=np.float64 | np.float32
-        ), _common.FIELD_KEYWORDS:
-            return data  # ty: ignore[invalid-return-type]
-
-        # Uniform field (non-scalar integer)
-        case np.ndarray(
-            shape=(3,) | (6,) | (9,), dtype=np.int64 | np.int32
-        ), _common.FIELD_KEYWORDS:
-            return normalized(data.astype(float), keywords=keywords)  # ty: ignore[possibly-missing-attribute]
+        case np.ndarray(shape=(3,) | (6,) | (9,)), _common.FIELD_KEYWORDS if (
+            np.issubdtype(data.dtype, np.floating)  # ty: ignore[possibly-missing-attribute]
+            or np.issubdtype(data.dtype, np.integer)  # ty: ignore[possibly-missing-attribute]
+        ):
+            return data.astype(float, copy=False)  # ty: ignore[possibly-missing-attribute]
 
         # Non-uniform field
         case np.ndarray(
-            shape=(_,) | (_, 3) | (_, 6) | (_, 9), dtype=np.float64 | np.float32
-        ), _common.FIELD_KEYWORDS:
-            return data  # ty: ignore[invalid-return-type]
+            shape=(_,) | (_, 3) | (_, 6) | (_, 9)
+        ), _common.FIELD_KEYWORDS if np.issubdtype(
+            data.dtype,  # ty: ignore[possibly-missing-attribute]
+            np.floating,
+        ) or np.issubdtype(data.dtype, np.integer):  # ty: ignore[possibly-missing-attribute]
+            if format_ == "binary":
+                if np.issubdtype(data.dtype, np.integer):  # ty: ignore[possibly-missing-attribute]
+                    msg = "Binary fields cannot have integer data type"
+                    raise ValueError(msg)
+                return data  # ty: ignore[invalid-return-type]
+            return data.astype(float, copy=False)  # ty: ignore[possibly-missing-attribute]
 
-        # Non-uniform field (integer)
-        case np.ndarray(
-            shape=(_,) | (_, 3) | (_, 6) | (_, 9), dtype=np.int64 | np.int32
-        ), _common.FIELD_KEYWORDS:
-            return normalized(data.astype(float), keywords=keywords)  # ty: ignore[possibly-missing-attribute]
-
-        # Other possible field
+        # Other possible uniform field
         case [Real(), Real(), Real()] | [
             Real(),
             Real(),
@@ -215,81 +285,65 @@ def normalized(
             Real(),
             Real(),
             Real(),
-        ] | [Real(), *_] | [
-            [Real(), Real(), Real()],
-            *_,
-        ] | [
-            [
+        ], _common.FIELD_KEYWORDS:
+            return normalized(np.array(data), keywords=keywords, format_=format_)
+
+        # Other possible non-uniform scalar or empty field
+        case [*_], _common.FIELD_KEYWORDS if not isinstance(data, tuple) and all(
+            isinstance(d, Real)
+            for d in data  # ty: ignore[not-iterable]
+        ):
+            return normalized(
+                np.array(data, dtype=float), keywords=keywords, format_=format_
+            )
+
+        # Other possible non-uniform non-scalar field
+        case [
+            [Real(), Real(), Real()]
+            | [Real(), Real(), Real(), Real(), Real(), Real()]
+            | [
                 Real(),
                 Real(),
                 Real(),
                 Real(),
                 Real(),
                 Real(),
-            ],
-            *_,
-        ] | [
-            [
                 Real(),
                 Real(),
                 Real(),
-                Real(),
-                Real(),
-                Real(),
-                Real(),
-                Real(),
-                Real(),
-            ],
-            *_,
-        ], _common.FIELD_KEYWORDS if not isinstance(data, tuple):
-            try:
-                return normalized(np.asarray(data), keywords=keywords)
-            except ValueError:
-                return [normalized(d) for d in data]  # ty: ignore[no-matching-overload,not-iterable]
+            ] as first,
+            *rest,
+        ], _common.FIELD_KEYWORDS if not isinstance(data, tuple) and all(
+            isinstance(r, Sequence)
+            and not isinstance(r, tuple)
+            and (all(isinstance(x, Real) for x in r) and (len(r) == len(first)))
+            for r in rest
+        ):
+            return normalized(
+                np.array(data, dtype=float), keywords=keywords, format_=format_
+            )
 
         # Dimension set from list of numbers
-        case [] | [Real()] | [Real(), Real()] | [
-            Real(),
-            Real(),
-            Real(),
-        ] | [Real(), Real(), Real(), Real()] | [
-            Real(),
-            Real(),
-            Real(),
-            Real(),
-            Real(),
-        ] | [
-            Real(),
-            Real(),
-            Real(),
-            Real(),
-            Real(),
-            Real(),
-        ] | [
-            Real(),
-            Real(),
-            Real(),
-            Real(),
-            Real(),
-            Real(),
-            Real(),
-        ], ("dimensions",):
+        case [*_], ("dimensions",) if len(data) <= 7 and all(  # ty: ignore[invalid-argument-type]
+            isinstance(d, Real)
+            for d in data  # ty: ignore[not-iterable]
+        ):
             return DimensionSet(*data)  # ty: ignore[invalid-argument-type]
 
         # List
         case [*_], _ if not isinstance(data, tuple):
-            return [normalized(d) for d in data]  # ty: ignore[no-matching-overload,not-iterable]
+            return [normalized(d, keywords=None, format_=format_) for d in data]  # ty: ignore[no-matching-overload,not-iterable]
 
         # Other Numpy array (treated as list)
         case np.ndarray(), _:
-            return normalized(data.tolist())  # ty: ignore[possibly-missing-attribute]
+            return normalized(data.tolist(), keywords=keywords)  # ty: ignore[possibly-missing-attribute]
 
         # Multiple data entries or keyword entry (tuple)
         case (
             tuple((_, _, *_)),
             _,
         ) if not isinstance(data, DimensionSet):
-            ret = tuple(normalized(d, keywords=keywords) for d in data)  # ty: ignore[no-matching-overload,not-iterable]
+            ret = tuple(normalized(d, keywords=keywords, format_=format_) for d in data)  # ty: ignore[no-matching-overload,not-iterable]
             if any(isinstance(d, tuple) for d in ret):
                 msg = f"Nested tuples not supported: {data!r}"
                 raise ValueError(msg)
@@ -371,35 +425,38 @@ def normalized(
 
         # Unsupported type
         case _:
-            raise_bad_type(data)  # ty: ignore[invalid-argument-type]
+            assert_type(data, Never)  # ty: ignore[type-assertion-failure]
+            msg = f"Unsupported data type: {data!r} ({type(data)})"
+            raise TypeError(msg)
 
 
 def dumps(
     data: File | Data | StandaloneData | KeywordEntry | SubDict,
     *,
-    keywords: tuple[str, ...] | None = None,
-    header: SubDictLike | None = None,
-    tuple_is_keyword_entry: bool = False,
+    keywords: tuple[str, ...] | None = (),
+    format_: Literal["ascii", "binary"] | None = None,
+    _tuple_is_keyword_entry: bool = False,
 ) -> bytes:
-    if keywords == () and header is None and isinstance(data, Mapping):
-        header = data.get("FoamFile")  # ty: ignore[invalid-argument-type,invalid-assignment]
+    match data, keywords, format_:
+        case {"FoamFile": {"format": ("ascii" | "binary") as format_}}, (), None:
+            pass
 
-    match data, keywords, header:
-        case Mapping(), _, _:
+    match data, keywords, format_:
+        case {}, _, _:
             return (
                 (b"{" if keywords != () else b"")
                 + b" ".join(
                     dumps(
                         (k, v),  # ty: ignore[invalid-argument-type]
                         keywords=keywords,
-                        header=header,
-                        tuple_is_keyword_entry=True,
+                        format_=format_,
+                        _tuple_is_keyword_entry=True,
                     )
                     if k is not None
                     else dumps(
                         v,  # ty: ignore[invalid-argument-type]
                         keywords=keywords,
-                        header=header,
+                        format_=format_,
                     )
                     for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
                 )
@@ -407,42 +464,66 @@ def dumps(
             )
 
         case float(), _common.FIELD_KEYWORDS, _:
-            return b"uniform " + dumps(data)
+            return b"uniform " + dumps(data, keywords=None, format_=format_)
 
         case np.ndarray(shape=(3,) | (6,) | (9,)), _common.FIELD_KEYWORDS, _:
-            return b"uniform " + dumps(data.tolist())  # ty: ignore[possibly-missing-attribute]
+            return b"uniform " + dumps(data.tolist(), keywords=None, format_=format_)  # ty: ignore[possibly-missing-attribute]
 
         case np.ndarray(shape=(_,)), _common.FIELD_KEYWORDS, _:
-            return b"nonuniform List<scalar> " + dumps(data, header=header)
+            return b"nonuniform List<scalar> " + dumps(
+                data, keywords=None, format_=format_
+            )
 
         case np.ndarray(shape=(_, 3)), _common.FIELD_KEYWORDS, _:
-            return b"nonuniform List<vector> " + dumps(data, header=header)
+            return b"nonuniform List<vector> " + dumps(
+                data, keywords=None, format_=format_
+            )
 
         case np.ndarray(shape=(_, 6)), _common.FIELD_KEYWORDS, _:
-            return b"nonuniform List<symmTensor> " + dumps(data, header=header)
+            return b"nonuniform List<symmTensor> " + dumps(
+                data, keywords=None, format_=format_
+            )
 
         case np.ndarray(shape=(_, 9)), _common.FIELD_KEYWORDS, _:
-            return b"nonuniform List<tensor> " + dumps(data, header=header)
+            return b"nonuniform List<tensor> " + dumps(
+                data, keywords=None, format_=format_
+            )
 
-        case np.ndarray(), _, {"format": "binary"}:
-            return dumps(len(data)) + b"(" + data.tobytes() + b")"  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+        case np.ndarray(), _, "binary":
+            return (
+                dumps(len(data), keywords=None, format_=None)  # ty: ignore[invalid-argument-type]
+                + b"("
+                + data.tobytes()  # ty: ignore[possibly-missing-attribute]
+                + b")"
+            )
 
-        case np.ndarray(), _, _:
-            return dumps(len(data)) + dumps(data.tolist())  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+        case np.ndarray(), (_, *_) | None, _:
+            return dumps(len(data), keywords=None, format_=None) + dumps(  # ty: ignore[invalid-argument-type]
+                data.tolist(),  # ty: ignore[possibly-missing-attribute]
+                keywords=None,
+                format_=format_,
+            )
+
+        case np.ndarray(), (), _:
+            return dumps(data.tolist(), keywords=None, format_=format_)  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
 
         case DimensionSet(), _, _:
-            return b"[" + dumps(tuple(data)) + b"]"  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+            return b"[" + dumps(tuple(data), keywords=None, format_=format_) + b"]"  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
 
         case Dimensioned(name=None), _, _:
-            return dumps(data.dimensions) + b" " + dumps(data.value)  # ty: ignore[possibly-missing-attribute]
-
-        case Dimensioned(), _, _:
             return (
-                dumps(data.name)  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+                dumps(data.dimensions, keywords=None, format_=format_)  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
                 + b" "
-                + dumps(data.dimensions)  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+                + dumps(data.value, keywords=None, format_=format_)  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+            )  # ty: ignore[possibly-missing-attribute]
+
+        case Dimensioned(name=str()), _, _:
+            return (
+                dumps(data.name, keywords=None, format_=format_)  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
                 + b" "
-                + dumps(data.value)  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+                + dumps(data.dimensions, keywords=None, format_=format_)  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+                + b" "
+                + dumps(data.value, keywords=None, format_=format_)  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
             )
 
         case (
@@ -450,7 +531,7 @@ def dumps(
             _,
             _,
         ) if not isinstance(data, DimensionSet):
-            if tuple_is_keyword_entry:
+            if _tuple_is_keyword_entry:
                 k, v = data  # ty: ignore[not-iterable]
                 ret = b"\n" if isinstance(k, str) and k[0] == "#" else b""
                 if k is not None:
@@ -462,7 +543,7 @@ def dumps(
                     else ()
                     if k is None
                     else None,  # ty: ignore[invalid-argument-type]
-                    header=header,
+                    format_=format_,
                 )
                 if k is not None and val:
                     ret += b" "
@@ -473,12 +554,20 @@ def dumps(
                     ret += b";"
                 return ret
 
-            return b" ".join(dumps(v, keywords=keywords, header=header) for v in data)  # ty: ignore[invalid-argument-type,not-iterable]
+            return b" ".join(dumps(v, keywords=keywords, format_=format_) for v in data)  # ty: ignore[invalid-argument-type,not-iterable]
 
         case [*_], _, _:
             return (
                 b"("
-                + b" ".join(dumps(v, tuple_is_keyword_entry=True) for v in data)  # ty: ignore[invalid-argument-type,not-iterable]
+                + b" ".join(
+                    dumps(
+                        v,  # ty: ignore[invalid-argument-type]
+                        keywords=keywords,
+                        format_=format_,
+                        _tuple_is_keyword_entry=True,
+                    )
+                    for v in data  #  ty: ignore[not-iterable]
+                )
                 + b")"
             )
 

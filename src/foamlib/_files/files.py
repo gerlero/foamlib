@@ -588,10 +588,9 @@ class FoamFile(
             before, after = self._calculate_spacing(keywords, start, end, add=add)
 
             try:
-                header = self["FoamFile"]
-                assert isinstance(header, FoamFile.SubDict)
+                format_ = self.format
             except (KeyError, FileNotFoundError):
-                header = None
+                format_ = None
 
             if isinstance(data, Mapping):
                 if not keywords:
@@ -622,7 +621,7 @@ class FoamFile(
                     self[(*keywords, k)] = v  # ty: ignore[invalid-assignment]
 
             elif keywords:
-                val = dumps(data, keywords=keywords, header=header)
+                val = dumps(data, keywords=keywords, format_=format_)
 
                 content = (
                     before
@@ -645,7 +644,7 @@ class FoamFile(
                 if add and () in parsed:
                     raise KeyError(None)
 
-                content = before + dumps(data, keywords=(), header=header) + after
+                content = before + dumps(data, keywords=(), format_=format_) + after
 
                 parsed.put((), data, content)
 
@@ -906,7 +905,7 @@ class FoamFile(
             If ``True``, a header will be included if it is not already present in the
             input object.
         """
-        file = normalized(file, keywords=())
+        file = normalized(file)
 
         if not isinstance(file, Mapping):
             file = {None: file}  # ty: ignore[invalid-assignment]
