@@ -350,7 +350,7 @@ def normalized(
                     raise ValueError(msg)
 
         # None
-        case None, (*_,):
+        case None, (*_, _):
             return None
 
         # Boolean
