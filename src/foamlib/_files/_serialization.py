@@ -336,7 +336,7 @@ def normalized(
 
         # Other Numpy array (treated as list)
         case np.ndarray(), _:
-            return normalized(data.tolist(), keywords=keywords)  # ty: ignore[possibly-missing-attribute]
+            return normalized(data.tolist(), keywords=keywords, format_=format_)  # ty: ignore[possibly-missing-attribute]
 
         # Multiple data entries or keyword entry (tuple)
         case (
