@@ -38,22 +38,6 @@ from ._util import SupportsKeysAndGetItem
 from .types import Dimensioned, DimensionSet
 
 
-def _vol_field_class(
-    field: Field,
-) -> str:
-    match field:
-        case np.ndarray(shape=(3,) | (_, 3)):
-            return "volVectorField"
-        case np.ndarray(shape=(6,) | (_, 6)):
-            return "volSymmTensorField"
-        case np.ndarray(shape=(9,) | (_, 9)):
-            return "volTensorField"
-        case float() | np.ndarray(shape=(_,)):
-            return "volScalarField"
-        case _:
-            assert_never(field)  # ty: ignore[type-assertion-failure]
-
-
 class FoamFile(
     MutableMultiMapping[
         str | tuple[str, ...] | None,
@@ -472,10 +456,7 @@ class FoamFile(
         self,
         keywords: str | tuple[str, ...] | None,
     ) -> Collection["Data | StandaloneData | FoamFile.SubDict | None"]:
-        if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
+        keywords = FoamFile._normalized_keywords(keywords)
 
         parsed = self._get_parsed()
 
@@ -521,7 +502,7 @@ class FoamFile(
                 float() | np.ndarray(),
                 _common.FIELD_KEYWORDS,
             ):
-                self.class_ = _vol_field_class(data)  # ty: ignore[invalid-argument-type]
+                self.class_ = FoamFile._vol_field_class(data)  # ty: ignore[invalid-argument-type]
 
     def _calculate_spacing(
         self,
@@ -691,10 +672,7 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
-        if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
+        keywords = FoamFile._normalized_keywords(keywords)
 
         self._perform_entry_operation(keywords, data, add=False)
 
@@ -704,10 +682,7 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
-        if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
+        keywords = FoamFile._normalized_keywords(keywords)
 
         self._perform_entry_operation(keywords, data, add=True)
 
@@ -716,10 +691,7 @@ class FoamFile(
     def popone(
         self, keywords: str | tuple[str, ...] | None
     ) -> "Data | StandaloneData | FoamFile.SubDict | None":
-        if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
+        keywords = FoamFile._normalized_keywords(keywords)
 
         with self:
             return self._get_parsed().popone(keywords)
@@ -751,10 +723,10 @@ class FoamFile(
     @override
     def __contains__(self, keywords: object) -> bool:
         """Check if the FoamFile contains the given keyword or tuple of keywords."""
-        if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
+        try:
+            keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[invalid-argument-type]
+        except TypeError:
+            return False
 
         return keywords in self._get_parsed()
 
@@ -947,7 +919,7 @@ class FoamFile(
                 pass
             else:
                 if isinstance(internal_field, (float, np.ndarray)):
-                    class_ = _vol_field_class(internal_field)  # ty: ignore[invalid-argument-type]
+                    class_ = FoamFile._vol_field_class(internal_field)  # ty: ignore[invalid-argument-type]
 
             new = MultiDict(
                 FoamFile={"version": 2.0, "format": "ascii", "class": class_}
@@ -956,6 +928,33 @@ class FoamFile(
             file = new
 
         return dumps(file, keywords=())  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+
+    @staticmethod
+    def _normalized_keywords(keywords: object, /) -> tuple[str, ...]:
+        match keywords:
+            case None:
+                return ()
+            case str():
+                return (keywords,)
+            case [*_] if all(isinstance(k, str) for k in keywords):  # ty: ignore[not-iterable]
+                return tuple(keywords)  # ty: ignore[invalid-argument-type]
+            case _:
+                msg = f"Invalid keyword type: {keywords!r}"
+                raise TypeError(msg)
+
+    @staticmethod
+    def _vol_field_class(field: Field, /) -> str:
+        match field:
+            case np.ndarray(shape=(3,) | (_, 3)):
+                return "volVectorField"
+            case np.ndarray(shape=(6,) | (_, 6)):
+                return "volSymmTensorField"
+            case np.ndarray(shape=(9,) | (_, 9)):
+                return "volTensorField"
+            case float() | np.ndarray(shape=(_,)):
+                return "volScalarField"
+            case _:
+                assert_never(field)  # ty: ignore[type-assertion-failure]
 
 
 class FoamFieldFile(FoamFile):
@@ -1048,10 +1047,7 @@ class FoamFieldFile(FoamFile):
     def getall(
         self, keywords: str | tuple[str, ...] | None
     ) -> Collection["Data | StandaloneData | FoamFieldFile.SubDict | None"]:
-        if keywords is None:
-            keywords = ()
-        elif not isinstance(keywords, tuple):
-            keywords = (keywords,)
+        keywords = FoamFile._normalized_keywords(keywords)
 
         ret = list(super().getall(keywords))
 
