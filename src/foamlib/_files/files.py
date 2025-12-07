@@ -1,3 +1,4 @@
+import contextlib
 import sys
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
@@ -283,10 +284,51 @@ class FoamFile(
         def getall(self, keyword: str) -> Collection["Data | FoamFile.SubDict | None"]:
             return self._file.getall((*self._keywords, keyword))
 
+        @overload
+        def __getitem__(self, keyword: str) -> "Data | FoamFile.SubDict | None": ...
+
+        @overload
+        def __getitem__(self, keyword: slice) -> SubDict: ...
+
         @override
+        def __getitem__(
+            self, keyword: str | slice
+        ) -> "Data | FoamFile.SubDict | None | SubDict":
+            if keyword == slice(None):
+                return self.as_dict()
+
+            if isinstance(keyword, slice):
+                msg = "Only empty slices (:) are supported"
+                raise ValueError(msg)  # noqa: TRY004
+
+            ret = self._file[(*self._keywords, keyword)]
+            return cast("Data | FoamFile.SubDict | None", ret)
+
+        @overload
         def __setitem__(
             self, keyword: str, data: DataLike | SubDictLike | None
+        ) -> None: ...
+
+        @overload
+        def __setitem__(self, keyword: slice, data: SubDictLike) -> None: ...
+
+        @override
+        def __setitem__(
+            self, keyword: str | slice, data: DataLike | SubDictLike | None
         ) -> None:
+            if keyword == slice(None):
+                if not isinstance(data, Mapping):
+                    msg = "Can only set entire SubDict with a mapping"
+                    raise TypeError(msg)
+                with self._file:
+                    self.clear()
+                    self.extend(data)  # type: ignore[invalid-argument-type]
+                return
+
+            if isinstance(keyword, slice):
+                msg = "Only empty slices (:) are supported"
+                raise ValueError(msg)  # noqa: TRY004
+
             self._file[(*self._keywords, keyword)] = data
 
         @override
@@ -299,7 +341,15 @@ class FoamFile(
             return self._file.popone((*self._keywords, keyword))
 
         @override
-        def __delitem__(self, keyword: str) -> None:
+        def __delitem__(self, keyword: str | slice) -> None:
+            if keyword == slice(None):
+                self.clear()
+                return
+
+            if isinstance(keyword, slice):
+                msg = "Only empty slices (:) are supported"
+                raise ValueError(msg)  # noqa: TRY004
+
             del self._file[(*self._keywords, keyword)]
 
         @override
@@ -449,22 +499,6 @@ class FoamFile(
     @object_.setter
     def object_(self, value: str) -> None:
         self["FoamFile", "object"] = value
-
-    @override
-    @with_default
-    def getall(
-        self,
-        keywords: str | tuple[str, ...] | None,
-    ) -> Collection["Data | StandaloneData | FoamFile.SubDict | None"]:
-        keywords = FoamFile._normalized_keywords(keywords)
-
-        parsed = self._get_parsed()
-
-        ret = parsed.getall(keywords)
-
-        return [
-            FoamFile.SubDict(self, keywords) if v is ... else deepcopy(v) for v in ret
-        ]
 
     def _write_header_if_needed(self, keywords: tuple[str, ...]) -> None:
         """Write FoamFile header if needed."""
@@ -649,6 +683,79 @@ class FoamFile(
                 parsed.put((), data, content)
 
     @overload
+    @with_default
+    def getall(
+        self, keywords: str | tuple[str]
+    ) -> Collection["Data | FoamFile.SubDict | None"]: ...
+
+    @overload
+    @with_default
+    def getall(self, keywords: None | tuple[()]) -> Collection[StandaloneData]: ...
+
+    @overload
+    @with_default
+    def getall(
+        self, keywords: tuple[str, ...]
+    ) -> Collection["Data | StandaloneData | FoamFile.SubDict | None"]: ...
+
+    @override
+    @with_default
+    def getall(
+        self,
+        keywords: str | tuple[str, ...] | None,
+    ) -> Collection["Data | StandaloneData | FoamFile.SubDict | None"]:
+        keywords = FoamFile._normalized_keywords(keywords)
+
+        parsed = self._get_parsed()
+
+        ret = parsed.getall(keywords)
+
+        return [
+            FoamFile.SubDict(self, keywords) if v is ... else deepcopy(v) for v in ret
+        ]
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: str | tuple[str],
+    ) -> "Data | FoamFile.SubDict | None": ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: None | tuple[()],
+    ) -> StandaloneData: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[str, ...],
+    ) -> "Data | StandaloneData | FoamFile.SubDict | None": ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: slice,
+    ) -> File: ...
+
+    @override
+    def __getitem__(  # ty: ignore[invalid-method-override]
+        self,
+        keywords: str | tuple[str, ...] | None | slice,
+    ) -> "Data | StandaloneData | FoamFile.SubDict | None | File":
+        keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
+
+        if keywords == slice(None):
+            return self.as_dict()
+
+        assert not isinstance(keywords, slice)
+        parsed = self._get_parsed()
+        ret = parsed[keywords]
+        if ret is ...:
+            return FoamFile.SubDict(self, keywords)
+        return deepcopy(ret)
+
+    @overload
     def __setitem__(
         self, keywords: None | tuple[()], data: StandaloneDataLike
     ) -> None: ...
@@ -665,15 +772,45 @@ class FoamFile(
         data: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None: ...
 
+    @overload
+    def __setitem__(
+        self,
+        keywords: slice,
+        data: FileLike,
+    ) -> None: ...
+
     @override
     def __setitem__(  # ty: ignore[invalid-method-override]
         self,
-        keywords: str | tuple[str, ...] | None,
-        data: DataLike | StandaloneDataLike | SubDictLike | None,
+        keywords: str | tuple[str, ...] | None | slice,
+        data: FileLike | DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
-        keywords = FoamFile._normalized_keywords(keywords)
+        keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
 
-        self._perform_entry_operation(keywords, data, add=False)
+        if keywords == slice(None):
+            if not isinstance(data, Mapping):
+                msg = "Can only set the entire FoamFile from a mapping"
+                raise TypeError(msg)
+            with self:
+                with contextlib.suppress(FileNotFoundError):
+                    self.clear()
+                self.extend(data)  # ty: ignore[invalid-argument-type]
+            return
+
+        assert not isinstance(keywords, slice)
+        self._perform_entry_operation(keywords, data, add=False)  # ty: ignore[invalid-argument-type]
+
+    @override
+    def __delitem__(self, keywords: str | tuple[str, ...] | None | slice) -> None:
+        keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
+
+        if keywords == slice(None):
+            with self:
+                self.clear()
+            return
+
+        assert not isinstance(keywords, slice)
+        super().__delitem__(keywords)
 
     @override
     def add(
@@ -723,8 +860,8 @@ class FoamFile(
     def __contains__(self, keywords: object) -> bool:
         """Check if the FoamFile contains the given keyword or tuple of keywords."""
         try:
-            keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[invalid-argument-type]
-        except TypeError:
+            keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
+        except (ValueError, TypeError):
             return False
 
         return keywords in self._get_parsed()
@@ -928,15 +1065,46 @@ class FoamFile(
 
         return dumps(file, keywords=())  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
 
+    @overload
     @staticmethod
-    def _normalized_keywords(keywords: object, /) -> tuple[str, ...]:
+    def _normalized_keywords(
+        keywords: str, /, *, slice_ok: bool = ...
+    ) -> tuple[str]: ...
+
+    @overload
+    @staticmethod
+    def _normalized_keywords(
+        keywords: None, /, *, slice_ok: bool = ...
+    ) -> tuple[()]: ...
+
+    @overload
+    @staticmethod
+    def _normalized_keywords(
+        keywords: tuple[str, ...], /, *, slice_ok: bool = ...
+    ) -> tuple[str, ...]: ...
+
+    @overload
+    @staticmethod
+    def _normalized_keywords(
+        keywords: slice, /, *, slice_ok: Literal[True] = ...
+    ) -> slice: ...
+
+    @staticmethod
+    def _normalized_keywords(
+        keywords: tuple[str, ...] | None | slice, /, *, slice_ok: bool = False
+    ) -> tuple[str, ...] | slice:
         match keywords:
             case None:
                 return ()
             case str():
                 return (keywords,)
-            case [*_] if all(isinstance(k, str) for k in keywords):  # ty: ignore[not-iterable]
-                return tuple(keywords)  # ty: ignore[invalid-argument-type]
+            case tuple((*_,)) if all(isinstance(k, str) for k in keywords):  # ty: ignore[not-iterable]
+                return tuple(keywords)  # ty: ignore[invalid-argument-type,invalid-return-type]
+            case slice(start=None, stop=None, step=None) if slice_ok:
+                return slice(None)
+            case slice() if slice_ok:
+                msg = "Only empty slices (:) are supported"
+                raise ValueError(msg)
             case _:
                 msg = f"Invalid keyword type: {keywords!r}"
                 raise TypeError(msg)
@@ -1041,6 +1209,22 @@ class FoamFieldFile(FoamFile):
         def value(self) -> None:
             del self["value"]
 
+    @overload
+    @with_default
+    def getall(
+        self, keywords: str | tuple[str]
+    ) -> Collection["Data | FoamFieldFile.BoundariesSubDict | None"]: ...
+
+    @overload
+    @with_default
+    def getall(self, keywords: None | tuple[()]) -> Collection[StandaloneData]: ...
+
+    @overload
+    @with_default
+    def getall(
+        self, keywords: tuple[str, ...]
+    ) -> Collection["Data | StandaloneData | FoamFieldFile.SubDict | None"]: ...
+
     @override
     @with_default
     def getall(
@@ -1057,6 +1241,51 @@ class FoamFieldFile(FoamFile):
                         ret[i] = FoamFieldFile.BoundariesSubDict(self, keywords)
                     elif len(keywords) == 2:
                         ret[i] = FoamFieldFile.BoundarySubDict(self, keywords)
+
+        return ret
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: str | tuple[str],
+    ) -> "Data | FoamFieldFile.BoundariesSubDict | None": ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: None | tuple[()],
+    ) -> StandaloneData: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[str, ...],
+    ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None": ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: slice,
+    ) -> File: ...
+
+    @override
+    def __getitem__(  # ty: ignore[invalid-method-override]
+        self,
+        keywords: str | tuple[str, ...] | None | slice,
+    ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None | File":
+        keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
+
+        if keywords == slice(None):
+            return self.as_dict()
+
+        assert not isinstance(keywords, slice)
+        ret = super().__getitem__(keywords)
+
+        if keywords[0] == "boundaryField" and isinstance(ret, FoamFile.SubDict):
+            if len(keywords) == 1:
+                ret = FoamFieldFile.BoundariesSubDict(self, keywords)
+            elif len(keywords) == 2:
+                ret = FoamFieldFile.BoundarySubDict(self, keywords)
 
         return ret
 
