@@ -37,13 +37,13 @@ with case.control_dict as f:
 
 with case.fv_schemes as f:
     f["ddtSchemes"] = {"default": "Euler"}
-    f["gradSchemes"] = {"default": "Gauss linear"}
+    f["gradSchemes"] = {"default": ("Gauss", "linear")}
     f["divSchemes"] = {
         "default": "none",
-        "div(phi,U)": "Gauss linear",
-        "div(phi,T)": "Gauss linear",
+        "div(phi,U)": ("Gauss", "linear"),
+        "div(phi,T)": ("Gauss", "linear"),
     }
-    f["laplacianSchemes"] = {"default": "Gauss linear corrected"}
+    f["laplacianSchemes"] = {"default": ("Gauss", "linear", "corrected")}
 
 with case.fv_solution as f:
     f["solvers"] = {
