@@ -1,4 +1,5 @@
 import contextlib
+import os
 import sys
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
@@ -44,6 +45,7 @@ class FoamFile(
         str | tuple[str, ...] | None,
         "Data | StandaloneData | FoamFile.SubDict | None",
     ],
+    os.PathLike[str],
     FoamFileIO,
 ):
     """
@@ -980,6 +982,7 @@ class FoamFile(
             else:
                 super().clear()
 
+    @override
     def __fspath__(self) -> str:
         return str(self.path)
 

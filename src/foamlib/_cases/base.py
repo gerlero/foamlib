@@ -16,7 +16,7 @@ import os
 from .._files import FoamFieldFile, FoamFile
 
 
-class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
+class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
     """
     Base class for OpenFOAM cases.
 
@@ -34,7 +34,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
     def __init__(self, path: os.PathLike[str] | str = Path()) -> None:
         self.path = Path(path).absolute()
 
-    class TimeDirectory(AbstractSet[FoamFieldFile]):
+    class TimeDirectory(AbstractSet[FoamFieldFile], os.PathLike[str]):
         """
         A time directory in an OpenFOAM case.
 
@@ -100,6 +100,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
             else:
                 (self.path / name).unlink()
 
+        @override
         def __fspath__(self) -> str:
             return str(self.path)
 
@@ -266,6 +267,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"]):
         """The turbulenceProperties file."""
         return self.file("constant/turbulenceProperties")
 
+    @override
     def __fspath__(self) -> str:
         return str(self.path)
 
