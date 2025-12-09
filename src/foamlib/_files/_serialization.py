@@ -169,8 +169,8 @@ def normalized(
         # Numeric standalone data (n floats)
         case np.ndarray(shape=(_,)), () if np.issubdtype(data.dtype, np.floating):  # ty: ignore[possibly-missing-attribute]
             if format_ == "binary":
-                if data.dtype != np.float64:  # ty: ignore[possibly-missing-attribute]
-                    msg = f"Only float64 data type is supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
+                if data.dtype not in (np.float64, np.float32):  # ty: ignore[possibly-missing-attribute]
+                    msg = f"Only float64 or float32 data types are supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
                     raise ValueError(msg)
                 return data  # ty: ignore[invalid-return-type]
             return data.astype(float, copy=False)  # ty: ignore[possibly-missing-attribute]
