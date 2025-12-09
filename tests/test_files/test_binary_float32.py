@@ -61,8 +61,8 @@ def test_standalone_float32_dumps() -> None:
     # Should produce 2 elements * 4 bytes = 8 bytes of data, plus count and parens
     assert isinstance(dumped, bytes)
     assert b"2(" in dumped
-    # Verify the byte representation is float32
-    assert len(dumped) == 11  # "2(" + 8 bytes + ")"
+    # Verify the byte representation is float32: "2(" (2 bytes) + 8 bytes + ")" (1 byte)
+    assert len(dumped) == 2 + 8 + 1
 
 
 def test_standalone_float64_dumps() -> None:
@@ -73,8 +73,8 @@ def test_standalone_float64_dumps() -> None:
     # Should produce 2 elements * 8 bytes = 16 bytes of data, plus count and parens
     assert isinstance(dumped, bytes)
     assert b"2(" in dumped
-    # Verify the byte representation is float64
-    assert len(dumped) == 19  # "2(" + 16 bytes + ")"
+    # Verify the byte representation is float64: "2(" (2 bytes) + 16 bytes + ")" (1 byte)
+    assert len(dumped) == 2 + 16 + 1
 
 
 def test_field_float32_dumps() -> None:
