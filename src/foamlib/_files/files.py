@@ -449,7 +449,7 @@ class FoamFile(
             """
             Return a dict representation of the sub-dictionary.
 
-            :param deep: Whether to returned a nested representation by recursing into
+            :param deep: Whether to return a nested representation by recursing into
                 nested sub-dictionaries.
             """
             if deep:
