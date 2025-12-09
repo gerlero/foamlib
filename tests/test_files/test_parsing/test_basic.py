@@ -22,7 +22,7 @@ def test_parse_value() -> None:
     lst = ParsedFile(b"(1 2 3)")[()]
     assert isinstance(lst, np.ndarray)
     assert np.array_equal(lst, [1, 2, 3])
-    lst = ParsedFile(b"(1.0 2 3)")[()]
+    lst = ParsedFile(b"list (1.0 2 3);")[("list",)]
     assert isinstance(lst, list)
     assert lst == [1.0, 2, 3]
     assert isinstance(lst[0], float)
@@ -34,35 +34,50 @@ def test_parse_value() -> None:
     assert np.array_equal(field, [1, 2, 3])
     field = ParsedFile(b"nonuniform List<scalar> 2(1 2)")[()]
     assert isinstance(field, np.ndarray)
-    assert np.array_equal(field, [1, 2])
+    assert field.dtype == float
+    assert np.array_equal(field, [1.0, 2.0])
+    field = ParsedFile(b"nonuniform List<scalar> 2(1/*comment*/2)")[()]
+    assert isinstance(field, np.ndarray)
+    assert field.dtype == float
+    assert np.array_equal(field, [1.0, 2.0])
     field = ParsedFile(b"nonuniform List<scalar> 2{1}")[()]
     assert isinstance(field, np.ndarray)
-    assert np.array_equal(field, [1, 1])
+    assert field.dtype == float
+    assert np.array_equal(field, [1.0, 1.0])
     field = ParsedFile(b"nonuniform List<symmTensor> 0()")[()]
     assert isinstance(field, np.ndarray)
+    assert field.dtype == float
     assert field.shape == (0, 6)
     field = ParsedFile(b"nonuniform List<tensor> ()")[()]
     assert isinstance(field, np.ndarray)
+    assert field.dtype == float
     assert field.shape == (0, 9)
-    lst = ParsedFile(b"3(1 2 3)")[()]
-    assert isinstance(lst, np.ndarray)
-    assert np.array_equal(lst, [1, 2, 3])
-    lst = ParsedFile(b"2((1 2 3) (4 5 6))")[()]
-    assert isinstance(lst, np.ndarray)
+    arr = ParsedFile(b"3(1 2 3)")[()]
+    assert isinstance(arr, np.ndarray)
+    assert arr.dtype == int
+    assert np.array_equal(arr, [1, 2, 3])
+    arr = ParsedFile(b"3(1.0 2 3)")[()]
+    assert isinstance(arr, np.ndarray)
+    assert arr.dtype == float
+    assert np.array_equal(arr, [1.0, 2.0, 3.0])
+    arr = ParsedFile(b"2((1 2 3) (4 5 6))")[()]
+    assert isinstance(arr, np.ndarray)
+    assert arr.dtype == float
     assert np.array_equal(
-        lst,
+        arr,
         [
-            [1, 2, 3],
-            [4, 5, 6],
+            [1.0, 2.0, 3.0],
+            [4.0, 5.0, 6.0],
         ],
     )
-    lst = ParsedFile(b"2((1\n2 3)\t(4 5 6))")[()]
-    assert isinstance(lst, np.ndarray)
+    arr = ParsedFile(b"2((1\n2 3)\t(4 5 6))")[()]
+    assert isinstance(arr, np.ndarray)
+    assert arr.dtype == float
     assert np.array_equal(
-        lst,
+        arr,
         [
-            [1, 2, 3],
-            [4, 5, 6],
+            [1.0, 2.0, 3.0],
+            [4.0, 5.0, 6.0],
         ],
     )
     lst = ParsedFile(b"2(3(1 2 3) 4(4 5 6 7))")[()]

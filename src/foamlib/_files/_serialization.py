@@ -187,9 +187,9 @@ def normalized(
                 return data  # ty: ignore[invalid-return-type]
             return data.astype(float, copy=False)  # ty: ignore[possibly-missing-attribute]
 
-        # Other possible numeric standalone data (n integers)
-        case [Integral(), *rest], () if not isinstance(data, tuple) and all(
-            isinstance(r, Integral) for r in rest
+        # Other possible numeric standalone data (n integers or floats)
+        case [Real(), *rest], () if not isinstance(data, tuple) and all(
+            isinstance(r, Real) for r in rest
         ):
             return normalized(np.asarray(data), keywords=keywords, format_=format_)
 
