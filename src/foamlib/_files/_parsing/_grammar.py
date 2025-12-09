@@ -150,8 +150,9 @@ DATA <<= _DATA_ENTRY[1, ...].set_parse_action(
 
 _STANDALONE_DATA_ENTRY = (
     ASCIINumericList(dtype=int)
-    | ASCIIFacesLikeList()
+    | ASCIINumericList(dtype=float)
     | ASCIINumericList(dtype=float, elshape=(3,))
+    | ASCIIFacesLikeList()
     | (
         (
             binary_numeric_list(dtype=np.int32)
