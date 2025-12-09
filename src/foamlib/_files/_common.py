@@ -46,9 +46,9 @@ def dict_from_items(
     items: Iterable[tuple[object, _V]],
     /,
     *,
-    target: type[File] = ...,
+    target: type[SubDict] = ...,
     check_keys: bool = ...,
-) -> dict[str | None, _V] | MultiDict[str | None, _V]: ...
+) -> dict[str, _V] | MultiDict[str, _V]: ...
 
 
 @overload
@@ -56,16 +56,16 @@ def dict_from_items(
     items: Iterable[tuple[object, _V]],
     /,
     *,
-    target: type[SubDict] = ...,
+    target: type[File] = ...,
     check_keys: bool = ...,
-) -> dict[str, _V] | MultiDict[str, _V]: ...
+) -> dict[str | None, _V] | MultiDict[str | None, _V]: ...
 
 
 def dict_from_items(
     items: Iterable[tuple[object, _V]],
     /,
     *,
-    target: type[Dict] | type[File] | type[SubDict],
+    target: type[Dict] | type[SubDict] | type[File],
     check_keys: bool = False,
 ) -> (
     dict[str, _V]

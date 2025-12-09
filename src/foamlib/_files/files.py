@@ -21,6 +21,7 @@ from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
 
 from .._files import _common
+from ._common import dict_from_items
 from ._io import FoamFileIO
 from ._parsing import parse
 from ._serialization import dumps, normalized
@@ -98,7 +99,7 @@ class FoamFile(
     Dimensioned = Dimensioned
     DimensionSet = DimensionSet
 
-    class KeysView(multicollections.abc.KeysView["str | None"]):
+    class KeysView(multicollections.abc.KeysView[str | None]):
         def __init__(self, file: "FoamFile", *, include_header: bool = False) -> None:
             self._file = file
             self._include_header = include_header
@@ -142,7 +143,7 @@ class FoamFile(
 
     class ItemsView(
         multicollections.abc.ItemsView[
-            "str | None", "Data | StandaloneData | FoamFile.SubDict | None"
+            str | None, "Data | StandaloneData | FoamFile.SubDict | None"
         ]
     ):
         def __init__(
@@ -290,14 +291,19 @@ class FoamFile(
         def __getitem__(self, keyword: str) -> "Data | FoamFile.SubDict | None": ...
 
         @overload
-        def __getitem__(self, keyword: slice) -> SubDict: ...
+        def __getitem__(
+            self, keyword: slice
+        ) -> (
+            dict[str, "Data | FoamFile.SubDict | None"]
+            | MultiDict[str, "Data | FoamFile.SubDict | None"]
+        ): ...
 
         @override
         def __getitem__(
             self, keyword: str | slice
-        ) -> "Data | FoamFile.SubDict | None | SubDict":
+        ) -> "Data | FoamFile.SubDict | None | dict[str, Data | FoamFile.SubDict | None] | MultiDict[str, Data | FoamFile.SubDict | None]":
             if keyword == slice(None):
-                return self.as_dict()
+                return self.as_dict(deep=False)
 
             if isinstance(keyword, slice):
                 msg = "Only empty slices (:) are supported"
@@ -422,17 +428,42 @@ class FoamFile(
         def __repr__(self) -> str:
             return f"{type(self).__qualname__}('{self._file}', {self._keywords})"
 
-        def as_dict(self) -> SubDict:
-            """Return a nested dict representation of the sub-dictionary."""
-            file = self._file.as_dict(include_header=True)
+        @overload
+        def as_dict(self, *, deep: Literal[True] = ...) -> SubDict: ...
 
-            ret = file[self._keywords[0]]
-            assert isinstance(ret, Mapping)
-            for k in self._keywords[1:]:
-                ret = ret[k]
+        @overload
+        def as_dict(
+            self, *, deep: Literal[False] = ...
+        ) -> (
+            dict[str, "Data | FoamFile.SubDict | None"]
+            | MultiDict[str, "Data | FoamFile.SubDict | None"]
+        ): ...
+
+        def as_dict(
+            self, *, deep: bool = True
+        ) -> (
+            SubDict
+            | dict[str, "Data | FoamFile.SubDict | None"]
+            | MultiDict[str, "Data | FoamFile.SubDict | None"]
+        ):
+            """
+            Return a dict representation of the sub-dictionary.
+
+            :param deep: Whether to return a nested representation by recursing into
+                nested sub-dictionaries.
+            """
+            if deep:
+                file = self._file.as_dict(include_header=True)
+
+                ret = file[self._keywords[0]]
                 assert isinstance(ret, Mapping)
+                for k in self._keywords[1:]:
+                    ret = ret[k]
+                    assert isinstance(ret, Mapping)
 
-            return ret  # ty: ignore[invalid-return-type]
+                return ret  # ty: ignore[invalid-return-type]
+
+            return dict_from_items(self.items(), target=SubDict)
 
     @property
     def version(self) -> float:
@@ -738,17 +769,20 @@ class FoamFile(
     def __getitem__(
         self,
         keywords: slice,
-    ) -> File: ...
+    ) -> (
+        dict[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]
+        | MultiDict[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]
+    ): ...
 
     @override
     def __getitem__(  # ty: ignore[invalid-method-override]
         self,
         keywords: str | tuple[str, ...] | None | slice,
-    ) -> "Data | StandaloneData | FoamFile.SubDict | None | File":
+    ) -> "Data | StandaloneData | FoamFile.SubDict | None | dict[str | None, Data | StandaloneData | FoamFile.SubDict | None] | MultiDict[str | None, Data | StandaloneData | FoamFile.SubDict | None]":
         keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
 
         if keywords == slice(None):
-            return self.as_dict()
+            return self.as_dict(deep=False)
 
         assert not isinstance(keywords, slice)
         parsed = self._get_parsed()
@@ -785,7 +819,7 @@ class FoamFile(
     def __setitem__(  # ty: ignore[invalid-method-override]
         self,
         keywords: str | tuple[str, ...] | None | slice,
-        data: FileLike | DataLike | StandaloneDataLike | SubDictLike | None,
+        data: DataLike | StandaloneDataLike | SubDictLike | None | FileLike,
     ) -> None:
         keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
 
@@ -986,16 +1020,40 @@ class FoamFile(
     def __fspath__(self) -> str:
         return str(self.path)
 
-    def as_dict(self, *, include_header: bool = False) -> File:
+    @overload
+    def as_dict(
+        self, *, include_header: bool = ..., deep: Literal[True] = ...
+    ) -> File: ...
+
+    @overload
+    def as_dict(
+        self, *, include_header: bool = ..., deep: Literal[False] = ...
+    ) -> (
+        dict[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]
+        | MultiDict[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]
+    ): ...
+
+    def as_dict(
+        self, *, include_header: bool = False, deep: bool = True
+    ) -> (
+        File
+        | dict[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]
+        | MultiDict[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]
+    ):
         """
-        Return a nested dict representation of the file.
+        Return a dict representation of the file.
 
         :param include_header: Whether to include the "FoamFile" header in the output.
+        :param deep: Whether to return a nested representation by recursing into
+            nested sub-dictionaries.
         """
-        d = self._get_parsed().as_dict()
-        if not include_header:
-            d.pop("FoamFile", None)
-        return deepcopy(d)
+        if deep:
+            d = self._get_parsed().as_dict()
+            if not include_header:
+                d.pop("FoamFile", None)
+            return deepcopy(d)
+
+        return dict_from_items(self.items(include_header=include_header), target=File)  # ty: ignore[invalid-return-type]
 
     @staticmethod
     def loads(
@@ -1233,7 +1291,7 @@ class FoamFieldFile(FoamFile):
     def getall(
         self, keywords: str | tuple[str, ...] | None
     ) -> Collection["Data | StandaloneData | FoamFieldFile.SubDict | None"]:
-        keywords = FoamFile._normalized_keywords(keywords)
+        keywords = FoamFieldFile._normalized_keywords(keywords)
 
         ret = list(super().getall(keywords))
 
@@ -1252,6 +1310,12 @@ class FoamFieldFile(FoamFile):
         self,
         keywords: str | tuple[str],
     ) -> "Data | FoamFieldFile.BoundariesSubDict | None": ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[str, str],
+    ) -> "Data | FoamFieldFile.BoundarySubDict | None": ...
 
     @overload
     def __getitem__(
@@ -1275,11 +1339,11 @@ class FoamFieldFile(FoamFile):
     def __getitem__(  # ty: ignore[invalid-method-override]
         self,
         keywords: str | tuple[str, ...] | None | slice,
-    ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None | File":
-        keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
+    ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None | dict[str | None, Data | StandaloneData | FoamFieldFile.SubDict | None] | MultiDict[str | None, Data | StandaloneData | FoamFieldFile.SubDict | None]":
+        keywords = FoamFieldFile._normalized_keywords(keywords, slice_ok=True)
 
         if keywords == slice(None):
-            return self.as_dict()
+            return self.as_dict(deep=False)
 
         assert not isinstance(keywords, slice)
         ret = super().__getitem__(keywords)
