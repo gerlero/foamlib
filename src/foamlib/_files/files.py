@@ -1044,7 +1044,7 @@ class FoamFile(
         Return a dict representation of the file.
 
         :param include_header: Whether to include the "FoamFile" header in the output.
-        :param deep: Whether to returned a nested representation by recursing into
+        :param deep: Whether to return a nested representation by recursing into
             nested sub-dictionaries.
         """
         if deep:
