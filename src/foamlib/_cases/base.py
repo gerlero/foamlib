@@ -89,7 +89,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         @override
         def __len__(self) -> int:
             """Return the number of field files in this time directory."""
-            return len(list(iter(self)))
+            return sum(1 for _ in iter(self))
 
         def __delitem__(self, name: str, /) -> None:
             """Delete the field file with the given name in this time directory."""
