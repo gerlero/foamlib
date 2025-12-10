@@ -1,5 +1,11 @@
+import sys
 from collections.abc import Mapping, Sequence
 from typing import Literal, TypeAlias
+
+if sys.version_info >= (3, 11):
+    from typing import Unpack
+else:
+    from typing_extensions import Unpack
 
 import numpy as np
 from multicollections import MultiDict
@@ -38,8 +44,11 @@ DataEntryLike: TypeAlias = (
     DataEntry | Sequence["DataEntryLike | KeywordEntryLike | DictLike"] | FieldLike
 )
 
-Data: TypeAlias = DataEntry | tuple[DataEntry, ...]
-DataLike: TypeAlias = DataEntryLike | tuple[DataEntryLike, ...]
+Data: TypeAlias = DataEntry | tuple[DataEntry, DataEntry, Unpack[tuple[DataEntry, ...]]]
+DataLike: TypeAlias = (
+    DataEntryLike
+    | tuple[DataEntryLike, DataEntryLike, Unpack[tuple[DataEntryLike, ...]]]
+)
 
 StandaloneDataEntry: TypeAlias = (
     DataEntry
@@ -57,9 +66,21 @@ StandaloneDataEntryLike: TypeAlias = (
     | Sequence[Sequence[int]]
 )
 
-StandaloneData: TypeAlias = StandaloneDataEntry | tuple[StandaloneDataEntry, ...]
+StandaloneData: TypeAlias = (
+    StandaloneDataEntry
+    | tuple[
+        StandaloneDataEntry,
+        StandaloneDataEntry,
+        Unpack[tuple[StandaloneDataEntry, ...]],
+    ]
+)
 StandaloneDataLike: TypeAlias = (
-    StandaloneDataEntryLike | tuple[StandaloneDataEntryLike, ...]
+    StandaloneDataEntryLike
+    | tuple[
+        StandaloneDataEntryLike,
+        StandaloneDataEntryLike,
+        Unpack[tuple[StandaloneDataEntryLike, ...]],
+    ]
 )
 
 SubDict: TypeAlias = (

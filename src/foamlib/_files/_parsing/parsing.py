@@ -1,7 +1,12 @@
 import dataclasses
 import sys
 from collections.abc import Collection, Iterator, Sequence
-from typing import cast
+from typing import cast, overload
+
+if sys.version_info >= (3, 11):
+    from typing import Never, Unpack
+else:
+    from typing_extensions import Never, Unpack
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -116,19 +121,62 @@ class ParsedFile(
                     )
         return ret
 
+    @overload
+    @with_default
+    def getall(self, keywords: tuple[()], /) -> Collection[StandaloneData]: ...
+
+    @overload
+    @with_default
+    def getall(
+        self, keywords: tuple[str, Unpack[tuple[str, ...]]], /
+    ) -> Collection[Data | EllipsisType | None]: ...
+
     @override
     @with_default
     def getall(
         self, keywords: tuple[str, ...], /
-    ) -> Collection[Data | StandaloneData | EllipsisType]:
+    ) -> Collection[Data | StandaloneData | EllipsisType | None]:
         return [entry.data for entry in self._parsed.getall(keywords)]
 
+    @overload
+    def __getitem__(self, keywords: tuple[()]) -> StandaloneData: ...
+
+    @overload
+    def __getitem__(
+        self, keywords: tuple[str, Unpack[tuple[str, ...]]]
+    ) -> Data | EllipsisType | None: ...
+
     @override
-    def __setitem__(
-        self, key: tuple[str, ...], value: Data | StandaloneData | EllipsisType | None
+    def __getitem__(
+        self, keywords: tuple[str, ...]
+    ) -> Data | StandaloneData | EllipsisType | None:  # ty: ignore[invalid-method-override]
+        entry = self._parsed[keywords]
+        return entry.data
+
+    @override
+    def __setitem__(  # ty: ignore[invalid-method-override]
+        self, key: Never, value: Never
     ) -> None:  # pragma: no cover
         msg = "Use 'put' method instead"
         raise NotImplementedError(msg)
+
+    @overload
+    def put(
+        self,
+        keywords: tuple[()],
+        /,
+        data: StandaloneData,
+        content: bytes,
+    ) -> None: ...
+
+    @overload
+    def put(
+        self,
+        keywords: tuple[str, Unpack[tuple[str, ...]]],
+        /,
+        data: Data | EllipsisType | None,
+        content: bytes,
+    ) -> None: ...
 
     def put(
         self,
@@ -142,6 +190,24 @@ class ParsedFile(
         self._update_content(start, end, content)
         self._parsed[keywords] = ParsedFile._Entry(data, start, start + len(content))
         self._remove_child_entries(keywords)
+
+    @overload
+    def add(
+        self,
+        keywords: tuple[()],
+        data: StandaloneData,
+        content: bytes,
+        /,
+    ) -> None: ...
+
+    @overload
+    def add(
+        self,
+        keywords: tuple[str, Unpack[tuple[str, ...]]],
+        data: Data | EllipsisType | None,
+        content: bytes,
+        /,
+    ) -> None: ...
 
     @override
     def add(  # ty: ignore[invalid-method-override]
