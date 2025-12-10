@@ -6,9 +6,9 @@ from copy import deepcopy
 from typing import Literal, cast, overload
 
 if sys.version_info >= (3, 11):
-    from typing import assert_never
+    from typing import Unpack, assert_never
 else:
-    from typing_extensions import assert_never
+    from typing_extensions import Unpack, assert_never
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -130,7 +130,12 @@ class FoamFile(
         ) -> Iterator["Data | StandaloneData | FoamFile.SubDict | None"]:
             for k, v in self._file._get_parsed().items():
                 if k != ("FoamFile",) or self._include_header:
-                    yield v if v is not ... else FoamFile.SubDict(self._file, k)
+                    if v is ...:
+                        assert k
+                        k = cast("tuple[str, Unpack[tuple[str, ...]]]", k)
+                        yield FoamFile.SubDict(self._file, k)
+                    else:
+                        yield v
 
         @override
         def __len__(self) -> int:
@@ -161,14 +166,18 @@ class FoamFile(
         def __iter__(
             self,
         ) -> Iterator[
-            tuple[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]
+            tuple[str, "Data | FoamFile.SubDict | None"] | tuple[None, StandaloneData]
         ]:
             for k, v in self._file._get_parsed().items():
                 if k != ("FoamFile",) or self._include_header:
-                    yield (
-                        k[-1] if k else None,
-                        v if v is not ... else FoamFile.SubDict(self._file, k),
-                    )
+                    if not k:
+                        yield None, v
+                    else:
+                        k = cast("tuple[str, Unpack[tuple[str, ...]]]", k)
+                        yield (
+                            k[-1],
+                            v if v is not ... else FoamFile.SubDict(self._file, k),
+                        )
 
         @override
         def __len__(self) -> int:
@@ -236,6 +245,7 @@ class FoamFile(
             def __iter__(self) -> Iterator["Data | FoamFile.SubDict | None"]:
                 for k, v in self._subdict._file._get_parsed().items():
                     if k[:-1] == self._subdict._keywords:
+                        k = cast("tuple[str, Unpack[tuple[str, ...]]]", k)
                         yield (
                             v
                             if v is not ...
@@ -262,8 +272,9 @@ class FoamFile(
             ) -> Iterator[tuple[str, "Data | FoamFile.SubDict | None"]]:
                 for k, v in self._subdict._file._get_parsed().items():
                     if k[:-1] == self._subdict._keywords:
+                        k = cast("tuple[str, Unpack[tuple[str, ...]]]", k)
                         yield (
-                            k[-1] if k else None,
+                            k[-1],
                             v
                             if v is not ...
                             else FoamFile.SubDict(self._subdict._file, k),
@@ -277,13 +288,17 @@ class FoamFile(
             def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
                 return any(i == x for i in iter(self))
 
-        def __init__(self, _file: "FoamFile", _keywords: tuple[str, ...]) -> None:
+        def __init__(
+            self, _file: "FoamFile", _keywords: tuple[str, Unpack[tuple[str, ...]]]
+        ) -> None:
             self._file = _file
             self._keywords = _keywords
 
         @override
         @with_default
-        def getall(self, keyword: str) -> Collection["Data | FoamFile.SubDict | None"]:
+        def getall(
+            self, keyword: str, /
+        ) -> Collection["Data | FoamFile.SubDict | None"]:
             return self._file.getall((*self._keywords, keyword))
 
         @override
@@ -323,7 +338,7 @@ class FoamFile(
 
         @override
         @with_default
-        def popone(self, keyword: str) -> "Data | FoamFile.SubDict | None":
+        def popone(self, keyword: str, /) -> "Data | FoamFile.SubDict | None":
             return self._file.popone((*self._keywords, keyword))
 
         @override
@@ -616,6 +631,7 @@ class FoamFile(
                 if not keywords:
                     msg = "Cannot set a mapping at the root level of a FoamFile\nUse update(), extend(), or merge() instead."
                     raise ValueError(msg)
+                keywords = cast("tuple[str, Unpack[tuple[str, ...]]]", keywords)
 
                 if keyword.startswith("#"):
                     msg = f"Cannot set a directive as the keyword for a dictionary: {keyword}"
@@ -641,6 +657,7 @@ class FoamFile(
                     self[(*keywords, k)] = v  # ty: ignore[invalid-assignment]
 
             elif keywords:
+                keywords = cast("tuple[str, Unpack[tuple[str, ...]]]", keywords)
                 val = dumps(data, keywords=keywords, format_=format_)
 
                 content = (
@@ -671,39 +688,42 @@ class FoamFile(
     @overload
     @with_default
     def getall(
-        self, keywords: str | tuple[str]
+        self,
+        keywords: str | tuple[str, Unpack[tuple[str, ...]]],
+        /,
     ) -> Collection["Data | FoamFile.SubDict | None"]: ...
 
     @overload
     @with_default
-    def getall(self, keywords: None | tuple[()]) -> Collection[StandaloneData]: ...
-
-    @overload
-    @with_default
-    def getall(
-        self, keywords: tuple[str, ...]
-    ) -> Collection["Data | StandaloneData | FoamFile.SubDict | None"]: ...
+    def getall(self, keywords: None | tuple[()], /) -> Collection[StandaloneData]: ...
 
     @override
     @with_default
     def getall(
         self,
         keywords: str | tuple[str, ...] | None,
+        /,
     ) -> Collection["Data | StandaloneData | FoamFile.SubDict | None"]:
         keywords = FoamFile._normalized_keywords(keywords)
+        keywords = cast("tuple[str, Unpack[tuple[str, ...]]] | tuple[()]", keywords)
 
         parsed = self._get_parsed()
 
-        ret = parsed.getall(keywords)
+        values = parsed.getall(keywords)
 
-        return [
-            FoamFile.SubDict(self, keywords) if v is ... else deepcopy(v) for v in ret
-        ]
+        ret = []
+        for v in values:
+            if v is ...:
+                assert keywords
+                ret.append(FoamFile.SubDict(self, keywords))
+            else:
+                ret.append(deepcopy(v))
+        return ret
 
     @overload
     def __getitem__(
         self,
-        keywords: str | tuple[str],
+        keywords: str | tuple[str, Unpack[tuple[str, ...]]],
     ) -> "Data | FoamFile.SubDict | None": ...
 
     @overload
@@ -711,12 +731,6 @@ class FoamFile(
         self,
         keywords: None | tuple[()],
     ) -> StandaloneData: ...
-
-    @overload
-    def __getitem__(
-        self,
-        keywords: tuple[str, ...],
-    ) -> "Data | StandaloneData | FoamFile.SubDict | None": ...
 
     @override
     def __getitem__(  # ty: ignore[invalid-method-override]
@@ -726,8 +740,10 @@ class FoamFile(
         keywords = FoamFile._normalized_keywords(keywords)
 
         parsed = self._get_parsed()
+        keywords = cast("tuple[str, Unpack[tuple[str, ...]]] | tuple[()]", keywords)
         ret = parsed[keywords]
         if ret is ...:
+            assert keywords
             return FoamFile.SubDict(self, keywords)
         return deepcopy(ret)
 
@@ -801,7 +817,9 @@ class FoamFile(
     @with_default
     @override
     def popone(
-        self, keywords: str | tuple[str, ...] | None
+        self,
+        keywords: str | tuple[str, ...] | None,
+        /,
     ) -> "Data | StandaloneData | FoamFile.SubDict | None":
         keywords = FoamFile._normalized_keywords(keywords)
 
@@ -1051,14 +1069,14 @@ class FoamFile(
     @overload
     @staticmethod
     def _normalized_keywords(
-        keywords: None, /, *, slice_ok: bool = ...
+        keywords: None | tuple[()], /, *, slice_ok: bool = ...
     ) -> tuple[()]: ...
 
     @overload
     @staticmethod
     def _normalized_keywords(
-        keywords: tuple[str, ...], /, *, slice_ok: bool = ...
-    ) -> tuple[str, ...]: ...
+        keywords: tuple[str, Unpack[tuple[str, ...]]], /, *, slice_ok: bool = ...
+    ) -> tuple[str, Unpack[tuple[str, ...]]]: ...
 
     @overload
     @staticmethod
@@ -1141,7 +1159,7 @@ class FoamFieldFile(FoamFile):
         @override
         @with_default
         def getall(
-            self, keyword: str
+            self, keyword: str, /
         ) -> Collection["FoamFieldFile.BoundarySubDict | Data | None"]:
             ret = super().getall(keyword)
             for r in ret:
@@ -1189,23 +1207,17 @@ class FoamFieldFile(FoamFile):
     @overload
     @with_default
     def getall(
-        self, keywords: str | tuple[str]
-    ) -> Collection["Data | FoamFieldFile.BoundariesSubDict | None"]: ...
+        self, keywords: str | tuple[str, Unpack[tuple[str, ...]]], /
+    ) -> Collection["Data | FoamFieldFile.SubDict | None"]: ...
 
     @overload
     @with_default
-    def getall(self, keywords: None | tuple[()]) -> Collection[StandaloneData]: ...
-
-    @overload
-    @with_default
-    def getall(
-        self, keywords: tuple[str, ...]
-    ) -> Collection["Data | StandaloneData | FoamFieldFile.SubDict | None"]: ...
+    def getall(self, keywords: None | tuple[()], /) -> Collection[StandaloneData]: ...
 
     @override
     @with_default
     def getall(
-        self, keywords: str | tuple[str, ...] | None
+        self, keywords: str | tuple[str, ...] | None, /
     ) -> Collection["Data | StandaloneData | FoamFieldFile.SubDict | None"]:
         keywords = FoamFieldFile._normalized_keywords(keywords)
 
@@ -1215,8 +1227,10 @@ class FoamFieldFile(FoamFile):
             for i, r in enumerate(ret):
                 if isinstance(r, FoamFile.SubDict):
                     if len(keywords) == 1:
+                        keywords = cast("tuple[str]", keywords)
                         ret[i] = FoamFieldFile.BoundariesSubDict(self, keywords)
                     elif len(keywords) == 2:
+                        keywords = cast("tuple[str, str]", keywords)
                         ret[i] = FoamFieldFile.BoundarySubDict(self, keywords)
 
         return ret
@@ -1224,26 +1238,14 @@ class FoamFieldFile(FoamFile):
     @overload
     def __getitem__(
         self,
-        keywords: str | tuple[str],
-    ) -> "Data | FoamFieldFile.BoundariesSubDict | None": ...
-
-    @overload
-    def __getitem__(
-        self,
-        keywords: tuple[str, str],
-    ) -> "Data | FoamFieldFile.BoundarySubDict | None": ...
+        keywords: str | tuple[str, Unpack[tuple[str, ...]]],
+    ) -> "Data | FoamFieldFile.SubDict | None": ...
 
     @overload
     def __getitem__(
         self,
         keywords: None | tuple[()],
     ) -> StandaloneData: ...
-
-    @overload
-    def __getitem__(
-        self,
-        keywords: tuple[str, ...],
-    ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None": ...
 
     @override
     def __getitem__(  # ty: ignore[invalid-method-override]
@@ -1252,12 +1254,18 @@ class FoamFieldFile(FoamFile):
     ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None":
         keywords = FoamFieldFile._normalized_keywords(keywords)
 
-        ret = super().__getitem__(keywords)
+        ret = super().__getitem__(keywords)  # ty: ignore[no-matching-overload]
 
-        if keywords[0] == "boundaryField" and isinstance(ret, FoamFile.SubDict):
+        if (
+            keywords
+            and keywords[0] == "boundaryField"
+            and isinstance(ret, FoamFile.SubDict)
+        ):
             if len(keywords) == 1:
+                keywords = cast("tuple[str]", keywords)
                 ret = FoamFieldFile.BoundariesSubDict(self, keywords)
             elif len(keywords) == 2:
+                keywords = cast("tuple[str, str]", keywords)
                 ret = FoamFieldFile.BoundarySubDict(self, keywords)
 
         return ret
