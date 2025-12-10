@@ -31,11 +31,11 @@ from numpy.typing import DTypeLike
 from .._common import dict_from_items
 from .._typing import Dict, SubDict
 
+_FLOAT_PATTERN = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
+_INT_PATTERN = r"-?\d+"
+
 
 class ASCIINumericList(ParserElement):
-    _FLOAT_PATTERN = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
-    _INT_PATTERN = r"-?\d+"
-
     def __init__(
         self,
         dtype: DTypeLike,
@@ -54,38 +54,41 @@ class ASCIINumericList(ParserElement):
     def _generateDefaultName(self) -> str:
         return self.name
 
-    @override
-    def parseImpl(
-        self, instring: str, loc: int, do_actions: bool = True
+    def __parse(
+        self, instring: str, loc: int, *, assume_no_ignores: bool = False
     ) -> tuple[int, ParseResults]:
         spacing_pattern = "|".join(re.escape(c) for c in self.whiteChars)
         assert spacing_pattern
 
-        assert all(
-            isinstance(ignore_expr, Suppress) and isinstance(ignore_expr.expr, Regex)
-            for ignore_expr in self.ignoreExprs
-        )
-        ignore_pattern = "|".join(
-            ignore_expr.expr.re.pattern  # ty: ignore[unresolved-attribute]
-            for ignore_expr in self.ignoreExprs
-        )
+        if assume_no_ignores:
+            ignore_pattern = ""
+        else:
+            assert all(
+                isinstance(ignore_expr, Suppress)
+                and isinstance(ignore_expr.expr, Regex)
+                for ignore_expr in self.ignoreExprs
+            )
+            ignore_pattern = "|".join(
+                ignore_expr.expr.re.pattern  # ty: ignore[unresolved-attribute]
+                for ignore_expr in self.ignoreExprs
+            )
 
-        if ignore_pattern:
-            spacing_pattern = f"{spacing_pattern}|{ignore_pattern}"
+            if ignore_pattern:
+                spacing_pattern = f"{spacing_pattern}|{ignore_pattern}"
 
         if np.issubdtype(self._dtype, np.floating):
-            base_pattern = self._FLOAT_PATTERN
+            number_pattern = _FLOAT_PATTERN
         elif np.issubdtype(self._dtype, np.integer):
-            base_pattern = self._INT_PATTERN
+            number_pattern = _INT_PATTERN
         else:
             msg = f"Unsupported dtype {self._dtype}"
             raise TypeError(msg)
 
         if self._elshape:
             (dim,) = self._elshape
-            element_pattern = rf"\((?:{spacing_pattern})*(?:{base_pattern}(?:{spacing_pattern})*){{{dim}}}\)"
+            element_pattern = rf"\((?:{spacing_pattern})*(?:{number_pattern}(?:{spacing_pattern})*){{{dim}}}\)"
         else:
-            element_pattern = base_pattern
+            element_pattern = number_pattern
 
         regular_pattern = re.compile(
             rf"(\d*)(?:{spacing_pattern})*\((?:{spacing_pattern})*((?:{element_pattern}(?:{spacing_pattern})*)*)\)"
@@ -158,6 +161,15 @@ class ASCIINumericList(ParserElement):
             self,
         )
 
+    @override
+    def parseImpl(
+        self, instring: str, loc: int, do_actions: bool = True
+    ) -> tuple[int, ParseResults]:
+        try:
+            return self.__parse(instring, loc, assume_no_ignores=True)
+        except ParseException:
+            return self.__parse(instring, loc)
+
 
 _EAGER_INTEGER = Word(nums).add_parse_action(
     lambda tks: int(tks[0]), call_during_try=True
@@ -210,8 +222,6 @@ def binary_numeric_list(
 
 
 class ASCIIFacesLikeList(ParserElement):
-    _INT_PATTERN = ASCIINumericList._INT_PATTERN
-
     def __init__(self) -> None:
         super().__init__()
         self.name = "ASCIIFacesLikeList"
@@ -220,27 +230,29 @@ class ASCIIFacesLikeList(ParserElement):
     def _generateDefaultName(self) -> str:
         return self.name
 
-    @override
-    def parseImpl(
-        self, instring: str, loc: int, do_actions: bool = True
+    def __parse(
+        self, instring: str, loc: int, *, assume_no_ignores: bool = False
     ) -> tuple[int, ParseResults]:
         spacing_pattern = "|".join(re.escape(c) for c in self.whiteChars)
         assert spacing_pattern
 
-        assert all(
-            isinstance(ignore_expr, Suppress) and isinstance(ignore_expr.expr, Regex)
-            for ignore_expr in self.ignoreExprs
-        )
-        ignore_pattern = "|".join(
-            ignore_expr.expr.re.pattern  # ty: ignore[unresolved-attribute]
-            for ignore_expr in self.ignoreExprs
-        )
+        if assume_no_ignores:
+            ignore_pattern = ""
+        else:
+            assert all(
+                isinstance(ignore_expr, Suppress)
+                and isinstance(ignore_expr.expr, Regex)
+                for ignore_expr in self.ignoreExprs
+            )
+            ignore_pattern = "|".join(
+                ignore_expr.expr.re.pattern  # ty: ignore[unresolved-attribute]
+                for ignore_expr in self.ignoreExprs
+            )
+            if ignore_pattern:
+                spacing_pattern = f"{spacing_pattern}|{ignore_pattern}"
 
-        if ignore_pattern:
-            spacing_pattern = f"{spacing_pattern}|{ignore_pattern}"
-
-        three_face_pattern = rf"3(?:{spacing_pattern})*\((?:{spacing_pattern})*(?:{self._INT_PATTERN}(?:{spacing_pattern})*){{3}}\)"
-        four_face_pattern = rf"4(?:{spacing_pattern})*\((?:{spacing_pattern})*(?:{self._INT_PATTERN}(?:{spacing_pattern})*){{4}}\)"
+        three_face_pattern = rf"3(?:{spacing_pattern})*\((?:{spacing_pattern})*(?:{_INT_PATTERN}(?:{spacing_pattern})*){{3}}\)"
+        four_face_pattern = rf"4(?:{spacing_pattern})*\((?:{spacing_pattern})*(?:{_INT_PATTERN}(?:{spacing_pattern})*){{4}}\)"
 
         face_pattern = rf"(?:{three_face_pattern})|(?:{four_face_pattern})"
 
@@ -290,6 +302,15 @@ class ASCIIFacesLikeList(ParserElement):
             msg,
             self,
         )
+
+    @override
+    def parseImpl(
+        self, instring: str, loc: int, do_actions: bool = True
+    ) -> tuple[int, ParseResults]:
+        try:
+            return self.__parse(instring, loc, assume_no_ignores=True)
+        except ParseException:
+            return self.__parse(instring, loc)
 
 
 def list_of(entry: ParserElement) -> ParserElement:
