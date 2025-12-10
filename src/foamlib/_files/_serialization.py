@@ -5,9 +5,9 @@ from typing import Literal, overload
 from warnings import warn
 
 if sys.version_info >= (3, 11):
-    from typing import Never, assert_never, assert_type
+    from typing import Never, Unpack, assert_never, assert_type
 else:
-    from typing_extensions import Never, assert_never, assert_type
+    from typing_extensions import Never, Unpack, assert_never, assert_type
 
 import numpy as np
 
@@ -44,7 +44,7 @@ def normalized(
     data: DataLike,
     /,
     *,
-    keywords: tuple[str, ...] | None = ...,
+    keywords: tuple[str, Unpack[tuple[str, ...]]] | None = ...,
     format_: Literal["ascii", "binary"] | None = ...,
 ) -> Data: ...
 
@@ -64,19 +64,9 @@ def normalized(
     data: SubDictLike,
     /,
     *,
-    keywords: tuple[str, ...] = ...,
+    keywords: tuple[str, Unpack[tuple[str, ...]]] = ...,
     format_: Literal["ascii", "binary"] | None = ...,
 ) -> SubDict: ...
-
-
-@overload
-def normalized(
-    data: DataLike,
-    /,
-    *,
-    keywords: tuple[str, ...] = ...,
-    format_: Literal["ascii", "binary"] | None = ...,
-) -> Data: ...
 
 
 @overload
@@ -94,7 +84,7 @@ def normalized(
     data: None,
     /,
     *,
-    keywords: tuple[str, ...] = ...,
+    keywords: tuple[str, Unpack[tuple[str, ...]]] = ...,
     format_: Literal["ascii", "binary"] | None = ...,
 ) -> None: ...
 

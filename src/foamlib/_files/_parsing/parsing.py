@@ -228,6 +228,16 @@ class ParsedFile(
         self._parsed.add(keywords, ParsedFile._Entry(data, start, end))
         self._update_content(start, end, content)
 
+    @overload
+    @with_default
+    def popone(self, keywords: tuple[()]) -> StandaloneData: ...
+
+    @overload
+    @with_default
+    def popone(
+        self, keywords: tuple[str, Unpack[tuple[str, ...]]]
+    ) -> Data | EllipsisType | None: ...
+
     @override
     @with_default
     def popone(
