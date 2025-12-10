@@ -285,4 +285,4 @@ If you use **foamlib** in your research, please cite our paper:
 
 ## 👟 Footnotes
 
-<a id="benchmark">[1]</a> foamlib 1.3.11 vs. PyFoam 2023.7 (Python 3.11.13) on an M3 MacBook Air. [Benchmark script](https://github.com/gerlero/foamlib/blob/main/benchmark/benchmark.py).
+<a id="benchmark">[1]</a> foamlib 1.4.4 vs. PyFoam 2023.7 (Python 3.11.13) on an M3 MacBook Air. [Benchmark script](https://github.com/gerlero/foamlib/blob/main/benchmark/benchmark.py).
