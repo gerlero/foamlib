@@ -66,6 +66,14 @@ def test_write_read(tmp_path: Path) -> None:
     assert isinstance(ssd, FoamFile.SubDict)
     assert ssd["key"] == "value"
 
+    sd["subsubdict"] = {"a": sd["subsubdict"], "b": 2}
+    ssd = sd["subsubdict"]
+    assert isinstance(ssd, FoamFile.SubDict)
+    assert "key" not in ssd
+    assert isinstance(ssd["a"], FoamFile.SubDict)
+    assert ssd["a"]["key"] == "value"
+    assert ssd["b"] == 2
+
     sd["list"] = [1, 2, 3]
     assert sd["list"] == [1, 2, 3]
 
