@@ -369,6 +369,11 @@ class AsyncFoamCase(FoamCaseRunBase):
         """
         Run an async function on each element of an iterable concurrently.
 
+        Note that if `coro` runs :class:`AsyncFoamCase`s, these will be
+        executed in parallel if possible (this parallelism is automatically
+        limited by the :attr:`max_cpus` attribute in order to avoid
+        oversubscription of available CPUs).
+
         :param coro: An async function to run on each element.
         :param iterable: An iterable of arguments to pass to the function.
 
@@ -413,19 +418,21 @@ class AsyncFoamCase(FoamCaseRunBase):
         """
         Run multiple cases concurrently.
 
-        Note that maximum parallelism for :class:`AsyncFoamCase` is limited by the :attr:`max_cpus`
-        attribute in order to avoid overloading the system.
+        Multiple cases will be run in parallel if possible (this parallelism is
+        automatically limited by the :attr:`max_cpus` attribute in order to
+        avoid oversubscription of available CPUs).
 
-        :param cases: Instances of :class:`AsyncFoamCase` (:meth:`run` will be called) or arbitrary
-            awaitables (will be awaited as-is).
+        :param cases: Instances of :class:`AsyncFoamCase` (:meth:`run` will be
+            called) or arbitrary awaitables (will be awaited as-is).
 
         Example usage: ::
+
             from foamlib import AsyncFoamCase
 
             case1 = AsyncFoamCase("path/to/case1")
             case2 = AsyncFoamCase("path/to/case2")
 
-            await AsyncFoamCase.run_all([case1, case2]) # Cases will run in parallel (as much the :attr:`max_cpus` allows)
+            await AsyncFoamCase.run_all([case1, case2])
         """
         await asyncio.gather(
             *(case.run() if isinstance(case, AsyncFoamCase) else case for case in cases)
@@ -436,18 +443,20 @@ class AsyncFoamCase(FoamCaseRunBase):
         """
         Run multiple cases concurrently, blocking until all are complete.
 
-        Note that maximum parallelism for :class:`AsyncFoamCase` is limited by the :attr:`max_cpus`
-        attribute in order to avoid overloading the system.
+        Multiple cases will be run in parallel if possible (this parallelism is
+        automatically limited by the :attr:`max_cpus` attribute in order to
+        avoid oversubscription of available CPUs).
 
-        :param cases: Instances of :class:`AsyncFoamCase` (:meth:`run` will be called) or arbitrary
-            awaitables (will be awaited as-is).
+        :param cases: Instances of :class:`AsyncFoamCase` (:meth:`run` will be
+            called) or arbitrary awaitables (will be awaited as-is).
 
         Example usage: ::
+
             from foamlib import AsyncFoamCase
 
             case1 = AsyncFoamCase("path/to/case1")
             case2 = AsyncFoamCase("path/to/case2")
 
-            AsyncFoamCase.run_all_wait([case1, case2]) # Cases will run in parallel (as much the :attr:`max_cpus` allows)
+            AsyncFoamCase.run_all_wait([case1, case2])
         """
         asyncio.get_event_loop().run_until_complete(AsyncFoamCase.run_all(cases))
