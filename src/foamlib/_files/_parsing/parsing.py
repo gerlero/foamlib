@@ -102,13 +102,13 @@ class ParsedFile(
                         raise ValueError(msg)
                     ret[(*_keywords, keyword)] = ParsedFile._Entry(..., start, end)
                     # Flatten nested dict entries
-                    for k, v in (value.items() if isinstance(value, dict) else value.allitems()):
+                    for k, v in value.items():
                         nested_key = (*_keywords, keyword, k) if k is not None else (*_keywords, keyword)
                         if isinstance(v, (dict, MultiDict)):
                             ret[nested_key] = ParsedFile._Entry(..., start, end)
                             # Recursively flatten
                             def flatten_dict(d: dict | MultiDict, prefix: tuple[str, ...]) -> None:
-                                for k2, v2 in (d.items() if isinstance(d, dict) else d.allitems()):
+                                for k2, v2 in d.items():
                                     key2 = (*prefix, k2) if k2 is not None else prefix
                                     if isinstance(v2, (dict, MultiDict)):
                                         ret[key2] = ParsedFile._Entry(..., start, end)

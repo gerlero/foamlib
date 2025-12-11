@@ -612,9 +612,31 @@ def _parse_dict(data: bytes, pos: int) -> tuple[int, Dict]:
         if data[pos:pos+1] == b'}':
             break
         
+        # Check for directive
+        if data[pos:pos+1] == b'#':
+            pos, directive = _parse_directive(data, pos)
+            # Parse optional data entry after directive
+            try:
+                pos, value = _parse_data_entry(data, pos)
+            except ParseError:
+                value = None
+            # Directives end at line end
+            while pos < len(data) and data[pos:pos+1] not in b'\n\r':
+                pos += 1
+            if pos < len(data):
+                pos += 1
+            entries.append((directive, value))
+            continue
+        
         # Parse keyword
         pos, keyword = _parse_identifier(data, pos)
         pos = _skip_whitespace_and_comments(data, pos)
+        
+        # Check for ; immediately (keyword with no value)
+        if data[pos:pos+1] == b';':
+            pos += 1
+            entries.append((keyword, None))
+            continue
         
         # Parse value (dict or data;)
         if data[pos:pos+1] == b'{':
@@ -883,8 +905,15 @@ def _parse_standalone_data(data: bytes, pos: int) -> tuple[int, StandaloneData]:
             return _parse_binary_list(data, pos, np.float32, elshape=(3,))
         except ParseError:
             pass
+        
+        # If we have a count but none of the binary/numeric lists worked,
+        # try a regular list (e.g., 7(dict1 dict2...))
+        try:
+            return _parse_list(data, pos)
+        except ParseError:
+            pass
     
-    # Try generic data entry
+    # Try generic data entry (including lists without count)
     try:
         pos, value = _parse_data_entry(data, pos)
         # If it's a tuple, return as-is, otherwise return the single value
@@ -998,48 +1027,10 @@ def parse_file_with_locations(data: bytes) -> list[tuple[tuple[str | None, Any],
         except ParseError:
             pass
         
-        # Try standalone data entry (tries numeric lists first)
+        # Try standalone data entry (tries numeric lists first, then falls back to regular lists)
         try:
-            # Use _parse_standalone_data_entry for first attempt
-            end_pos = pos
-            # Try faces list first
-            if result := _try_parse_faces_list(data, end_pos):
-                end_pos, standalone_data = result
-            else:
-                # Try ASCII numeric lists
-                parsed = False
-                for dtype, elshape in [
-                    (int, ()),
-                    (float, ()),
-                    (float, (3,)),
-                ]:
-                    try:
-                        end_pos, standalone_data = _parse_ascii_list(data, pos, dtype, elshape=elshape)
-                        parsed = True
-                        break
-                    except ParseError:
-                        pass
-                
-                if not parsed:
-                    # Try binary lists
-                    count_match = re.match(rb'(\d+)', data[pos:])
-                    if count_match:
-                        for dtype, elshape in [
-                            (np.int32, ()),
-                            (np.float64, ()),
-                            (np.float64, (3,)),
-                            (np.float32, (3,)),
-                        ]:
-                            try:
-                                end_pos, standalone_data = _parse_binary_list(data, pos, dtype, elshape=elshape)
-                                parsed = True
-                                break
-                            except ParseError:
-                                pass
-                
-                if not parsed:
-                    # Fall back to _parse_data_entry
-                    end_pos, standalone_data = _parse_data_entry(data, pos)
+            # Use _parse_standalone_data which has the right logic
+            end_pos, standalone_data = _parse_standalone_data(data, pos)
             
             if not standalone_entries:
                 standalone_start = start
