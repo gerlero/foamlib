@@ -21,10 +21,7 @@ from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
 
 from .._files import _common
-from ._io import FoamFileIO
-from ._parsing import parse
-from ._serialization import dumps, normalized
-from ._typing import (
+from ..typing import (
     Data,
     DataLike,
     Field,
@@ -36,6 +33,9 @@ from ._typing import (
     SubDict,
     SubDictLike,
 )
+from ._io import FoamFileIO
+from ._parsing import parse
+from ._serialization import dumps, normalized
 from ._util import SupportsKeysAndGetItem
 from .types import Dimensioned, DimensionSet
 

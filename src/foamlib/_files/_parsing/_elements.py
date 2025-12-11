@@ -28,8 +28,8 @@ else:
 
 from numpy.typing import DTypeLike
 
+from ...typing import Dict, SubDict
 from .._common import dict_from_items
-from .._typing import Dict, SubDict
 
 _FLOAT_PATTERN = r"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))"
 _INT_PATTERN = r"-?\d+"

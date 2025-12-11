@@ -12,9 +12,7 @@ else:
 import numpy as np
 
 from .._files import _common
-from ._common import dict_from_items
-from ._parsing import parse
-from ._typing import (
+from ..typing import (
     Data,
     DataLike,
     Dict,
@@ -27,6 +25,8 @@ from ._typing import (
     SubDict,
     SubDictLike,
 )
+from ._common import dict_from_items
+from ._parsing import parse
 from .types import Dimensioned, DimensionSet
 
 

@@ -90,8 +90,8 @@
       .. autoproperty:: foamlib.FoamFieldFile.BoundarySubDict.type
 
 
-Additional types
-----------------
+Additional classes
+------------------
 
 .. autoclass:: foamlib.Dimensioned
 

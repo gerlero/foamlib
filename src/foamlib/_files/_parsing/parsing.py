@@ -19,7 +19,7 @@ from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
 from pyparsing import ParseException, ParseResults, TypeVar
 
-from .._typing import Data, File, StandaloneData, SubDict
+from ...typing import Data, File, StandaloneData, SubDict
 from .._util import add_to_mapping
 from ._grammar import DATA, FILE, LOCATED_FILE, STANDALONE_DATA, TOKEN
 
