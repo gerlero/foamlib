@@ -1,7 +1,7 @@
 import dataclasses
 import sys
 from collections.abc import Collection, Iterator, Sequence
-from typing import cast, overload
+from typing import Any, TypeVar, cast, overload
 
 if sys.version_info >= (3, 11):
     from typing import Never, Unpack
@@ -17,38 +17,43 @@ from types import EllipsisType
 
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
-from pyparsing import ParseException, ParseResults, TypeVar
 
 from .._typing import Data, File, StandaloneData, SubDict
 from .._util import add_to_mapping
-from ._grammar import DATA, FILE, LOCATED_FILE, STANDALONE_DATA, TOKEN
+from ._regex_parser import (
+    ParseError,
+    parse_data,
+    parse_file,
+    parse_file_with_locations,
+    parse_standalone_data,
+    parse_token,
+)
 
 _T = TypeVar("_T", str, Data, StandaloneData, File)
 
 
 def parse(s: bytes | str, /, *, target: type[_T]) -> _T:
-    if isinstance(s, bytes):
-        s = s.decode("latin-1")
+    if isinstance(s, str):
+        s = s.encode("latin-1")
 
     if target is str:
-        element = TOKEN
+        parse_func = parse_token
     elif target is Data:
-        element = DATA
+        parse_func = parse_data
     elif target is StandaloneData:
-        element = STANDALONE_DATA
+        parse_func = parse_standalone_data
     elif target is File:
-        element = FILE
+        parse_func = parse_file
     else:
         msg = f"Unsupported type for parsing: {target}"
         raise TypeError(msg)
 
     try:
-        parse_results = element.parse_string(s, parse_all=True)
-    except ParseException as e:
+        ret = parse_func(s)
+    except ParseError as e:
         msg = f"Failed to parse {target}: {e}"
         raise ValueError(msg) from e
 
-    (ret,) = parse_results
     return ret
 
 
@@ -62,15 +67,12 @@ class ParsedFile(
         end: int
 
     def __init__(self, contents: bytes | str, /) -> None:
-        if isinstance(contents, bytes):
-            contents_str = contents.decode("latin-1")
-        else:
-            contents_str = contents
+        if isinstance(contents, str):
             contents = contents.encode("latin-1")
 
         try:
-            parse_results = LOCATED_FILE.parse_string(contents_str, parse_all=True)
-        except ParseException as e:
+            parse_results = parse_file_with_locations(contents)
+        except ParseError as e:
             msg = f"Failed to parse contents: {e}"
             raise ValueError(msg) from e
         self._parsed = self._flatten_results(parse_results)
@@ -80,44 +82,48 @@ class ParsedFile(
 
     @staticmethod
     def _flatten_results(
-        parse_results: ParseResults | Sequence[ParseResults],
+        parse_results: list[tuple[tuple[str | None, Any], int, int]],
         /,
         *,
         _keywords: tuple[str, ...] = (),
     ) -> MultiDict[tuple[str, ...], "ParsedFile._Entry"]:
         ret: MultiDict[tuple[str, ...], ParsedFile._Entry] = MultiDict()
-        for parse_result in parse_results:
-            value = parse_result.value
-            assert isinstance(value, Sequence)
-            start = parse_result.locn_start
-            assert isinstance(start, int)
-            end = parse_result.locn_end
-            assert isinstance(end, int)
-            keyword, *data = value
+        for (keyword, value), start, end in parse_results:
             if keyword is None:
                 assert not _keywords
-                assert len(data) == 1
-                assert not isinstance(data[0], ParseResults)
                 assert () not in ret
-                ret[()] = ParsedFile._Entry(data[0], start, end)
+                ret[()] = ParsedFile._Entry(value, start, end)
             else:
                 assert isinstance(keyword, str)
-                if len(data) == 0 or isinstance(data[0], ParseResults):
+                # Check if value is a dict (nested structure)
+                if isinstance(value, (dict, MultiDict)):
                     if (*_keywords, keyword) in ret:
                         msg = f"Duplicate entry found for keyword: {keyword}"
                         raise ValueError(msg)
                     ret[(*_keywords, keyword)] = ParsedFile._Entry(..., start, end)
-                    ret.extend(
-                        ParsedFile._flatten_results(
-                            data, _keywords=(*_keywords, keyword)
-                        )
-                    )
+                    # Flatten nested dict entries
+                    for k, v in (value.items() if isinstance(value, dict) else value.allitems()):
+                        nested_key = (*_keywords, keyword, k) if k is not None else (*_keywords, keyword)
+                        if isinstance(v, (dict, MultiDict)):
+                            ret[nested_key] = ParsedFile._Entry(..., start, end)
+                            # Recursively flatten
+                            def flatten_dict(d: dict | MultiDict, prefix: tuple[str, ...]) -> None:
+                                for k2, v2 in (d.items() if isinstance(d, dict) else d.allitems()):
+                                    key2 = (*prefix, k2) if k2 is not None else prefix
+                                    if isinstance(v2, (dict, MultiDict)):
+                                        ret[key2] = ParsedFile._Entry(..., start, end)
+                                        flatten_dict(v2, key2)
+                                    else:
+                                        ret.add(key2, ParsedFile._Entry(v2, start, end))
+                            flatten_dict(v, nested_key)
+                        else:
+                            ret.add(nested_key, ParsedFile._Entry(v, start, end))
                 else:
                     if (*_keywords, keyword) in ret and not keyword.startswith("#"):
                         msg = f"Duplicate entry found for keyword: {keyword}"
                         raise ValueError(msg)
                     ret.add(
-                        (*_keywords, keyword), ParsedFile._Entry(data[0], start, end)
+                        (*_keywords, keyword), ParsedFile._Entry(value, start, end)
                     )
         return ret
 
