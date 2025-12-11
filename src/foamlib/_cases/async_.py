@@ -364,9 +364,90 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     @staticmethod
     def map(
-        coro: Callable[[_X], Awaitable[_Y]], iterable: Iterable[_X]
+        coro: Callable[[_X], Awaitable[_Y]], iterable: Iterable[_X], /
     ) -> Iterable[_Y]:
-        """Run an async function on each element of an iterable concurrently."""
+        """
+        Run an async function on each element of an iterable concurrently.
+
+        :param coro: An async function to run on each element.
+        :param iterable: An iterable of arguments to pass to the function.
+
+        :return: An iterable of results from the function.
+
+        Example usage: ::
+
+            import os
+            from pathlib import Path
+            from foamlib import AsyncSlurmFoamCase
+            from scipy.optimize import differential_evolution
+
+            # Set up base case for optimization
+            base = AsyncSlurmFoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily")
+
+            async def objective_function(x):
+                async with base.clone() as case:
+                    # Set inlet velocity based on optimization parameters
+                    case[0]["U"].boundary_field["inlet"].value = [x[0], 0, 0]
+
+                    # Run with fallback to local execution if Slurm unavailable
+                    await case.run(fallback=True)
+
+                    # Return objective (minimize velocity magnitude at outlet)
+                    return abs(case[-1]["U"].internal_field[0][0])
+
+            # Run optimization with parallel jobs
+            result = differential_evolution(
+                objective_function,
+                bounds=[(-1, 1)],
+                workers=AsyncSlurmFoamCase.map,
+                polish=False
+            )
+            print(f"Optimal inlet velocity: {result.x[0]}")
+        """
         return asyncio.get_event_loop().run_until_complete(
             asyncio.gather(*(coro(arg) for arg in iterable))
         )
+
+    @staticmethod
+    async def run_all(cases: Iterable["AsyncFoamCase | Awaitable[object]"], /) -> None:
+        """
+        Run multiple cases concurrently.
+
+        Note that maximum parallelism for :class:`AsyncFoamCase` is limited by the :attr:`max_cpus`
+        attribute in order to avoid overloading the system.
+
+        :param cases: Instances of :class:`AsyncFoamCase` (:meth:`run` will be called) or arbitrary
+            awaitables (will be awaited as-is).
+
+        Example usage: ::
+            from foamlib import AsyncFoamCase
+
+            case1 = AsyncFoamCase("path/to/case1")
+            case2 = AsyncFoamCase("path/to/case2")
+
+            await AsyncFoamCase.run_all([case1, case2]) # Cases will run in parallel (as much the :attr:`max_cpus` allows)
+        """
+        await asyncio.gather(
+            *(case.run() if isinstance(case, AsyncFoamCase) else case for case in cases)
+        )
+
+    @staticmethod
+    def run_all_wait(cases: Iterable["AsyncFoamCase | Awaitable[object]"], /) -> None:
+        """
+        Run multiple cases concurrently, blocking until all are complete.
+
+        Note that maximum parallelism for :class:`AsyncFoamCase` is limited by the :attr:`max_cpus`
+        attribute in order to avoid overloading the system.
+
+        :param cases: Instances of :class:`AsyncFoamCase` (:meth:`run` will be called) or arbitrary
+            awaitables (will be awaited as-is).
+
+        Example usage: ::
+            from foamlib import AsyncFoamCase
+
+            case1 = AsyncFoamCase("path/to/case1")
+            case2 = AsyncFoamCase("path/to/case2")
+
+            AsyncFoamCase.run_all_wait([case1, case2]) # Cases will run in parallel (as much the :attr:`max_cpus` allows)
+        """
+        asyncio.get_event_loop().run_until_complete(AsyncFoamCase.run_all(cases))
