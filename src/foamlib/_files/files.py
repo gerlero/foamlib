@@ -522,9 +522,7 @@ class FoamFile(
             self.format = "ascii"
             self.class_ = "dictionary"
             self.location = f'"{self.path.parent.name}"'
-            self.object_ = (
-                self.path.stem if self.path.suffix == ".gz" else self.path.name
-            )
+            self.object_ = self.path.name.removesuffix(".gz")
 
     @overload
     def _update_class_for_field_if_needed(
