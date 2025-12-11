@@ -26,8 +26,8 @@ from ..typing import (
     DataLike,
     Field,
     FieldLike,
-    File,
-    FileLike,
+    FileDict,
+    FileDictLike,
     StandaloneData,
     StandaloneDataLike,
     SubDict,
@@ -844,14 +844,14 @@ class FoamFile(
     def __setitem__(
         self,
         keywords: slice,
-        data: FileLike,
+        data: FileDictLike,
     ) -> None: ...
 
     @override
     def __setitem__(  # ty: ignore[invalid-method-override]
         self,
         keywords: str | tuple[str, ...] | None | slice,
-        data: DataLike | StandaloneDataLike | SubDictLike | None | FileLike,
+        data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
     ) -> None:
         keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
 
@@ -1082,7 +1082,7 @@ class FoamFile(
     def __fspath__(self) -> str:
         return str(self.path)
 
-    def as_dict(self, *, include_header: bool = False) -> File:
+    def as_dict(self, *, include_header: bool = False) -> FileDict:
         """
         Return a nested dict representation of the file.
 
@@ -1098,7 +1098,7 @@ class FoamFile(
         s: bytes | str,
         *,
         include_header: bool = False,
-    ) -> File | StandaloneData:
+    ) -> FileDict | StandaloneData:
         """
         Standalone deserializing function.
 
@@ -1109,7 +1109,7 @@ class FoamFile(
         :param include_header: Whether to include the "FoamFile" header in the output.
             If `True`, the header will be included if it is present in the input object.
         """
-        file = parse(s, target=File)  # ty: ignore[invalid-argument-type]
+        file = parse(s, target=FileDict)  # ty: ignore[invalid-argument-type]
 
         ret = (
             cast("StandaloneData", file[None])
@@ -1128,7 +1128,7 @@ class FoamFile(
 
     @staticmethod
     def dumps(
-        file: FileLike | StandaloneDataLike, *, ensure_header: bool = True
+        file: FileDictLike | StandaloneDataLike, *, ensure_header: bool = True
     ) -> bytes:
         """
         Standalone serializing function.

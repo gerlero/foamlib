@@ -17,8 +17,8 @@ from ..typing import (
     DataLike,
     Dict,
     DictLike,
-    File,
-    FileLike,
+    FileDict,
+    FileDictLike,
     KeywordEntry,
     StandaloneData,
     StandaloneDataLike,
@@ -32,11 +32,11 @@ from .types import Dimensioned, DimensionSet
 
 @overload
 def normalized(
-    data: FileLike,
+    data: FileDictLike,
     *,
     keywords: tuple[()] = ...,
     format_: Literal["ascii", "binary"] | None = ...,
-) -> File: ...
+) -> FileDict: ...
 
 
 @overload
@@ -90,12 +90,12 @@ def normalized(
 
 
 def normalized(
-    data: FileLike | DataLike | StandaloneDataLike | SubDictLike | DictLike | None,
+    data: FileDictLike | DataLike | StandaloneDataLike | SubDictLike | DictLike | None,
     /,
     *,
     keywords: tuple[str, ...] | None = (),
     format_: Literal["ascii", "binary"] | None = None,
-) -> File | Data | StandaloneData | SubDict | Dict | None:
+) -> FileDict | Data | StandaloneData | SubDict | Dict | None:
     match data, keywords, format_:
         case {"FoamFile": {"format": ("ascii" | "binary") as format_}}, (), None:
             pass
@@ -115,7 +115,7 @@ def normalized(
                     )
                     for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
                 ),
-                target=File,
+                target=FileDict,
                 check_keys=True,
             )  # ty: ignore[invalid-return-type]
 
@@ -421,7 +421,7 @@ def normalized(
 
 
 def dumps(
-    data: File | Data | StandaloneData | KeywordEntry | SubDict,
+    data: FileDict | Data | StandaloneData | KeywordEntry | SubDict,
     *,
     keywords: tuple[str, ...] | None = (),
     format_: Literal["ascii", "binary"] | None = None,
