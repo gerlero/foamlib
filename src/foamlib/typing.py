@@ -113,12 +113,12 @@ SubDict: TypeAlias = (
 SubDictLike: TypeAlias = Mapping[str, "DataLike | SubDictLike | None"]
 """Any mapping that could be interpreted as a :type:`SubDict`."""
 
-File: TypeAlias = (
+FileDict: TypeAlias = (
     dict[str | None, StandaloneData | Data | SubDict | None]
     | MultiDict[str | None, StandaloneData | Data | SubDict | None]
 )
 """An entire OpenFOAM file as a :class:`dict` or :class:`MultiDict`."""
-FileLike: TypeAlias = Mapping[
+FileDictLike: TypeAlias = Mapping[
     str | None, StandaloneDataLike | DataLike | SubDictLike | None
 ]
-"""Any mapping that could be interpreted as a :type:`File`."""
+"""Any mapping that could be interpreted as a :type:`FileDict`."""

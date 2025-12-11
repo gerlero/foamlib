@@ -19,11 +19,11 @@ from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
 from pyparsing import ParseException, ParseResults, TypeVar
 
-from ...typing import Data, File, StandaloneData, SubDict
+from ...typing import Data, FileDict, StandaloneData, SubDict
 from .._util import add_to_mapping
 from ._grammar import DATA, FILE, LOCATED_FILE, STANDALONE_DATA, TOKEN
 
-_T = TypeVar("_T", str, Data, StandaloneData, File)
+_T = TypeVar("_T", str, Data, StandaloneData, FileDict)
 
 
 def parse(s: bytes | str, /, *, target: type[_T]) -> _T:
@@ -36,7 +36,7 @@ def parse(s: bytes | str, /, *, target: type[_T]) -> _T:
         element = DATA
     elif target is StandaloneData:
         element = STANDALONE_DATA
-    elif target is File:
+    elif target is FileDict:
         element = FILE
     else:
         msg = f"Unsupported type for parsing: {target}"
@@ -303,8 +303,8 @@ class ParsedFile(
 
         return start, end
 
-    def as_dict(self) -> File:
-        ret: File = {}
+    def as_dict(self) -> FileDict:
+        ret: FileDict = {}
         for keywords, entry in self._parsed.items():
             assert isinstance(entry, ParsedFile._Entry)
             if not keywords:
@@ -312,7 +312,7 @@ class ParsedFile(
                 assert None not in ret
                 ret[None] = entry.data
             elif entry.data is ...:
-                parent: File | SubDict = ret
+                parent: FileDict | SubDict = ret
                 for k in keywords[:-1]:
                     sub = parent[k]
                     assert isinstance(sub, (dict, MultiDict))
@@ -322,7 +322,7 @@ class ParsedFile(
             elif len(keywords) == 1:
                 ret = add_to_mapping(ret, keywords[0], entry.data)  # ty: ignore[invalid-assignment]
             else:
-                grandparent: File | SubDict = ret
+                grandparent: FileDict | SubDict = ret
                 for k in keywords[:-2]:
                     sub = grandparent[k]
                     assert isinstance(sub, (dict, MultiDict))

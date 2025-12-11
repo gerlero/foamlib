@@ -17,7 +17,7 @@ from pyparsing import (
     printables,
 )
 
-from ...typing import Dict, File, SubDict
+from ...typing import Dict, FileDict, SubDict
 from .._common import dict_from_items
 from ..types import Dimensioned, DimensionSet
 from ._elements import (
@@ -181,7 +181,7 @@ FILE = (
         + Opt(STANDALONE_DATA.copy().add_parse_action(lambda tks: [(None, tks[0])]))
         + STANDALONE_KEYWORD_ENTRY[...]
     )
-    .add_parse_action(lambda tks: dict_from_items(tks, target=File))
+    .add_parse_action(lambda tks: dict_from_items(tks, target=FileDict))
     .ignore(_COMMENT)
     .parse_with_tabs()
 )

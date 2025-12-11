@@ -3,7 +3,7 @@ from typing import TypeVar, overload
 
 from multicollections import MultiDict
 
-from ..typing import Dict, File, SubDict
+from ..typing import Dict, FileDict, SubDict
 from ._util import add_to_mapping
 
 _V = TypeVar("_V")
@@ -56,7 +56,7 @@ def dict_from_items(
     items: Iterable[tuple[object, _V]],
     /,
     *,
-    target: type[File] = ...,
+    target: type[FileDict] = ...,
     check_keys: bool = ...,
 ) -> dict[str | None, _V] | MultiDict[str | None, _V]: ...
 
@@ -65,7 +65,7 @@ def dict_from_items(
     items: Iterable[tuple[object, _V]],
     /,
     *,
-    target: type[Dict] | type[SubDict] | type[File],
+    target: type[Dict] | type[SubDict] | type[FileDict],
     check_keys: bool = False,
 ) -> (
     dict[str, _V]
@@ -73,8 +73,8 @@ def dict_from_items(
     | dict[str | None, _V]
     | MultiDict[str | None, _V]
 ):
-    none_ok = target is File
-    directive_ok = target in (File, SubDict)
+    none_ok = target is FileDict
+    directive_ok = target in (FileDict, SubDict)
 
     ret: (
         dict[str, _V]
