@@ -3,7 +3,7 @@ from typing import TypeVar, overload
 
 from multicollections import MultiDict
 
-from ._typing import Dict, File, SubDict
+from ..typing import Dict, File, SubDict
 from ._util import add_to_mapping
 
 _V = TypeVar("_V")

@@ -12,7 +12,7 @@ else:
 from collections.abc import Sequence
 
 if TYPE_CHECKING:
-    from ._typing import Tensor, TensorLike
+    from ..typing import Tensor, TensorLike
 
 
 _T = TypeVar("_T", bound=np.floating | np.integer)

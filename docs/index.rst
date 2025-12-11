@@ -25,6 +25,7 @@ With support for ASCII- and binary-formatted fields, a fully type-hinted API, an
    example
    parametricstudy
    postprocessing
+   typing
 
 
 🔍 Indices and search

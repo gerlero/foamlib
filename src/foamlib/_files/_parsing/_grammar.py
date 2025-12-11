@@ -17,8 +17,8 @@ from pyparsing import (
     printables,
 )
 
+from ...typing import Dict, File, SubDict
 from .._common import dict_from_items
-from .._typing import Dict, File, SubDict
 from ..types import Dimensioned, DimensionSet
 from ._elements import (
     ASCIIFacesLikeList,
