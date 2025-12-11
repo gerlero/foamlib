@@ -32,10 +32,10 @@ _Loading a_ volVectorField _with one million cells_<sup>[1](#benchmark)</sup>
 
 **foamlib** is a Python package designed to simplify and streamline OpenFOAM workflows. It provides:
 
-- **🗄️ Intuitive file handling**: Read and write OpenFOAM configuration and field files as if they were Python objects
-- **⚡ High performance**: Standalone parser supporting both ASCII and binary formats with or without compression
-- **🔄 Async operations**: Run multiple cases in parallel with full [`asyncio`](https://docs.python.org/3/library/asyncio.html) support
-- **🎯 Type safety**: A fully typed API for a better development experience
+- **🗄️ Effortless file handling**: Read and write OpenFOAM configuration and field files via intuitive `dict`-like Python classes
+- **⚡ High performance**: Powered by our _FoamFile_ parser with seamless support for both ASCII and binary formats with or without compression
+- **🔄 Async support**: Run exactly as many cases in parallel as your hardware can handle with **foamlib**'s [`asyncio`](https://docs.python.org/3/library/asyncio.html) integration
+- **🎯 Type safety**: A rigorously typed API for the best coding experience
 - **⚙️ Workflow automation**: Reduce boilerplate code for pre/post-processing and simulation management
 - **🧩 Fully compatible**: Works with OpenFOAM from both [openfoam.com](https://www.openfoam.com/) and [openfoam.org](https://www.openfoam.org/)
 - And more!
@@ -47,7 +47,7 @@ Compared to [PyFoam](https://openfoamwiki.net/index.php/Contrib/PyFoam) and othe
 **foamlib** provides these key classes for different aspects of OpenFOAM workflow automation:
 
 ### 📄 File handling
-* **[`FoamFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFile)** - Read and write OpenFOAM configuration files as if they were Python `dict`s
+* **[`FoamFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFile)** - Read and edit OpenFOAM configuration files as if they were Python `dict`s
 * **[`FoamFieldFile`](https://foamlib.readthedocs.io/en/stable/files.html#foamlib.FoamFieldFile)** - Handle field files with support for ASCII and binary formats (with or without compression)
 
 ### 📁 Case management  
@@ -259,7 +259,7 @@ You're welcome to contribute to **foamlib**! Check out the [contributing guideli
 
 **foamlib** has been published in the [Journal of Open Source Software](https://joss.theoj.org/papers/10.21105/joss.07633)! 
 
-If you use **foamlib** in your research, please cite our paper:
+If you use **foamlib** in your research, please remember to cite our paper:
 
 > Gerlero, G. S., & Kler, P. A. (2025). foamlib: A modern Python package for working with OpenFOAM. *Journal of Open Source Software*, 10(109), 7633. https://doi.org/10.21105/joss.07633
 
