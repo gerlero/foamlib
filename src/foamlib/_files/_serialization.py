@@ -177,32 +177,6 @@ def normalized(
                 return data  # ty: ignore[invalid-return-type]
             return data.astype(float, copy=False)  # ty: ignore[possibly-missing-attribute]
 
-        # Other possible numeric standalone data (n integers or floats)
-        case [Real(), *rest], () if not isinstance(data, tuple) and all(
-            isinstance(r, Real) for r in rest
-        ):
-            return normalized(np.asarray(data), keywords=keywords, format_=format_)
-
-        # Other possible numeric standalone data (n x 3 floats)
-        case [_, *_], () if not isinstance(data, tuple) and all(
-            (
-                isinstance(r, Sequence)
-                and not isinstance(r, tuple)
-                and len(r) == 3
-                and all(isinstance(x, Real) for x in r)
-            )
-            or (
-                isinstance(r, np.ndarray)
-                and r.shape == (3,)
-                and (
-                    np.issubdtype(r.dtype, np.floating)
-                    or np.issubdtype(r.dtype, np.integer)
-                )
-            )
-            for r in data  # ty: ignore[not-iterable]
-        ):
-            return normalized(np.asarray(data), keywords=keywords, format_=format_)
-
         # ASCII faces-like list
         case [*_], () if not isinstance(data, tuple) and all(
             isinstance(e, np.ndarray)
@@ -231,6 +205,32 @@ def normalized(
             for e in data  # ty: ignore[not-iterable]
         ):
             return [np.asarray(e) for e in data]  # ty: ignore[not-iterable]
+
+        # Other possible numeric standalone data (n integers or floats)
+        case [Real(), *rest], () if not isinstance(data, tuple) and all(
+            isinstance(r, Real) for r in rest
+        ):
+            return normalized(np.asarray(data), keywords=keywords, format_=format_)
+
+        # Other possible numeric standalone data (n x 3 floats)
+        case [_, *_], () if not isinstance(data, tuple) and all(
+            (
+                isinstance(r, Sequence)
+                and not isinstance(r, tuple)
+                and len(r) == 3
+                and all(isinstance(x, Real) for x in r)
+            )
+            or (
+                isinstance(r, np.ndarray)
+                and r.shape == (3,)
+                and (
+                    np.issubdtype(r.dtype, np.floating)
+                    or np.issubdtype(r.dtype, np.integer)
+                )
+            )
+            for r in data  # ty: ignore[not-iterable]
+        ):
+            return normalized(np.asarray(data), keywords=keywords, format_=format_)
 
         # Uniform field (scalar)
         case Real(), _common.FIELD_KEYWORDS:
@@ -487,14 +487,14 @@ def dumps(
                 + b")"
             )
 
-        case np.ndarray(), (_, *_) | None, _:
+        case np.ndarray(), (_, *_) | None, "ascii" | None:
             return dumps(len(data), keywords=None, format_=None) + dumps(  # ty: ignore[invalid-argument-type]
                 data.tolist(),  # ty: ignore[possibly-missing-attribute]
                 keywords=None,
                 format_=format_,
             )
 
-        case np.ndarray(), (), _:
+        case np.ndarray(), (), "ascii" | None:
             return dumps(data.tolist(), keywords=None, format_=format_)  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
 
         case DimensionSet(), _, _:
@@ -552,7 +552,7 @@ def dumps(
                 + b" ".join(
                     dumps(
                         v,  # ty: ignore[invalid-argument-type]
-                        keywords=keywords,
+                        keywords=None,
                         format_=format_,
                         _tuple_is_keyword_entry=True,
                     )

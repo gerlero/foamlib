@@ -186,6 +186,10 @@ def test_serialize_file() -> None:
     assert FoamFile.dumps([1, 2, 3], ensure_header=False) == b"(1 2 3)"
     assert FoamFile.dumps([1.0, 2, 3], ensure_header=False) == b"(1.0 2.0 3.0)"
     assert (
+        FoamFile.dumps([[1, 2, 3], [4, 5.0, 6]], ensure_header=False)
+        == b"((1.0 2.0 3.0) (4.0 5.0 6.0))"
+    )
+    assert (
         FoamFile.dumps(
             {
                 "FoamFile": {"format": "binary"},
@@ -198,6 +202,18 @@ def test_serialize_file() -> None:
     assert (
         FoamFile.dumps({"#include": "$FOAM_CASE/simControls"}, ensure_header=False)
         == b"\n#include $FOAM_CASE/simControls\n"
+    )
+    assert (
+        FoamFile.dumps([[1, 2, 3, 4], [5, 6, 7, 8]], ensure_header=False)
+        == b"(4(1 2 3 4) 4(5 6 7 8))"
+    )
+    assert (
+        FoamFile.dumps([[1, 2, 3], [4, 5, 6, 7]], ensure_header=False)
+        == b"(3(1 2 3) 4(4 5 6 7))"
+    )
+    assert (
+        FoamFile.dumps([[1, 2, 3], [4, 5, 6]], ensure_header=False)
+        == b"(3(1 2 3) 3(4 5 6))"
     )
     indices = np.array([0, 3, 7], dtype=np.int32)
     values = np.array(
