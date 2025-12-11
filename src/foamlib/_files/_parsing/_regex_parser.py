@@ -69,28 +69,36 @@ def _match_pattern(pattern: bytes, data: bytes, pos: int, *, skip_ws: bool = Tru
     return None
 
 
+# Compile patterns once at module level for performance
+_NAN_PATTERN = re.compile(rb'(?i:nan\b)')
+_INF_PATTERN = re.compile(rb'(?i:inf(?:inity)?\b)')
+_NEG_INF_PATTERN = re.compile(rb'(?i:-inf(?:inity)?\b)')
+_FLOAT_PATTERN = re.compile(rb'[+-]?(?:\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?)')
+
+
 def _parse_number(data: bytes, pos: int) -> tuple[int, int | float]:
     """Parse a number (int or float)."""
     pos = _skip_whitespace_and_comments(data, pos)
     
     # Try special float values first
     for pattern, value in [
-        (rb'(?i:nan\b)', np.nan),
-        (rb'(?i:inf(?:inity)?\b)', np.inf),
-        (rb'(?i:-inf(?:inity)?\b)', -np.inf),
+        (_NAN_PATTERN, np.nan),
+        (_INF_PATTERN, np.inf),
+        (_NEG_INF_PATTERN, -np.inf),
     ]:
-        if result := _match_pattern(pattern, data, pos, skip_ws=False):
-            return result[0], value
+        match = pattern.match(data, pos)
+        if match:
+            return pos + len(match.group(0)), value
     
     # Regular number pattern
-    float_pattern = rb'[+-]?(?:\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?)'
-    if result := _match_pattern(float_pattern, data, pos, skip_ws=False):
-        matched = result[1]
+    match = _FLOAT_PATTERN.match(data, pos)
+    if match:
+        matched = match.group(0)
         try:
             # Try int first
             if b'.' not in matched and b'e' not in matched.lower():
-                return result[0], int(matched)
-            return result[0], float(matched)
+                return pos + len(matched), int(matched)
+            return pos + len(matched), float(matched)
         except ValueError as e:
             raise ParseError(f"Invalid number: {matched}", pos) from e
     
@@ -134,7 +142,8 @@ def _parse_identifier(data: bytes, pos: int) -> tuple[int, str]:
         return end + 1, data[pos:end+1].decode('latin-1')
     
     # Regular identifier with optional balanced parentheses
-    pattern = rb'[A-Za-z_$][^\s;(){}[\]]*'
+    # Note: Character class excludes whitespace, semicolon, and brackets
+    pattern = rb'[A-Za-z_$][^\s;(){}\[\]]*'
     if result := _match_pattern(pattern, data, pos, skip_ws=False):
         new_pos, matched = result
         identifier = matched.decode('latin-1')
@@ -662,7 +671,8 @@ def _parse_directive(data: bytes, pos: int) -> tuple[int, str]:
     if data[pos:pos+1] != b'#':
         raise ParseError("Expected '#'", pos)
     
-    pattern = rb'#[^\s;(){}[\]]*'
+    # Directive pattern: # followed by non-whitespace, non-special chars
+    pattern = rb'#[^\s;(){}\[\]]*'
     if result := _match_pattern(pattern, data, pos, skip_ws=False):
         return result[0], result[1].decode('latin-1')
     
