@@ -150,28 +150,28 @@ with my_pitz.fv_schemes as f:
     f["snGradSchemes"]["default"] = "uncorrected"
 ```
 
-### ⏳ Asynchronous execution
+### ⏳ Run multiple cases in parallel
+
+Outside an [asyncio](https://docs.python.org/3/library/asyncio.html) context:
 
 ```python
-import asyncio
 from foamlib import AsyncFoamCase
 
-async def run_multiple_cases():
-    """Run multiple cases concurrently."""
-    base_case = AsyncFoamCase(my_pitz)
-    
-    # Create and run multiple cases with different parameters
-    tasks = []
-    for i, velocity in enumerate([1, 2, 3]):
-        case = base_case.clone(f"case_{i}")
-        case[0]["U"].boundary_field["inlet"].value = [velocity, 0, 0]
-        tasks.append(case.run())
-    
-    # Wait for all cases to complete
-    await asyncio.gather(*tasks)
+case1 = AsyncFoamCase("path/to/case1")
+case2 = AsyncFoamCase("path/to/case2")
 
-# Run the async function
-asyncio.run(run_multiple_cases())
+AsyncFoamCase.run_all_wait([case1, case2])
+```
+
+Within an asyncio context (e.g. in a [Jupyter](https://jupyter.org/) notebook):
+
+```python
+from foamlib import AsyncFoamCase
+
+case1 = AsyncFoamCase("path/to/case1")
+case2 = AsyncFoamCase("path/to/case2")
+
+await AsyncFoamCase.run_all([case1, case2])
 ```
 
 ### 🔢 Direct field file access
@@ -213,7 +213,7 @@ async def objective_function(x):
 result = differential_evolution(
     objective_function, 
     bounds=[(-1, 1)], 
-    workers=AsyncSlurmFoamCase.map, 
+    workers=AsyncSlurmFoamCase.map,  # Enables concurrent evaluations
     polish=False
 )
 print(f"Optimal inlet velocity: {result.x[0]}")
