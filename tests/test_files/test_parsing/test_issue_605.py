@@ -52,5 +52,5 @@ CONTENTS = """7
 )"""
 
 
-def test_issue_615() -> None:
+def test_issue_605() -> None:
     FoamFile.loads(CONTENTS)

@@ -1,4 +1,5 @@
 import sys
+from typing import NoReturn
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -23,6 +24,9 @@ class ParseError(ValueError):
         if last_newline == -1:
             return self.pos + 1
         return self.pos - last_newline
+
+    def raise_fatal(self) -> NoReturn:
+        raise ValueError(str(self)) from self
 
     @override
     def __str__(self) -> str:

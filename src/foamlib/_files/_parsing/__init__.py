@@ -58,8 +58,7 @@ def parse(contents: bytes | str, /, *, target: type[_T]) -> _T:
         ret, pos = parse(contents, 0)
         skip(contents, pos, strict=True)
     except ParseError as e:
-        msg = str(e)
-        raise ValueError(msg) from e
+        e.raise_fatal()
 
     return ret  # ty: ignore[invalid-return-type]
 
@@ -80,8 +79,7 @@ class ParsedFile(
         try:
             parse_results = parse_file_located(contents, 0)
         except ParseError as e:
-            msg = f"Failed to parse contents: {e}"
-            raise ValueError(msg) from e
+            e.raise_fatal()
         self._parsed = self._flatten_results(contents, parse_results)
 
         self.contents = contents
