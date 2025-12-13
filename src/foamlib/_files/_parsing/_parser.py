@@ -175,17 +175,26 @@ def _parse_ascii_numeric_list(
     elif count is not None and contents[pos : pos + 1] == b"{":
         pos += 1
         pos = skip(contents, pos)
+
+        match dtype:
+            case builtins.float:
+                parse_number = _parse_float
+            case builtins.int:
+                parse_number = _parse_integer
+            case _:
+                raise NotImplementedError
+
         if elshape:
             elem = []
             pos = _expect(contents, pos, b"(")
             for _ in range(elshape[0]):
                 pos = skip(contents, pos)
-                x, pos = _parse_number(contents, pos)
+                x, pos = parse_number(contents, pos)
                 elem.append(x)
             pos = skip(contents, pos)
             pos = _expect(contents, pos, b")")
         else:
-            elem, pos = _parse_number(contents, pos)
+            elem, pos = parse_number(contents, pos)
 
         pos = _expect(contents, pos, b"}")
 
@@ -344,26 +353,18 @@ def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
     raise ParseError(contents, pos, expected="token")
 
 
-def _parse_number(contents: bytes, pos: int) -> tuple[int | float, int]:
-    float_match = FLOAT.match(contents, pos)
-    int_match = INTEGER.match(contents, pos)
-
-    if float_match and int_match:
-        if float_match.end() > int_match.end():
-            return float(float_match.group(0).decode("ascii")), float_match.end()
-        return int(int_match.group(0).decode("ascii")), int_match.end()
-    if float_match:
-        return float(float_match.group(0).decode("ascii")), float_match.end()
-    if int_match:
-        return int(int_match.group(0).decode("ascii")), int_match.end()
-    raise ParseError(contents, pos, expected="number")
-
-
 def _parse_unsigned_integer(contents: bytes, pos: int) -> tuple[int, int]:
     if match := UNSIGNED_INTEGER.match(contents, pos):
         return int(match.group(0).decode("ascii")), match.end()
 
     raise ParseError(contents, pos, expected="unsigned integer")
+
+
+def _parse_integer(contents: bytes, pos: int) -> tuple[int, int]:
+    if match := INTEGER.match(contents, pos):
+        return int(match.group(0).decode("ascii")), match.end()
+
+    raise ParseError(contents, pos, expected="integer")
 
 
 def _parse_float(contents: bytes, pos: int) -> tuple[float, int]:
@@ -435,9 +436,12 @@ def _parse_dimensions(contents: bytes, pos: int) -> tuple[DimensionSet, int]:
             break
 
         try:
-            dim, pos = _parse_number(contents, pos)
+            dim, pos = _parse_integer(contents, pos)
         except ParseError:
-            break
+            try:
+                dim, pos = _parse_float(contents, pos)
+            except ParseError:
+                break
         dimensions.append(dim)
 
     pos = skip(contents, pos)
@@ -526,7 +530,8 @@ def _parse_data_entry(contents: bytes, pos: int) -> tuple[DataEntry, int]:
         _parse_list,
         _parse_dimensioned,
         _parse_dimensions,
-        _parse_number,
+        _parse_integer,
+        _parse_float,
         _parse_switch,
     ):
         with contextlib.suppress(ParseError):

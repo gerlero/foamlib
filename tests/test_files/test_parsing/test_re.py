@@ -56,29 +56,29 @@ def test_token() -> None:
     assert TOKEN.fullmatch(b"complexFunc(param1,param2(paramA,paramB))")
     assert TOKEN.fullmatch(b"_underscoreVar123")
     assert TOKEN.fullmatch(b"VarWith123Numbers")
-    assert not TOKEN.fullmatch(b"123invalid")
-    assert not TOKEN.fullmatch(b"func(arg1, arg2)")
-    assert not TOKEN.fullmatch(b'"unclosed string')
+    assert not TOKEN.match(b"123invalid")
+    assert not TOKEN.fullmatch(b"func(arg1 arg2)")
+    assert not TOKEN.match(b'"unclosed string')
     assert not TOKEN.fullmatch(b"unbalancedParens(arg1(arg2,arg3)))")
     assert not TOKEN.fullmatch(b"a;")
 
 
 def test_unsigned_integer() -> None:
     assert UNSIGNED_INTEGER.fullmatch(b"12345")
-    assert not UNSIGNED_INTEGER.fullmatch(b"-12345")
+    assert not UNSIGNED_INTEGER.match(b"-12345")
 
 
 def test_integer() -> None:
     assert INTEGER.fullmatch(b"-12345")
     assert INTEGER.fullmatch(b"67890")
-    assert not INTEGER.fullmatch(b"12.34")
+    assert not INTEGER.match(b"12.34")
 
 
 def test_float() -> None:
     assert FLOAT.fullmatch(b"3.14")
     assert FLOAT.fullmatch(b"-2.71e10")
     assert FLOAT.fullmatch(b"NaN")
-    assert not FLOAT.fullmatch(b"Not a float")
+    assert not FLOAT.fullmatch(b"1.3a4")
 
 
 def test_vector() -> None:
