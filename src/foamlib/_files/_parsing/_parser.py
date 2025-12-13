@@ -889,8 +889,11 @@ def _parse_file_located_recursive(
             elif contents[new_pos : new_pos + 1] == b"{":
                 # Check for duplicates
                 if (*_keywords, keyword) in ret:
-                    msg = f"duplicate entry found for keyword: {keyword}"
-                    raise ValueError(msg)
+                    raise ParseSemanticError(
+                        contents,
+                        entry_start,
+                        found=f"duplicate entry for keyword: {keyword}",
+                    )
                 
                 # Skip opening brace
                 new_pos += 1
@@ -924,8 +927,11 @@ def _parse_file_located_recursive(
                 
                 # Check for duplicates
                 if (*_keywords, keyword) in ret and not keyword.startswith("#"):
-                    msg = f"duplicate entry found for keyword: {keyword}"
-                    raise ValueError(msg)
+                    raise ParseSemanticError(
+                        contents,
+                        entry_start,
+                        found=f"duplicate entry for keyword: {keyword}",
+                    )
                 
                 ret.add((*_keywords, keyword), ParsedEntry(value, entry_start, new_pos))
             
@@ -947,8 +953,11 @@ def _parse_file_located_recursive(
                 ) from None
             else:
                 if () in ret:
-                    msg = "duplicate standalone data found"
-                    raise ValueError(msg)
+                    raise ParseSemanticError(
+                        contents,
+                        pos,
+                        found="duplicate standalone data",
+                    )
                 ret[()] = ParsedEntry(standalone_data, entry_start, new_pos)
                 pos = new_pos
 

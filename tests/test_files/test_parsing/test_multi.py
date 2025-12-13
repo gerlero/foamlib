@@ -86,7 +86,7 @@ def test_invalid_duplicate_keywords() -> None:
         key value2;
         """)
 
-    with pytest.raises(FoamFile.ParseSemanticError, match="duplicate"):
+    with pytest.raises(ValueError, match="duplicate"):
         normalized(MultiDict([("key", "value1"), ("key", "value2")]), keywords=())
 
     with pytest.raises(FoamFile.ParseSemanticError, match="duplicate"):
@@ -99,7 +99,7 @@ def test_invalid_duplicate_keywords() -> None:
         }
         """)
 
-    with pytest.raises(FoamFile.ParseSemanticError, match="duplicate"):
+    with pytest.raises(ValueError, match="duplicate"):
         normalized(
             MultiDict(
                 [
