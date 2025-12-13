@@ -38,7 +38,6 @@ from ._re import (
     SKIP_NO_NEWLINE,
     SYMM_TENSOR_LIST,
     TENSOR_LIST,
-    TOKEN,
     UNCOMMENTED_FACES_LIKE_LIST,
     UNCOMMENTED_FLOAT_LIST,
     UNCOMMENTED_INTEGER_LIST,
@@ -349,10 +348,81 @@ def _parse_field(contents: bytes, pos: int) -> tuple[Field, int]:
 
 
 def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
-    if match := TOKEN.match(contents, pos):
-        return match.group(0).decode("ascii"), match.end()
+    r"""Parse a token using Python builtins only.
+    
+    Matches:
+    1. Quoted strings: "(?:[^"\\]|\\.)*"
+    2. Tokens: [A-Za-z_#$][allowed_chars]*(\((?:allowed_chars|nested_parens)*\))?
+       where allowed_chars = [\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7b\x7c\x7e]
+    """
+    if pos >= len(contents):
+        raise ParseSyntaxError(contents, pos, expected="token")
 
-    raise ParseSyntaxError(contents, pos, expected="token")
+    # Try to match a quoted string first
+    if contents[pos : pos + 1] == b'"':
+        # Match quoted string: "(?:[^"\\]|\\.)*"
+        i = pos + 1
+        while i < len(contents):
+            if contents[i : i + 1] == b'"':
+                return contents[pos : i + 1].decode("ascii"), i + 1
+            if contents[i : i + 1] == b"\\":
+                # Skip escaped character
+                i += 2
+            else:
+                i += 1
+        # Unterminated string
+        raise ParseSyntaxError(contents, pos, expected="token")
+
+    # Try to match a token
+    # First character must be [A-Za-z_#$]
+    first_char = contents[pos : pos + 1]
+    if (
+        not first_char
+        or first_char
+        not in b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_#$"
+    ):
+        raise ParseSyntaxError(contents, pos, expected="token")
+
+    # Following characters can be [\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7b\x7c\x7e]
+    # which is: !"#$%&'*+,-./0123456789:<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\^_`abcdefghijklmnopqrstuvwxyz{|~
+    allowed_chars = (
+        set(range(0x21, 0x28))
+        | set(range(0x2A, 0x3B))
+        | set(range(0x3C, 0x5B))
+        | {0x5C}
+        | set(range(0x5E, 0x7C))
+        | {0x7C, 0x7E}
+    )
+
+    i = pos + 1
+    while i < len(contents) and contents[i] in allowed_chars:
+        i += 1
+
+    # Check for optional parenthesized part
+    if i < len(contents) and contents[i : i + 1] == b"(":
+        # Match parenthesized expression with nesting
+        i += 1
+        depth = 1
+
+        while i < len(contents) and depth > 0:
+            c = contents[i]
+            if c == ord(b"("):
+                depth += 1
+                i += 1
+            elif c == ord(b")"):
+                depth -= 1
+                i += 1
+            elif c in allowed_chars:
+                i += 1
+            else:
+                # Invalid character in parentheses
+                raise ParseSyntaxError(contents, pos, expected="token")
+
+        if depth != 0:
+            # Unbalanced parentheses
+            raise ParseSyntaxError(contents, pos, expected="token")
+
+    return contents[pos:i].decode("ascii"), i
 
 
 def _parse_number(contents: bytes, pos: int) -> tuple[int | float, int]:
