@@ -72,7 +72,7 @@ def skip(
 
 def _expect(contents: bytes, pos: int, expected: bytes) -> int:
     length = len(expected)
-    if pos >= len(contents) or contents[pos : pos + length] != expected:
+    if contents[pos : pos + length] != expected:
         raise ParseSyntaxError(contents, pos, expected=repr(expected.decode("ascii")))
 
     return pos + length
@@ -173,6 +173,13 @@ def _parse_ascii_numeric_list(
             )
 
     elif count is not None and contents[pos : pos + 1] == b"{":
+        match dtype:
+            case builtins.float:
+                parse_number = _parse_float
+            case builtins.int:
+                parse_number = _parse_integer
+            case _:
+                raise NotImplementedError
         pos += 1
         pos = skip(contents, pos)
         if elshape:
@@ -180,12 +187,12 @@ def _parse_ascii_numeric_list(
             pos = _expect(contents, pos, b"(")
             for _ in range(elshape[0]):
                 pos = skip(contents, pos)
-                x, pos = _parse_number(contents, pos)
+                x, pos = parse_number(contents, pos)
                 elem.append(x)
             pos = skip(contents, pos)
             pos = _expect(contents, pos, b")")
         else:
-            elem, pos = _parse_number(contents, pos)
+            elem, pos = parse_number(contents, pos)
 
         pos = _expect(contents, pos, b"}")
 
@@ -349,29 +356,55 @@ def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
 
 
 def _parse_number(contents: bytes, pos: int) -> tuple[int | float, int]:
-    float_match = FLOAT.match(contents, pos)
-    int_match = INTEGER.match(contents, pos)
-
-    if float_match and int_match:
-        if float_match.end() > int_match.end():
-            return float(float_match.group(0).decode("ascii")), float_match.end()
-        return int(int_match.group(0).decode("ascii")), int_match.end()
-    if float_match:
-        return float(float_match.group(0).decode("ascii")), float_match.end()
-    if int_match:
-        return int(int_match.group(0).decode("ascii")), int_match.end()
-    raise ParseSyntaxError(contents, pos, expected="number")
+    try:
+        return _parse_integer(contents, pos)
+    except ParseSyntaxError:
+        try:
+            return _parse_float(contents, pos)
+        except ParseSyntaxError as e:
+            raise ParseSyntaxError(contents, pos, expected="number") from e
 
 
 def _parse_unsigned_integer(contents: bytes, pos: int) -> tuple[int, int]:
     if match := UNSIGNED_INTEGER.match(contents, pos):
+        try:
+            _, _ = parse_token(contents, match.end())
+        except ParseSyntaxError:
+            pass
+        else:
+            raise ParseSyntaxError(contents, pos, expected="unsigned integer")
+
         return int(match.group(0).decode("ascii")), match.end()
 
     raise ParseSyntaxError(contents, pos, expected="unsigned integer")
 
 
+def _parse_integer(contents: bytes, pos: int) -> tuple[int, int]:
+    if match := INTEGER.match(contents, pos):
+        try:
+            _, _ = parse_token(contents, match.end())
+        except ParseSyntaxError:
+            pass
+        else:
+            raise ParseSyntaxError(contents, pos, expected="integer")
+
+        if contents[match.end() : match.end() + 1] == b".":
+            raise ParseSyntaxError(contents, pos, expected="integer")
+
+        return int(match.group(0).decode("ascii")), match.end()
+
+    raise ParseSyntaxError(contents, pos, expected="integer")
+
+
 def _parse_float(contents: bytes, pos: int) -> tuple[float, int]:
     if match := FLOAT.match(contents, pos):
+        try:
+            _, _ = parse_token(contents, match.end())
+        except ParseSyntaxError:
+            pass
+        else:
+            raise ParseSyntaxError(contents, pos, expected="float")
+
         return float(match.group(0).decode("ascii")), match.end()
 
     raise ParseSyntaxError(contents, pos, expected="float")
