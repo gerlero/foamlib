@@ -395,8 +395,8 @@ def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
         | set(range(0x2A, 0x3B))
         | set(range(0x3C, 0x5B))
         | {0x5C}
-        | set(range(0x5E, 0x7B))  # Changed from 0x7C to 0x7B to exclude {
-        | {0x7C, 0x7E}
+        | set(range(0x5E, 0x7B))  # 0x5E-0x7A (excludes { at 0x7B)
+        | {0x7C, 0x7E}  # | and ~
     )
 
     i = pos + 1
@@ -935,21 +935,9 @@ def _parse_file_located_recursive(
             # This pattern is necessary because OpenFOAM files can contain
             # standalone data (numeric arrays, etc.) without keywords
             if _keywords:
-                # Inside subdictionary - skip unparseable content until we find
-                # the closing brace for this subdictionary level
-                # This handles cases like directives followed by unparseable syntax
-                depth = 0
-                while pos < end:
-                    if contents[pos:pos+1] == b"{":
-                        depth += 1
-                    elif contents[pos:pos+1] == b"}":
-                        if depth == 0:
-                            # Found the closing brace for this subdictionary
-                            return ret, pos
-                        depth -= 1
-                    pos += 1
-                # Reached end without finding closing brace
-                return ret, pos
+                # Inside subdictionary - can't parse keyword, likely at closing brace or invalid syntax
+                # Let it fail rather than silently skipping content
+                break
             
             try:
                 standalone_data, new_pos = parse_standalone_data(contents, pos)
