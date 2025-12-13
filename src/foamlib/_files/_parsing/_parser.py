@@ -349,7 +349,7 @@ def _parse_field(contents: bytes, pos: int) -> tuple[Field, int]:
 
 def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
     r"""Parse a token using Python builtins only.
-    
+
     Matches:
     1. Quoted strings: "(?:[^"\\]|\\.)*"
     2. Tokens: [A-Za-z_#$][allowed_chars]*(\((?:allowed_chars|nested_parens)*\))?
