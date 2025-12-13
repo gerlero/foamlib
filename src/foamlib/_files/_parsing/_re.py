@@ -7,9 +7,7 @@ TOKEN = regex.compile(
 )
 UNSIGNED_INTEGER = re.compile(rb"\d+")
 INTEGER = re.compile(rb"[+-]?\d+")
-FLOAT = re.compile(
-    rb"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan(?![A-Za-z0-9_])|inf(?:inity)?(?![A-Za-z0-9_])))"
-)
+FLOAT = re.compile(rb"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))")
 
 COMMENT = re.compile(rb"(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*)")
 SKIP = re.compile(rb"(?:\s+|(?:" + COMMENT.pattern + b"))+")
