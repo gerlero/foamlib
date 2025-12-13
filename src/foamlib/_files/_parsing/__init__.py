@@ -47,7 +47,7 @@ _T = TypeVar("_T", str, Data, StandaloneData, FileDict)
 
 def parse(contents: bytes | str, /, *, target: type[_T]) -> _T:
     if isinstance(contents, str):
-        contents = contents.encode("latin-1")
+        contents = contents.encode()
 
     if target is str:
         parse = parse_token
@@ -61,7 +61,8 @@ def parse(contents: bytes | str, /, *, target: type[_T]) -> _T:
         msg = f"Unsupported type for parsing: {target}"
         raise TypeError(msg)
 
-    ret, pos = parse(contents, 0)
+    pos = skip(contents, 0)
+    ret, pos = parse(contents, pos)
     skip(contents, pos, strict=True)
 
     return ret  # ty: ignore[invalid-return-type]
@@ -78,9 +79,10 @@ class ParsedFile(
 
     def __init__(self, contents: bytes | str, /) -> None:
         if isinstance(contents, str):
-            contents = contents.encode("latin-1")
+            contents = contents.encode()
 
-        parse_results, pos = parse_file_located(contents, 0)
+        pos = skip(contents, 0)
+        parse_results, pos = parse_file_located(contents, pos)
         skip(contents, pos, strict=True)
 
         self._parsed = self._flatten_results(contents, parse_results)
