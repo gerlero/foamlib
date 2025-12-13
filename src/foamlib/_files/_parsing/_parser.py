@@ -652,7 +652,7 @@ def parse_standalone_data(contents: bytes, pos: int) -> tuple[StandaloneData, in
         entries.append(entry)
 
     if len(entries) == 1:
-        return entry, pos
+        return entries[0], pos
 
     return tuple(entries), pos
 
