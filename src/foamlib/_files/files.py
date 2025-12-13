@@ -572,13 +572,9 @@ class FoamFile(
             is_update = keywords in parsed
             if is_update and len(keywords) > 1:
                 # For existing sub-dictionary entries, preserve existing formatting
-                existing_content = parsed.contents[start:end]
-                if existing_content.startswith(b"\n"):
-                    before = b""  # Preserve existing leading newlines
-                elif parsed.contents[:start].endswith(b"\n"):
-                    before = b""  # Already have a newline before
-                else:
-                    before = b"\n"  # Need to add a newline
+                # The content before 'start' already includes both spacing and indentation,
+                # so we don't add any leading newlines to prevent blank line accumulation
+                before = b""
             elif start and not parsed.contents[:start].endswith(b"\n\n"):
                 if parsed.contents[:start].endswith(b"\n"):
                     before = b"\n" if len(keywords) <= 1 else b""
@@ -695,9 +691,17 @@ class FoamFile(
                 keywords = cast("tuple[str, Unpack[tuple[str, ...]]]", keywords)
                 val = dumps(data, keywords=keywords, format_=format_)
 
+                # When updating existing subdictionary entries, don't add indentation
+                # because it's already present in the content before 'start'
+                # Note: is_update is also calculated in _calculate_spacing for determining 'before'
+                is_update = not add and keywords in parsed
+                content_indentation = (
+                    b"" if (is_update and len(keywords) > 1) else indentation
+                )
+
                 content = (
                     before
-                    + indentation
+                    + content_indentation
                     + dumps(keyword)
                     + ((b" " + val) if val else b"")
                     + (b";" if not keywords[-1].startswith("#") else b"")
