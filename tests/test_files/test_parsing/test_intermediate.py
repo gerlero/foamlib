@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from foamlib import Dimensioned, DimensionSet
+from foamlib import Dimensioned, DimensionSet, FoamFile
 from foamlib._files._parsing import ParsedFile
 
 
@@ -550,7 +550,7 @@ def test_list_numbered() -> None:
 
 
 def test_list_numbered_u() -> None:
-    with pytest.raises(ValueError, match="parse"):
+    with pytest.raises(FoamFile.ParseError):
         ParsedFile(b"""
             70
             (

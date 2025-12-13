@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from foamlib import Dimensioned, DimensionSet
+from foamlib import Dimensioned, DimensionSet, FoamFile
 from foamlib._files._parsing import ParsedFile
 
 
@@ -195,11 +195,11 @@ def test_parse_directive() -> None:
 def test_parse_invalid_content() -> None:
     """Test that ValueError is raised for malformed content that causes ParseException."""
     # Test malformed syntax that will cause pyparsing to fail
-    with pytest.raises(ValueError, match="parse"):
+    with pytest.raises(FoamFile.ParseSyntaxError):
         ParsedFile(b"key value; unclosed {")
 
-    with pytest.raises(ValueError, match="parse"):
+    with pytest.raises(FoamFile.ParseSyntaxError):
         ParsedFile(b"key { value; } extra }")
 
-    with pytest.raises(ValueError, match="parse"):
+    with pytest.raises(FoamFile.ParseSyntaxError):
         ParsedFile(b"{ orphaned brace")

@@ -90,7 +90,7 @@ def dict_from_items(
                         msg = "None key is only allowed in top-level File dicts"
                         raise TypeError(msg)
                     if None in ret:
-                        msg = "Duplicate None key found"
+                        msg = "duplicate None key found"
                         raise ValueError(msg)
                 ret[None] = v
 
@@ -99,7 +99,7 @@ def dict_from_items(
                     from ._parsing import parse  # noqa: PLC0415
 
                     if k != parse(k, target=str):
-                        msg = f"Invalid key string: {k!r}"
+                        msg = f"invalid key string: {k!r}"
                         raise ValueError(msg)
                 if k.startswith("#"):
                     if check_keys:
@@ -112,12 +112,12 @@ def dict_from_items(
                     ret = add_to_mapping(ret, k, v)  # ty: ignore[invalid-assignment]
                 else:
                     if k in ret:
-                        msg = f"Duplicate key found: {k!r}"
+                        msg = f"duplicate key found: {k!r}"
                         raise ValueError(msg)
                     ret[k] = v
 
             case _:
-                msg = "Key must be a string"
+                msg = "key must be a string"
                 if none_ok:
                     msg += " or None"
                 msg += f"; got {k!r}"

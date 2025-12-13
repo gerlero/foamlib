@@ -34,7 +34,7 @@ from ..typing import (
     SubDictLike,
 )
 from ._io import FoamFileIO
-from ._parsing import parse
+from ._parsing import ParseError, ParseSemanticError, ParseSyntaxError, parse
 from ._serialization import dumps, normalized
 from ._util import SupportsKeysAndGetItem
 from .types import Dimensioned, DimensionSet
@@ -97,6 +97,9 @@ class FoamFile(
             file["writeFormat"] = "binary"
     """
 
+    ParseError = ParseError
+    ParseSyntaxError = ParseSyntaxError
+    ParseSemanticError = ParseSemanticError
     Dimensioned = Dimensioned
     DimensionSet = DimensionSet
 

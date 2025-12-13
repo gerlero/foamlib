@@ -21,7 +21,6 @@ from pyparsing import TypeVar
 
 from ...typing import Data, FileDict, StandaloneData, SubDict
 from .._util import add_to_mapping
-from ._exceptions import ParseError
 from ._parser import (
     LocatedEntry,
     _expect,
@@ -34,6 +33,15 @@ from ._parser import (
     parse_token,
     skip,
 )
+from .exceptions import ParseError, ParseSemanticError, ParseSyntaxError
+
+__all__ = [
+    "ParseError",
+    "ParseSemanticError",
+    "ParseSyntaxError",
+    "ParsedFile",
+    "parse",
+]
 
 _T = TypeVar("_T", str, Data, StandaloneData, FileDict)
 
@@ -54,11 +62,8 @@ def parse(contents: bytes | str, /, *, target: type[_T]) -> _T:
         msg = f"Unsupported type for parsing: {target}"
         raise TypeError(msg)
 
-    try:
-        ret, pos = parse(contents, 0)
-        skip(contents, pos, strict=True)
-    except ParseError as e:
-        e.raise_fatal()
+    ret, pos = parse(contents, 0)
+    skip(contents, pos, strict=True)
 
     return ret  # ty: ignore[invalid-return-type]
 
@@ -76,10 +81,9 @@ class ParsedFile(
         if isinstance(contents, str):
             contents = contents.encode("latin-1")
 
-        try:
-            parse_results = parse_file_located(contents, 0)
-        except ParseError as e:
-            e.raise_fatal()
+        parse_results, pos = parse_file_located(contents, 0)
+        skip(contents, pos, strict=True)
+
         self._parsed = self._flatten_results(contents, parse_results)
 
         self.contents = contents
@@ -109,7 +113,7 @@ class ParsedFile(
                 if isinstance(data, dict):
                     # This is a subdictionary - recursively parse its entries
                     if (*_keywords, keyword) in ret:
-                        msg = f"Duplicate entry found for keyword: {keyword}"
+                        msg = f"duplicate entry found for keyword: {keyword}"
                         raise ValueError(msg)
                     ret[(*_keywords, keyword)] = ParsedFile._Entry(..., start, end)
                     # Parse the subdictionary content to get nested entries with locations
@@ -128,7 +132,7 @@ class ParsedFile(
                         )
                 else:
                     if (*_keywords, keyword) in ret and not keyword.startswith("#"):
-                        msg = f"Duplicate entry found for keyword: {keyword}"
+                        msg = f"duplicate entry found for keyword: {keyword}"
                         raise ValueError(msg)
                     assert not isinstance(data, Mapping)
                     ret.add((*_keywords, keyword), ParsedFile._Entry(data, start, end))
@@ -162,7 +166,7 @@ class ParsedFile(
                 else:
                     try:
                         value, new_pos = parse_data(contents, new_pos)
-                    except ParseError:
+                    except ParseSyntaxError:
                         value = None
                     else:
                         new_pos = skip(contents, new_pos)
@@ -170,7 +174,7 @@ class ParsedFile(
 
                 ret.append(LocatedEntry((keyword, value), entry_start, new_pos))
                 pos = new_pos
-            except ParseError:
+            except ParseSyntaxError:
                 # End of subdictionary or invalid content
                 break
 

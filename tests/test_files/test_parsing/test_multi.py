@@ -80,16 +80,16 @@ def test_parsed_mutation() -> None:
 
 
 def test_invalid_duplicate_keywords() -> None:
-    with pytest.raises(ValueError, match="Duplicate"):
+    with pytest.raises(FoamFile.ParseSemanticError, match="duplicate"):
         ParsedFile(b"""
         key value1;
         key value2;
         """)
 
-    with pytest.raises(ValueError, match="Duplicate"):
+    with pytest.raises(FoamFile.ParseSemanticError, match="duplicate"):
         normalized(MultiDict([("key", "value1"), ("key", "value2")]), keywords=())
 
-    with pytest.raises(ValueError, match="Duplicate"):
+    with pytest.raises(FoamFile.ParseSemanticError, match="duplicate"):
         ParsedFile(b"""
         subdict {
             key value;
@@ -99,7 +99,7 @@ def test_invalid_duplicate_keywords() -> None:
         }
         """)
 
-    with pytest.raises(ValueError, match="Duplicate"):
+    with pytest.raises(FoamFile.ParseSemanticError, match="duplicate"):
         normalized(
             MultiDict(
                 [
@@ -110,7 +110,7 @@ def test_invalid_duplicate_keywords() -> None:
             keywords=(),
         )
 
-    with pytest.raises(ValueError, match="Duplicate"):
+    with pytest.raises(FoamFile.ParseSemanticError, match="duplicate"):
         ParsedFile(b"""
         dict1 {
             key value1;
@@ -118,18 +118,18 @@ def test_invalid_duplicate_keywords() -> None:
         }
         """)
 
-    with pytest.raises(ValueError, match="Duplicate"):
+    with pytest.raises(ValueError, match="duplicate"):
         normalized(
             {"dict1": MultiDict([("key", "value1"), ("key", "value2")])},
             keywords=(),
         )
 
-    with pytest.raises(ValueError, match="unique"):
+    with pytest.raises(FoamFile.ParseSemanticError, match="duplicate"):
         ParsedFile(b"""
         list (subdict { a b; a c; });
         """)
 
-    with pytest.raises(ValueError, match="Duplicate"):
+    with pytest.raises(ValueError, match="duplicate"):
         normalized(
             {"list": [("subdict", MultiDict([("a", "b"), ("a", "c")]))]}, keywords=()
         )

@@ -60,6 +60,15 @@
       .. automethod:: foamlib.FoamFile.SubDict.extend
       .. automethod:: foamlib.FoamFile.SubDict.merge
       .. automethod:: foamlib.FoamFile.SubDict.as_dict
+   
+
+   .. autoclass:: foamlib.FoamFile.ParseError
+   
+   .. autoclass:: foamlib.FoamFile.ParseSyntaxError
+      :show-inheritance:
+
+   .. autoclass:: foamlib.FoamFile.ParseSemanticError
+      :show-inheritance:
 
    .. class:: foamlib.FoamFile.Dimensioned
 
