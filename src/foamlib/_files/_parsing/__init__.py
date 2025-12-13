@@ -1,6 +1,6 @@
 import dataclasses
 import sys
-from collections.abc import Collection, Iterator
+from collections.abc import Collection, Iterator, Mapping
 from typing import cast, overload
 
 if sys.version_info >= (3, 11):
@@ -104,6 +104,7 @@ class ParsedFile(
             if keyword is None:
                 assert not _keywords
                 assert () not in ret
+                data = cast("StandaloneData", data)
                 ret[()] = ParsedFile._Entry(data, start, end)
             else:
                 assert isinstance(keyword, str)
@@ -131,6 +132,7 @@ class ParsedFile(
                     if (*_keywords, keyword) in ret and not keyword.startswith("#"):
                         msg = f"Duplicate entry found for keyword: {keyword}"
                         raise ValueError(msg)
+                    assert not isinstance(data, Mapping)
                     ret.add((*_keywords, keyword), ParsedFile._Entry(data, start, end))
         return ret
 
