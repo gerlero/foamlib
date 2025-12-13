@@ -695,7 +695,9 @@ class FoamFile(
                 # because it's already present in the content before 'start'
                 # Note: is_update is also calculated in _calculate_spacing for determining 'before'
                 is_update = not add and keywords in parsed
-                content_indentation = b"" if (is_update and len(keywords) > 1) else indentation
+                content_indentation = (
+                    b"" if (is_update and len(keywords) > 1) else indentation
+                )
 
                 content = (
                     before
