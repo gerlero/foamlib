@@ -2,21 +2,14 @@ import re
 
 import regex
 
-# TOKEN regex matches quoted strings or identifiers with optional parentheses
-# Character ranges are ASCII printables excluding: space, ;, (, ), {, }, [, ]
-# \x21-\x27: !"#$%&'
-# \x2a-\x3a: *+,-./0-9:
-# \x3c-\x5a: <=>?@A-Z
-# \x5c: \
-# \x5e-\x7b: ^_`a-z{
-# \x7c: |
-# \x7e: ~
 TOKEN = regex.compile(
     rb'"(?:[^"\\]|\\.)*"|[A-Za-z_#$][\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7b\x7c\x7e]*(\((?:[\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7b\x7c\x7e]+|(?1))*\))?'
 )
 UNSIGNED_INTEGER = re.compile(rb"\d+")
 INTEGER = re.compile(rb"[+-]?\d+")
-FLOAT = re.compile(rb"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan(?![A-Za-z0-9_])|inf(?:inity)?(?![A-Za-z0-9_])))")
+FLOAT = re.compile(
+    rb"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan(?![A-Za-z0-9_])|inf(?:inity)?(?![A-Za-z0-9_])))"
+)
 
 COMMENT = re.compile(rb"(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*)")
 SKIP = re.compile(rb"(?:\s+|(?:" + COMMENT.pattern + b"))+")

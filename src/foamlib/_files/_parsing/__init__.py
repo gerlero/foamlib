@@ -1,6 +1,6 @@
 import dataclasses
 import sys
-from collections.abc import Collection, Iterator, Sequence
+from collections.abc import Collection, Iterator
 from typing import cast, overload
 
 if sys.version_info >= (3, 11):
@@ -131,9 +131,7 @@ class ParsedFile(
                     if (*_keywords, keyword) in ret and not keyword.startswith("#"):
                         msg = f"Duplicate entry found for keyword: {keyword}"
                         raise ValueError(msg)
-                    ret.add(
-                        (*_keywords, keyword), ParsedFile._Entry(data, start, end)
-                    )
+                    ret.add((*_keywords, keyword), ParsedFile._Entry(data, start, end))
         return ret
 
     @staticmethod
@@ -156,20 +154,19 @@ class ParsedFile(
                     # Expect newline or end of subdictionary for directives
                     if new_pos < end and contents[new_pos : new_pos + 1] == b"\n":
                         new_pos += 1
+                # Check if this is a nested subdictionary
+                elif contents[new_pos : new_pos + 1] == b"{":
+                    # Just find the matching brace without parsing/validating
+                    new_pos = _find_matching_brace(contents, new_pos)
+                    value = {}  # Marker for subdictionary
                 else:
-                    # Check if this is a nested subdictionary
-                    if contents[new_pos : new_pos + 1] == b"{":
-                        # Just find the matching brace without parsing/validating
-                        new_pos = _find_matching_brace(contents, new_pos)
-                        value = {}  # Marker for subdictionary
+                    try:
+                        value, new_pos = parse_data(contents, new_pos)
+                    except ParseError:
+                        value = None
                     else:
-                        try:
-                            value, new_pos = parse_data(contents, new_pos)
-                        except ParseError:
-                            value = None
-                        else:
-                            new_pos = skip(contents, new_pos)
-                        new_pos = _expect(contents, new_pos, b";")
+                        new_pos = skip(contents, new_pos)
+                    new_pos = _expect(contents, new_pos, b";")
 
                 ret.append(LocatedEntry((keyword, value), entry_start, new_pos))
                 pos = new_pos

@@ -745,10 +745,7 @@ def _find_matching_brace(contents: bytes, pos: int) -> int:
             continue
         if contents[pos : pos + 2] == b"//":
             end = contents.find(b"\n", pos + 2)
-            if end == -1:
-                pos = len(contents)
-            else:
-                pos = end + 1
+            pos = len(contents) if end == -1 else end + 1
             continue
 
         if contents[pos : pos + 1] == b"{":
@@ -792,25 +789,24 @@ def parse_file_located(contents: bytes, pos: int = 0) -> list[LocatedEntry]:
                 # Expect newline or end of file for directives
                 if new_pos < len(contents):
                     new_pos = _expect(contents, new_pos, b"\n")
+            # Check if this is a subdictionary
+            elif contents[new_pos : new_pos + 1] == b"{":
+                # Just find the matching brace without parsing/validating the content
+                # The content will be parsed later by _flatten_results
+                new_pos = _find_matching_brace(contents, new_pos)
+                value = {}  # Marker for subdictionary
             else:
-                # Check if this is a subdictionary
-                if contents[new_pos : new_pos + 1] == b"{":
-                    # Just find the matching brace without parsing/validating the content
-                    # The content will be parsed later by _flatten_results
-                    new_pos = _find_matching_brace(contents, new_pos)
-                    value = {}  # Marker for subdictionary
+                try:
+                    value, new_pos = parse_data(contents, new_pos)
+                except ParseError:
+                    value = None
                 else:
-                    try:
-                        value, new_pos = parse_data(contents, new_pos)
-                    except ParseError:
-                        value = None
-                    else:
-                        new_pos = skip(contents, new_pos)
-                    new_pos = _expect(contents, new_pos, b";")
+                    new_pos = skip(contents, new_pos)
+                new_pos = _expect(contents, new_pos, b";")
 
             ret.append(LocatedEntry((keyword, value), entry_start, new_pos))
             pos = new_pos
-        except ParseError:  # noqa: PERF203
+        except ParseError:
             # If keyword parsing fails, try parsing as standalone data
             # This pattern is necessary because OpenFOAM files can contain
             # standalone data (numeric arrays, etc.) without keywords
