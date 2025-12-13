@@ -30,7 +30,7 @@ _T = TypeVar("_T", str, Data, StandaloneData, FileDict)
 
 def parse(contents: bytes | str, /, *, target: type[_T]) -> _T:
     if isinstance(contents, str):
-        contents = contents.encode("ascii")
+        contents = contents.encode("latin-1")
 
     if target is str:
         parse = parse_token
