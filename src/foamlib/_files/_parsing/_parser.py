@@ -547,7 +547,7 @@ def parse_data(contents: bytes, pos: int) -> tuple[Data, int]:
         entries.append(entry)
 
     if len(entries) == 1:
-        return entry, pos
+        return entries[0], pos
 
     return tuple(entries), pos
 
