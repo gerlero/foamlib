@@ -536,7 +536,7 @@ def _parse_data_entry(contents: bytes, pos: int) -> tuple[DataEntry, int]:
 
 def parse_data(contents: bytes, pos: int) -> tuple[Data, int]:
     entry, pos = _parse_data_entry(contents, pos)
-    entries = [entry]
+    entries: list[DataEntry] = [entry]
 
     while True:
         pos = skip(contents, pos)
@@ -641,7 +641,7 @@ def _parse_standalone_data_entry(
 
 def parse_standalone_data(contents: bytes, pos: int) -> tuple[StandaloneData, int]:
     entry, pos = _parse_standalone_data_entry(contents, pos)
-    entries = [entry]
+    entries: list[StandaloneDataEntry] = [entry]
 
     while True:
         pos = skip(contents, pos)
