@@ -24,7 +24,6 @@ from ._parser import (
     LocatedEntry,
     ParsedEntry,
     _expect,
-    _find_matching_brace,
     _parse_data_entry,
     parse_data,
     parse_file,

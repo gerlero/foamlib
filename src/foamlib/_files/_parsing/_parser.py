@@ -387,14 +387,15 @@ def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
     ):
         raise ParseSyntaxError(contents, pos, expected="token")
 
-    # Following characters can be [\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7b\x7c\x7e]
-    # which is: !"#$%&'*+,-./0123456789:<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\^_`abcdefghijklmnopqrstuvwxyz{|~
+    # Following characters can be [\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7a\x7c\x7e]
+    # which is: !"#$%&'*+,-./0123456789:<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\^_`abcdefghijklmnopqrstuvwxyz|~
+    # Note: { (0x7b) and } (0x7d) are excluded as they are subdictionary delimiters
     allowed_chars = (
         set(range(0x21, 0x28))
         | set(range(0x2A, 0x3B))
         | set(range(0x3C, 0x5B))
         | {0x5C}
-        | set(range(0x5E, 0x7C))
+        | set(range(0x5E, 0x7B))  # Changed from 0x7C to 0x7B to exclude {
         | {0x7C, 0x7E}
     )
 
@@ -848,49 +849,6 @@ class ParsedEntry:
     end: int
 
 
-def _find_matching_brace(contents: bytes, pos: int) -> int:
-    """Find the position of the matching closing brace for an opening brace.
-
-    Args:
-        contents: The bytes to search in
-        pos: Position of the opening brace
-
-    Returns:
-        Position right after the closing brace
-
-    Raises:
-        ParseError: If no matching brace is found
-    """
-    assert contents[pos : pos + 1] == b"{"
-    depth = 1
-    pos += 1
-
-    while pos < len(contents) and depth > 0:
-        # Skip comments
-        if contents[pos : pos + 2] == b"/*":
-            end = contents.find(b"*/", pos + 2)
-            if end == -1:
-                raise ParseSyntaxError(contents, pos, expected="closing */")
-            pos = end + 2
-            continue
-        if contents[pos : pos + 2] == b"//":
-            end = contents.find(b"\n", pos + 2)
-            pos = len(contents) if end == -1 else end + 1
-            continue
-
-        if contents[pos : pos + 1] == b"{":
-            depth += 1
-        elif contents[pos : pos + 1] == b"}":
-            depth -= 1
-
-        pos += 1
-
-    if depth != 0:
-        raise ParseSyntaxError(contents, pos, expected="matching closing brace")
-
-    return pos
-
-
 def _parse_file_located_recursive(
     contents: bytes,
     pos: int,
@@ -911,6 +869,10 @@ def _parse_file_located_recursive(
     ret: MultiDict[tuple[str, ...], ParsedEntry] = MultiDict()
 
     while (pos := skip(contents, pos)) < end:
+        # Check if we've hit a closing brace (end of subdictionary)
+        if _keywords and contents[pos : pos + 1] == b"}":
+            return ret, pos
+        
         entry_start = pos
         try:
             keyword, new_pos = parse_token(contents, pos)
@@ -925,25 +887,31 @@ def _parse_file_located_recursive(
                 ret.add((*_keywords, keyword), ParsedEntry(value, entry_start, new_pos))
             # Check if this is a subdictionary
             elif contents[new_pos : new_pos + 1] == b"{":
-                # Find the matching brace
-                brace_start = new_pos
-                new_pos = _find_matching_brace(contents, new_pos)
-                
                 # Check for duplicates
                 if (*_keywords, keyword) in ret:
                     msg = f"duplicate entry found for keyword: {keyword}"
                     raise ValueError(msg)
                 
-                # Add entry with ... marker for subdictionary
-                ret[(*_keywords, keyword)] = ParsedEntry(..., entry_start, new_pos)
+                # Skip opening brace
+                new_pos += 1
                 
                 # Recursively parse subdictionary content
-                subdict_result, _ = _parse_file_located_recursive(
+                # The recursive call will parse until it hits the closing brace
+                subdict_result, new_pos = _parse_file_located_recursive(
                     contents,
-                    brace_start + 1,
-                    new_pos - 1,  # Exclude closing brace
+                    new_pos,
+                    end,
                     (*_keywords, keyword),
                 )
+                
+                # Expect closing brace
+                new_pos = skip(contents, new_pos)
+                if new_pos >= end or contents[new_pos : new_pos + 1] != b"}":
+                    raise ParseSyntaxError(contents, new_pos, expected="}")
+                new_pos += 1
+                
+                # Add entry with ... marker for subdictionary
+                ret[(*_keywords, keyword)] = ParsedEntry(..., entry_start, new_pos)
                 ret.extend(subdict_result)
             else:
                 try:
@@ -967,8 +935,21 @@ def _parse_file_located_recursive(
             # This pattern is necessary because OpenFOAM files can contain
             # standalone data (numeric arrays, etc.) without keywords
             if _keywords:
-                # Inside subdictionary, just break
-                break
+                # Inside subdictionary - skip unparseable content until we find
+                # the closing brace for this subdictionary level
+                # This handles cases like directives followed by unparseable syntax
+                depth = 0
+                while pos < end:
+                    if contents[pos:pos+1] == b"{":
+                        depth += 1
+                    elif contents[pos:pos+1] == b"}":
+                        if depth == 0:
+                            # Found the closing brace for this subdictionary
+                            return ret, pos
+                        depth -= 1
+                    pos += 1
+                # Reached end without finding closing brace
+                return ret, pos
             
             try:
                 standalone_data, new_pos = parse_standalone_data(contents, pos)
