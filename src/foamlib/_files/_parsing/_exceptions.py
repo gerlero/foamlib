@@ -22,7 +22,7 @@ class ParseError(ValueError):
         last_newline = self._contents.rfind(b"\n", 0, self.pos)
         if last_newline == -1:
             return self.pos + 1
-        return self.pos - last_newline + 1
+        return self.pos - last_newline
 
     @override
     def __str__(self) -> str:
