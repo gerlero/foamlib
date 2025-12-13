@@ -1,6 +1,5 @@
-import dataclasses
 import sys
-from collections.abc import Collection, Iterator, Mapping
+from collections.abc import Collection, Iterator
 from typing import TypeVar, cast, overload
 
 if sys.version_info >= (3, 11):
@@ -21,10 +20,7 @@ from multicollections.abc import MutableMultiMapping, with_default
 from ...typing import Data, FileDict, StandaloneData, SubDict
 from .._util import add_to_mapping
 from ._parser import (
-    LocatedEntry,
     ParsedEntry,
-    _expect,
-    _parse_data_entry,
     parse_data,
     parse_file,
     parse_file_located,

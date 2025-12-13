@@ -2,8 +2,8 @@ import builtins
 import contextlib
 import dataclasses
 import sys
-from typing import Literal, TypeVar, overload
 from types import EllipsisType
+from typing import Literal, TypeVar, overload
 
 from foamlib._files._util import add_to_mapping
 
@@ -872,7 +872,7 @@ def _parse_file_located_recursive(
         # Check if we've hit a closing brace (end of subdictionary)
         if _keywords and contents[pos : pos + 1] == b"}":
             return ret, pos
-        
+
         entry_start = pos
         try:
             keyword, new_pos = parse_token(contents, pos)
@@ -894,10 +894,10 @@ def _parse_file_located_recursive(
                         entry_start,
                         found=f"duplicate entry for keyword: {keyword}",
                     )
-                
+
                 # Skip opening brace
                 new_pos += 1
-                
+
                 # Recursively parse subdictionary content
                 # The recursive call will parse until it hits the closing brace
                 subdict_result, new_pos = _parse_file_located_recursive(
@@ -906,13 +906,13 @@ def _parse_file_located_recursive(
                     end,
                     (*_keywords, keyword),
                 )
-                
+
                 # Expect closing brace
                 new_pos = skip(contents, new_pos)
                 if new_pos >= end or contents[new_pos : new_pos + 1] != b"}":
-                    raise ParseSyntaxError(contents, new_pos, expected="}")
+                    raise ParseSyntaxError(contents, new_pos, expected="}")  # noqa: TRY301
                 new_pos += 1
-                
+
                 # Add entry with ... marker for subdictionary
                 ret[(*_keywords, keyword)] = ParsedEntry(..., entry_start, new_pos)
                 ret.extend(subdict_result)
@@ -924,7 +924,7 @@ def _parse_file_located_recursive(
                 else:
                     new_pos = skip(contents, new_pos)
                 new_pos = _expect(contents, new_pos, b";")
-                
+
                 # Check for duplicates
                 if (*_keywords, keyword) in ret and not keyword.startswith("#"):
                     raise ParseSemanticError(
@@ -932,9 +932,9 @@ def _parse_file_located_recursive(
                         entry_start,
                         found=f"duplicate entry for keyword: {keyword}",
                     )
-                
+
                 ret.add((*_keywords, keyword), ParsedEntry(value, entry_start, new_pos))
-            
+
             pos = new_pos
         except ParseSyntaxError:
             # If keyword parsing fails, try parsing as standalone data
@@ -944,7 +944,7 @@ def _parse_file_located_recursive(
                 # Inside subdictionary - can't parse keyword, likely at closing brace or invalid syntax
                 # Let it fail rather than silently skipping content
                 break
-            
+
             try:
                 standalone_data, new_pos = parse_standalone_data(contents, pos)
             except ParseSyntaxError:
@@ -964,7 +964,9 @@ def _parse_file_located_recursive(
     return ret, pos
 
 
-def parse_file_located(contents: bytes, pos: int = 0) -> tuple[MultiDict[tuple[str, ...], ParsedEntry], int]:
+def parse_file_located(
+    contents: bytes, pos: int = 0
+) -> tuple[MultiDict[tuple[str, ...], ParsedEntry], int]:
     """Parse a file and return a flattened MultiDict with location information.
 
     This function parses an OpenFOAM file and returns entries already flattened
