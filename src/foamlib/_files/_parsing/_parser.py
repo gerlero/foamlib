@@ -402,6 +402,9 @@ def _parse_list(
 
             ret.append(item)
 
+        if count is not None and len(ret) != count:
+            raise ParseError(contents, pos, expected=f"exactly {count} items in list")
+
     elif count is not None and contents[pos : pos + 1] == b"{":
         pos += 1
         pos = skip(contents, pos)
@@ -502,9 +505,7 @@ def _parse_dictionary(contents: bytes, pos: int) -> tuple[Dict, int]:
             )
 
         if keyword in ret:
-            raise ParseError(
-                contents, pos, expected=f"unique keyword (got duplicate {keyword!r})"
-            )
+            raise ValueError(f"Duplicate keyword {keyword!r} in dictionary")
 
         pos = skip(contents, pos)
 
@@ -566,9 +567,7 @@ def _parse_subdictionary(contents: bytes, pos: int) -> tuple[SubDict, int]:
         keyword, pos = parse_token(contents, pos)
 
         if not keyword.startswith("#") and keyword in ret:
-            raise ParseError(
-                contents, pos, expected=f"unique keyword (got duplicate {keyword!r})"
-            )
+            raise ValueError(f"Duplicate keyword {keyword!r} in subdictionary")
 
         pos = skip(contents, pos)
 

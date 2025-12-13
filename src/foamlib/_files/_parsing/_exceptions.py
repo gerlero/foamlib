@@ -32,7 +32,7 @@ class ParseError(ValueError):
             "ascii", errors="replace"
         )
         pointer = " " * (self.pos - snippet_start) + "^"
-        return f"Failure to parse at position {self.pos} (line {self.lineno}, column {self.colno}), expected {self._expected}:\n{snippet}\n{pointer}"
+        return f"Failure to parse at position {self.pos} (line {self.lineno}, column {self.colno}), Expected {self._expected}:\n{snippet}\n{pointer}"
 
     @override
     def __repr__(self) -> str:
