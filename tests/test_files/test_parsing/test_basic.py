@@ -195,11 +195,11 @@ def test_parse_directive() -> None:
 def test_parse_invalid_content() -> None:
     """Test that ValueError is raised for malformed content that causes ParseException."""
     # Test malformed syntax that will cause pyparsing to fail
-    with pytest.raises(ValueError, match="Failed to parse contents"):
+    with pytest.raises(ValueError, match="parse"):
         ParsedFile(b"key value; unclosed {")
 
-    with pytest.raises(ValueError, match="Failed to parse contents"):
+    with pytest.raises(ValueError, match="parse"):
         ParsedFile(b"key { value; } extra }")
 
-    with pytest.raises(ValueError, match="Failed to parse contents"):
+    with pytest.raises(ValueError, match="parse"):
         ParsedFile(b"{ orphaned brace")

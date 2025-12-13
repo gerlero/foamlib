@@ -386,9 +386,9 @@ def _parse_list(
     if contents[pos : pos + 1] == b"(":
         pos += 1
         ret: list[DataEntry | KeywordEntry | Dict] = []
-        while True:
+        while count is None or len(ret) < count:
             pos = skip(contents, pos)
-            if contents[pos : pos + 1] == b")":
+            if count is None and contents[pos : pos + 1] == b")":
                 pos += 1
                 break
 
@@ -401,6 +401,10 @@ def _parse_list(
                     item, pos = _parse_data_entry(contents, pos)
 
             ret.append(item)
+
+        if count is not None:
+            pos = skip(contents, pos)
+            pos = _expect(contents, pos, b")")
 
     elif count is not None and contents[pos : pos + 1] == b"{":
         pos += 1
@@ -497,14 +501,18 @@ def _parse_dictionary(contents: bytes, pos: int) -> tuple[Dict, int]:
         keyword, pos = parse_token(contents, pos)
 
         if keyword.startswith("#"):
-            raise ParseError(
-                contents, pos, expected="non-directive keyword in dictionary"
-            )
+            ParseError(
+                contents,
+                pos,
+                expected=f"non-directive keyword in dictionary (got {keyword!r})",
+            ).raise_fatal()
 
         if keyword in ret:
-            raise ParseError(
-                contents, pos, expected=f"unique keyword (got duplicate {keyword!r})"
-            )
+            ParseError(
+                contents,
+                pos,
+                expected=f"unique keyword in dictionary (got duplicate {keyword!r})",
+            ).raise_fatal()
 
         pos = skip(contents, pos)
 
@@ -566,9 +574,11 @@ def _parse_subdictionary(contents: bytes, pos: int) -> tuple[SubDict, int]:
         keyword, pos = parse_token(contents, pos)
 
         if not keyword.startswith("#") and keyword in ret:
-            raise ParseError(
-                contents, pos, expected=f"unique keyword (got duplicate {keyword!r})"
-            )
+            ParseError(
+                contents,
+                pos,
+                expected=f"unique keyword in subdictionary (got duplicate {keyword!r})",
+            ).raise_fatal()
 
         pos = skip(contents, pos)
 
@@ -665,11 +675,11 @@ def parse_file(contents: bytes, pos: int = 0) -> tuple[FileDict, int]:
         try:
             keyword, new_pos = parse_token(contents, pos)
             if not keyword.startswith("#") and keyword in ret:
-                raise ParseError(  # noqa: TRY301
+                ParseError(
                     contents,
                     pos,
                     expected=f"unique non-directive keyword (got duplicate {keyword!r})",
-                )
+                ).raise_fatal()
 
             new_pos = skip(contents, new_pos)
 
@@ -699,11 +709,11 @@ def parse_file(contents: bytes, pos: int = 0) -> tuple[FileDict, int]:
                 ) from None
             else:
                 if None in ret:
-                    raise ParseError(
+                    ParseError(
                         contents,
                         pos,
-                        expected="non-duplicate top-level standalone data",
-                    ) from None
+                        expected="a single instance of top-level standalone data",
+                    ).raise_fatal()
                 ret[None] = standalone_data
 
     return ret, pos

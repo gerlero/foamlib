@@ -124,7 +124,7 @@ def test_invalid_duplicate_keywords() -> None:
             keywords=(),
         )
 
-    with pytest.raises(ValueError, match="Duplicate"):
+    with pytest.raises(ValueError, match="unique"):
         ParsedFile(b"""
         list (subdict { a b; a c; });
         """)

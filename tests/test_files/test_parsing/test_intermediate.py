@@ -252,7 +252,6 @@ def test_directive() -> None:
     assert parsed[("#include",)] == '"initialConditions"'
 
 
-@pytest.mark.xfail(reason="Not currently supported")
 def test_directives_in_dict() -> None:
     ParsedFile(b"""
         functions
@@ -551,7 +550,7 @@ def test_list_numbered() -> None:
 
 
 def test_list_numbered_u() -> None:
-    with pytest.raises(Exception, match="Expected"):
+    with pytest.raises(ValueError, match="parse"):
         ParsedFile(b"""
             70
             (
