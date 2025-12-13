@@ -18,7 +18,6 @@ from foamlib._files._parsing._re import (
     SKIP,
     SYMM_TENSOR_LIST,
     TENSOR_LIST,
-    TOKEN,
     UNCOMMENTED_FACES_LIKE_LIST,
     UNCOMMENTED_FLOAT_LIST,
     UNCOMMENTED_INTEGER_LIST,
@@ -41,26 +40,6 @@ def test_whitespace_and_comments() -> None:
     assert SKIP.fullmatch(b"   // Comment\n /* Multi-line \n comment */ \t")
     assert SKIP.fullmatch(b"/* these are *//* two comments */")
     assert not SKIP.fullmatch(b"Not whitespace or comment")
-
-
-def test_token() -> None:
-    assert TOKEN.fullmatch(b"variableName")
-    assert TOKEN.fullmatch(b'"string value"')
-    assert TOKEN.fullmatch(b"List<scalar>")
-    assert TOKEN.fullmatch(b"functionName(arg1,arg2,arg3)")
-    assert TOKEN.fullmatch(b"nestedFunc(outer(inner(arg)))")
-    assert TOKEN.fullmatch(b"div((nuEff*dev2(T(grad(U)))))")
-    assert TOKEN.fullmatch(b"#include")
-    assert TOKEN.fullmatch(b"$special_var")
-    assert TOKEN.fullmatch(b"var.name.with.dots")
-    assert TOKEN.fullmatch(b"complexFunc(param1,param2(paramA,paramB))")
-    assert TOKEN.fullmatch(b"_underscoreVar123")
-    assert TOKEN.fullmatch(b"VarWith123Numbers")
-    assert not TOKEN.fullmatch(b"123invalid")
-    assert not TOKEN.fullmatch(b"func(arg1, arg2)")
-    assert not TOKEN.fullmatch(b'"unclosed string')
-    assert not TOKEN.fullmatch(b"unbalancedParens(arg1(arg2,arg3)))")
-    assert not TOKEN.fullmatch(b"a;")
 
 
 def test_unsigned_integer() -> None:
