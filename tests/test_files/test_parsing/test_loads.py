@@ -83,7 +83,7 @@ def test_loads() -> None:
     assert FoamFile.loads("a {b c; d e;}") == {"a": {"b": "c", "d": "e"}}
     assert FoamFile.loads("(a b; c d;)") == [("a", "b"), ("c", "d")]
     assert FoamFile.loads("keyword;") == {"keyword": None}
-    assert FoamFile.loads("#include $FOAM_CASE/simControls") == {
+    assert FoamFile.loads("#include $FOAM_CASE/simControls\n") == {
         "#include": "$FOAM_CASE/simControls"
     }
     faces = FoamFile.loads("2(3(1 2 3) 4(4 5 6 7))")
