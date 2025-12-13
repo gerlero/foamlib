@@ -384,6 +384,7 @@ def _parse_list(
         pos = skip(contents, pos)
 
     if contents[pos : pos + 1] == b"(":
+        list_start = pos
         pos += 1
         ret: list[DataEntry | KeywordEntry | Dict] = []
         while True:
@@ -403,7 +404,9 @@ def _parse_list(
             ret.append(item)
 
         if count is not None and len(ret) != count:
-            raise ParseError(contents, pos, expected=f"exactly {count} items in list")
+            raise ParseError(
+                contents, list_start, expected=f"exactly {count} items in list"
+            )
 
     elif count is not None and contents[pos : pos + 1] == b"{":
         pos += 1
