@@ -3,6 +3,7 @@ import contextlib
 import dataclasses
 import sys
 from typing import Literal, TypeVar, overload
+from types import EllipsisType
 
 from foamlib._files._util import add_to_mapping
 
@@ -12,6 +13,7 @@ else:
     from typing_extensions import Unpack
 
 import numpy as np
+from multicollections import MultiDict
 
 from ...typing import (
     Data,
@@ -832,10 +834,18 @@ def parse_file(contents: bytes, pos: int = 0) -> tuple[FileDict, int]:
 class LocatedEntry:
     """Represents a parsed entry with its location in the source."""
 
-    keyword: str | None
-    data: Data | StandaloneData | Dict | SubDict | None
+    value: tuple[str | None, Data | StandaloneData | Dict | SubDict | None]
     locn_start: int
     locn_end: int
+
+
+@dataclasses.dataclass
+class ParsedEntry:
+    """Represents a parsed entry with data and location information."""
+
+    data: Data | StandaloneData | EllipsisType | None
+    start: int
+    end: int
 
 
 def _find_matching_brace(contents: bytes, pos: int) -> int:
@@ -881,23 +891,26 @@ def _find_matching_brace(contents: bytes, pos: int) -> int:
     return pos
 
 
-def parse_file_located(contents: bytes, pos: int = 0) -> tuple[list[LocatedEntry], int]:
-    """Parse a file and return entries with location information.
-
-    This function is similar to parse_file but returns a list of LocatedEntry
-    objects that include start and end positions for each top-level entry.
-    This is used by ParsedFile to track locations for editing.
+def _parse_file_located_recursive(
+    contents: bytes,
+    pos: int,
+    end: int,
+    _keywords: tuple[str, ...] = (),
+) -> tuple[MultiDict[tuple[str, ...], ParsedEntry], int]:
+    """Parse entries with location information and flatten them into a MultiDict.
 
     Args:
         contents: The bytes to parse
-        pos: Starting position (default 0)
+        pos: Starting position
+        end: Ending position (exclusive)
+        _keywords: Tuple of parent keywords for nested entries
 
     Returns:
-        A list of LocatedEntry objects containing parsed entries with locations
+        A MultiDict mapping keyword tuples to ParsedEntry objects and the final position
     """
-    ret: list[LocatedEntry] = []
+    ret: MultiDict[tuple[str, ...], ParsedEntry] = MultiDict()
 
-    while (pos := skip(contents, pos)) < len(contents):
+    while (pos := skip(contents, pos)) < end:
         entry_start = pos
         try:
             keyword, new_pos = parse_token(contents, pos)
@@ -906,15 +919,32 @@ def parse_file_located(contents: bytes, pos: int = 0) -> tuple[list[LocatedEntry
             if keyword.startswith("#"):
                 value, new_pos = _parse_data_entry(contents, new_pos)
                 new_pos = skip(contents, new_pos, newline_ok=False)
-                # Expect newline or end of file for directives
-                if new_pos < len(contents):
-                    new_pos = _expect(contents, new_pos, b"\n")
+                # Expect newline or end for directives
+                if new_pos < end and contents[new_pos : new_pos + 1] == b"\n":
+                    new_pos += 1
+                ret.add((*_keywords, keyword), ParsedEntry(value, entry_start, new_pos))
             # Check if this is a subdictionary
             elif contents[new_pos : new_pos + 1] == b"{":
-                # Just find the matching brace without parsing/validating the content
-                # The content will be parsed later by _flatten_results
+                # Find the matching brace
+                brace_start = new_pos
                 new_pos = _find_matching_brace(contents, new_pos)
-                value = {}  # Marker for subdictionary
+                
+                # Check for duplicates
+                if (*_keywords, keyword) in ret:
+                    msg = f"duplicate entry found for keyword: {keyword}"
+                    raise ValueError(msg)
+                
+                # Add entry with ... marker for subdictionary
+                ret[(*_keywords, keyword)] = ParsedEntry(..., entry_start, new_pos)
+                
+                # Recursively parse subdictionary content
+                subdict_result, _ = _parse_file_located_recursive(
+                    contents,
+                    brace_start + 1,
+                    new_pos - 1,  # Exclude closing brace
+                    (*_keywords, keyword),
+                )
+                ret.extend(subdict_result)
             else:
                 try:
                     value, new_pos = parse_data(contents, new_pos)
@@ -923,13 +953,23 @@ def parse_file_located(contents: bytes, pos: int = 0) -> tuple[list[LocatedEntry
                 else:
                     new_pos = skip(contents, new_pos)
                 new_pos = _expect(contents, new_pos, b";")
-
-            ret.append(LocatedEntry(keyword, value, entry_start, new_pos))
+                
+                # Check for duplicates
+                if (*_keywords, keyword) in ret and not keyword.startswith("#"):
+                    msg = f"duplicate entry found for keyword: {keyword}"
+                    raise ValueError(msg)
+                
+                ret.add((*_keywords, keyword), ParsedEntry(value, entry_start, new_pos))
+            
             pos = new_pos
         except ParseSyntaxError:
             # If keyword parsing fails, try parsing as standalone data
             # This pattern is necessary because OpenFOAM files can contain
             # standalone data (numeric arrays, etc.) without keywords
+            if _keywords:
+                # Inside subdictionary, just break
+                break
+            
             try:
                 standalone_data, new_pos = parse_standalone_data(contents, pos)
             except ParseSyntaxError:
@@ -937,7 +977,27 @@ def parse_file_located(contents: bytes, pos: int = 0) -> tuple[list[LocatedEntry
                     contents, pos, expected="keyword or standalone data"
                 ) from None
             else:
-                ret.append(LocatedEntry(None, standalone_data, entry_start, new_pos))
+                if () in ret:
+                    msg = "duplicate standalone data found"
+                    raise ValueError(msg)
+                ret[()] = ParsedEntry(standalone_data, entry_start, new_pos)
                 pos = new_pos
 
     return ret, pos
+
+
+def parse_file_located(contents: bytes, pos: int = 0) -> tuple[MultiDict[tuple[str, ...], ParsedEntry], int]:
+    """Parse a file and return a flattened MultiDict with location information.
+
+    This function parses an OpenFOAM file and returns entries already flattened
+    into the structure used by ParsedFile, eliminating the need for a separate
+    flattening step.
+
+    Args:
+        contents: The bytes to parse
+        pos: Starting position (default 0)
+
+    Returns:
+        A MultiDict mapping keyword tuples to ParsedEntry objects and the final position
+    """
+    return _parse_file_located_recursive(contents, pos, len(contents))
