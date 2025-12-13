@@ -366,8 +366,11 @@ def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
             if contents[i : i + 1] == b'"':
                 return contents[pos : i + 1].decode("ascii"), i + 1
             if contents[i : i + 1] == b"\\":
-                # Skip escaped character
+                # Skip escaped character (if present)
                 i += 2
+                if i > len(contents):
+                    # String ends with backslash (unterminated)
+                    break
             else:
                 i += 1
         # Unterminated string
@@ -376,11 +379,7 @@ def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
     # Try to match a token
     # First character must be [A-Za-z_#$]
     first_char = contents[pos : pos + 1]
-    if (
-        not first_char
-        or first_char
-        not in b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_#$"
-    ):
+    if not first_char or first_char not in b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_#$":
         raise ParseSyntaxError(contents, pos, expected="token")
 
     # Following characters can be [\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7b\x7c\x7e]
