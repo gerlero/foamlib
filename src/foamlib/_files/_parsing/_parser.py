@@ -811,6 +811,9 @@ def parse_file_located(contents: bytes, pos: int = 0) -> list[LocatedEntry]:
             ret.append(LocatedEntry((keyword, value), entry_start, new_pos))
             pos = new_pos
         except ParseError:  # noqa: PERF203
+            # If keyword parsing fails, try parsing as standalone data
+            # This pattern is necessary because OpenFOAM files can contain
+            # standalone data (numeric arrays, etc.) without keywords
             try:
                 standalone_data, new_pos = parse_standalone_data(contents, pos)
             except ParseError:

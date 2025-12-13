@@ -2,6 +2,15 @@ import re
 
 import regex
 
+# TOKEN regex matches quoted strings or identifiers with optional parentheses
+# Character ranges are ASCII printables excluding: space, ;, (, ), {, }, [, ]
+# \x21-\x27: !"#$%&'
+# \x2a-\x3a: *+,-./0-9:
+# \x3c-\x5a: <=>?@A-Z
+# \x5c: \
+# \x5e-\x7b: ^_`a-z{
+# \x7c: |
+# \x7e: ~
 TOKEN = regex.compile(
     rb'"(?:[^"\\]|\\.)*"|[A-Za-z_#$][\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7b\x7c\x7e]*(\((?:[\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7b\x7c\x7e]+|(?1))*\))?'
 )

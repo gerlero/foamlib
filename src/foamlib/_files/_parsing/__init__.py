@@ -160,8 +160,6 @@ class ParsedFile(
                     # Check if this is a nested subdictionary
                     if contents[new_pos : new_pos + 1] == b"{":
                         # Just find the matching brace without parsing/validating
-                        from ._parser import _find_matching_brace
-
                         new_pos = _find_matching_brace(contents, new_pos)
                         value = {}  # Marker for subdictionary
                     else:
