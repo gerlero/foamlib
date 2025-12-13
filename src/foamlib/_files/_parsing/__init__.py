@@ -1,6 +1,6 @@
 import dataclasses
 import sys
-from collections.abc import Collection, Iterator, Sequence
+from collections.abc import Collection, Iterator, Mapping
 from typing import cast, overload
 
 if sys.version_info >= (3, 11):
@@ -17,13 +17,23 @@ from types import EllipsisType
 
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
-from pyparsing import ParseException, ParseResults, TypeVar
+from pyparsing import TypeVar
 
 from ...typing import Data, FileDict, StandaloneData, SubDict
 from .._util import add_to_mapping
 from ._exceptions import ParseError
-from ._old._grammar import LOCATED_FILE
-from ._parser import parse_data, parse_file, parse_standalone_data, parse_token, skip
+from ._parser import (
+    LocatedEntry,
+    _expect,
+    _find_matching_brace,
+    _parse_data_entry,
+    parse_data,
+    parse_file,
+    parse_file_located,
+    parse_standalone_data,
+    parse_token,
+    skip,
+)
 
 _T = TypeVar("_T", str, Data, StandaloneData, FileDict)
 
@@ -64,63 +74,108 @@ class ParsedFile(
         end: int
 
     def __init__(self, contents: bytes | str, /) -> None:
-        if isinstance(contents, bytes):
-            contents_str = contents.decode("latin-1")
-        else:
-            contents_str = contents
+        if isinstance(contents, str):
             contents = contents.encode("latin-1")
 
         try:
-            parse_results = LOCATED_FILE.parse_string(contents_str, parse_all=True)
-        except ParseException as e:
+            parse_results = parse_file_located(contents, 0)
+        except ParseError as e:
             msg = f"Failed to parse contents: {e}"
             raise ValueError(msg) from e
-        self._parsed = self._flatten_results(parse_results)
+        self._parsed = self._flatten_results(contents, parse_results)
 
         self.contents = contents
         self.modified = False
 
     @staticmethod
     def _flatten_results(
-        parse_results: ParseResults | Sequence[ParseResults],
+        contents: bytes,
+        parse_results: list[LocatedEntry],
         /,
         *,
         _keywords: tuple[str, ...] = (),
     ) -> MultiDict[tuple[str, ...], "ParsedFile._Entry"]:
         ret: MultiDict[tuple[str, ...], ParsedFile._Entry] = MultiDict()
         for parse_result in parse_results:
-            value = parse_result.value
-            assert isinstance(value, Sequence)
+            keyword, data = parse_result.value
             start = parse_result.locn_start
-            assert isinstance(start, int)
             end = parse_result.locn_end
-            assert isinstance(end, int)
-            keyword, *data = value
+
             if keyword is None:
                 assert not _keywords
-                assert len(data) == 1
-                assert not isinstance(data[0], ParseResults)
                 assert () not in ret
-                ret[()] = ParsedFile._Entry(data[0], start, end)
+                data = cast("StandaloneData", data)
+                ret[()] = ParsedFile._Entry(data, start, end)
             else:
                 assert isinstance(keyword, str)
-                if len(data) == 0 or isinstance(data[0], ParseResults):
+                if isinstance(data, dict):
+                    # This is a subdictionary - recursively parse its entries
                     if (*_keywords, keyword) in ret:
                         msg = f"Duplicate entry found for keyword: {keyword}"
                         raise ValueError(msg)
                     ret[(*_keywords, keyword)] = ParsedFile._Entry(..., start, end)
-                    ret.extend(
-                        ParsedFile._flatten_results(
-                            data, _keywords=(*_keywords, keyword)
+                    # Parse the subdictionary content to get nested entries with locations
+                    dict_start = contents.find(b"{", start)
+                    dict_end = contents.rfind(b"}", start, end)
+                    if dict_start != -1 and dict_end != -1:
+                        subdict_entries = ParsedFile._parse_subdict_located(
+                            contents, dict_start + 1, dict_end
                         )
-                    )
+                        ret.extend(
+                            ParsedFile._flatten_results(
+                                contents,
+                                subdict_entries,
+                                _keywords=(*_keywords, keyword),
+                            )
+                        )
                 else:
                     if (*_keywords, keyword) in ret and not keyword.startswith("#"):
                         msg = f"Duplicate entry found for keyword: {keyword}"
                         raise ValueError(msg)
-                    ret.add(
-                        (*_keywords, keyword), ParsedFile._Entry(data[0], start, end)
-                    )
+                    assert not isinstance(data, Mapping)
+                    ret.add((*_keywords, keyword), ParsedFile._Entry(data, start, end))
+        return ret
+
+    @staticmethod
+    def _parse_subdict_located(
+        contents: bytes, start: int, end: int
+    ) -> list[LocatedEntry]:
+        """Parse entries within a subdictionary and return them with locations."""
+        ret: list[LocatedEntry] = []
+        pos = start
+
+        while (pos := skip(contents, pos)) < end:
+            entry_start = pos
+            try:
+                keyword, new_pos = parse_token(contents, pos)
+                new_pos = skip(contents, new_pos)
+
+                if keyword.startswith("#"):
+                    value, new_pos = _parse_data_entry(contents, new_pos)
+                    new_pos = skip(contents, new_pos, newline_ok=False)
+                    # Expect newline or end of subdictionary for directives
+                    if new_pos < end and contents[new_pos : new_pos + 1] == b"\n":
+                        new_pos += 1
+                # Check if this is a nested subdictionary
+                elif contents[new_pos : new_pos + 1] == b"{":
+                    # Just find the matching brace without parsing/validating
+                    new_pos = _find_matching_brace(contents, new_pos)
+                    value = {}  # Marker for subdictionary
+                else:
+                    try:
+                        value, new_pos = parse_data(contents, new_pos)
+                    except ParseError:
+                        value = None
+                    else:
+                        new_pos = skip(contents, new_pos)
+                    new_pos = _expect(contents, new_pos, b";")
+
+                ret.append(LocatedEntry((keyword, value), entry_start, new_pos))
+                pos = new_pos
+            except ParseError:
+                # End of subdictionary or invalid content
+                break
+
         return ret
 
     @overload

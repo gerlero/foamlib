@@ -3,11 +3,13 @@ import re
 import regex
 
 TOKEN = regex.compile(
-    rb'"(?:[^"\\]|\\.)*"|[A-Za-z_#$][A-Za-z0-9_<>&\|\+\-\*\/]*(?:\.?[A-Za-z_][A-Za-z0-9_&\|\+\-\*\/]*)*(\((?:[A-Za-z0-9_<>&\|\+\-\*\/]+(?:,[A-Za-z0-9_<>&\|\+\-\*\/]+)*|(?1))*\))?'
+    rb'"(?:[^"\\]|\\.)*"|[A-Za-z_#$][\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7b\x7c\x7e]*(\((?:[\x21-\x27\x2a-\x3a\x3c-\x5a\x5c\x5e-\x7b\x7c\x7e]+|(?1))*\))?'
 )
 UNSIGNED_INTEGER = re.compile(rb"\d+")
 INTEGER = re.compile(rb"[+-]?\d+")
-FLOAT = re.compile(rb"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))")
+FLOAT = re.compile(
+    rb"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan(?![A-Za-z0-9_])|inf(?:inity)?(?![A-Za-z0-9_])))"
+)
 
 COMMENT = re.compile(rb"(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*)")
 SKIP = re.compile(rb"(?:\s+|(?:" + COMMENT.pattern + b"))+")

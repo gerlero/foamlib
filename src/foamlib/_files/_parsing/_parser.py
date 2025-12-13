@@ -1,5 +1,6 @@
 import builtins
 import contextlib
+import dataclasses
 import sys
 from typing import Literal, TypeVar, overload
 
@@ -706,3 +707,117 @@ def parse_file(contents: bytes, pos: int = 0) -> tuple[FileDict, int]:
                 ret[None] = standalone_data
 
     return ret, pos
+
+
+@dataclasses.dataclass
+class LocatedEntry:
+    """Represents a parsed entry with its location in the source."""
+
+    value: tuple[str | None, Data | StandaloneData | Dict | SubDict | None]
+    locn_start: int
+    locn_end: int
+
+
+def _find_matching_brace(contents: bytes, pos: int) -> int:
+    """Find the position of the matching closing brace for an opening brace.
+
+    Args:
+        contents: The bytes to search in
+        pos: Position of the opening brace
+
+    Returns:
+        Position right after the closing brace
+
+    Raises:
+        ParseError: If no matching brace is found
+    """
+    assert contents[pos : pos + 1] == b"{"
+    depth = 1
+    pos += 1
+
+    while pos < len(contents) and depth > 0:
+        # Skip comments
+        if contents[pos : pos + 2] == b"/*":
+            end = contents.find(b"*/", pos + 2)
+            if end == -1:
+                raise ParseError(contents, pos, expected="closing */")
+            pos = end + 2
+            continue
+        if contents[pos : pos + 2] == b"//":
+            end = contents.find(b"\n", pos + 2)
+            pos = len(contents) if end == -1 else end + 1
+            continue
+
+        if contents[pos : pos + 1] == b"{":
+            depth += 1
+        elif contents[pos : pos + 1] == b"}":
+            depth -= 1
+
+        pos += 1
+
+    if depth != 0:
+        raise ParseError(contents, pos, expected="matching closing brace")
+
+    return pos
+
+
+def parse_file_located(contents: bytes, pos: int = 0) -> list[LocatedEntry]:
+    """Parse a file and return entries with location information.
+
+    This function is similar to parse_file but returns a list of LocatedEntry
+    objects that include start and end positions for each top-level entry.
+    This is used by ParsedFile to track locations for editing.
+
+    Args:
+        contents: The bytes to parse
+        pos: Starting position (default 0)
+
+    Returns:
+        A list of LocatedEntry objects containing parsed entries with locations
+    """
+    ret: list[LocatedEntry] = []
+
+    while (pos := skip(contents, pos)) < len(contents):
+        entry_start = pos
+        try:
+            keyword, new_pos = parse_token(contents, pos)
+            new_pos = skip(contents, new_pos)
+
+            if keyword.startswith("#"):
+                value, new_pos = _parse_data_entry(contents, new_pos)
+                new_pos = skip(contents, new_pos, newline_ok=False)
+                # Expect newline or end of file for directives
+                if new_pos < len(contents):
+                    new_pos = _expect(contents, new_pos, b"\n")
+            # Check if this is a subdictionary
+            elif contents[new_pos : new_pos + 1] == b"{":
+                # Just find the matching brace without parsing/validating the content
+                # The content will be parsed later by _flatten_results
+                new_pos = _find_matching_brace(contents, new_pos)
+                value = {}  # Marker for subdictionary
+            else:
+                try:
+                    value, new_pos = parse_data(contents, new_pos)
+                except ParseError:
+                    value = None
+                else:
+                    new_pos = skip(contents, new_pos)
+                new_pos = _expect(contents, new_pos, b";")
+
+            ret.append(LocatedEntry((keyword, value), entry_start, new_pos))
+            pos = new_pos
+        except ParseError:
+            # If keyword parsing fails, try parsing as standalone data
+            # This pattern is necessary because OpenFOAM files can contain
+            # standalone data (numeric arrays, etc.) without keywords
+            try:
+                standalone_data, new_pos = parse_standalone_data(contents, pos)
+            except ParseError:
+                raise ParseError(
+                    contents, pos, expected="keyword or standalone data"
+                ) from None
+            else:
+                ret.append(LocatedEntry((None, standalone_data), entry_start, new_pos))
+                pos = new_pos
+
+    return ret
