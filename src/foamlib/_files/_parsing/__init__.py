@@ -1,6 +1,5 @@
-import dataclasses
 import sys
-from collections.abc import Collection, Iterator, Mapping
+from collections.abc import Collection, Iterator
 from typing import TypeVar, cast, overload
 
 if sys.version_info >= (3, 11):
@@ -21,10 +20,7 @@ from multicollections.abc import MutableMultiMapping, with_default
 from ...typing import Data, FileDict, StandaloneData, SubDict
 from .._util import add_to_mapping
 from ._parser import (
-    LocatedEntry,
-    _expect,
-    _find_matching_brace,
-    _parse_data_entry,
+    ParsedEntry,
     parse_data,
     parse_file,
     parse_file_located,
@@ -71,115 +67,15 @@ def parse(contents: bytes | str, /, *, target: type[_T]) -> _T:
 class ParsedFile(
     MutableMultiMapping[tuple[str, ...], Data | StandaloneData | EllipsisType | None]
 ):
-    @dataclasses.dataclass
-    class _Entry:
-        data: Data | StandaloneData | EllipsisType | None
-        start: int
-        end: int
-
     def __init__(self, contents: bytes | str, /) -> None:
         if isinstance(contents, str):
             contents = contents.encode()
 
-        pos = skip(contents, 0)
-        parse_results, pos = parse_file_located(contents, pos)
+        self._parsed, pos = parse_file_located(contents, 0)
         skip(contents, pos, strict=True)
-
-        self._parsed = self._flatten_results(contents, parse_results)
 
         self.contents = contents
         self.modified = False
-
-    @staticmethod
-    def _flatten_results(
-        contents: bytes,
-        parse_results: list[LocatedEntry],
-        /,
-        *,
-        _keywords: tuple[str, ...] = (),
-    ) -> MultiDict[tuple[str, ...], "ParsedFile._Entry"]:
-        ret: MultiDict[tuple[str, ...], ParsedFile._Entry] = MultiDict()
-        for parse_result in parse_results:
-            keyword, data = parse_result.value
-            start = parse_result.locn_start
-            end = parse_result.locn_end
-
-            if keyword is None:
-                assert not _keywords
-                assert () not in ret
-                data = cast("StandaloneData", data)
-                ret[()] = ParsedFile._Entry(data, start, end)
-            else:
-                assert isinstance(keyword, str)
-                if isinstance(data, dict):
-                    # This is a subdictionary - recursively parse its entries
-                    if (*_keywords, keyword) in ret:
-                        msg = f"duplicate entry found for keyword: {keyword}"
-                        raise ValueError(msg)
-                    ret[(*_keywords, keyword)] = ParsedFile._Entry(..., start, end)
-                    # Parse the subdictionary content to get nested entries with locations
-                    dict_start = contents.find(b"{", start)
-                    dict_end = contents.rfind(b"}", start, end)
-                    if dict_start != -1 and dict_end != -1:
-                        subdict_entries = ParsedFile._parse_subdict_located(
-                            contents, dict_start + 1, dict_end
-                        )
-                        ret.extend(
-                            ParsedFile._flatten_results(
-                                contents,
-                                subdict_entries,
-                                _keywords=(*_keywords, keyword),
-                            )
-                        )
-                else:
-                    if (*_keywords, keyword) in ret and not keyword.startswith("#"):
-                        msg = f"duplicate entry found for keyword: {keyword}"
-                        raise ValueError(msg)
-                    assert not isinstance(data, Mapping)
-                    ret.add((*_keywords, keyword), ParsedFile._Entry(data, start, end))
-        return ret
-
-    @staticmethod
-    def _parse_subdict_located(
-        contents: bytes, start: int, end: int
-    ) -> list[LocatedEntry]:
-        """Parse entries within a subdictionary and return them with locations."""
-        ret: list[LocatedEntry] = []
-        pos = start
-
-        while (pos := skip(contents, pos)) < end:
-            entry_start = pos
-            try:
-                keyword, new_pos = parse_token(contents, pos)
-                new_pos = skip(contents, new_pos)
-
-                if keyword.startswith("#"):
-                    value, new_pos = _parse_data_entry(contents, new_pos)
-                    new_pos = skip(contents, new_pos, newline_ok=False)
-                    # Expect newline or end of subdictionary for directives
-                    if new_pos < end and contents[new_pos : new_pos + 1] == b"\n":
-                        new_pos += 1
-                # Check if this is a nested subdictionary
-                elif contents[new_pos : new_pos + 1] == b"{":
-                    # Just find the matching brace without parsing/validating
-                    new_pos = _find_matching_brace(contents, new_pos)
-                    value = {}  # Marker for subdictionary
-                else:
-                    try:
-                        value, new_pos = parse_data(contents, new_pos)
-                    except ParseSyntaxError:
-                        value = None
-                    else:
-                        new_pos = skip(contents, new_pos)
-                    new_pos = _expect(contents, new_pos, b";")
-
-                ret.append(LocatedEntry((keyword, value), entry_start, new_pos))
-                pos = new_pos
-            except ParseSyntaxError:
-                # End of subdictionary or invalid content
-                break
-
-        return ret
 
     @overload
     @with_default
@@ -248,7 +144,7 @@ class ParsedFile(
         start, end = self.entry_location(keywords)
 
         self._update_content(start, end, content)
-        self._parsed[keywords] = ParsedFile._Entry(data, start, start + len(content))
+        self._parsed[keywords] = ParsedEntry(data, start, start + len(content))
         self._remove_child_entries(keywords)
 
     @overload
@@ -285,7 +181,7 @@ class ParsedFile(
 
         start, end = self.entry_location(keywords, add=True)
 
-        self._parsed.add(keywords, ParsedFile._Entry(data, start, end))
+        self._parsed.add(keywords, ParsedEntry(data, start, end))
         self._update_content(start, end, content)
 
     @overload
@@ -328,7 +224,7 @@ class ParsedFile(
         # Update positions of other entries if content length changed
         if diff != 0:
             for entry in self._parsed.values():
-                assert isinstance(entry, ParsedFile._Entry)
+                assert isinstance(entry, ParsedEntry)
                 if entry.start >= end:
                     entry.start += diff
                     entry.end += diff
@@ -366,7 +262,7 @@ class ParsedFile(
     def as_dict(self) -> FileDict:
         ret: FileDict = {}
         for keywords, entry in self._parsed.items():
-            assert isinstance(entry, ParsedFile._Entry)
+            assert isinstance(entry, ParsedEntry)
             if not keywords:
                 assert entry.data is not ...
                 assert None not in ret
