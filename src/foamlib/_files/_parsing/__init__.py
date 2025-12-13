@@ -98,7 +98,8 @@ class ParsedFile(
     ) -> MultiDict[tuple[str, ...], "ParsedFile._Entry"]:
         ret: MultiDict[tuple[str, ...], ParsedFile._Entry] = MultiDict()
         for parse_result in parse_results:
-            keyword, data = parse_result.value
+            keyword = parse_result.keyword
+            data = parse_result.data
             start = parse_result.locn_start
             end = parse_result.locn_end
 
@@ -171,7 +172,7 @@ class ParsedFile(
                         new_pos = skip(contents, new_pos)
                     new_pos = _expect(contents, new_pos, b";")
 
-                ret.append(LocatedEntry((keyword, value), entry_start, new_pos))
+                ret.append(LocatedEntry(keyword, value, entry_start, new_pos))
                 pos = new_pos
             except ParseSyntaxError:
                 # End of subdictionary or invalid content

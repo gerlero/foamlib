@@ -832,7 +832,8 @@ def parse_file(contents: bytes, pos: int = 0) -> tuple[FileDict, int]:
 class LocatedEntry:
     """Represents a parsed entry with its location in the source."""
 
-    value: tuple[str | None, Data | StandaloneData | Dict | SubDict | None]
+    keyword: str | None
+    data: Data | StandaloneData | Dict | SubDict | None
     locn_start: int
     locn_end: int
 
@@ -923,7 +924,7 @@ def parse_file_located(contents: bytes, pos: int = 0) -> tuple[list[LocatedEntry
                     new_pos = skip(contents, new_pos)
                 new_pos = _expect(contents, new_pos, b";")
 
-            ret.append(LocatedEntry((keyword, value), entry_start, new_pos))
+            ret.append(LocatedEntry(keyword, value, entry_start, new_pos))
             pos = new_pos
         except ParseSyntaxError:
             # If keyword parsing fails, try parsing as standalone data
@@ -936,7 +937,7 @@ def parse_file_located(contents: bytes, pos: int = 0) -> tuple[list[LocatedEntry
                     contents, pos, expected="keyword or standalone data"
                 ) from None
             else:
-                ret.append(LocatedEntry((None, standalone_data), entry_start, new_pos))
+                ret.append(LocatedEntry(None, standalone_data, entry_start, new_pos))
                 pos = new_pos
 
     return ret, pos
