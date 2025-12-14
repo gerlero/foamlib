@@ -26,13 +26,13 @@ _VECTOR = re.compile(
     + rb")?\)"
 )
 _UNCOMMENTED_VECTOR = re.compile(
-    rb"\((?:\s*)?(?:"
+    rb"\(\s*(?:"
     + FLOAT.pattern
     + rb"(?:\s*))(?:"
     + FLOAT.pattern
     + rb"(?:\s*))(?:"
     + FLOAT.pattern
-    + rb")(?:\s*)?\)"
+    + rb")\s*\)"
 )
 _SYMM_TENSOR = re.compile(
     rb"\((?:"
@@ -64,7 +64,7 @@ _SYMM_TENSOR = re.compile(
     + rb")?\)"
 )
 _UNCOMMENTED_SYMM_TENSOR = re.compile(
-    rb"\((?:\s*)?(?:"
+    rb"\(\s*(?:"
     + FLOAT.pattern
     + rb"(?:\s*))(?:"
     + FLOAT.pattern
@@ -76,7 +76,7 @@ _UNCOMMENTED_SYMM_TENSOR = re.compile(
     + FLOAT.pattern
     + rb"(?:\s*))(?:"
     + FLOAT.pattern
-    + rb")(?:\s*)?\)"
+    + rb")\s*\)"
 )
 _TENSOR = re.compile(
     rb"\((?:"
@@ -120,7 +120,7 @@ _TENSOR = re.compile(
     + rb")?\)"
 )
 _UNCOMMENTED_TENSOR = re.compile(
-    rb"\((?:\s*)?(?:"
+    rb"\(\s*(?:"
     + FLOAT.pattern
     + rb"(?:\s*))(?:"
     + FLOAT.pattern
@@ -138,7 +138,7 @@ _UNCOMMENTED_TENSOR = re.compile(
     + FLOAT.pattern
     + rb"(?:\s*))(?:"
     + FLOAT.pattern
-    + rb")(?:\s*)?\)"
+    + rb")\s*\)"
 )
 
 INTEGER_LIST = re.compile(
@@ -150,9 +150,7 @@ INTEGER_LIST = re.compile(
     + SKIP.pattern
     + rb")?\)"
 )
-UNCOMMENTED_INTEGER_LIST = re.compile(
-    rb"\((?:(?:\s*)?(?:" + INTEGER.pattern + rb"))*(?:\s*)?\)"
-)
+UNCOMMENTED_INTEGER_LIST = re.compile(rb"\((?:\s*(?:" + INTEGER.pattern + rb"))*\s*\)")
 
 FLOAT_LIST = re.compile(
     rb"\((?:(?:"
@@ -163,9 +161,7 @@ FLOAT_LIST = re.compile(
     + SKIP.pattern
     + rb")?\)"
 )
-UNCOMMENTED_FLOAT_LIST = re.compile(
-    rb"\((?:(?:\s*)?(?:" + FLOAT.pattern + rb"))*(?:\s*)?\)"
-)
+UNCOMMENTED_FLOAT_LIST = re.compile(rb"\((?:\s*(?:" + FLOAT.pattern + rb"))*\s*\)")
 VECTOR_LIST = re.compile(
     rb"\((?:(?:"
     + SKIP.pattern
@@ -176,7 +172,7 @@ VECTOR_LIST = re.compile(
     + rb")?\)"
 )
 UNCOMMENTED_VECTOR_LIST = re.compile(
-    rb"\((?:(?:\s*)?(?:" + _UNCOMMENTED_VECTOR.pattern + rb"))*(?:\s*)?\)"
+    rb"\((?:\s*(?:" + _UNCOMMENTED_VECTOR.pattern + rb"))*\s*\)"
 )
 SYMM_TENSOR_LIST = re.compile(
     rb"\((?:(?:"
@@ -188,7 +184,7 @@ SYMM_TENSOR_LIST = re.compile(
     + rb")?\)"
 )
 UNCOMMENTED_SYMM_TENSOR_LIST = re.compile(
-    rb"\((?:(?:\s*)?(?:" + _UNCOMMENTED_SYMM_TENSOR.pattern + rb"))*(?:\s*)?\)"
+    rb"\((?:\s*(?:" + _UNCOMMENTED_SYMM_TENSOR.pattern + rb"))*\s*\)"
 )
 TENSOR_LIST = re.compile(
     rb"\((?:(?:"
@@ -200,7 +196,7 @@ TENSOR_LIST = re.compile(
     + rb")?\)"
 )
 UNCOMMENTED_TENSOR_LIST = re.compile(
-    rb"\((?:(?:\s*)?(?:" + _UNCOMMENTED_TENSOR.pattern + rb"))*(?:\s*)?\)"
+    rb"\((?:\s*(?:" + _UNCOMMENTED_TENSOR.pattern + rb"))*\s*\)"
 )
 
 _THREE_FACE_LIKE = re.compile(
@@ -223,13 +219,13 @@ _THREE_FACE_LIKE = re.compile(
     + rb")?\)"
 )
 _UNCOMMENTED_THREE_FACE_LIKE = re.compile(
-    rb"3(?:\s*)?\((?:\s*)?(?:"
+    rb"3\s*\(\s*(?:"
     + INTEGER.pattern
     + rb"(?:\s*))(?:"
     + INTEGER.pattern
     + rb"(?:\s*))(?:"
     + INTEGER.pattern
-    + rb")(?:\s*)?\)"
+    + rb")\s*\)"
 )
 _FOUR_FACE_LIKE = re.compile(
     rb"4(?:"
@@ -255,7 +251,7 @@ _FOUR_FACE_LIKE = re.compile(
     + rb")?\)"
 )
 _UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
-    rb"4(?:\s*)?\((?:\s*)?(?:"
+    rb"4\s*\(\s*(?:"
     + INTEGER.pattern
     + rb"(?:\s*))(?:"
     + INTEGER.pattern
@@ -263,7 +259,7 @@ _UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
     + INTEGER.pattern
     + rb"(?:\s*))(?:"
     + INTEGER.pattern
-    + rb")(?:\s*)?\)"
+    + rb")\s*\)"
 )
 FACES_LIKE_LIST = re.compile(
     rb"\((?:(?:"
@@ -277,9 +273,9 @@ FACES_LIKE_LIST = re.compile(
     + rb")?\)"
 )
 UNCOMMENTED_FACES_LIKE_LIST = re.compile(
-    rb"\((?:(?:\s*)?(?:"
+    rb"\((?:\s*(?:"
     + _UNCOMMENTED_THREE_FACE_LIKE.pattern
     + rb"|"
     + _UNCOMMENTED_FOUR_FACE_LIKE.pattern
-    + rb"))*(?:\s*)?\)"
+    + rb"))*\s*\)"
 )
