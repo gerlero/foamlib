@@ -59,9 +59,6 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
                     self.__file_exists = True
         finally:
             self.__context_depth -= 1
-            # If we're exiting the outermost context and the save failed,
-            # invalidate the cache to prevent the assertion in _get_parsed from failing
-            # when context_depth is 0 but the cached file has unsaved modifications
             if (
                 self.__context_depth == 0
                 and self.__cached_parsed is not None
