@@ -617,8 +617,18 @@ class FoamFile(
         else:
             before = b""
 
-        # Calculate after spacing (same for both operations)
-        if not parsed.contents[end:].strip() or parsed.contents[end:].startswith(b"}"):
+        # Calculate after spacing
+        # For updates to existing subdictionary entries, preserve trailing whitespace if present
+        if not add and keywords in parsed and len(keywords) > 1:
+            # Check if the existing entry ends with a newline
+            entry_start, entry_end = parsed.entry_location(keywords)
+            existing_content = parsed.contents[entry_start:entry_end]
+            # If the existing entry ends with a newline, preserve it
+            if existing_content and existing_content[-1:] == b"\n":
+                after = b"\n"
+            else:
+                after = b""
+        elif not parsed.contents[end:].strip() or parsed.contents[end:].startswith(b"}"):
             after = b"\n" + b"    " * (len(keywords) - 2)
         else:
             after = b""
@@ -717,13 +727,28 @@ class FoamFile(
                 keywords = cast("tuple[str, Unpack[tuple[str, ...]]]", keywords)
                 val = dumps(data, keywords=keywords, format_=format_)
 
-                # When updating existing subdictionary entries, don't add indentation
-                # because it's already present in the content before 'start'
+                # When updating existing subdictionary entries, check if the existing entry
+                # includes indentation in its boundaries. If so, we need to preserve it.
                 # Note: is_update is also calculated in _calculate_spacing for determining 'before'
                 is_update = not add and keywords in parsed
-                content_indentation = (
-                    b"" if (is_update and len(keywords) > 1) else indentation
-                )
+                if is_update and len(keywords) > 1:
+                    # Check if the existing entry starts with indentation
+                    entry_start, entry_end = parsed.entry_location(keywords)
+                    existing_content = parsed.contents[entry_start:entry_end]
+                    # If the existing entry starts with whitespace, preserve it
+                    if existing_content and existing_content[0:1] in (b" ", b"\t"):
+                        # Extract leading whitespace from existing entry
+                        leading_ws_len = 0
+                        for i, byte in enumerate(existing_content):
+                            if byte in (32, 9):  # space or tab
+                                leading_ws_len += 1
+                            else:
+                                break
+                        content_indentation = bytes(existing_content[:leading_ws_len])
+                    else:
+                        content_indentation = b""
+                else:
+                    content_indentation = indentation
 
                 content = (
                     before
