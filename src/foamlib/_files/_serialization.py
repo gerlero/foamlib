@@ -25,7 +25,7 @@ from ..typing import (
     SubDict,
     SubDictLike,
 )
-from ._parsing import parse
+from ._parsing import FoamFileDecodeError, parse
 from ._util import add_to_mapping
 from .types import Dimensioned, DimensionSet
 
@@ -115,14 +115,14 @@ def normalized(
                 match k:
                     case None:
                         if seen_none:
-                            msg = "duplicate None key found"
+                            msg = "duplicate None keyword found"
                             raise ValueError(msg)
                         seen_none = True
                         ret[None] = normalized_v
 
                     case str():
-                        if k != parse(k, target=str):
-                            msg = f"invalid key string: {k!r}"
+                        if k != normalized(k):
+                            msg = f"invalid keyword: {k!r}"
                             raise ValueError(msg)
 
                         if k.startswith("#"):
@@ -132,12 +132,12 @@ def normalized(
                             ret = add_to_mapping(ret, k, normalized_v)  # ty: ignore[invalid-assignment]
                         else:
                             if k in ret:
-                                msg = f"duplicate key found: {k!r}"
+                                msg = f"duplicate keyword found: {k!r}"
                                 raise ValueError(msg)
                             ret[k] = normalized_v
 
                     case _:
-                        msg = f"key must be a string or None; got {k!r}"
+                        msg = f"keyword must be a string or None; got {k!r}"
                         raise TypeError(msg)
 
             return ret  # ty: ignore[invalid-return-type]
@@ -154,8 +154,8 @@ def normalized(
                         raise TypeError(msg)
 
                     case str():
-                        if k != parse(k, target=str):
-                            msg = f"invalid key string: {k!r}"
+                        if k != normalized(k):
+                            msg = f"invalid keyword: {k!r}"
                             raise ValueError(msg)
 
                         if k.startswith("#"):
@@ -165,12 +165,12 @@ def normalized(
                             ret = add_to_mapping(ret, k, normalized_v)  # ty: ignore[invalid-assignment]
                         else:
                             if k in ret:
-                                msg = f"duplicate key found: {k!r}"
+                                msg = f"duplicate keyword found: {k!r}"
                                 raise ValueError(msg)
                             ret[k] = normalized_v
 
                     case _:
-                        msg = f"key must be a string; got {k!r}"
+                        msg = f"keyword must be a string; got {k!r}"
                         raise TypeError(msg)
 
             return ret
@@ -183,12 +183,12 @@ def normalized(
 
                 match k:
                     case None:
-                        msg = "None key is only allowed in top-level File dicts"
+                        msg = "None keyword is only allowed in top-level File dicts"
                         raise TypeError(msg)
 
                     case str():
-                        if k != parse(k, target=str):
-                            msg = f"invalid key string: {k!r}"
+                        if k != normalized(k):
+                            msg = f"invalid keyword: {k!r}"
                             raise ValueError(msg)
 
                         if k.startswith("#"):
@@ -196,12 +196,12 @@ def normalized(
                             raise ValueError(msg)
 
                         if k in ret:
-                            msg = f"duplicate key found: {k!r}"
+                            msg = f"duplicate keyword found: {k!r}"
                             raise ValueError(msg)
                         ret[k] = normalized_v
 
                     case _:
-                        msg = f"key must be a string; got {k!r}"
+                        msg = f"keyword must be a string; got {k!r}"
                         raise TypeError(msg)
 
             return ret
@@ -210,7 +210,7 @@ def normalized(
         case np.ndarray(shape=(_,)), () if np.issubdtype(data.dtype, np.integer):  # ty: ignore[possibly-missing-attribute]
             if format_ == "binary":
                 if data.dtype != np.int32:  # ty: ignore[possibly-missing-attribute]
-                    msg = f"Only int32 data type is supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
+                    msg = f"only int32 data type is supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
                     raise ValueError(msg)
                 return data  # ty: ignore[invalid-return-type]
             return data.astype(int, copy=False)  # ty: ignore[possibly-missing-attribute]
@@ -219,7 +219,7 @@ def normalized(
         case np.ndarray(shape=(_,)), () if np.issubdtype(data.dtype, np.floating):  # ty: ignore[possibly-missing-attribute]
             if format_ == "binary":
                 if data.dtype != np.float64:  # ty: ignore[possibly-missing-attribute]
-                    msg = f"Only float64 data type is supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
+                    msg = f"only float64 data type is supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
                     raise ValueError(msg)
                 return data  # ty: ignore[invalid-return-type]
             return data.astype(float, copy=False)  # ty: ignore[possibly-missing-attribute]
@@ -231,7 +231,7 @@ def normalized(
         ) or np.issubdtype(data.dtype, np.integer):  # ty: ignore[possibly-missing-attribute]
             if format_ == "binary":
                 if data.dtype not in (np.float64, np.float32):  # ty: ignore[possibly-missing-attribute]
-                    msg = f"Only float64 or float32 data types are supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
+                    msg = f"only float64 or float32 data types are supported for this kind of binary data, got {data.dtype}"  # ty: ignore[possibly-missing-attribute]
                     raise ValueError(msg)
                 return data  # ty: ignore[invalid-return-type]
             return data.astype(float, copy=False)  # ty: ignore[possibly-missing-attribute]
@@ -311,7 +311,7 @@ def normalized(
         ) or np.issubdtype(data.dtype, np.integer):  # ty: ignore[possibly-missing-attribute]
             if format_ == "binary":
                 if np.issubdtype(data.dtype, np.integer):  # ty: ignore[possibly-missing-attribute]
-                    msg = "Binary fields cannot have integer data type"
+                    msg = "binary fields cannot have an integer data type"
                     raise ValueError(msg)
                 return data  # ty: ignore[invalid-return-type]
             return data.astype(float, copy=False)  # ty: ignore[possibly-missing-attribute]
@@ -394,63 +394,71 @@ def normalized(
         ) if not isinstance(data, DimensionSet):
             ret = tuple(normalized(d, keywords=keywords, format_=format_) for d in data)  # ty: ignore[no-matching-overload,not-iterable]
             if any(isinstance(d, tuple) for d in ret):
-                msg = f"Nested tuples not supported: {data!r}"
+                msg = f"nested tuples not supported: {data!r}"
                 raise ValueError(msg)
             return ret  # ty: ignore[invalid-return-type]
 
         # One-element tuple (unsupported)
         case tuple((_,)), _:
-            msg = f"One-element tuple {data!r} not supported"
+            msg = f"found unsupported one-element tuple: {data!r}"
             raise ValueError(msg)
 
         # Empty tuple (unsupported)
         case tuple(()), _:
-            msg = "Empty tuples are not supported"
+            msg = "found unsupported empty tuple"
             raise ValueError(msg)
 
         # Top-level string
         case str(), ():
-            match parsed := parse(data, target=StandaloneData):  # ty: ignore[invalid-argument-type]
-                case str():
-                    if not parsed:
-                        msg = "Found unsupported empty string"
+            try:
+                match parsed := parse(data, target=StandaloneData):  # ty: ignore[invalid-argument-type]
+                    case str():
+                        if not parsed:
+                            msg = "found unsupported empty string"
+                            raise ValueError(msg)
+                        return parsed  # ty: ignore[invalid-return-type]
+                    case bool():
+                        msg = f"{data!r} will be stored as {parsed!r}"
+                        warn(msg, stacklevel=2)
+                        return parsed
+                    case tuple((str() | bool(), str() | bool(), *rest)) if all(
+                        isinstance(p, (str, bool)) for p in rest
+                    ):
+                        msg = f"{data!r} will be stored as {parsed!r}"
+                        warn(msg, stacklevel=2)
+                        return parsed
+                    case _:
+                        msg = f"{data!r} cannot be stored as string (would be stored as {parsed!r})"
                         raise ValueError(msg)
-                    return parsed  # ty: ignore[invalid-return-type]
-                case bool():
-                    msg = f"{data!r} will be stored as {parsed!r}"
-                    warn(msg, stacklevel=2)
-                    return parsed
-                case tuple((str() | bool(), str() | bool(), *rest)) if all(
-                    isinstance(p, (str, bool)) for p in rest
-                ):
-                    msg = f"{data!r} will be stored as {parsed!r}"
-                    warn(msg, stacklevel=2)
-                    return parsed
-                case _:
-                    msg = f"{data!r} cannot be stored as string (would be stored as {parsed!r})"
-                    raise ValueError(msg)
+            except FoamFileDecodeError:
+                msg = f"invalid string: {data!r}"
+                raise ValueError(msg) from None
 
         # String
         case str(), (_, *_) | None:
-            match parsed := parse(data, target=Data):  # ty: ignore[invalid-argument-type]
-                case str():
-                    if not parsed:
-                        msg = "Found unsupported empty string"
+            try:
+                match parsed := parse(data, target=Data):  # ty: ignore[invalid-argument-type]
+                    case str():
+                        if not parsed:
+                            msg = "Found unsupported empty string"
+                            raise ValueError(msg)
+                        return parsed  # ty: ignore[invalid-return-type]
+                    case bool():
+                        msg = f"{data!r} will be stored as {parsed!r}"
+                        warn(msg, stacklevel=2)
+                        return parsed
+                    case tuple((str() | bool(), str() | bool(), *rest)) if all(
+                        isinstance(p, (str, bool)) for p in rest
+                    ):
+                        msg = f"{data!r} will be stored as {parsed!r}"
+                        warn(msg, stacklevel=2)
+                        return parsed
+                    case _:
+                        msg = f"{data!r} cannot be stored as string (would be stored as {parsed!r})"
                         raise ValueError(msg)
-                    return parsed  # ty: ignore[invalid-return-type]
-                case bool():
-                    msg = f"{data!r} will be stored as {parsed!r}"
-                    warn(msg, stacklevel=2)
-                    return parsed
-                case tuple((str() | bool(), str() | bool(), *rest)) if all(
-                    isinstance(p, (str, bool)) for p in rest
-                ):
-                    msg = f"{data!r} will be stored as {parsed!r}"
-                    warn(msg, stacklevel=2)
-                    return parsed
-                case _:
-                    msg = f"{data!r} cannot be stored as string (would be stored as {parsed!r})"
-                    raise ValueError(msg)
+            except FoamFileDecodeError:
+                msg = f"invalid string: {data!r}"
+                raise ValueError(msg) from None
 
         # None
         case None, (*_, _):
