@@ -257,7 +257,10 @@ class FoamFile(
             def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
                 if not isinstance(x, str):
                     return False
-                return (*self._subdict._keywords, x) in self._subdict._file._get_parsed()
+                return (
+                    *self._subdict._keywords,
+                    x,
+                ) in self._subdict._file._get_parsed()
 
         class ValuesView(
             multicollections.abc.ValuesView["Data | FoamFile.SubDict | None"]
