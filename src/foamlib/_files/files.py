@@ -122,11 +122,11 @@ class FoamFile(
         def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
             if not isinstance(x, str) and x is not None:
                 return False
-            key_tuple = (x,) if isinstance(x, str) else ()
+            keywords = (x,) if x is not None else ()
             parsed = self._file._get_parsed()
-            if key_tuple in parsed:
+            if keywords in parsed:
                 # Check if this key should be included in the view
-                return key_tuple != ("FoamFile",) or self._include_header
+                return keywords != ("FoamFile",) or self._include_header
             return False
 
     class ValuesView(
