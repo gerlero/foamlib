@@ -93,7 +93,7 @@ _UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
 def _make_list_pattern(elem_pattern: bytes, skip_pattern: bytes) -> bytes:
     """Generate pattern for list of elements with optional skip."""
     return (
-        rb"\((?:(?:" + skip_pattern + rb")?(?:" + elem_pattern + rb"))*(?:" 
+        rb"\((?:(?:" + skip_pattern + rb")?(?:" + elem_pattern + rb"))*(?:"
         + skip_pattern + rb")?\)"
     )
 
@@ -130,7 +130,7 @@ UNCOMMENTED_TENSOR_LIST = re.compile(
 
 _FACES_PATTERN = rb"(?:" + _THREE_FACE_LIKE.pattern + rb"|" + _FOUR_FACE_LIKE.pattern + rb")"
 _UNCOMMENTED_FACES_PATTERN = (
-    rb"(?:" + _UNCOMMENTED_THREE_FACE_LIKE.pattern + rb"|" 
+    rb"(?:" + _UNCOMMENTED_THREE_FACE_LIKE.pattern + rb"|"
     + _UNCOMMENTED_FOUR_FACE_LIKE.pattern + rb")"
 )
 
