@@ -18,7 +18,9 @@ _FLOAT_PATTERN = rb"(?i:[+-]?(?:" + _FLOAT_NUM + rb"|" + _FLOAT_SPECIAL + rb"))"
 FLOAT = re.compile(_FLOAT_PATTERN, re.ASCII)
 
 # Comment patterns - optimized for matching performance
-_COMMENT_BLOCK = rb"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/"  # More efficient than negative lookahead
+# Block comment uses "unrolling the loop" technique (Friedl, Mastering Regular Expressions)
+# More efficient than: /\*(?:[^*]|\*(?!/))*\*/ (which uses negative lookahead)
+_COMMENT_BLOCK = rb"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/"
 _COMMENT_LINE = rb"//(?:\\\n|[^\n])*"
 _COMMENT_PATTERN = rb"(?:" + _COMMENT_BLOCK + rb"|" + _COMMENT_LINE + rb")"
 COMMENT = re.compile(_COMMENT_PATTERN)
@@ -92,10 +94,9 @@ _UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
 # List patterns - lists of elements
 def _make_list_pattern(elem_pattern: bytes, skip_pattern: bytes) -> bytes:
     """Generate pattern for list of elements with optional skip."""
-    return (
-        rb"\((?:(?:" + skip_pattern + rb")?(?:" + elem_pattern + rb"))*(?:"
-        + skip_pattern + rb")?\)"
-    )
+    # Pattern: ( (skip? elem)* skip? )
+    parts = [rb"\((?:(?:", skip_pattern, rb")?(?:", elem_pattern, rb"))*(?:", skip_pattern, rb")?\)"]
+    return b"".join(parts)
 
 
 def _make_uncommented_list_pattern(elem_pattern: bytes) -> bytes:
@@ -128,11 +129,11 @@ UNCOMMENTED_TENSOR_LIST = re.compile(
     _make_uncommented_list_pattern(_UNCOMMENTED_TENSOR.pattern), re.ASCII
 )
 
-_FACES_PATTERN = rb"(?:" + _THREE_FACE_LIKE.pattern + rb"|" + _FOUR_FACE_LIKE.pattern + rb")"
-_UNCOMMENTED_FACES_PATTERN = (
-    rb"(?:" + _UNCOMMENTED_THREE_FACE_LIKE.pattern + rb"|"
-    + _UNCOMMENTED_FOUR_FACE_LIKE.pattern + rb")"
-)
+_FACES_PATTERN = b"".join([rb"(?:", _THREE_FACE_LIKE.pattern, rb"|", _FOUR_FACE_LIKE.pattern, rb")"])
+_UNCOMMENTED_FACES_PATTERN = b"".join([
+    rb"(?:", _UNCOMMENTED_THREE_FACE_LIKE.pattern, rb"|",
+    _UNCOMMENTED_FOUR_FACE_LIKE.pattern, rb")"
+])
 
 FACES_LIKE_LIST = re.compile(_make_list_pattern(_FACES_PATTERN, _SKIP_PATTERN))
 UNCOMMENTED_FACES_LIKE_LIST = re.compile(
