@@ -3,6 +3,7 @@
 Patterns are generated at import time for improved readability and matching performance.
 Optimizations focus on reducing non-capturing groups and simplifying pattern structures.
 """
+
 import re
 
 # Basic numeric patterns
@@ -31,6 +32,7 @@ SKIP = re.compile(_SKIP_PATTERN)
 SKIP_NO_NEWLINE = re.compile(
     rb"(?:[ \t\r]+|" + _COMMENT_BLOCK + rb"|" + _COMMENT_LINE + rb")+"
 )
+
 
 # Helper to build numeric tuple patterns (vectors, tensors)
 # Using string templates with format for clarity
@@ -77,14 +79,20 @@ _UNCOMMENTED_TENSOR = re.compile(
 
 # Face-like patterns (3 or 4 integers)
 _THREE_FACE_LIKE = re.compile(
-    rb"3(?:" + _SKIP_PATTERN + rb")?" + _make_tuple_pattern(3, INTEGER.pattern, _SKIP_PATTERN)
+    rb"3(?:"
+    + _SKIP_PATTERN
+    + rb")?"
+    + _make_tuple_pattern(3, INTEGER.pattern, _SKIP_PATTERN)
 )
 _UNCOMMENTED_THREE_FACE_LIKE = re.compile(
     rb"3" + _make_uncommented_tuple_pattern(3, INTEGER.pattern), re.ASCII
 )
 
 _FOUR_FACE_LIKE = re.compile(
-    rb"4(?:" + _SKIP_PATTERN + rb")?" + _make_tuple_pattern(4, INTEGER.pattern, _SKIP_PATTERN)
+    rb"4(?:"
+    + _SKIP_PATTERN
+    + rb")?"
+    + _make_tuple_pattern(4, INTEGER.pattern, _SKIP_PATTERN)
 )
 _UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
     rb"4" + _make_uncommented_tuple_pattern(4, INTEGER.pattern), re.ASCII
@@ -95,7 +103,15 @@ _UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
 def _make_list_pattern(elem_pattern: bytes, skip_pattern: bytes) -> bytes:
     """Generate pattern for list of elements with optional skip."""
     # Pattern: ( (skip? elem)* skip? )
-    parts = [rb"\((?:(?:", skip_pattern, rb")?(?:", elem_pattern, rb"))*(?:", skip_pattern, rb")?\)"]
+    parts = [
+        rb"\((?:(?:",
+        skip_pattern,
+        rb")?(?:",
+        elem_pattern,
+        rb"))*(?:",
+        skip_pattern,
+        rb")?\)",
+    ]
     return b"".join(parts)
 
 
@@ -129,11 +145,18 @@ UNCOMMENTED_TENSOR_LIST = re.compile(
     _make_uncommented_list_pattern(_UNCOMMENTED_TENSOR.pattern), re.ASCII
 )
 
-_FACES_PATTERN = b"".join([rb"(?:", _THREE_FACE_LIKE.pattern, rb"|", _FOUR_FACE_LIKE.pattern, rb")"])
-_UNCOMMENTED_FACES_PATTERN = b"".join([
-    rb"(?:", _UNCOMMENTED_THREE_FACE_LIKE.pattern, rb"|",
-    _UNCOMMENTED_FOUR_FACE_LIKE.pattern, rb")"
-])
+_FACES_PATTERN = b"".join(
+    [rb"(?:", _THREE_FACE_LIKE.pattern, rb"|", _FOUR_FACE_LIKE.pattern, rb")"]
+)
+_UNCOMMENTED_FACES_PATTERN = b"".join(
+    [
+        rb"(?:",
+        _UNCOMMENTED_THREE_FACE_LIKE.pattern,
+        rb"|",
+        _UNCOMMENTED_FOUR_FACE_LIKE.pattern,
+        rb")",
+    ]
+)
 
 FACES_LIKE_LIST = re.compile(_make_list_pattern(_FACES_PATTERN, _SKIP_PATTERN))
 UNCOMMENTED_FACES_LIKE_LIST = re.compile(
