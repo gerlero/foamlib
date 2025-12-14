@@ -102,6 +102,9 @@ def test_write_read(tmp_path: Path) -> None:
         assert lst == [0, 2, 3]
         assert sd["list"] == [1, 2, 3]
 
+    with pytest.raises(ValueError, match="invalid"):
+        d["invalid"] = "semicolon;"
+
 
 def test_new_field(tmp_path: Path) -> None:
     Path(tmp_path / "testField").touch()
