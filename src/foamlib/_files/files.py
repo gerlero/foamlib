@@ -115,22 +115,19 @@ class FoamFile(
             return sum(
                 1
                 for k in parsed
-                if k[:-1] == () and (k != ("FoamFile",) or self._include_header)
+                if len(k) == 1 and (k != ("FoamFile",) or self._include_header)
             )
 
         @override
         def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
             if not isinstance(x, str) and x is not None:
                 return False
-            try:
-                keywords = (x,) if isinstance(x, str) else ()
-                parsed = self._file._get_parsed()
-                if keywords in parsed:
-                    # Check if this key should be included in the view
-                    return keywords != ("FoamFile",) or self._include_header
-                return False
-            except (ValueError, TypeError):
-                return False
+            key_tuple = (x,) if isinstance(x, str) else ()
+            parsed = self._file._get_parsed()
+            if key_tuple in parsed:
+                # Check if this key should be included in the view
+                return key_tuple != ("FoamFile",) or self._include_header
+            return False
 
     class ValuesView(
         multicollections.abc.ValuesView[
@@ -160,7 +157,7 @@ class FoamFile(
             return sum(
                 1
                 for k in parsed
-                if k[:-1] == () and (k != ("FoamFile",) or self._include_header)
+                if len(k) == 1 and (k != ("FoamFile",) or self._include_header)
             )
 
         @override
@@ -204,7 +201,7 @@ class FoamFile(
             return sum(
                 1
                 for k in parsed
-                if k[:-1] == () and (k != ("FoamFile",) or self._include_header)
+                if len(k) == 1 and (k != ("FoamFile",) or self._include_header)
             )
 
         @override
@@ -1001,7 +998,7 @@ class FoamFile(
     def __len__(self) -> int:
         """Return the number of top-level keywords in the FoamFile (excluding the FoamFile header if present)."""
         parsed = self._get_parsed()
-        return sum(1 for k in parsed if k[:-1] == () and k != ("FoamFile",))
+        return sum(1 for k in parsed if len(k) == 1 and k != ("FoamFile",))
 
     @override
     def keys(
