@@ -49,12 +49,23 @@ from ._re import (
     UNSIGNED_INTEGER,
     VECTOR_LIST,
 )
-from .exceptions import ParseSemanticError, ParseSyntaxError
+from .exceptions import FoamFileDecodeError
 
 _DT = TypeVar("_DT", np.float64, np.float32, np.int64, np.int32)
 _ElShape = TypeVar(
     "_ElShape", tuple[()], tuple[Literal[3]], tuple[Literal[6]], tuple[Literal[9]]
 )
+
+
+class ParseError(Exception):
+    def __init__(self, contents: bytes, pos: int, *, expected: str) -> None:
+        self._contents = contents
+        self.pos = pos
+        self._expected = expected
+        super().__init__()
+
+    def make_fatal(self) -> FoamFileDecodeError:
+        return FoamFileDecodeError(self._contents, self.pos, expected=self._expected)
 
 
 def skip(
@@ -66,7 +77,7 @@ def skip(
         return match.end()
 
     if strict and pos < len(contents):
-        raise ParseSyntaxError(contents, pos, expected="end of file")
+        raise ParseError(contents, pos, expected="end of file")
 
     return pos
 
@@ -74,7 +85,7 @@ def skip(
 def _expect(contents: bytes, pos: int, expected: bytes) -> int:
     length = len(expected)
     if contents[pos : pos + length] != expected:
-        raise ParseSyntaxError(contents, pos, expected=repr(expected.decode("ascii")))
+        raise ParseError(contents, pos, expected=repr(expected.decode("ascii")))
 
     return pos + length
 
@@ -113,11 +124,11 @@ def _parse_ascii_numeric_list(
 ]:
     try:
         count, pos = _parse_unsigned_integer(contents, pos)
-    except ParseSyntaxError:
+    except ParseError:
         count = None
     else:
         if count == 0 and not empty_ok:
-            raise ParseSyntaxError(contents, pos, expected="non-empty numeric list")
+            raise ParseError(contents, pos, expected="non-empty numeric list")
         pos = skip(contents, pos)
 
     if contents[pos : pos + 1] == b"(":
@@ -151,7 +162,7 @@ def _parse_ascii_numeric_list(
             data = COMMENT.sub(b" ", data)
 
         if not match:
-            raise ParseSyntaxError(
+            raise ParseError(
                 contents,
                 pos,
                 expected=f"numeric list of type {dtype} and shape {elshape}",
@@ -163,7 +174,7 @@ def _parse_ascii_numeric_list(
         try:
             data = data.decode("ascii")
         except UnicodeDecodeError as e:
-            raise ParseSyntaxError(
+            raise ParseError(
                 contents,
                 pos,
                 expected="ASCII numeric list",
@@ -175,10 +186,10 @@ def _parse_ascii_numeric_list(
             ret = ret.reshape((-1, *elshape))
 
         if not empty_ok and len(ret) == 0:
-            raise ParseSyntaxError(contents, pos, expected="non-empty numeric list")
+            raise ParseError(contents, pos, expected="non-empty numeric list")
 
         if count is not None and len(ret) != count:
-            raise ParseSyntaxError(
+            raise ParseError(
                 contents, pos, expected=f"{count} elements (got {len(ret)})"
             )
 
@@ -209,7 +220,7 @@ def _parse_ascii_numeric_list(
         ret = np.full((count, *elshape), elem, dtype=dtype)
 
     else:
-        raise ParseSyntaxError(contents, pos, expected="ASCII numeric list")
+        raise ParseError(contents, pos, expected="ASCII numeric list")
 
     return ret, pos
 
@@ -219,7 +230,7 @@ def _parse_ascii_faces_like_list(
 ) -> tuple[list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]], int]:
     try:
         count, pos = _parse_unsigned_integer(contents, pos)
-    except ParseSyntaxError:
+    except ParseError:
         count = None
     else:
         pos = skip(contents, pos)
@@ -237,14 +248,14 @@ def _parse_ascii_faces_like_list(
         data = COMMENT.sub(b" ", data)
 
     if not match:
-        raise ParseSyntaxError(contents, pos, expected="faces-like list")
+        raise ParseError(contents, pos, expected="faces-like list")
 
     data = data.replace(b"(", b" ").replace(b")", b" ")
 
     try:
         data = data.decode("ascii")
     except UnicodeDecodeError as e:
-        raise ParseSyntaxError(
+        raise ParseError(
             contents,
             pos,
             expected="ASCII faces-like list",
@@ -260,9 +271,7 @@ def _parse_ascii_faces_like_list(
         i += n + 1
 
     if count is not None and len(ret) != count:
-        raise ParseSyntaxError(
-            contents, pos, expected=f"{count} faces (got {len(ret)})"
-        )
+        raise ParseError(contents, pos, expected=f"{count} faces (got {len(ret)})")
 
     return ret, pos
 
@@ -277,7 +286,7 @@ def _parse_binary_numeric_list(
 ) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[_DT]], int]:
     count, pos = _parse_unsigned_integer(contents, pos)
     if count == 0 and not empty_ok:
-        raise ParseSyntaxError(contents, pos, expected="non-empty numeric list")
+        raise ParseError(contents, pos, expected="non-empty numeric list")
     pos = skip(contents, pos)
     pos = _expect(contents, pos, b"(")
 
@@ -304,7 +313,7 @@ def _parse_tensor(contents: bytes, pos: int) -> tuple[Tensor, int]:
             pos = skip(contents, pos)
             try:
                 value, pos = _parse_float(contents, pos)
-            except ParseSyntaxError:
+            except ParseError:
                 break
             values.append(value)
 
@@ -312,16 +321,14 @@ def _parse_tensor(contents: bytes, pos: int) -> tuple[Tensor, int]:
         pos = _expect(contents, pos, b")")
 
         if len(values) not in (3, 6, 9):
-            raise ParseSyntaxError(
-                contents, pos, expected="3, 6, or 9 values for tensor"
-            )
+            raise ParseError(contents, pos, expected="3, 6, or 9 values for tensor")
 
         return np.array(values), pos
 
     try:
         return _parse_float(contents, pos)
-    except ParseSyntaxError as e:
-        raise ParseSyntaxError(contents, pos, expected="tensor") from e
+    except ParseError as e:
+        raise ParseError(contents, pos, expected="tensor") from e
 
 
 def _parse_field(contents: bytes, pos: int) -> tuple[Field, int]:
@@ -345,18 +352,18 @@ def _parse_field(contents: bytes, pos: int) -> tuple[Field, int]:
                 case "List<tensor>":
                     elshape = (9,)
                 case _:
-                    raise ParseSyntaxError(
+                    raise ParseError(
                         contents,
                         pos,
                         expected="one of: List<scalar>, List<vector>, List<symmTensor>, or List<tensor>",
                     )
 
             pos = skip(contents, pos)
-            with contextlib.suppress(ParseSyntaxError):
+            with contextlib.suppress(ParseError):
                 return _parse_ascii_numeric_list(
                     contents, pos, dtype=float, elshape=elshape, empty_ok=True
                 )
-            with contextlib.suppress(ParseSyntaxError):
+            with contextlib.suppress(ParseError):
                 return _parse_binary_numeric_list(
                     contents, pos, dtype=np.float64, elshape=elshape, empty_ok=True
                 )
@@ -365,7 +372,7 @@ def _parse_field(contents: bytes, pos: int) -> tuple[Field, int]:
             )
 
         case _:
-            raise ParseSyntaxError(contents, pos, expected="'uniform' or 'nonuniform'")
+            raise ParseError(contents, pos, expected="'uniform' or 'nonuniform'")
 
 
 def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
@@ -390,7 +397,7 @@ def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
                 break
 
         if depth != 0:
-            raise ParseSemanticError(contents, pos, found="unterminated parenthesis")
+            raise FoamFileDecodeError(contents, pos, expected=")")
 
         return contents[pos:end].decode("ascii"), end
 
@@ -400,10 +407,8 @@ def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
             c = contents[end : end + 1]
             if c == b"\\":
                 if end + 1 >= len(contents):
-                    raise ParseSemanticError(
-                        contents,
-                        pos,
-                        found="unterminated escape sequence in quoted string",
+                    raise FoamFileDecodeError(
+                        contents, pos, expected="end of quoted string"
                     )
                 end += 2
             elif c == b'"':
@@ -411,64 +416,64 @@ def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
                 return contents[pos:end].decode(), end
             else:
                 end += 1
-        raise ParseSemanticError(contents, pos, found="unterminated quoted string")
+        raise FoamFileDecodeError(contents, pos, expected="end of quoted string")
 
-    raise ParseSyntaxError(contents, pos, expected="token")
+    raise ParseError(contents, pos, expected="token")
 
 
 def _parse_number(contents: bytes, pos: int) -> tuple[int | float, int]:
     try:
         return _parse_integer(contents, pos)
-    except ParseSyntaxError:
+    except ParseError:
         try:
             return _parse_float(contents, pos)
-        except ParseSyntaxError as e:
-            raise ParseSyntaxError(contents, pos, expected="number") from e
+        except ParseError as e:
+            raise ParseError(contents, pos, expected="number") from e
 
 
 def _parse_unsigned_integer(contents: bytes, pos: int) -> tuple[int, int]:
     if match := UNSIGNED_INTEGER.match(contents, pos):
         try:
             _, _ = parse_token(contents, match.end())
-        except ParseSyntaxError:
+        except ParseError:
             pass
         else:
-            raise ParseSyntaxError(contents, pos, expected="unsigned integer")
+            raise ParseError(contents, pos, expected="unsigned integer")
 
         return int(match.group(0).decode("ascii")), match.end()
 
-    raise ParseSyntaxError(contents, pos, expected="unsigned integer")
+    raise ParseError(contents, pos, expected="unsigned integer")
 
 
 def _parse_integer(contents: bytes, pos: int) -> tuple[int, int]:
     if match := INTEGER.match(contents, pos):
         try:
             _, _ = parse_token(contents, match.end())
-        except ParseSyntaxError:
+        except ParseError:
             pass
         else:
-            raise ParseSyntaxError(contents, pos, expected="integer")
+            raise ParseError(contents, pos, expected="integer")
 
         if contents[match.end() : match.end() + 1] == b".":
-            raise ParseSyntaxError(contents, pos, expected="integer")
+            raise ParseError(contents, pos, expected="integer")
 
         return int(match.group(0).decode("ascii")), match.end()
 
-    raise ParseSyntaxError(contents, pos, expected="integer")
+    raise ParseError(contents, pos, expected="integer")
 
 
 def _parse_float(contents: bytes, pos: int) -> tuple[float, int]:
     if match := FLOAT.match(contents, pos):
         try:
             _, _ = parse_token(contents, match.end())
-        except ParseSyntaxError:
+        except ParseError:
             pass
         else:
-            raise ParseSyntaxError(contents, pos, expected="float")
+            raise ParseError(contents, pos, expected="float")
 
         return float(match.group(0).decode("ascii")), match.end()
 
-    raise ParseSyntaxError(contents, pos, expected="float")
+    raise ParseError(contents, pos, expected="float")
 
 
 def _parse_list(
@@ -476,7 +481,7 @@ def _parse_list(
 ) -> tuple[list[DataEntry | KeywordEntry | Dict], int]:
     try:
         count, pos = _parse_unsigned_integer(contents, pos)
-    except ParseSyntaxError:
+    except ParseError:
         count = None
     else:
         pos = skip(contents, pos)
@@ -492,10 +497,10 @@ def _parse_list(
 
             try:
                 item, pos = _parse_dictionary(contents, pos)
-            except ParseSyntaxError:
+            except ParseError:
                 try:
                     item, pos = _parse_keyword_entry(contents, pos)
-                except ParseSyntaxError:
+                except ParseError:
                     item, pos = _parse_data_entry(contents, pos)
 
             ret.append(item)
@@ -510,10 +515,10 @@ def _parse_list(
         item: DataEntry | KeywordEntry | Dict
         try:
             item, pos = _parse_dictionary(contents, pos)
-        except ParseSyntaxError:
+        except ParseError:
             try:
                 item, pos = _parse_keyword_entry(contents, pos)
-            except ParseSyntaxError:
+            except ParseError:
                 item, pos = _parse_data_entry(contents, pos)
         pos = skip(contents, pos)
         pos = _expect(contents, pos, b"}")
@@ -522,7 +527,7 @@ def _parse_list(
         ret *= count
 
     else:
-        raise ParseSyntaxError(contents, pos, expected="list")
+        raise ParseError(contents, pos, expected="list")
 
     return ret, pos
 
@@ -538,7 +543,7 @@ def _parse_dimensions(contents: bytes, pos: int) -> tuple[DimensionSet, int]:
 
         try:
             dim, pos = _parse_number(contents, pos)
-        except ParseSyntaxError:
+        except ParseError:
             break
         dimensions.append(dim)
 
@@ -551,7 +556,7 @@ def _parse_dimensions(contents: bytes, pos: int) -> tuple[DimensionSet, int]:
 def _parse_dimensioned(contents: bytes, pos: int) -> tuple[Dimensioned, int]:
     try:
         name, pos = parse_token(contents, pos)
-    except ParseSyntaxError:
+    except ParseError:
         name = None
     else:
         pos = skip(contents, pos)
@@ -570,7 +575,7 @@ def _parse_switch(contents: bytes, pos: int) -> tuple[bool, int]:
         case "no" | "false" | "off":
             return False, pos
         case _:
-            raise ParseSyntaxError(contents, pos, expected="switch value")
+            raise ParseError(contents, pos, expected="switch value")
 
 
 def _parse_keyword_entry(contents: bytes, pos: int) -> tuple[KeywordEntry, int]:
@@ -578,7 +583,7 @@ def _parse_keyword_entry(contents: bytes, pos: int) -> tuple[KeywordEntry, int]:
     pos = skip(contents, pos)
     try:
         value, pos = _parse_dictionary(contents, pos)
-    except ParseSyntaxError:
+    except ParseError:
         value, pos = parse_data(contents, pos)
         pos = skip(contents, pos)
         pos = _expect(contents, pos, b";")
@@ -599,24 +604,24 @@ def _parse_dictionary(contents: bytes, pos: int) -> tuple[Dict, int]:
         keyword, pos = parse_token(contents, pos)
 
         if keyword.startswith("#"):
-            raise ParseSemanticError(
+            raise FoamFileDecodeError(
                 contents,
                 pos,
-                found=f"#-directive not allowed at this level (got {keyword!r})",
+                expected=f"keyword not starting with # (got {keyword!r})",
             )
 
         if keyword in ret:
-            raise ParseSemanticError(
+            raise FoamFileDecodeError(
                 contents,
                 pos,
-                found=f"duplicate keyword in dictionary (got {keyword!r})",
+                expected=f"non-duplicate keyword in dictionary (got {keyword!r})",
             )
 
         pos = skip(contents, pos)
 
         try:
             value, pos = _parse_dictionary(contents, pos)
-        except ParseSyntaxError:
+        except ParseError:
             value, pos = parse_data(contents, pos)
             pos = skip(contents, pos)
             pos = _expect(contents, pos, b";")
@@ -635,7 +640,7 @@ def _parse_data_entry(contents: bytes, pos: int) -> tuple[DataEntry, int]:
         _parse_number,
         _parse_switch,
     ):
-        with contextlib.suppress(ParseSyntaxError):
+        with contextlib.suppress(ParseError):
             return parser(contents, pos)
 
     return parse_token(contents, pos)
@@ -649,7 +654,7 @@ def parse_data(contents: bytes, pos: int) -> tuple[Data, int]:
         pos = skip(contents, pos)
         try:
             entry, pos = _parse_data_entry(contents, pos)
-        except ParseSyntaxError:
+        except ParseError:
             break
         entries.append(entry)
 
@@ -672,10 +677,10 @@ def _parse_subdictionary(contents: bytes, pos: int) -> tuple[SubDict, int]:
         keyword, pos = parse_token(contents, pos)
 
         if not keyword.startswith("#") and keyword in ret:
-            raise ParseSemanticError(
+            raise FoamFileDecodeError(
                 contents,
                 pos,
-                found=f"duplicate keyword in subdictionary (got {keyword!r})",
+                expected=f"non-duplicate keyword in subdictionary (got {keyword!r})",
             )
 
         pos = skip(contents, pos)
@@ -687,10 +692,10 @@ def _parse_subdictionary(contents: bytes, pos: int) -> tuple[SubDict, int]:
         else:
             try:
                 value, pos = _parse_subdictionary(contents, pos)
-            except ParseSyntaxError:
+            except ParseError:
                 try:
                     value, pos = parse_data(contents, pos)
-                except ParseSyntaxError:
+                except ParseError:
                     value = None
                 else:
                     pos = skip(contents, pos)
@@ -704,40 +709,40 @@ def _parse_subdictionary(contents: bytes, pos: int) -> tuple[SubDict, int]:
 def _parse_standalone_data_entry(
     contents: bytes, pos: int
 ) -> tuple[StandaloneDataEntry, int]:
-    with contextlib.suppress(ParseSyntaxError):
+    with contextlib.suppress(ParseError):
         return _parse_ascii_numeric_list(contents, pos, dtype=int, elshape=())
-    with contextlib.suppress(ParseSyntaxError):
+    with contextlib.suppress(ParseError):
         return _parse_ascii_numeric_list(contents, pos, dtype=float, elshape=())
-    with contextlib.suppress(ParseSyntaxError):
+    with contextlib.suppress(ParseError):
         return _parse_ascii_numeric_list(contents, pos, dtype=float, elshape=(3,))
-    with contextlib.suppress(ParseSyntaxError):
+    with contextlib.suppress(ParseError):
         return _parse_ascii_faces_like_list(contents, pos)
 
     try:
         entry1, pos1 = parse_data(contents, pos)
-    except ParseSyntaxError:
+    except ParseError:
         pos1 = None
 
     try:
         entry2, pos2 = _parse_binary_numeric_list(
             contents, pos, dtype=np.int32, elshape=()
         )
-    except ParseSyntaxError:
+    except ParseError:
         try:
             entry2, pos2 = _parse_binary_numeric_list(
                 contents, pos, dtype=np.float64, elshape=()
             )
-        except ParseSyntaxError:
+        except ParseError:
             try:
                 entry2, pos2 = _parse_binary_numeric_list(
                     contents, pos, dtype=np.float64, elshape=(3,)
                 )
-            except ParseSyntaxError:
+            except ParseError:
                 pos2 = None
 
     match pos1, pos2:
         case None, None:
-            raise ParseSyntaxError(contents, pos, expected="standalone data entry")
+            raise ParseError(contents, pos, expected="standalone data entry")
         case _, None:
             return entry1, pos1
         case None, _:
@@ -756,7 +761,7 @@ def parse_standalone_data(contents: bytes, pos: int) -> tuple[StandaloneData, in
         pos = skip(contents, pos)
         try:
             entry, pos = _parse_standalone_data_entry(contents, pos)
-        except ParseSyntaxError:
+        except ParseError:
             break
         entries.append(entry)
 
@@ -773,10 +778,10 @@ def parse_file(contents: bytes, pos: int = 0) -> tuple[FileDict, int]:
         try:
             keyword, new_pos = parse_token(contents, pos)
             if not keyword.startswith("#") and keyword in ret:
-                raise ParseSemanticError(
+                raise FoamFileDecodeError(
                     contents,
                     pos,
-                    found=f"duplicate keyword in file (got {keyword!r})",
+                    expected=f"non-duplicate keyword in file (got {keyword!r})",
                 )
 
             new_pos = skip(contents, new_pos)
@@ -788,29 +793,29 @@ def parse_file(contents: bytes, pos: int = 0) -> tuple[FileDict, int]:
             else:
                 try:
                     value, new_pos = _parse_subdictionary(contents, new_pos)
-                except ParseSyntaxError:
+                except ParseError:
                     try:
                         value, new_pos = parse_data(contents, new_pos)
-                    except ParseSyntaxError:
+                    except ParseError:
                         value = None
                     else:
                         new_pos = skip(contents, new_pos)
                     new_pos = _expect(contents, new_pos, b";")
             ret = add_to_mapping(ret, keyword, value)  # ty: ignore[invalid-assignment]
             pos = new_pos
-        except ParseSyntaxError:  # noqa: PERF203
+        except ParseError:  # noqa: PERF203
             try:
                 standalone_data, pos = parse_standalone_data(contents, pos)
-            except ParseSyntaxError:
-                raise ParseSyntaxError(
+            except ParseError:
+                raise ParseError(
                     contents, pos, expected="keyword or standalone data"
                 ) from None
             else:
                 if None in ret:
-                    raise ParseSemanticError(
+                    raise FoamFileDecodeError(
                         contents,
                         pos,
-                        found="multiple standalone data in file",
+                        expected="only one standalone data block",
                     )
                 ret[None] = standalone_data
 
@@ -875,10 +880,10 @@ def _parse_file_located_recursive(
             elif contents[new_pos : new_pos + 1] == b"{":
                 # Check for duplicates
                 if (*_keywords, keyword) in ret:
-                    raise ParseSemanticError(
+                    raise FoamFileDecodeError(
                         contents,
                         entry_start,
-                        found=f"duplicate entry for keyword: {keyword}",
+                        expected=f"non-duplicate entry for keyword: {keyword}",
                     )
 
                 # Skip opening brace
@@ -896,7 +901,7 @@ def _parse_file_located_recursive(
                 # Expect closing brace
                 new_pos = skip(contents, new_pos)
                 if new_pos >= end or contents[new_pos : new_pos + 1] != b"}":
-                    raise ParseSyntaxError(contents, new_pos, expected="}")  # noqa: TRY301
+                    raise ParseError(contents, new_pos, expected="}")  # noqa: TRY301
                 new_pos += 1
 
                 # Add entry with ... marker for subdictionary
@@ -905,7 +910,7 @@ def _parse_file_located_recursive(
             else:
                 try:
                     value, new_pos = parse_data(contents, new_pos)
-                except ParseSyntaxError:
+                except ParseError:
                     value = None
                 else:
                     new_pos = skip(contents, new_pos)
@@ -913,16 +918,16 @@ def _parse_file_located_recursive(
 
                 # Check for duplicates
                 if (*_keywords, keyword) in ret and not keyword.startswith("#"):
-                    raise ParseSemanticError(
+                    raise FoamFileDecodeError(
                         contents,
                         entry_start,
-                        found=f"duplicate entry for keyword: {keyword}",
+                        expected=f"non-duplicate entry for keyword: {keyword}",
                     )
 
                 ret.add((*_keywords, keyword), ParsedEntry(value, entry_start, new_pos))
 
             pos = new_pos
-        except ParseSyntaxError:
+        except ParseError:
             # If keyword parsing fails, try parsing as standalone data
             # This pattern is necessary because OpenFOAM files can contain
             # standalone data (numeric arrays, etc.) without keywords
@@ -933,16 +938,16 @@ def _parse_file_located_recursive(
 
             try:
                 standalone_data, new_pos = parse_standalone_data(contents, pos)
-            except ParseSyntaxError:
-                raise ParseSyntaxError(
+            except ParseError:
+                raise ParseError(
                     contents, pos, expected="keyword or standalone data"
                 ) from None
             else:
                 if () in ret:
-                    raise ParseSemanticError(
+                    raise FoamFileDecodeError(
                         contents,
                         pos,
-                        found="duplicate standalone data",
+                        expected="only one standalone data block",
                     )
                 ret[()] = ParsedEntry(standalone_data, entry_start, new_pos)
                 pos = new_pos

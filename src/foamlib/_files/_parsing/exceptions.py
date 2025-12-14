@@ -1,9 +1,10 @@
-class ParseError(ValueError):
-    """Base class for errors encountered when parsing a FoamFile."""
+class FoamFileDecodeError(ValueError):
+    """Error raised when a FoamFile cannot be parsed."""
 
-    def __init__(self, contents: bytes, pos: int) -> None:
+    def __init__(self, contents: bytes, pos: int, *, expected: str) -> None:
         self._contents = contents
         self.pos = pos
+        self._expected = expected
         super().__init__()
 
     @property
@@ -30,35 +31,10 @@ class ParseError(ValueError):
         return " " * (self.colno - 1) + "^"
 
     def __str__(self) -> str:
-        return f"parse failed on line {self.lineno}, column {self.colno}:\n{self._line}\n{self._column_pointer}"
+        return f"parsing failed on line {self.lineno}, column {self.colno}:\n{self._line}\n{self._column_pointer}\nExpected: {self._expected}"
 
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}(line={self.lineno}, column={self.colno})"
 
-    __qualname__ = "foamlib.FoamFile.ParseError"
-
-
-class ParseSyntaxError(ParseError):
-    """Error raised when a FoamFile has unexpected syntax."""
-
-    def __init__(self, contents: bytes, pos: int, *, expected: str) -> None:
-        self._expected = expected
-        super().__init__(contents, pos)
-
-    def __str__(self) -> str:
-        return f"{super().__str__()}\nNote: expected {self._expected}"
-
-    __qualname__ = "foamlib.FoamFile.ParseSyntaxError"
-
-
-class ParseSemanticError(ParseError):
-    """Error raised when a semantic issue is detected in a FoamFile."""
-
-    def __init__(self, contents: bytes, pos: int, *, found: str) -> None:
-        self._found = found
-        super().__init__(contents, pos)
-
-    def __str__(self) -> str:
-        return f"{super().__str__()}\nNote: found {self._found}"
-
-    __qualname__ = "foamlib.FoamFile.ParseSemanticError"
+    __name__ = "FoamFileDecodeError"
+    __qualname__ = "foamlib.FoamFileDecodeError"

@@ -9,7 +9,13 @@ from ._cases import (
     FoamCase,
     FoamCaseBase,
 )
-from ._files import Dimensioned, DimensionSet, FoamFieldFile, FoamFile
+from ._files import (
+    Dimensioned,
+    DimensionSet,
+    FoamFieldFile,
+    FoamFile,
+    FoamFileDecodeError,
+)
 
 __version__ = version("foamlib")
 
@@ -23,4 +29,5 @@ __all__ = [
     "FoamCaseBase",
     "FoamFieldFile",
     "FoamFile",
+    "FoamFileDecodeError",
 ]

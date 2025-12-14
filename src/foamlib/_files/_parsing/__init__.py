@@ -28,12 +28,10 @@ from ._parser import (
     parse_token,
     skip,
 )
-from .exceptions import ParseError, ParseSemanticError, ParseSyntaxError
+from .exceptions import FoamFileDecodeError
 
 __all__ = [
-    "ParseError",
-    "ParseSemanticError",
-    "ParseSyntaxError",
+    "FoamFileDecodeError",
     "ParsedFile",
     "parse",
 ]
