@@ -739,8 +739,8 @@ class FoamFile(
                     if existing_content and existing_content[0:1] in (b" ", b"\t"):
                         # Extract leading whitespace from existing entry
                         leading_ws_len = 0
-                        for i, byte in enumerate(existing_content):
-                            if byte in (32, 9):  # space or tab
+                        for byte in existing_content:
+                            if byte in (ord(b" "), ord(b"\t")):  # space or tab
                                 leading_ws_len += 1
                             else:
                                 break

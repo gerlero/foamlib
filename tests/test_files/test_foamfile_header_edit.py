@@ -96,12 +96,16 @@ def test_multiple_edits_preserve_formatting(tmp_path: Path) -> None:
     f = FoamFile(test_file)
     f["key1"] = "value1"
     
-    # Edit the same FoamFile header entry multiple times
-    for i in range(5):
-        f["FoamFile", "version"] = 2.0 + i * 0.1
+    # Edit the same FoamFile header entry multiple times to ensure
+    # formatting is preserved across multiple updates
+    NUM_EDITS = 5
+    VERSION_INCREMENT = 0.1
+    
+    for i in range(NUM_EDITS):
+        f["FoamFile", "version"] = 2.0 + i * VERSION_INCREMENT
         content = test_file.read_text()
         # Verify indentation is preserved
-        assert f"    version {2.0 + i * 0.1};" in content
+        assert f"    version {2.0 + i * VERSION_INCREMENT};" in content
         # Verify entries are on separate lines
         lines = content.split('\n')
         version_line = [line for line in lines if 'version' in line][0]
