@@ -15,7 +15,11 @@ _VECTOR = re.compile(
     + FLOAT.pattern
     + rb"(?:"
     + SKIP.pattern
-    + rb")){2}(?:"
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
     + FLOAT.pattern
     + rb")(?:"
     + SKIP.pattern
@@ -24,7 +28,9 @@ _VECTOR = re.compile(
 _UNCOMMENTED_VECTOR = re.compile(
     rb"\((?:\s*)?(?:"
     + FLOAT.pattern
-    + rb"(?:\s*)){2}(?:"
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
     + FLOAT.pattern
     + rb")(?:\s*)?\)"
 )
@@ -35,7 +41,23 @@ _SYMM_TENSOR = re.compile(
     + FLOAT.pattern
     + rb"(?:"
     + SKIP.pattern
-    + rb")){5}(?:"
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
     + FLOAT.pattern
     + rb")(?:"
     + SKIP.pattern
@@ -44,7 +66,15 @@ _SYMM_TENSOR = re.compile(
 _UNCOMMENTED_SYMM_TENSOR = re.compile(
     rb"\((?:\s*)?(?:"
     + FLOAT.pattern
-    + rb"(?:\s*)){5}(?:"
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
     + FLOAT.pattern
     + rb")(?:\s*)?\)"
 )
@@ -55,7 +85,35 @@ _TENSOR = re.compile(
     + FLOAT.pattern
     + rb"(?:"
     + SKIP.pattern
-    + rb")){8}(?:"
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
+    + FLOAT.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
     + FLOAT.pattern
     + rb")(?:"
     + SKIP.pattern
@@ -64,7 +122,21 @@ _TENSOR = re.compile(
 _UNCOMMENTED_TENSOR = re.compile(
     rb"\((?:\s*)?(?:"
     + FLOAT.pattern
-    + rb"(?:\s*)){8}(?:"
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
+    + FLOAT.pattern
+    + rb"(?:\s*))(?:"
     + FLOAT.pattern
     + rb")(?:\s*)?\)"
 )
@@ -140,7 +212,11 @@ _THREE_FACE_LIKE = re.compile(
     + INTEGER.pattern
     + rb"(?:"
     + SKIP.pattern
-    + rb")){2}(?:"
+    + rb"))(?:"
+    + INTEGER.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
     + INTEGER.pattern
     + rb")(?:"
     + SKIP.pattern
@@ -149,7 +225,9 @@ _THREE_FACE_LIKE = re.compile(
 _UNCOMMENTED_THREE_FACE_LIKE = re.compile(
     rb"3(?:\s*)?\((?:\s*)?(?:"
     + INTEGER.pattern
-    + rb"(?:\s*)){2}(?:"
+    + rb"(?:\s*))(?:"
+    + INTEGER.pattern
+    + rb"(?:\s*))(?:"
     + INTEGER.pattern
     + rb")(?:\s*)?\)"
 )
@@ -162,7 +240,15 @@ _FOUR_FACE_LIKE = re.compile(
     + INTEGER.pattern
     + rb"(?:"
     + SKIP.pattern
-    + rb")){3}(?:"
+    + rb"))(?:"
+    + INTEGER.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
+    + INTEGER.pattern
+    + rb"(?:"
+    + SKIP.pattern
+    + rb"))(?:"
     + INTEGER.pattern
     + rb")(?:"
     + SKIP.pattern
@@ -171,7 +257,11 @@ _FOUR_FACE_LIKE = re.compile(
 _UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
     rb"4(?:\s*)?\((?:\s*)?(?:"
     + INTEGER.pattern
-    + rb"(?:\s*)){3}(?:"
+    + rb"(?:\s*))(?:"
+    + INTEGER.pattern
+    + rb"(?:\s*))(?:"
+    + INTEGER.pattern
+    + rb"(?:\s*))(?:"
     + INTEGER.pattern
     + rb")(?:\s*)?\)"
 )
