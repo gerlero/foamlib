@@ -73,6 +73,10 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
                     if self.path.suffix == ".gz":
                         contents = gzip.decompress(contents)
 
+                assert (
+                    self.__cached_parsed is None or not self.__cached_parsed.modified
+                ), "cached parsed file had unsaved modifications"
+
                 if (
                     self.__cached_parsed is None
                     or self.__cached_parsed.contents != contents
