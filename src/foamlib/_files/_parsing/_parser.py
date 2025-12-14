@@ -160,6 +160,15 @@ def _parse_ascii_numeric_list(
         if elshape:
             data = data.replace(b"(", b" ").replace(b")", b" ")
 
+        try:
+            data = data.decode("ascii")
+        except UnicodeDecodeError as e:
+            raise ParseSyntaxError(
+                contents,
+                pos,
+                expected="ASCII numeric list",
+            ) from e
+
         ret = np.fromstring(data, sep=" ", dtype=dtype)
 
         if elshape:
@@ -231,6 +240,16 @@ def _parse_ascii_faces_like_list(
         raise ParseSyntaxError(contents, pos, expected="faces-like list")
 
     data = data.replace(b"(", b" ").replace(b")", b" ")
+
+    try:
+        data = data.decode("ascii")
+    except UnicodeDecodeError as e:
+        raise ParseSyntaxError(
+            contents,
+            pos,
+            expected="ASCII faces-like list",
+        ) from e
+
     values = np.fromstring(data, sep=" ", dtype=int)
 
     ret: list[np.ndarray] = []
