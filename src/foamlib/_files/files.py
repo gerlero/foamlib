@@ -115,7 +115,7 @@ class FoamFile(
             return sum(
                 1
                 for k in parsed
-                if len(k) == 1 and (k != ("FoamFile",) or self._include_header)
+                if len(k) <= 1 and (k != ("FoamFile",) or self._include_header)
             )
 
         @override
@@ -157,7 +157,7 @@ class FoamFile(
             return sum(
                 1
                 for k in parsed
-                if len(k) == 1 and (k != ("FoamFile",) or self._include_header)
+                if len(k) <= 1 and (k != ("FoamFile",) or self._include_header)
             )
 
         @override
@@ -201,7 +201,7 @@ class FoamFile(
             return sum(
                 1
                 for k in parsed
-                if len(k) == 1 and (k != ("FoamFile",) or self._include_header)
+                if len(k) <= 1 and (k != ("FoamFile",) or self._include_header)
             )
 
         @override
@@ -998,7 +998,7 @@ class FoamFile(
     def __len__(self) -> int:
         """Return the number of top-level keywords in the FoamFile (excluding the FoamFile header if present)."""
         parsed = self._get_parsed()
-        return sum(1 for k in parsed if len(k) == 1 and k != ("FoamFile",))
+        return sum(1 for k in parsed if len(k) <= 1 and k != ("FoamFile",))
 
     @override
     def keys(
