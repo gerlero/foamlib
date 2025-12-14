@@ -45,18 +45,26 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
         exc_tb: TracebackType | None,
     ) -> None:
         """If this is the outermost context, write any deferred file changes to disk."""
-        self.__context_depth -= 1
-        if self.__context_depth == 0:
-            assert self.__cached_parsed is not None
-            if self.__cached_parsed.modified:
-                contents = self.__cached_parsed.contents
+        try:
+            if self.__context_depth == 1:
+                assert self.__cached_parsed is not None
+                if self.__cached_parsed.modified:
+                    contents = self.__cached_parsed.contents
 
-                if self.path.suffix == ".gz":
-                    contents = gzip.compress(contents)
+                    if self.path.suffix == ".gz":
+                        contents = gzip.compress(contents)
 
-                self.path.write_bytes(contents)
-                self.__cached_parsed.modified = False
-                self.__file_exists = True
+                    self.path.write_bytes(contents)
+                    self.__cached_parsed.modified = False
+                    self.__file_exists = True
+        finally:
+            self.__context_depth -= 1
+            if (
+                self.__context_depth == 0
+                and self.__cached_parsed is not None
+                and self.__cached_parsed.modified
+            ):
+                self.__cached_parsed = None
 
     def _get_parsed(
         self, *, missing_ok: bool = False, _assume_exclusive: bool = False
@@ -72,6 +80,10 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
                     self.__file_exists = True
                     if self.path.suffix == ".gz":
                         contents = gzip.decompress(contents)
+
+                assert (
+                    self.__cached_parsed is None or not self.__cached_parsed.modified
+                ), "cached parsed file had unsaved modifications"
 
                 if (
                     self.__cached_parsed is None
