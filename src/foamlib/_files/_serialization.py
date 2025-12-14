@@ -114,7 +114,7 @@ def normalized(
                     keywords=(k,) if k is not None else (),  # ty: ignore[not-iterable]
                     format_=format_,
                 )  # ty: ignore[no-matching-overload]
-                
+
                 match k:
                     case None:
                         if seen_none:
@@ -122,12 +122,12 @@ def normalized(
                             raise ValueError(msg)
                         seen_none = True
                         ret[None] = normalized_v
-                    
+
                     case str():
                         if k != parse(k, target=str):
                             msg = f"invalid key string: {k!r}"
                             raise ValueError(msg)
-                        
+
                         if k.startswith("#"):
                             if isinstance(normalized_v, Mapping):
                                 msg = f"#-directive {k!r} cannot have a mapping as value; got value {normalized_v!r}"
@@ -138,11 +138,11 @@ def normalized(
                                 msg = f"duplicate key found: {k!r}"
                                 raise ValueError(msg)
                             ret[k] = normalized_v
-                    
+
                     case _:
                         msg = f"key must be a string or None; got {k!r}"
                         raise TypeError(msg)
-            
+
             return ret  # ty: ignore[invalid-return-type]
 
         # Sub-dictionary
@@ -154,17 +154,17 @@ def normalized(
                 normalized_v = normalized(
                     v, keywords=(*keywords, k), format_=format_
                 )  # ty: ignore[no-matching-overload, not-iterable]
-                
+
                 match k:
                     case None:
                         msg = "None key is only allowed in top-level File dicts"
                         raise TypeError(msg)
-                    
+
                     case str():
                         if k != parse(k, target=str):
                             msg = f"invalid key string: {k!r}"
                             raise ValueError(msg)
-                        
+
                         if k.startswith("#"):
                             if isinstance(normalized_v, Mapping):
                                 msg = f"#-directive {k!r} cannot have a mapping as value; got value {normalized_v!r}"
@@ -175,11 +175,11 @@ def normalized(
                                 msg = f"duplicate key found: {k!r}"
                                 raise ValueError(msg)
                             ret[k] = normalized_v
-                    
+
                     case _:
                         msg = f"key must be a string; got {k!r}"
                         raise TypeError(msg)
-            
+
             return ret
 
         # Other dictionary
@@ -189,30 +189,30 @@ def normalized(
                 normalized_v = normalized(
                     v, keywords=None, format_=format_
                 )  # ty: ignore[no-matching-overload]
-                
+
                 match k:
                     case None:
                         msg = "None key is only allowed in top-level File dicts"
                         raise TypeError(msg)
-                    
+
                     case str():
                         if k != parse(k, target=str):
                             msg = f"invalid key string: {k!r}"
                             raise ValueError(msg)
-                        
+
                         if k.startswith("#"):
                             msg = f"#-directive {k!r} not allowed here"
                             raise ValueError(msg)
-                        
+
                         if k in ret:
                             msg = f"duplicate key found: {k!r}"
                             raise ValueError(msg)
                         ret[k] = normalized_v
-                    
+
                     case _:
                         msg = f"key must be a string; got {k!r}"
                         raise TypeError(msg)
-            
+
             return ret
 
         # Numeric standalone data (n integers)
