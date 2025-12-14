@@ -8,9 +8,9 @@ from typing import Literal, TypeVar, overload
 from foamlib._files._util import add_to_mapping
 
 if sys.version_info >= (3, 11):
-    from typing import Unpack
+    from typing import Unpack, assert_never
 else:
-    from typing_extensions import Unpack
+    from typing_extensions import Unpack, assert_never
 
 import numpy as np
 from multicollections import MultiDict
@@ -55,6 +55,7 @@ _DT = TypeVar("_DT", np.float64, np.float32, np.int64, np.int32)
 _ElShape = TypeVar(
     "_ElShape", tuple[()], tuple[Literal[3]], tuple[Literal[6]], tuple[Literal[9]]
 )
+_T = TypeVar("_T", type[FileDict], type[Data], type[StandaloneData], type[str])
 
 
 class ParseError(Exception):
@@ -68,11 +69,11 @@ class ParseError(Exception):
         return FoamFileDecodeError(self._contents, self.pos, expected=self._expected)
 
 
-def skip(
+def _skip(
     contents: bytes | bytearray,
     pos: int,
     *,
-    strict: bool = False,
+    to_end: bool = False,
     newline_ok: bool = True,
 ) -> int:
     pattern = SKIP if newline_ok else SKIP_NO_NEWLINE
@@ -80,7 +81,7 @@ def skip(
     if match := pattern.match(contents, pos):
         return match.end()
 
-    if strict and pos < len(contents):
+    if to_end and pos < len(contents):
         raise ParseError(contents, pos, expected="end of file")
 
     return pos
@@ -133,7 +134,7 @@ def _parse_ascii_numeric_list(
     else:
         if count == 0 and not empty_ok:
             raise ParseError(contents, pos, expected="non-empty numeric list")
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
 
     if contents[pos : pos + 1] == b"(":
         match dtype, elshape:
@@ -206,15 +207,15 @@ def _parse_ascii_numeric_list(
             case _:
                 raise NotImplementedError
         pos += 1
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
         if elshape:
             elem = []
             pos = _expect(contents, pos, b"(")
             for _ in range(elshape[0]):
-                pos = skip(contents, pos)
+                pos = _skip(contents, pos)
                 x, pos = parse_number(contents, pos)
                 elem.append(x)
-            pos = skip(contents, pos)
+            pos = _skip(contents, pos)
             pos = _expect(contents, pos, b")")
         else:
             elem, pos = parse_number(contents, pos)
@@ -237,7 +238,7 @@ def _parse_ascii_faces_like_list(
     except ParseError:
         count = None
     else:
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
 
     _ = _expect(contents, pos, b"(")
 
@@ -291,7 +292,7 @@ def _parse_binary_numeric_list(
     count, pos = _parse_unsigned_integer(contents, pos)
     if count == 0 and not empty_ok:
         raise ParseError(contents, pos, expected="non-empty numeric list")
-    pos = skip(contents, pos)
+    pos = _skip(contents, pos)
     pos = _expect(contents, pos, b"(")
 
     if elshape:
@@ -317,14 +318,14 @@ def _parse_tensor(contents: bytes | bytearray, pos: int) -> tuple[Tensor, int]:
         pos += 1
         values: list[float] = []
         for _ in range(9):
-            pos = skip(contents, pos)
+            pos = _skip(contents, pos)
             try:
                 value, pos = _parse_float(contents, pos)
             except ParseError:
                 break
             values.append(value)
 
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
         pos = _expect(contents, pos, b")")
 
         if len(values) not in (3, 6, 9):
@@ -339,15 +340,15 @@ def _parse_tensor(contents: bytes | bytearray, pos: int) -> tuple[Tensor, int]:
 
 
 def _parse_field(contents: bytes | bytearray, pos: int) -> tuple[Field, int]:
-    token, pos = parse_token(contents, pos)
+    token, pos = _parse_token(contents, pos)
     match token:
         case "uniform":
-            pos = skip(contents, pos)
+            pos = _skip(contents, pos)
             return _parse_tensor(contents, pos)
 
         case "nonuniform":
-            pos = skip(contents, pos)
-            token, pos = parse_token(contents, pos)
+            pos = _skip(contents, pos)
+            token, pos = _parse_token(contents, pos)
 
             match token:
                 case "List<scalar>":
@@ -365,7 +366,7 @@ def _parse_field(contents: bytes | bytearray, pos: int) -> tuple[Field, int]:
                         expected="one of: List<scalar>, List<vector>, List<symmTensor>, or List<tensor>",
                     )
 
-            pos = skip(contents, pos)
+            pos = _skip(contents, pos)
             with contextlib.suppress(ParseError):
                 return _parse_ascii_numeric_list(
                     contents, pos, dtype=float, elshape=elshape, empty_ok=True
@@ -382,7 +383,7 @@ def _parse_field(contents: bytes | bytearray, pos: int) -> tuple[Field, int]:
             raise ParseError(contents, pos, expected="'uniform' or 'nonuniform'")
 
 
-def parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
+def _parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
     c = contents[pos : pos + 1]
     if c.isalpha() or (c and c in b"_#$"):
         end = pos + 1
@@ -441,7 +442,7 @@ def _parse_number(contents: bytes | bytearray, pos: int) -> tuple[int | float, i
 def _parse_unsigned_integer(contents: bytes | bytearray, pos: int) -> tuple[int, int]:
     if match := UNSIGNED_INTEGER.match(contents, pos):
         try:
-            _, _ = parse_token(contents, match.end())
+            _, _ = _parse_token(contents, match.end())
         except ParseError:
             pass
         else:
@@ -455,7 +456,7 @@ def _parse_unsigned_integer(contents: bytes | bytearray, pos: int) -> tuple[int,
 def _parse_integer(contents: bytes | bytearray, pos: int) -> tuple[int, int]:
     if match := INTEGER.match(contents, pos):
         try:
-            _, _ = parse_token(contents, match.end())
+            _, _ = _parse_token(contents, match.end())
         except ParseError:
             pass
         else:
@@ -472,7 +473,7 @@ def _parse_integer(contents: bytes | bytearray, pos: int) -> tuple[int, int]:
 def _parse_float(contents: bytes | bytearray, pos: int) -> tuple[float, int]:
     if match := FLOAT.match(contents, pos):
         try:
-            _, _ = parse_token(contents, match.end())
+            _, _ = _parse_token(contents, match.end())
         except ParseError:
             pass
         else:
@@ -491,13 +492,13 @@ def _parse_list(
     except ParseError:
         count = None
     else:
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
 
     if contents[pos : pos + 1] == b"(":
         pos += 1
         ret: list[DataEntry | KeywordEntry | Dict] = []
         while count is None or len(ret) < count:
-            pos = skip(contents, pos)
+            pos = _skip(contents, pos)
             if count is None and contents[pos : pos + 1] == b")":
                 pos += 1
                 break
@@ -513,12 +514,12 @@ def _parse_list(
             ret.append(item)
 
         if count is not None:
-            pos = skip(contents, pos)
+            pos = _skip(contents, pos)
             pos = _expect(contents, pos, b")")
 
     elif count is not None and contents[pos : pos + 1] == b"{":
         pos += 1
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
         item: DataEntry | KeywordEntry | Dict
         try:
             item, pos = _parse_dictionary(contents, pos)
@@ -527,7 +528,7 @@ def _parse_list(
                 item, pos = _parse_keyword_entry(contents, pos)
             except ParseError:
                 item, pos = _parse_data_entry(contents, pos)
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
         pos = _expect(contents, pos, b"}")
 
         ret: list[DataEntry | KeywordEntry | Dict] = [item]
@@ -546,7 +547,7 @@ def _parse_dimensions(
 
     dimensions = []
     for _ in range(7):
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
         if contents[pos : pos + 1] == b"]":
             break
 
@@ -556,7 +557,7 @@ def _parse_dimensions(
             break
         dimensions.append(dim)
 
-    pos = skip(contents, pos)
+    pos = _skip(contents, pos)
     pos = _expect(contents, pos, b"]")
 
     return DimensionSet(*dimensions), pos
@@ -566,20 +567,20 @@ def _parse_dimensioned(
     contents: bytes | bytearray, pos: int
 ) -> tuple[Dimensioned, int]:
     try:
-        name, pos = parse_token(contents, pos)
+        name, pos = _parse_token(contents, pos)
     except ParseError:
         name = None
     else:
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
     dimensions, pos = _parse_dimensions(contents, pos)
-    pos = skip(contents, pos)
+    pos = _skip(contents, pos)
     value, pos = _parse_tensor(contents, pos)
 
     return Dimensioned(value, dimensions, name), pos
 
 
 def _parse_switch(contents: bytes | bytearray, pos: int) -> tuple[bool, int]:
-    token, pos = parse_token(contents, pos)
+    token, pos = _parse_token(contents, pos)
     match token:
         case "yes" | "true" | "on":
             return True, pos
@@ -593,12 +594,12 @@ def _parse_keyword_entry(
     contents: bytes | bytearray, pos: int
 ) -> tuple[KeywordEntry, int]:
     keyword, pos = _parse_data_entry(contents, pos)
-    pos = skip(contents, pos)
+    pos = _skip(contents, pos)
     try:
         value, pos = _parse_dictionary(contents, pos)
     except ParseError:
-        value, pos = parse_data(contents, pos)
-        pos = skip(contents, pos)
+        value, pos = _parse_data(contents, pos)
+        pos = _skip(contents, pos)
         pos = _expect(contents, pos, b";")
 
     return (keyword, value), pos
@@ -609,12 +610,12 @@ def _parse_dictionary(contents: bytes | bytearray, pos: int) -> tuple[Dict, int]
 
     ret: Dict = {}
     while True:
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
         if contents[pos : pos + 1] == b"}":
             pos += 1
             break
 
-        keyword, pos = parse_token(contents, pos)
+        keyword, pos = _parse_token(contents, pos)
 
         if keyword.startswith("#"):
             raise FoamFileDecodeError(
@@ -630,13 +631,13 @@ def _parse_dictionary(contents: bytes | bytearray, pos: int) -> tuple[Dict, int]
                 expected=f"non-duplicate keyword in dictionary (got {keyword!r})",
             )
 
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
 
         try:
             value, pos = _parse_dictionary(contents, pos)
         except ParseError:
-            value, pos = parse_data(contents, pos)
-            pos = skip(contents, pos)
+            value, pos = _parse_data(contents, pos)
+            pos = _skip(contents, pos)
             pos = _expect(contents, pos, b";")
 
         ret[keyword] = value
@@ -656,15 +657,15 @@ def _parse_data_entry(contents: bytes | bytearray, pos: int) -> tuple[DataEntry,
         with contextlib.suppress(ParseError):
             return parser(contents, pos)
 
-    return parse_token(contents, pos)
+    return _parse_token(contents, pos)
 
 
-def parse_data(contents: bytes | bytearray, pos: int) -> tuple[Data, int]:
+def _parse_data(contents: bytes | bytearray, pos: int) -> tuple[Data, int]:
     entry, pos = _parse_data_entry(contents, pos)
     entries: list[DataEntry] = [entry]
 
     while True:
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
         try:
             entry, pos = _parse_data_entry(contents, pos)
         except ParseError:
@@ -682,12 +683,12 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
 
     ret: SubDict = {}
     while True:
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
         if contents[pos : pos + 1] == b"}":
             pos += 1
             break
 
-        keyword, pos = parse_token(contents, pos)
+        keyword, pos = _parse_token(contents, pos)
 
         if not keyword.startswith("#") and keyword in ret:
             raise FoamFileDecodeError(
@@ -696,11 +697,11 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
                 expected=f"non-duplicate keyword in subdictionary (got {keyword!r})",
             )
 
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
 
         if keyword.startswith("#"):
             value, pos = _parse_data_entry(contents, pos)
-            pos = skip(contents, pos, newline_ok=False)
+            pos = _skip(contents, pos, newline_ok=False)
             if pos < len(contents):
                 pos = _expect(contents, pos, b"\n")
         else:
@@ -708,11 +709,11 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
                 value, pos = _parse_subdictionary(contents, pos)
             except ParseError:
                 try:
-                    value, pos = parse_data(contents, pos)
+                    value, pos = _parse_data(contents, pos)
                 except ParseError:
                     value = None
                 else:
-                    pos = skip(contents, pos)
+                    pos = _skip(contents, pos)
                 pos = _expect(contents, pos, b";")
 
         ret = add_to_mapping(ret, keyword, value)  # ty: ignore[invalid-assignment]
@@ -733,7 +734,7 @@ def _parse_standalone_data_entry(
         return _parse_ascii_faces_like_list(contents, pos)
 
     try:
-        entry1, pos1 = parse_data(contents, pos)
+        entry1, pos1 = _parse_data(contents, pos)
     except ParseError:
         pos1 = None
 
@@ -767,14 +768,14 @@ def _parse_standalone_data_entry(
             return entry2, pos2
 
 
-def parse_standalone_data(
+def _parse_standalone_data(
     contents: bytes | bytearray, pos: int
 ) -> tuple[StandaloneData, int]:
     entry, pos = _parse_standalone_data_entry(contents, pos)
     entries: list[StandaloneDataEntry] = [entry]
 
     while True:
-        pos = skip(contents, pos)
+        pos = _skip(contents, pos)
         try:
             entry, pos = _parse_standalone_data_entry(contents, pos)
         except ParseError:
@@ -787,12 +788,12 @@ def parse_standalone_data(
     return tuple(entries), pos
 
 
-def parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, int]:
+def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, int]:
     ret: FileDict = {}
 
-    while (pos := skip(contents, pos)) < len(contents):
+    while (pos := _skip(contents, pos)) < len(contents):
         try:
-            keyword, new_pos = parse_token(contents, pos)
+            keyword, new_pos = _parse_token(contents, pos)
             if not keyword.startswith("#") and keyword in ret:
                 raise FoamFileDecodeError(
                     contents,
@@ -800,11 +801,11 @@ def parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, int
                     expected=f"non-duplicate keyword in file (got {keyword!r})",
                 )
 
-            new_pos = skip(contents, new_pos)
+            new_pos = _skip(contents, new_pos)
 
             if keyword.startswith("#"):
                 value, new_pos = _parse_data_entry(contents, new_pos)
-                new_pos = skip(contents, new_pos, newline_ok=False)
+                new_pos = _skip(contents, new_pos, newline_ok=False)
                 if new_pos < len(contents):
                     new_pos = _expect(contents, new_pos, b"\n")
             else:
@@ -812,17 +813,17 @@ def parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, int
                     value, new_pos = _parse_subdictionary(contents, new_pos)
                 except ParseError:
                     try:
-                        value, new_pos = parse_data(contents, new_pos)
+                        value, new_pos = _parse_data(contents, new_pos)
                     except ParseError:
                         value = None
                     else:
-                        new_pos = skip(contents, new_pos)
+                        new_pos = _skip(contents, new_pos)
                     new_pos = _expect(contents, new_pos, b";")
             ret = add_to_mapping(ret, keyword, value)  # ty: ignore[invalid-assignment]
             pos = new_pos
         except ParseError:  # noqa: PERF203
             try:
-                standalone_data, pos = parse_standalone_data(contents, pos)
+                standalone_data, pos = _parse_standalone_data(contents, pos)
             except ParseError:
                 raise ParseError(
                     contents, pos, expected="keyword or standalone data"
@@ -839,6 +840,29 @@ def parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, int
     return ret, pos
 
 
+def parse(contents: bytes | bytearray | str, /, *, target: _T) -> _T:
+    if isinstance(contents, str):
+        contents = contents.encode()
+
+    try:
+        pos = _skip(contents, 0)
+        if target == FileDict:
+            ret, pos = _parse_file(contents, pos)
+        elif target == Data:
+            ret, pos = _parse_data(contents, pos)
+        elif target == StandaloneData:
+            ret, pos = _parse_standalone_data(contents, pos)
+        elif target is str:
+            ret, pos = _parse_token(contents, pos)
+        else:
+            assert_never(target)  # ty: ignore[type-assertion-failure]
+        _skip(contents, pos, to_end=True)
+    except ParseError as e:
+        raise e.make_fatal() from None
+
+    return ret  # ty: ignore[invalid-return-type]
+
+
 @dataclasses.dataclass
 class ParsedEntry:
     """Represents a parsed entry with data and location information."""
@@ -848,26 +872,26 @@ class ParsedEntry:
     end: int
 
 
-def parse_file_located(
+def _parse_file_located(
     contents: bytes | bytearray,
     pos: int,
     _keywords: tuple[str, ...] = (),
 ) -> tuple[MultiDict[tuple[str, ...], ParsedEntry], int]:
     ret: MultiDict[tuple[str, ...], ParsedEntry] = MultiDict()
 
-    while (pos := skip(contents, pos)) < len(contents):
+    while (pos := _skip(contents, pos)) < len(contents):
         # Check if we've hit a closing brace (end of subdictionary)
         if _keywords and contents[pos : pos + 1] == b"}":
             return ret, pos
 
         entry_start = pos
         try:
-            keyword, new_pos = parse_token(contents, pos)
-            new_pos = skip(contents, new_pos)
+            keyword, new_pos = _parse_token(contents, pos)
+            new_pos = _skip(contents, new_pos)
 
             if keyword.startswith("#"):
                 value, new_pos = _parse_data_entry(contents, new_pos)
-                new_pos = skip(contents, new_pos, newline_ok=False)
+                new_pos = _skip(contents, new_pos, newline_ok=False)
                 # Expect newline or end for directives
                 if new_pos < len(contents):
                     new_pos = _expect(contents, new_pos, b"\n")
@@ -887,14 +911,14 @@ def parse_file_located(
 
                 # Recursively parse subdictionary content
                 # The recursive call will parse until it hits the closing brace
-                subdict_result, new_pos = parse_file_located(
+                subdict_result, new_pos = _parse_file_located(
                     contents,
                     new_pos,
                     (*_keywords, keyword),
                 )
 
                 # Expect closing brace
-                new_pos = skip(contents, new_pos)
+                new_pos = _skip(contents, new_pos)
                 new_pos = _expect(contents, new_pos, b"}")
 
                 # Add entry with ... marker for subdictionary
@@ -902,11 +926,11 @@ def parse_file_located(
                 ret.extend(subdict_result)
             else:
                 try:
-                    value, new_pos = parse_data(contents, new_pos)
+                    value, new_pos = _parse_data(contents, new_pos)
                 except ParseError:
                     value = None
                 else:
-                    new_pos = skip(contents, new_pos)
+                    new_pos = _skip(contents, new_pos)
                 new_pos = _expect(contents, new_pos, b";")
 
                 # Check for duplicates
@@ -930,7 +954,7 @@ def parse_file_located(
                 break
 
             try:
-                standalone_data, new_pos = parse_standalone_data(contents, pos)
+                standalone_data, new_pos = _parse_standalone_data(contents, pos)
             except ParseError:
                 raise ParseError(
                     contents, pos, expected="keyword or standalone data"
@@ -946,3 +970,15 @@ def parse_file_located(
                 pos = new_pos
 
     return ret, pos
+
+
+def parse_located(
+    contents: bytes | bytearray, /
+) -> MultiDict[tuple[str, ...], ParsedEntry]:
+    try:
+        pos = _skip(contents, 0)
+        ret, pos = _parse_file_located(contents, pos)
+        _skip(contents, pos, to_end=True)
+    except ParseError as e:
+        raise e.make_fatal() from None
+    return ret
