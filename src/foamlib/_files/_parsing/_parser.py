@@ -448,7 +448,7 @@ def _parse_unsigned_integer(contents: bytes | bytearray, pos: int) -> tuple[int,
         else:
             raise ParseError(contents, pos, expected="unsigned integer")
 
-        return int(match.group(0).decode("ascii")), match.end()
+        return int(match.group(0)), match.end()
 
     raise ParseError(contents, pos, expected="unsigned integer")
 
@@ -465,7 +465,7 @@ def _parse_integer(contents: bytes | bytearray, pos: int) -> tuple[int, int]:
         if contents[match.end() : match.end() + 1] == b".":
             raise ParseError(contents, pos, expected="integer")
 
-        return int(match.group(0).decode("ascii")), match.end()
+        return int(match.group(0)), match.end()
 
     raise ParseError(contents, pos, expected="integer")
 
@@ -479,7 +479,7 @@ def _parse_float(contents: bytes | bytearray, pos: int) -> tuple[float, int]:
         else:
             raise ParseError(contents, pos, expected="float")
 
-        return float(match.group(0).decode("ascii")), match.end()
+        return float(match.group(0)), match.end()
 
     raise ParseError(contents, pos, expected="float")
 
