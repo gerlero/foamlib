@@ -111,11 +111,23 @@ class FoamFile(
 
         @override
         def __len__(self) -> int:
-            return sum(1 for _ in iter(self))
+            parsed = self._file._get_parsed()
+            return sum(
+                1
+                for k in parsed
+                if len(k) <= 1 and (k != ("FoamFile",) or self._include_header)
+            )
 
         @override
         def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
-            return any(k == x for k in iter(self))
+            if not isinstance(x, str) and x is not None:
+                return False
+            keywords = (x,) if x is not None else ()
+            parsed = self._file._get_parsed()
+            if keywords in parsed:
+                # Check if this key should be included in the view
+                return keywords != ("FoamFile",) or self._include_header
+            return False
 
     class ValuesView(
         multicollections.abc.ValuesView[
@@ -141,11 +153,16 @@ class FoamFile(
 
         @override
         def __len__(self) -> int:
-            return sum(1 for _ in iter(self))
+            parsed = self._file._get_parsed()
+            return sum(
+                1
+                for k in parsed
+                if len(k) <= 1 and (k != ("FoamFile",) or self._include_header)
+            )
 
         @override
         def __contains__(self, value: object) -> bool:
-            return value in list(iter(self))
+            return any(v == value for v in iter(self))
 
     class ItemsView(
         multicollections.abc.ItemsView[
@@ -180,11 +197,16 @@ class FoamFile(
 
         @override
         def __len__(self) -> int:
-            return sum(1 for _ in iter(self))
+            parsed = self._file._get_parsed()
+            return sum(
+                1
+                for k in parsed
+                if len(k) <= 1 and (k != ("FoamFile",) or self._include_header)
+            )
 
         @override
         def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
-            return x in list(iter(self))
+            return any(i == x for i in iter(self))
 
     class SubDict(
         MutableMultiMapping[str, "Data | FoamFile.SubDict | None"],
@@ -228,11 +250,17 @@ class FoamFile(
 
             @override
             def __len__(self) -> int:
-                return sum(1 for _ in iter(self))
+                parsed = self._subdict._file._get_parsed()
+                return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
 
             @override
             def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
-                return any(k == x for k in iter(self))
+                if not isinstance(x, str):
+                    return False
+                return (
+                    *self._subdict._keywords,
+                    x,
+                ) in self._subdict._file._get_parsed()
 
         class ValuesView(
             multicollections.abc.ValuesView["Data | FoamFile.SubDict | None"]
@@ -253,7 +281,8 @@ class FoamFile(
 
             @override
             def __len__(self) -> int:
-                return sum(1 for _ in iter(self))
+                parsed = self._subdict._file._get_parsed()
+                return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
 
             @override
             def __contains__(self, value: object) -> bool:
@@ -281,7 +310,8 @@ class FoamFile(
 
             @override
             def __len__(self) -> int:
-                return sum(1 for _ in iter(self))
+                parsed = self._subdict._file._get_parsed()
+                return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
 
             @override
             def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
@@ -360,11 +390,14 @@ class FoamFile(
 
         @override
         def __contains__(self, keyword: object) -> bool:
-            return (*self._keywords, keyword) in self._file
+            if not isinstance(keyword, str):
+                return False
+            return (*self._keywords, keyword) in self._file._get_parsed()
 
         @override
         def __len__(self) -> int:
-            return sum(1 for _ in iter(self))
+            parsed = self._file._get_parsed()
+            return sum(1 for k in parsed if k[:-1] == self._keywords)
 
         @override
         def keys(self) -> "FoamFile.SubDict.KeysView":
@@ -967,7 +1000,8 @@ class FoamFile(
     @override
     def __len__(self) -> int:
         """Return the number of top-level keywords in the FoamFile (excluding the FoamFile header if present)."""
-        return sum(1 for _ in self._iter())
+        parsed = self._get_parsed()
+        return sum(1 for k in parsed if len(k) <= 1 and k != ("FoamFile",))
 
     @override
     def keys(
