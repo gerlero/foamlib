@@ -58,7 +58,7 @@ _ElShape = TypeVar(
 
 
 class ParseError(Exception):
-    def __init__(self, contents: bytes, pos: int, *, expected: str) -> None:
+    def __init__(self, contents: bytes | bytearray, pos: int, *, expected: str) -> None:
         self._contents = contents
         self.pos = pos
         self._expected = expected
@@ -69,7 +69,11 @@ class ParseError(Exception):
 
 
 def skip(
-    contents: bytes, pos: int, *, strict: bool = False, newline_ok: bool = True
+    contents: bytes | bytearray,
+    pos: int,
+    *,
+    strict: bool = False,
+    newline_ok: bool = True,
 ) -> int:
     pattern = SKIP if newline_ok else SKIP_NO_NEWLINE
 
@@ -82,7 +86,7 @@ def skip(
     return pos
 
 
-def _expect(contents: bytes, pos: int, expected: bytes) -> int:
+def _expect(contents: bytes | bytearray, pos: int, expected: bytes | bytearray) -> int:
     length = len(expected)
     if contents[pos : pos + length] != expected:
         raise ParseError(contents, pos, expected=repr(expected.decode("ascii")))
@@ -92,7 +96,7 @@ def _expect(contents: bytes, pos: int, expected: bytes) -> int:
 
 @overload
 def _parse_ascii_numeric_list(
-    contents: bytes,
+    contents: bytes | bytearray,
     pos: int,
     *,
     dtype: type[float],
@@ -103,7 +107,7 @@ def _parse_ascii_numeric_list(
 
 @overload
 def _parse_ascii_numeric_list(
-    contents: bytes,
+    contents: bytes | bytearray,
     pos: int,
     *,
     dtype: type[int],
@@ -113,7 +117,7 @@ def _parse_ascii_numeric_list(
 
 
 def _parse_ascii_numeric_list(
-    contents: bytes,
+    contents: bytes | bytearray,
     pos: int,
     *,
     dtype: type[float] | type[int],
@@ -226,7 +230,7 @@ def _parse_ascii_numeric_list(
 
 
 def _parse_ascii_faces_like_list(
-    contents: bytes, pos: int
+    contents: bytes | bytearray, pos: int
 ) -> tuple[list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]], int]:
     try:
         count, pos = _parse_unsigned_integer(contents, pos)
@@ -277,7 +281,7 @@ def _parse_ascii_faces_like_list(
 
 
 def _parse_binary_numeric_list(
-    contents: bytes,
+    contents: bytes | bytearray,
     pos: int,
     *,
     dtype: type[_DT],
@@ -290,22 +294,25 @@ def _parse_binary_numeric_list(
     pos = skip(contents, pos)
     pos = _expect(contents, pos, b"(")
 
-    elsize = np.dtype(dtype).itemsize
     if elshape:
         (dim,) = elshape
-        elsize *= dim
-    byte_count = count * elsize
-    _ = _expect(contents, pos + byte_count, b")")
+        elsize = dim
+    else:
+        elsize = 1
+    items = count * elsize
+    end = pos + items * np.dtype(dtype).itemsize
 
-    ret = np.frombuffer(contents[pos : pos + byte_count], dtype=dtype)
+    _ = _expect(contents, end, b")")
+
+    ret = np.frombuffer(contents, dtype=dtype, count=items, offset=pos).copy()
+
     if elshape:
         ret = ret.reshape((-1, *elshape))
 
-    pos += byte_count + 1
-    return ret, pos
+    return ret, end + 1
 
 
-def _parse_tensor(contents: bytes, pos: int) -> tuple[Tensor, int]:
+def _parse_tensor(contents: bytes | bytearray, pos: int) -> tuple[Tensor, int]:
     if contents[pos : pos + 1] == b"(":
         pos += 1
         values: list[float] = []
@@ -331,7 +338,7 @@ def _parse_tensor(contents: bytes, pos: int) -> tuple[Tensor, int]:
         raise ParseError(contents, pos, expected="tensor") from e
 
 
-def _parse_field(contents: bytes, pos: int) -> tuple[Field, int]:
+def _parse_field(contents: bytes | bytearray, pos: int) -> tuple[Field, int]:
     token, pos = parse_token(contents, pos)
     match token:
         case "uniform":
@@ -375,7 +382,7 @@ def _parse_field(contents: bytes, pos: int) -> tuple[Field, int]:
             raise ParseError(contents, pos, expected="'uniform' or 'nonuniform'")
 
 
-def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
+def parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
     c = contents[pos : pos + 1]
     if c.isalpha() or (c and c in b"_#$"):
         end = pos + 1
@@ -421,7 +428,7 @@ def parse_token(contents: bytes, pos: int) -> tuple[str, int]:
     raise ParseError(contents, pos, expected="token")
 
 
-def _parse_number(contents: bytes, pos: int) -> tuple[int | float, int]:
+def _parse_number(contents: bytes | bytearray, pos: int) -> tuple[int | float, int]:
     try:
         return _parse_integer(contents, pos)
     except ParseError:
@@ -431,7 +438,7 @@ def _parse_number(contents: bytes, pos: int) -> tuple[int | float, int]:
             raise ParseError(contents, pos, expected="number") from e
 
 
-def _parse_unsigned_integer(contents: bytes, pos: int) -> tuple[int, int]:
+def _parse_unsigned_integer(contents: bytes | bytearray, pos: int) -> tuple[int, int]:
     if match := UNSIGNED_INTEGER.match(contents, pos):
         try:
             _, _ = parse_token(contents, match.end())
@@ -445,7 +452,7 @@ def _parse_unsigned_integer(contents: bytes, pos: int) -> tuple[int, int]:
     raise ParseError(contents, pos, expected="unsigned integer")
 
 
-def _parse_integer(contents: bytes, pos: int) -> tuple[int, int]:
+def _parse_integer(contents: bytes | bytearray, pos: int) -> tuple[int, int]:
     if match := INTEGER.match(contents, pos):
         try:
             _, _ = parse_token(contents, match.end())
@@ -462,7 +469,7 @@ def _parse_integer(contents: bytes, pos: int) -> tuple[int, int]:
     raise ParseError(contents, pos, expected="integer")
 
 
-def _parse_float(contents: bytes, pos: int) -> tuple[float, int]:
+def _parse_float(contents: bytes | bytearray, pos: int) -> tuple[float, int]:
     if match := FLOAT.match(contents, pos):
         try:
             _, _ = parse_token(contents, match.end())
@@ -477,7 +484,7 @@ def _parse_float(contents: bytes, pos: int) -> tuple[float, int]:
 
 
 def _parse_list(
-    contents: bytes, pos: int
+    contents: bytes | bytearray, pos: int
 ) -> tuple[list[DataEntry | KeywordEntry | Dict], int]:
     try:
         count, pos = _parse_unsigned_integer(contents, pos)
@@ -532,7 +539,9 @@ def _parse_list(
     return ret, pos
 
 
-def _parse_dimensions(contents: bytes, pos: int) -> tuple[DimensionSet, int]:
+def _parse_dimensions(
+    contents: bytes | bytearray, pos: int
+) -> tuple[DimensionSet, int]:
     pos = _expect(contents, pos, b"[")
 
     dimensions = []
@@ -553,7 +562,9 @@ def _parse_dimensions(contents: bytes, pos: int) -> tuple[DimensionSet, int]:
     return DimensionSet(*dimensions), pos
 
 
-def _parse_dimensioned(contents: bytes, pos: int) -> tuple[Dimensioned, int]:
+def _parse_dimensioned(
+    contents: bytes | bytearray, pos: int
+) -> tuple[Dimensioned, int]:
     try:
         name, pos = parse_token(contents, pos)
     except ParseError:
@@ -567,7 +578,7 @@ def _parse_dimensioned(contents: bytes, pos: int) -> tuple[Dimensioned, int]:
     return Dimensioned(value, dimensions, name), pos
 
 
-def _parse_switch(contents: bytes, pos: int) -> tuple[bool, int]:
+def _parse_switch(contents: bytes | bytearray, pos: int) -> tuple[bool, int]:
     token, pos = parse_token(contents, pos)
     match token:
         case "yes" | "true" | "on":
@@ -578,7 +589,9 @@ def _parse_switch(contents: bytes, pos: int) -> tuple[bool, int]:
             raise ParseError(contents, pos, expected="switch value")
 
 
-def _parse_keyword_entry(contents: bytes, pos: int) -> tuple[KeywordEntry, int]:
+def _parse_keyword_entry(
+    contents: bytes | bytearray, pos: int
+) -> tuple[KeywordEntry, int]:
     keyword, pos = _parse_data_entry(contents, pos)
     pos = skip(contents, pos)
     try:
@@ -591,7 +604,7 @@ def _parse_keyword_entry(contents: bytes, pos: int) -> tuple[KeywordEntry, int]:
     return (keyword, value), pos
 
 
-def _parse_dictionary(contents: bytes, pos: int) -> tuple[Dict, int]:
+def _parse_dictionary(contents: bytes | bytearray, pos: int) -> tuple[Dict, int]:
     pos = _expect(contents, pos, b"{")
 
     ret: Dict = {}
@@ -631,7 +644,7 @@ def _parse_dictionary(contents: bytes, pos: int) -> tuple[Dict, int]:
     return ret, pos
 
 
-def _parse_data_entry(contents: bytes, pos: int) -> tuple[DataEntry, int]:
+def _parse_data_entry(contents: bytes | bytearray, pos: int) -> tuple[DataEntry, int]:
     for parser in (
         _parse_field,
         _parse_list,
@@ -646,7 +659,7 @@ def _parse_data_entry(contents: bytes, pos: int) -> tuple[DataEntry, int]:
     return parse_token(contents, pos)
 
 
-def parse_data(contents: bytes, pos: int) -> tuple[Data, int]:
+def parse_data(contents: bytes | bytearray, pos: int) -> tuple[Data, int]:
     entry, pos = _parse_data_entry(contents, pos)
     entries: list[DataEntry] = [entry]
 
@@ -664,7 +677,7 @@ def parse_data(contents: bytes, pos: int) -> tuple[Data, int]:
     return tuple(entries), pos
 
 
-def _parse_subdictionary(contents: bytes, pos: int) -> tuple[SubDict, int]:
+def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict, int]:
     pos = _expect(contents, pos, b"{")
 
     ret: SubDict = {}
@@ -708,7 +721,7 @@ def _parse_subdictionary(contents: bytes, pos: int) -> tuple[SubDict, int]:
 
 
 def _parse_standalone_data_entry(
-    contents: bytes, pos: int
+    contents: bytes | bytearray, pos: int
 ) -> tuple[StandaloneDataEntry, int]:
     with contextlib.suppress(ParseError):
         return _parse_ascii_numeric_list(contents, pos, dtype=int, elshape=())
@@ -754,7 +767,9 @@ def _parse_standalone_data_entry(
             return entry2, pos2
 
 
-def parse_standalone_data(contents: bytes, pos: int) -> tuple[StandaloneData, int]:
+def parse_standalone_data(
+    contents: bytes | bytearray, pos: int
+) -> tuple[StandaloneData, int]:
     entry, pos = _parse_standalone_data_entry(contents, pos)
     entries: list[StandaloneDataEntry] = [entry]
 
@@ -772,7 +787,7 @@ def parse_standalone_data(contents: bytes, pos: int) -> tuple[StandaloneData, in
     return tuple(entries), pos
 
 
-def parse_file(contents: bytes, pos: int = 0) -> tuple[FileDict, int]:
+def parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, int]:
     ret: FileDict = {}
 
     while (pos := skip(contents, pos)) < len(contents):
@@ -834,7 +849,7 @@ class ParsedEntry:
 
 
 def parse_file_located(
-    contents: bytes,
+    contents: bytes | bytearray,
     pos: int,
     _keywords: tuple[str, ...] = (),
 ) -> tuple[MultiDict[tuple[str, ...], ParsedEntry], int]:
