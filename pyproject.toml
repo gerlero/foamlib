@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "foamlib"
-version = "1.4.5"
+version = "1.5.0"
 license = "GPL-3.0-only"
 license-files = ["LICENSE.txt"]
 description = "Pythonic interface for working with OpenFOAM"
