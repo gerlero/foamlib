@@ -10,7 +10,6 @@ else:
     from typing_extensions import Never, Unpack, assert_never, assert_type
 
 import numpy as np
-from multicollections import MultiDict
 
 from .._files import _common
 from ..typing import (
@@ -104,9 +103,7 @@ def normalized(
     match data, keywords:
         # File
         case {}, ():
-            ret: dict[str | None, Data | SubDict | None] | MultiDict[
-                str | None, Data | SubDict | None
-            ] = {}
+            ret: FileDict = {}
             seen_none = False
             for k, v in data.items():  # ty: ignore[possibly-missing-attribute]
                 normalized_v = normalized(
@@ -147,13 +144,9 @@ def normalized(
 
         # Sub-dictionary
         case {}, (_, *_):
-            ret: dict[str, Data | SubDict | None] | MultiDict[
-                str, Data | SubDict | None
-            ] = {}
+            ret: SubDict = {}
             for k, v in data.items():  # ty: ignore[possibly-missing-attribute]
-                normalized_v = normalized(
-                    v, keywords=(*keywords, k), format_=format_
-                )  # ty: ignore[no-matching-overload, not-iterable]
+                normalized_v = normalized(v, keywords=(*keywords, k), format_=format_)  # ty: ignore[no-matching-overload, not-iterable]
 
                 match k:
                     case None:
@@ -184,11 +177,9 @@ def normalized(
 
         # Other dictionary
         case {}, None:
-            ret: dict[str, Data | Dict] = {}
+            ret: Dict = {}
             for k, v in data.items():  # ty: ignore[possibly-missing-attribute]
-                normalized_v = normalized(
-                    v, keywords=None, format_=format_
-                )  # ty: ignore[no-matching-overload]
+                normalized_v = normalized(v, keywords=None, format_=format_)  # ty: ignore[no-matching-overload]
 
                 match k:
                     case None:
