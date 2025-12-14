@@ -6,7 +6,7 @@
 
 =========================================================================
 
-**foamlib** is a modern Python package that simplifies working with OpenFOAM cases and files by providing a standalone parser for seamless interaction with OpenFOAM's input/output data. It includes robust case-handling capabilities that reduce boilerplate code and enable efficient pre-processing, post-processing, and simulation management directly from Python.
+**foamlib** is a modern Python package that simplifies working with OpenFOAM input/output data by providing a standalone parser for OpenFOAM's own file format. It also includes robust case-handling capabilities that reduce boilerplate code and enable efficient pre-processing, post-processing, and simulation management directly from Python.
 
 With support for ASCII- and binary-formatted fields, a fully type-hinted API, and asynchronous operations, **foamlib** offers a streamlined, Pythonic approach to automating and managing OpenFOAM workflows.
 
