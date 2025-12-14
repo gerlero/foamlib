@@ -9,10 +9,8 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
-from collections.abc import Sequence
-
 if TYPE_CHECKING:
-    from ..typing import Tensor, TensorLike
+    from ..typing import DimensionSetLike, Tensor, TensorLike
 
 
 _T = TypeVar("_T", bound=np.floating | np.integer)
@@ -32,13 +30,13 @@ class DimensionSet(NamedTuple):
     :param luminous_intensity: Power of the luminous intensity dimension.
     """
 
-    mass: float = 0
-    length: float = 0
-    time: float = 0
-    temperature: float = 0
-    moles: float = 0
-    current: float = 0
-    luminous_intensity: float = 0
+    mass: int | float = 0
+    length: int | float = 0
+    time: int | float = 0
+    temperature: int | float = 0
+    moles: int | float = 0
+    current: int | float = 0
+    luminous_intensity: int | float = 0
 
     @override
     def __repr__(self) -> str:
@@ -103,7 +101,7 @@ class Dimensioned:
     def __init__(
         self,
         value: "TensorLike",
-        dimensions: DimensionSet | Sequence[float],
+        dimensions: "DimensionSetLike",
         name: str | None = None,
     ) -> None:
         match value:
