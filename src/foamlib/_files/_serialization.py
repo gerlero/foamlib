@@ -440,7 +440,7 @@ def normalized(
                 match parsed := parse(data, target=Data):  # ty: ignore[invalid-argument-type]
                     case str():
                         if not parsed:
-                            msg = "Found unsupported empty string"
+                            msg = "found unsupported empty string"
                             raise ValueError(msg)
                         return parsed  # ty: ignore[invalid-return-type]
                     case bool():
