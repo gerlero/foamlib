@@ -111,8 +111,7 @@ class FoamFile(
 
         @override
         def __len__(self) -> int:
-            with self._file:
-                return sum(1 for _ in iter(self))
+            return sum(1 for _ in iter(self))
 
         @override
         def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
@@ -142,8 +141,7 @@ class FoamFile(
 
         @override
         def __len__(self) -> int:
-            with self._file:
-                return sum(1 for _ in iter(self))
+            return sum(1 for _ in iter(self))
 
         @override
         def __contains__(self, value: object) -> bool:
@@ -182,8 +180,7 @@ class FoamFile(
 
         @override
         def __len__(self) -> int:
-            with self._file:
-                return sum(1 for _ in iter(self))
+            return sum(1 for _ in iter(self))
 
         @override
         def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
@@ -231,8 +228,7 @@ class FoamFile(
 
             @override
             def __len__(self) -> int:
-                with self._subdict._file:
-                    return sum(1 for _ in iter(self))
+                return sum(1 for _ in iter(self))
 
             @override
             def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
@@ -257,8 +253,7 @@ class FoamFile(
 
             @override
             def __len__(self) -> int:
-                with self._subdict._file:
-                    return sum(1 for _ in iter(self))
+                return sum(1 for _ in iter(self))
 
             @override
             def __contains__(self, value: object) -> bool:
@@ -286,8 +281,7 @@ class FoamFile(
 
             @override
             def __len__(self) -> int:
-                with self._subdict._file:
-                    return sum(1 for _ in iter(self))
+                return sum(1 for _ in iter(self))
 
             @override
             def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
@@ -370,8 +364,7 @@ class FoamFile(
 
         @override
         def __len__(self) -> int:
-            with self._file:
-                return sum(1 for _ in iter(self))
+            return sum(1 for _ in iter(self))
 
         @override
         def keys(self) -> "FoamFile.SubDict.KeysView":
@@ -974,8 +967,7 @@ class FoamFile(
     @override
     def __len__(self) -> int:
         """Return the number of top-level keywords in the FoamFile (excluding the FoamFile header if present)."""
-        with self:
-            return sum(1 for _ in self._iter())
+        return sum(1 for _ in self._iter())
 
     @override
     def keys(
