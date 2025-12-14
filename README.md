@@ -150,31 +150,7 @@ with my_pitz.fv_schemes as f:
     f["snGradSchemes"]["default"] = "uncorrected"
 ```
 
-### ⏳ Run multiple cases in parallel
-
-Outside an [asyncio](https://docs.python.org/3/library/asyncio.html) context:
-
-```python
-from foamlib import AsyncFoamCase
-
-case1 = AsyncFoamCase("path/to/case1")
-case2 = AsyncFoamCase("path/to/case2")
-
-AsyncFoamCase.run_all_wait([case1, case2])
-```
-
-Within an asyncio context (e.g. in a [Jupyter](https://jupyter.org/) notebook):
-
-```python
-from foamlib import AsyncFoamCase
-
-case1 = AsyncFoamCase("path/to/case1")
-case2 = AsyncFoamCase("path/to/case2")
-
-await AsyncFoamCase.run_all([case1, case2])
-```
-
-### 🔢 Direct field file access
+### 🔢 Direct field file access without FoamCase
 
 ```python
 import numpy as np
@@ -186,7 +162,22 @@ print(f"Velocity field shape: {np.shape(U.internal_field)}")
 print(f"Boundaries: {list(U.boundary_field)}")
 ```
 
-### 🎯 Optimization with HPC clusters
+### ⏳ Run multiple cases in parallel
+
+In an `asyncio` context (e.g. [`asyncio`](https://docs.python.org/3/library/asyncio.html) REPL or [Jupyter](https://jupyter.org/) notebook):
+
+```python
+from foamlib import AsyncFoamCase
+
+case1 = AsyncFoamCase("path/to/case1")
+case2 = AsyncFoamCase("path/to/case2")
+
+await AsyncFoamCase.run_all([case1, case2])
+```
+
+Note: outside of an `asyncio` context, you can use [`asyncio.run()`](https://docs.python.org/3/library/asyncio-runner.html#asyncio.run).
+
+### 🎯 Full optimization run on a Slurm-based HPC cluster
 
 ```python
 import os
