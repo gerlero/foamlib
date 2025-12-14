@@ -16,6 +16,7 @@ The following are aliases of the primary types used throughout **foamlib** to re
 .. autodata:: foamlib.typing.StandaloneDataEntry
 .. autodata:: foamlib.typing.Dict
 .. autodata:: foamlib.typing.KeywordEntry
+.. autodata:: foamlib.typing.List
 .. autodata:: foamlib.typing.Field
 .. autodata:: foamlib.typing.Tensor
 
@@ -33,5 +34,7 @@ These "Like" type variants accept the standard type plus other formats that coul
 .. autodata:: foamlib.typing.StandaloneDataEntryLike
 .. autodata:: foamlib.typing.DictLike
 .. autodata:: foamlib.typing.KeywordEntryLike
+.. autodata:: foamlib.typing.ListLike
 .. autodata:: foamlib.typing.FieldLike
 .. autodata:: foamlib.typing.TensorLike
+.. autodata:: foamlib.typing.DimensionSetLike

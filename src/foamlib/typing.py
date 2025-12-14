@@ -2,6 +2,7 @@
 
 import sys
 from collections.abc import Mapping, Sequence
+from numbers import Integral, Real
 from typing import Literal, TypeAlias
 
 if sys.version_info >= (3, 11):
@@ -18,7 +19,8 @@ Tensor: TypeAlias = float | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.floa
 """An OpenFOAM scalar, vector, symmetric tensor, or full tensor."""
 TensorLike: TypeAlias = (
     Tensor
-    | Sequence[float]
+    | Real
+    | Sequence[float | Real]
     | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.floating | np.integer]]
 )
 """Any type that could be interpreted as a :type:`Tensor`."""
@@ -27,7 +29,7 @@ Field: TypeAlias = (
     float | np.ndarray[tuple[int] | tuple[int, Literal[3, 6, 9]], np.dtype[np.floating]]
 )
 """An OpenFOAM field of scalars, vectors, symmetric tensors, or full tensors."""
-FieldLike: TypeAlias = Field | TensorLike | Sequence[TensorLike]
+FieldLike: TypeAlias = Field | Real | TensorLike | Sequence[TensorLike]
 """Any type that could be interpreted as a :type:`Field`."""
 
 Dict: TypeAlias = dict[str, "Data | Dict"]
@@ -40,24 +42,22 @@ KeywordEntry: TypeAlias = tuple["DataEntry", "Data | Dict"]
 KeywordEntryLike: TypeAlias = tuple["DataEntryLike", "Data | DictLike"]
 """Any 2-tuple that could be interpreted as a :type:`KeywordEntry`."""
 
+List = list["DataEntry | KeywordEntry | Dict"]
+"""An OpenFOAM list."""
+ListLike: TypeAlias = Sequence["DataEntryLike | KeywordEntryLike | DictLike"]
+"""Any sequence that could be interpreted as a :type:`List`."""
+
+DimensionSetLike: TypeAlias = DimensionSet | Sequence[int | float]
+"""Any type that could be interpreted as a :class:`foamlib.DimensionSet`."""
+
 DataEntry: TypeAlias = (
-    str
-    | int
-    | float
-    | bool
-    | Dimensioned
-    | DimensionSet
-    | list["DataEntry | KeywordEntry | Dict"]
-    | Field
+    str | int | float | bool | Dimensioned | DimensionSet | List | Field
 )
 """
 A single OpenFOAM value.
 """
 DataEntryLike: TypeAlias = (
-    DataEntry
-    | Sequence[float]
-    | Sequence["DataEntryLike | KeywordEntryLike | DictLike"]
-    | FieldLike
+    DataEntry | Integral | Real | DimensionSetLike | ListLike | FieldLike
 )
 """Any type that could be interpreted as a :type:`DataEntry`."""
 
