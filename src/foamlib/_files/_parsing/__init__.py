@@ -1,6 +1,6 @@
 import sys
 from collections.abc import Collection, Iterator
-from typing import TypeVar, cast, overload
+from typing import cast, overload
 
 if sys.version_info >= (3, 11):
     from typing import Never, Unpack
@@ -21,12 +21,8 @@ from ...typing import Data, FileDict, StandaloneData, SubDict
 from .._util import add_to_mapping
 from ._parser import (
     ParsedEntry,
-    parse_data,
-    parse_file,
-    parse_file_located,
-    parse_standalone_data,
-    parse_token,
-    skip,
+    parse,
+    parse_located,
 )
 from .exceptions import FoamFileDecodeError
 
@@ -36,31 +32,6 @@ __all__ = [
     "parse",
 ]
 
-_T = TypeVar("_T", str, Data, StandaloneData, FileDict)
-
-
-def parse(contents: bytes | bytearray | str, /, *, target: type[_T]) -> _T:
-    if isinstance(contents, str):
-        contents = contents.encode()
-
-    if target is str:
-        parse = parse_token
-    elif target is Data:
-        parse = parse_data
-    elif target is StandaloneData:
-        parse = parse_standalone_data
-    elif target is FileDict:
-        parse = parse_file
-    else:
-        msg = f"Unsupported type for parsing: {target}"
-        raise TypeError(msg)
-
-    pos = skip(contents, 0)
-    ret, pos = parse(contents, pos)
-    skip(contents, pos, strict=True)
-
-    return ret  # ty: ignore[invalid-return-type]
-
 
 class ParsedFile(
     MutableMultiMapping[tuple[str, ...], Data | StandaloneData | EllipsisType | None]
@@ -69,9 +40,7 @@ class ParsedFile(
         if isinstance(contents, bytes):
             contents = bytearray(contents)
 
-        self._parsed, pos = parse_file_located(contents, 0)
-        skip(contents, pos, strict=True)
-
+        self._parsed = parse_located(contents)
         self.contents = contents
         self.modified = False
 
