@@ -193,8 +193,8 @@ def test_parse_directive() -> None:
 
 
 def test_parse_invalid_content() -> None:
-    """Test that ValueError is raised for malformed content that causes ParseException."""
-    # Test malformed syntax that will cause pyparsing to fail
+    """Test that FoamFileDecodeError is raised for malformed content that cannot be parsed."""
+    # Test malformed syntax that will cause the parser to fail
     with pytest.raises(FoamFileDecodeError):
         ParsedFile(b"key value; unclosed {")
 
