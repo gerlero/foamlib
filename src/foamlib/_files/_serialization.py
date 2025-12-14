@@ -10,6 +10,7 @@ else:
     from typing_extensions import Never, Unpack, assert_never, assert_type
 
 import numpy as np
+from multicollections import MultiDict
 
 from .._files import _common
 from ..typing import (
@@ -25,8 +26,8 @@ from ..typing import (
     SubDict,
     SubDictLike,
 )
-from ._common import dict_from_items
 from ._parsing import parse
+from ._util import add_to_mapping
 from .types import Dimensioned, DimensionSet
 
 
@@ -103,49 +104,116 @@ def normalized(
     match data, keywords:
         # File
         case {}, ():
-            return dict_from_items(
-                (
-                    (
-                        k,
-                        normalized(
-                            v,
-                            keywords=(k,) if k is not None else (),  # ty: ignore[not-iterable]
-                            format_=format_,
-                        ),  # ty: ignore[no-matching-overload]
-                    )
-                    for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
-                ),
-                target=FileDict,
-                check_keys=True,
-            )  # ty: ignore[invalid-return-type]
+            ret: dict[str | None, Data | SubDict | None] | MultiDict[
+                str | None, Data | SubDict | None
+            ] = {}
+            seen_none = False
+            for k, v in data.items():  # ty: ignore[possibly-missing-attribute]
+                normalized_v = normalized(
+                    v,
+                    keywords=(k,) if k is not None else (),  # ty: ignore[not-iterable]
+                    format_=format_,
+                )  # ty: ignore[no-matching-overload]
+                
+                match k:
+                    case None:
+                        if seen_none:
+                            msg = "duplicate None key found"
+                            raise ValueError(msg)
+                        seen_none = True
+                        ret[None] = normalized_v
+                    
+                    case str():
+                        if k != parse(k, target=str):
+                            msg = f"invalid key string: {k!r}"
+                            raise ValueError(msg)
+                        
+                        if k.startswith("#"):
+                            if isinstance(normalized_v, Mapping):
+                                msg = f"#-directive {k!r} cannot have a mapping as value; got value {normalized_v!r}"
+                                raise TypeError(msg)
+                            ret = add_to_mapping(ret, k, normalized_v)  # ty: ignore[invalid-assignment]
+                        else:
+                            if k in ret:
+                                msg = f"duplicate key found: {k!r}"
+                                raise ValueError(msg)
+                            ret[k] = normalized_v
+                    
+                    case _:
+                        msg = f"key must be a string or None; got {k!r}"
+                        raise TypeError(msg)
+            
+            return ret  # ty: ignore[invalid-return-type]
 
         # Sub-dictionary
         case {}, (_, *_):
-            return dict_from_items(
-                (
-                    (
-                        k,
-                        normalized(v, keywords=(*keywords, k), format_=format_),  # ty: ignore[no-matching-overload, not-iterable]
-                    )
-                    for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
-                ),
-                target=SubDict,
-                check_keys=True,
-            )
+            ret: dict[str, Data | SubDict | None] | MultiDict[
+                str, Data | SubDict | None
+            ] = {}
+            for k, v in data.items():  # ty: ignore[possibly-missing-attribute]
+                normalized_v = normalized(
+                    v, keywords=(*keywords, k), format_=format_
+                )  # ty: ignore[no-matching-overload, not-iterable]
+                
+                match k:
+                    case None:
+                        msg = "None key is only allowed in top-level File dicts"
+                        raise TypeError(msg)
+                    
+                    case str():
+                        if k != parse(k, target=str):
+                            msg = f"invalid key string: {k!r}"
+                            raise ValueError(msg)
+                        
+                        if k.startswith("#"):
+                            if isinstance(normalized_v, Mapping):
+                                msg = f"#-directive {k!r} cannot have a mapping as value; got value {normalized_v!r}"
+                                raise TypeError(msg)
+                            ret = add_to_mapping(ret, k, normalized_v)  # ty: ignore[invalid-assignment]
+                        else:
+                            if k in ret:
+                                msg = f"duplicate key found: {k!r}"
+                                raise ValueError(msg)
+                            ret[k] = normalized_v
+                    
+                    case _:
+                        msg = f"key must be a string; got {k!r}"
+                        raise TypeError(msg)
+            
+            return ret
 
         # Other dictionary
         case {}, None:
-            return dict_from_items(
-                (
-                    (
-                        k,
-                        normalized(v, keywords=None, format_=format_),  # ty: ignore[no-matching-overload]
-                    )
-                    for k, v in data.items()  # ty: ignore[possibly-missing-attribute]
-                ),
-                target=Dict,
-                check_keys=True,
-            )
+            ret: dict[str, Data | Dict] = {}
+            for k, v in data.items():  # ty: ignore[possibly-missing-attribute]
+                normalized_v = normalized(
+                    v, keywords=None, format_=format_
+                )  # ty: ignore[no-matching-overload]
+                
+                match k:
+                    case None:
+                        msg = "None key is only allowed in top-level File dicts"
+                        raise TypeError(msg)
+                    
+                    case str():
+                        if k != parse(k, target=str):
+                            msg = f"invalid key string: {k!r}"
+                            raise ValueError(msg)
+                        
+                        if k.startswith("#"):
+                            msg = f"#-directive {k!r} not allowed here"
+                            raise ValueError(msg)
+                        
+                        if k in ret:
+                            msg = f"duplicate key found: {k!r}"
+                            raise ValueError(msg)
+                        ret[k] = normalized_v
+                    
+                    case _:
+                        msg = f"key must be a string; got {k!r}"
+                        raise TypeError(msg)
+            
+            return ret
 
         # Numeric standalone data (n integers)
         case np.ndarray(shape=(_,)), () if np.issubdtype(data.dtype, np.integer):  # ty: ignore[possibly-missing-attribute]
