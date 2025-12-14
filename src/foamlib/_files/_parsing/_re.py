@@ -30,9 +30,9 @@ _VECTOR = re.compile(
 _UNCOMMENTED_VECTOR = re.compile(
     rb"\(\s*(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
     + rb")\s*\)",
     re.ASCII,
@@ -69,15 +69,15 @@ _SYMM_TENSOR = re.compile(
 _UNCOMMENTED_SYMM_TENSOR = re.compile(
     rb"\(\s*(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
     + rb")\s*\)",
     re.ASCII,
@@ -126,21 +126,21 @@ _TENSOR = re.compile(
 _UNCOMMENTED_TENSOR = re.compile(
     rb"\(\s*(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + FLOAT.pattern
     + rb")\s*\)",
     re.ASCII,
@@ -228,9 +228,9 @@ _THREE_FACE_LIKE = re.compile(
 _UNCOMMENTED_THREE_FACE_LIKE = re.compile(
     rb"3\s*\(\s*(?:"
     + INTEGER.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + INTEGER.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + INTEGER.pattern
     + rb")\s*\)",
     re.ASCII,
@@ -261,11 +261,11 @@ _FOUR_FACE_LIKE = re.compile(
 _UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
     rb"4\s*\(\s*(?:"
     + INTEGER.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + INTEGER.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + INTEGER.pattern
-    + rb"(?:\s*))(?:"
+    + rb"\s*)(?:"
     + INTEGER.pattern
     + rb")\s*\)",
     re.ASCII,
