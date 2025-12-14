@@ -150,7 +150,7 @@ with my_pitz.fv_schemes as f:
     f["snGradSchemes"]["default"] = "uncorrected"
 ```
 
-### 🔢 Direct field file access without `FoamCase`
+### 🔢 Direct field file access without FoamCase
 
 ```python
 import numpy as np
