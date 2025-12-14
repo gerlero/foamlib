@@ -437,26 +437,3 @@ class AsyncFoamCase(FoamCaseRunBase):
         await asyncio.gather(
             *(case.run() if isinstance(case, AsyncFoamCase) else case for case in cases)
         )
-
-    @staticmethod
-    def run_all_wait(cases: Iterable["AsyncFoamCase | Awaitable[object]"], /) -> None:
-        """
-        Run multiple cases concurrently, blocking until all are complete.
-
-        Multiple cases will be run in parallel if possible (this parallelism is
-        automatically limited by the :attr:`max_cpus` attribute in order to
-        avoid oversubscription of available CPUs).
-
-        :param cases: Instances of :class:`AsyncFoamCase` (:meth:`run` will be
-            called) or arbitrary awaitables (will be awaited as-is).
-
-        Example usage: ::
-
-            from foamlib import AsyncFoamCase
-
-            case1 = AsyncFoamCase("path/to/case1")
-            case2 = AsyncFoamCase("path/to/case2")
-
-            AsyncFoamCase.run_all_wait([case1, case2])
-        """
-        asyncio.get_event_loop().run_until_complete(AsyncFoamCase.run_all(cases))
