@@ -72,14 +72,19 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
         if self.__context_depth == 0:
             with self.__lazy_parse_lock if not _assume_exclusive else nullcontext():
                 try:
-                    contents = self.path.read_bytes()
+                    with self.path.open("rb") as f:
+                        f.seek(0, os.SEEK_END)
+                        size = f.tell()
+                        contents = bytearray(size)
+                        f.seek(0)
+                        f.readinto(contents)
                 except FileNotFoundError:
+                    contents = bytearray()
                     self.__file_exists = False
-                    contents = b""
                 else:
                     self.__file_exists = True
                     if self.path.suffix == ".gz":
-                        contents = gzip.decompress(contents)
+                        contents = bytearray(gzip.decompress(contents))
 
                 assert (
                     self.__cached_parsed is None or not self.__cached_parsed.modified

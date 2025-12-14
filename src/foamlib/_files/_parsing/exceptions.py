@@ -1,7 +1,7 @@
 class FoamFileDecodeError(ValueError):
     """Error raised when a FoamFile cannot be parsed."""
 
-    def __init__(self, contents: bytes, pos: int, *, expected: str) -> None:
+    def __init__(self, contents: bytes | bytearray, pos: int, *, expected: str) -> None:
         self._contents = contents
         self.pos = pos
         self._expected = expected

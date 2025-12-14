@@ -39,7 +39,7 @@ __all__ = [
 _T = TypeVar("_T", str, Data, StandaloneData, FileDict)
 
 
-def parse(contents: bytes | str, /, *, target: type[_T]) -> _T:
+def parse(contents: bytes | bytearray | str, /, *, target: type[_T]) -> _T:
     if isinstance(contents, str):
         contents = contents.encode()
 
@@ -65,9 +65,9 @@ def parse(contents: bytes | str, /, *, target: type[_T]) -> _T:
 class ParsedFile(
     MutableMultiMapping[tuple[str, ...], Data | StandaloneData | EllipsisType | None]
 ):
-    def __init__(self, contents: bytes | str, /) -> None:
-        if isinstance(contents, str):
-            contents = contents.encode()
+    def __init__(self, contents: bytearray | bytes, /) -> None:
+        if isinstance(contents, bytes):
+            contents = bytearray(contents)
 
         self._parsed, pos = parse_file_located(contents, 0)
         skip(contents, pos, strict=True)
@@ -229,7 +229,7 @@ class ParsedFile(
                 elif entry.end > start:
                     entry.end += diff
 
-        self.contents = self.contents[:start] + new_content + self.contents[end:]
+        self.contents[start:end] = new_content
         self.modified = True
 
     def _remove_child_entries(self, keywords: tuple[str, ...], /) -> None:

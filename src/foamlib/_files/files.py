@@ -1125,7 +1125,7 @@ class FoamFile(
 
     @staticmethod
     def loads(
-        s: bytes | str,
+        s: bytes | bytearray | str,
         *,
         include_header: bool = False,
     ) -> FileDict | StandaloneData:
