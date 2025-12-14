@@ -688,7 +688,8 @@ def _parse_subdictionary(contents: bytes, pos: int) -> tuple[SubDict, int]:
         if keyword.startswith("#"):
             value, pos = _parse_data_entry(contents, pos)
             pos = skip(contents, pos, newline_ok=False)
-            pos = _expect(contents, pos, b"\n")
+            if pos < len(contents):
+                pos = _expect(contents, pos, b"\n")
         else:
             try:
                 value, pos = _parse_subdictionary(contents, pos)
@@ -789,7 +790,8 @@ def parse_file(contents: bytes, pos: int = 0) -> tuple[FileDict, int]:
             if keyword.startswith("#"):
                 value, new_pos = _parse_data_entry(contents, new_pos)
                 new_pos = skip(contents, new_pos, newline_ok=False)
-                new_pos = _expect(contents, new_pos, b"\n")
+                if new_pos < len(contents):
+                    new_pos = _expect(contents, new_pos, b"\n")
             else:
                 try:
                     value, new_pos = _parse_subdictionary(contents, new_pos)
@@ -823,15 +825,6 @@ def parse_file(contents: bytes, pos: int = 0) -> tuple[FileDict, int]:
 
 
 @dataclasses.dataclass
-class LocatedEntry:
-    """Represents a parsed entry with its location in the source."""
-
-    value: tuple[str | None, Data | StandaloneData | Dict | SubDict | None]
-    locn_start: int
-    locn_end: int
-
-
-@dataclasses.dataclass
 class ParsedEntry:
     """Represents a parsed entry with data and location information."""
 
@@ -840,26 +833,14 @@ class ParsedEntry:
     end: int
 
 
-def _parse_file_located_recursive(
+def parse_file_located(
     contents: bytes,
     pos: int,
-    end: int,
     _keywords: tuple[str, ...] = (),
 ) -> tuple[MultiDict[tuple[str, ...], ParsedEntry], int]:
-    """Parse entries with location information and flatten them into a MultiDict.
-
-    Args:
-        contents: The bytes to parse
-        pos: Starting position
-        end: Ending position (exclusive)
-        _keywords: Tuple of parent keywords for nested entries
-
-    Returns:
-        A MultiDict mapping keyword tuples to ParsedEntry objects and the final position
-    """
     ret: MultiDict[tuple[str, ...], ParsedEntry] = MultiDict()
 
-    while (pos := skip(contents, pos)) < end:
+    while (pos := skip(contents, pos)) < len(contents):
         # Check if we've hit a closing brace (end of subdictionary)
         if _keywords and contents[pos : pos + 1] == b"}":
             return ret, pos
@@ -873,8 +854,8 @@ def _parse_file_located_recursive(
                 value, new_pos = _parse_data_entry(contents, new_pos)
                 new_pos = skip(contents, new_pos, newline_ok=False)
                 # Expect newline or end for directives
-                if new_pos < end and contents[new_pos : new_pos + 1] == b"\n":
-                    new_pos += 1
+                if new_pos < len(contents):
+                    new_pos = _expect(contents, new_pos, b"\n")
                 ret.add((*_keywords, keyword), ParsedEntry(value, entry_start, new_pos))
             # Check if this is a subdictionary
             elif contents[new_pos : new_pos + 1] == b"{":
@@ -891,18 +872,15 @@ def _parse_file_located_recursive(
 
                 # Recursively parse subdictionary content
                 # The recursive call will parse until it hits the closing brace
-                subdict_result, new_pos = _parse_file_located_recursive(
+                subdict_result, new_pos = parse_file_located(
                     contents,
                     new_pos,
-                    end,
                     (*_keywords, keyword),
                 )
 
                 # Expect closing brace
                 new_pos = skip(contents, new_pos)
-                if new_pos >= end or contents[new_pos : new_pos + 1] != b"}":
-                    raise ParseError(contents, new_pos, expected="}")  # noqa: TRY301
-                new_pos += 1
+                new_pos = _expect(contents, new_pos, b"}")
 
                 # Add entry with ... marker for subdictionary
                 ret[(*_keywords, keyword)] = ParsedEntry(..., entry_start, new_pos)
@@ -953,22 +931,3 @@ def _parse_file_located_recursive(
                 pos = new_pos
 
     return ret, pos
-
-
-def parse_file_located(
-    contents: bytes, pos: int = 0
-) -> tuple[MultiDict[tuple[str, ...], ParsedEntry], int]:
-    """Parse a file and return a flattened MultiDict with location information.
-
-    This function parses an OpenFOAM file and returns entries already flattened
-    into the structure used by ParsedFile, eliminating the need for a separate
-    flattening step.
-
-    Args:
-        contents: The bytes to parse
-        pos: Starting position (default 0)
-
-    Returns:
-        A MultiDict mapping keyword tuples to ParsedEntry objects and the final position
-    """
-    return _parse_file_located_recursive(contents, pos, len(contents))
