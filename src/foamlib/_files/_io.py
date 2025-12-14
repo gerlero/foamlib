@@ -1,6 +1,7 @@
 import gzip
 import sys
-from contextlib import AbstractContextManager
+import threading
+from contextlib import AbstractContextManager, nullcontext
 from pathlib import Path
 
 if sys.version_info >= (3, 11):
@@ -23,16 +24,17 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
     def __init__(self, path: os.PathLike[str] | str) -> None:
         self.path = Path(path).absolute()
 
-        self.__parsed: ParsedFile | None = None
-        self.__missing: bool | None = None
-        self.__defer_io = 0
+        self.__cached_parsed: ParsedFile | None = None
+        self.__file_exists: bool | None = None
+        self.__context_depth = 0
+        self.__lazy_parse_lock = threading.Lock()
 
     @override
     def __enter__(self) -> Self:
         """Read the file from disk if not already read, and defer writing of changes until the context is exited."""
-        if self.__defer_io == 0:
-            self._get_parsed(missing_ok=True)
-        self.__defer_io += 1
+        if self.__context_depth == 0:
+            self._get_parsed(missing_ok=True, _assume_exclusive=True)
+        self.__context_depth += 1
         return self
 
     @override
@@ -43,41 +45,51 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
         exc_tb: TracebackType | None,
     ) -> None:
         """If this is the outermost context, write any deferred file changes to disk."""
-        self.__defer_io -= 1
-        if self.__defer_io == 0:
-            assert self.__parsed is not None
-            if self.__parsed.modified:
-                contents = self.__parsed.contents
+        self.__context_depth -= 1
+        if self.__context_depth == 0:
+            assert self.__cached_parsed is not None
+            if self.__cached_parsed.modified:
+                contents = self.__cached_parsed.contents
 
                 if self.path.suffix == ".gz":
                     contents = gzip.compress(contents)
 
                 self.path.write_bytes(contents)
-                self.__parsed.modified = False
-                self.__missing = False
+                self.__cached_parsed.modified = False
+                self.__file_exists = True
 
-    def _get_parsed(self, *, missing_ok: bool = False) -> ParsedFile:
-        if not self.__defer_io:
-            try:
-                contents = self.path.read_bytes()
-            except FileNotFoundError:
-                self.__missing = True
-                contents = b""
-            else:
-                self.__missing = False
-                if self.path.suffix == ".gz":
-                    contents = gzip.decompress(contents)
+    def _get_parsed(
+        self, *, missing_ok: bool = False, _assume_exclusive: bool = False
+    ) -> ParsedFile:
+        if self.__context_depth == 0:
+            with self.__lazy_parse_lock if not _assume_exclusive else nullcontext():
+                try:
+                    contents = self.path.read_bytes()
+                except FileNotFoundError:
+                    self.__file_exists = False
+                    contents = b""
+                else:
+                    self.__file_exists = True
+                    if self.path.suffix == ".gz":
+                        contents = gzip.decompress(contents)
 
-            if self.__parsed is None or self.__parsed.contents != contents:
-                self.__parsed = ParsedFile(contents)
+                if (
+                    self.__cached_parsed is None
+                    or self.__cached_parsed.contents != contents
+                ):
+                    self.__cached_parsed = ParsedFile(contents)
 
-        assert self.__parsed is not None
-        assert self.__missing is not None
+        assert self.__cached_parsed is not None
+        assert self.__file_exists is not None
 
-        if self.__missing and not self.__parsed.modified and not missing_ok:
+        if (
+            not self.__file_exists
+            and not self.__cached_parsed.modified
+            and not missing_ok
+        ):
             raise FileNotFoundError(self.path)
 
-        return self.__parsed
+        return self.__cached_parsed
 
     @override
     def __repr__(self) -> str:
