@@ -628,7 +628,9 @@ class FoamFile(
                 after = b"\n"
             else:
                 after = b""
-        elif not parsed.contents[end:].strip() or parsed.contents[end:].startswith(b"}"):
+        elif not parsed.contents[end:].strip() or parsed.contents[end:].startswith(
+            b"}"
+        ):
             after = b"\n" + b"    " * (len(keywords) - 2)
         else:
             after = b""
