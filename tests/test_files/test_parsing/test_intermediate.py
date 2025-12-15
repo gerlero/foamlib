@@ -310,7 +310,6 @@ def test_directives_in_dict() -> None:
     """)
 
 
-@pytest.mark.xfail(reason="Not currently supported")
 def test_code() -> None:
     ParsedFile(b"""
         code_name
