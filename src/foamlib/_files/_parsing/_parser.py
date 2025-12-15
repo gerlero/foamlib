@@ -493,24 +493,23 @@ def _parse_number(
     has_exponent = False
 
     # Check for NaN and infinity when float is allowed
-    if target is not int:
+    if target is not int and pos < length:
         sign_pos = pos
         if contents[pos] in b"+-":
             sign_pos += 1
         
         if sign_pos < length:
+            # Helper function to check if a special value is at a token boundary
+            def _is_token_boundary(end: int) -> bool:
+                if end >= length:
+                    return True
+                next_char = contents[end:end + 1]
+                return not (next_char.isalnum() or next_char in _TOKEN_CONTINUATION_CHARS)
+            
             # Check for 'nan' (case-insensitive)
             if sign_pos + 3 <= length and contents[sign_pos:sign_pos + 3].lower() == b"nan":
                 end_pos = sign_pos + 3
-                # Ensure 'nan' is not part of a larger token
-                if end_pos < length:
-                    next_char = contents[end_pos:end_pos + 1]
-                    if next_char.isalnum() or next_char in _TOKEN_CONTINUATION_CHARS:
-                        # This is part of a larger token, not a standalone nan
-                        pass  # Fall through to normal number parsing
-                    else:
-                        return float(contents[start:end_pos]), end_pos
-                else:
+                if _is_token_boundary(end_pos):
                     return float(contents[start:end_pos]), end_pos
             
             # Check for 'inf' or 'infinity' (case-insensitive)
@@ -519,15 +518,7 @@ def _parse_number(
                 # Check for full 'infinity'
                 if end_pos + 5 <= length and contents[end_pos:end_pos + 5].lower() == b"inity":
                     end_pos += 5
-                # Ensure 'inf'/'infinity' is not part of a larger token
-                if end_pos < length:
-                    next_char = contents[end_pos:end_pos + 1]
-                    if next_char.isalnum() or next_char in _TOKEN_CONTINUATION_CHARS:
-                        # This is part of a larger token, not a standalone inf/infinity
-                        pass  # Fall through to normal number parsing
-                    else:
-                        return float(contents[start:end_pos]), end_pos
-                else:
+                if _is_token_boundary(end_pos):
                     return float(contents[start:end_pos]), end_pos
 
     if contents[pos] in b"+-":
