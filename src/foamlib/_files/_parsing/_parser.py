@@ -38,6 +38,17 @@ _ElShape = TypeVar(
 )
 _T = TypeVar("_T", FileDict, Data, StandaloneData, str)
 
+_WHITESPACE = b" \n\t\r\f\v"
+_WHITESPACE_NO_NEWLINE = b" \t\r\f\v"
+
+_IS_TOKEN_START = [False] * 256
+for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$":
+    _IS_TOKEN_START[c] = True
+
+_IS_TOKEN_CONTINUATION = _IS_TOKEN_START.copy()
+for c in b"0123456789._<>#$:+-*/|^%&=!":
+    _IS_TOKEN_CONTINUATION[c] = True
+
 
 class ParseError(Exception):
     def __init__(self, contents: bytes | bytearray, pos: int, *, expected: str) -> None:
@@ -50,18 +61,12 @@ class ParseError(Exception):
         return FoamFileDecodeError(self._contents, self.pos, expected=self._expected)
 
 
-_WHITESPACE = b" \n\t\r\f\v"
-_WHITESPACE_NO_NEWLINE = b" \t\r\f\v"
-# Characters that can continue a token (used for boundary checking)
-_TOKEN_CONTINUATION_CHARS = b"._<>#$:+-*/|^%&=!"
-
-
 def _is_token_boundary(contents: bytes | bytearray, pos: int) -> bool:
-    """Check if position is at a token boundary (not followed by a token continuation character)."""
-    if pos >= len(contents):
+    try:
+        char = contents[pos]
+    except IndexError:
         return True
-    next_char = contents[pos : pos + 1]
-    return not (next_char.isalnum() or next_char in _TOKEN_CONTINUATION_CHARS)
+    return not _IS_TOKEN_CONTINUATION[char]
 
 
 def _skip(
@@ -526,47 +531,61 @@ def _parse_field(contents: bytes | bytearray, pos: int) -> tuple[Field, int]:
 
 
 def _parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
-    c = contents[pos : pos + 1]
-    if c.isalpha() or (c and c in b"_#$"):
+    try:
+        first = contents[pos]
+    except IndexError:
+        raise ParseError(contents, pos, expected="token") from None
+    try:
+        second = contents[pos + 1]
+    except IndexError:
+        second = None
+
+    if (first_ok := _IS_TOKEN_START[first]) and second is None:
+        return contents[pos : pos + 1].decode("ascii"), pos + 1
+
+    if first_ok and (first != ord(b"#") or second != ord(b"{")):
         end = pos + 1
         depth = 0
-        while end < len(contents):
-            c = contents[end : end + 1]
-            assert c
-            if (depth == 0 and (c.isalnum() or c in _TOKEN_CONTINUATION_CHARS)) or (
-                depth > 0 and c not in b";(){}[]"
-            ):
-                end += 1
-            elif c == b"(":
-                depth += 1
-                end += 1
-            elif c == b")" and depth > 0:
-                depth -= 1
-                end += 1
-            else:
-                break
+        char: int = second  # ty: ignore[invalid-assignment]
+        with contextlib.suppress(IndexError):
+            while True:
+                if (depth == 0 and _IS_TOKEN_CONTINUATION[char]) or (
+                    depth > 0 and char not in b";(){}[]"
+                ):
+                    end += 1
+                elif char == ord(b"("):
+                    depth += 1
+                    end += 1
+                elif char == ord(b")") and depth > 0:
+                    depth -= 1
+                    end += 1
+                else:
+                    break
+                char = contents[end]
 
         if depth != 0:
             raise FoamFileDecodeError(contents, pos, expected=")")
 
         return contents[pos:end].decode("ascii"), end
 
-    if contents[pos : pos + 1] == b'"':
+    if first == ord(b'"'):
         end = pos + 1
-        while end < len(contents):
-            c = contents[end : end + 1]
-            if c == b"\\":
-                if end + 1 >= len(contents):
-                    raise FoamFileDecodeError(
-                        contents, pos, expected="end of quoted string"
-                    )
-                end += 2
-            elif c == b'"':
-                end += 1
-                return contents[pos:end].decode(), end
-            else:
-                end += 1
+        with contextlib.suppress(IndexError):
+            while True:
+                char = contents[end]
+                if char == ord(b"\\"):
+                    end += 2
+                elif char == ord(b'"'):
+                    return contents[pos : end + 1].decode(), end + 1
+                else:
+                    end += 1
+
         raise FoamFileDecodeError(contents, pos, expected="end of quoted string")
+
+    if first == ord(b"#") and second == ord(b"{"):
+        if (end := contents.find(b"#}", pos + 2)) == -1:
+            raise FoamFileDecodeError(contents, len(contents), expected="#}")
+        return contents[pos : end + 2].decode(), end + 2
 
     raise ParseError(contents, pos, expected="token")
 
