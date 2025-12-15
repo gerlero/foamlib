@@ -8,8 +8,17 @@ FLOAT = re.compile(
 
 # Simplified patterns for list parsing: match "number-like tokens" without strict validation
 # These patterns only validate structure, letting numpy.fromstring handle actual numeric validation
-# For floats: match sequences that look like floats - more permissive than strict FLOAT but still reasonable
+#
+# Design philosophy:
+# - Be permissive enough to match all valid numbers (including edge cases)
+# - Allow some invalid patterns (e.g., "123.", "1e+") to pass regex but fail at numpy stage
+# - This is intentional: numpy.fromstring will catch these and we convert ValueError to ParseError
+# - Performance benefit: simpler regex patterns execute faster than complex strict patterns
+#
+# For floats: match sequences that look like floats - simpler than original FLOAT pattern
 # Matches: signed numbers with optional decimal/exponent, or NaN/Inf keywords (case-insensitive)
+# Examples that match: "1", "1.0", "1.", ".5", "1e5", "1.2e-3", "NaN", "Inf", "Infinity"
+# Examples that match but will fail at numpy: "1e+", "1.2.3", "..5"  (these are caught later)
 _FLOAT_LIKE = rb"[+-]?(?:[0-9]+\.?[0-9]*(?:[eE][+-]?[0-9]+)?|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?|[Nn][Aa][Nn]|[Ii][Nn][Ff](?:[Ii][Nn][Ii][Tt][Yy])?)"
 # For integers: match sequences that look like integers (digits with optional sign, no decimal)
 _INTEGER_LIKE = rb"[+-]?[0-9]+"
