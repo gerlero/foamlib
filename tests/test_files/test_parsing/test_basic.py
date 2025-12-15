@@ -6,9 +6,11 @@ from foamlib._files._parsing import ParsedFile
 
 def test_parse_value() -> None:
     assert ParsedFile(b"1")[()] == 1
-    assert ParsedFile(b"1")[()] == 1
-    assert ParsedFile(b"1.0")[()] == 1.0
+    assert ParsedFile(b"1.")[()] == 1.0
+    assert ParsedFile(b"1.1")[()] == 1.1
+    assert ParsedFile(b".1")[()] == 0.1
     assert ParsedFile(b"1.0e-3")[()] == 1.0e-3
+    assert ParsedFile(b"1e-3")[()] == 1e-3
     assert ParsedFile(b"yes")[()] is True
     assert ParsedFile(b"no")[()] is False
     assert ParsedFile(b"word")[()] == "word"
