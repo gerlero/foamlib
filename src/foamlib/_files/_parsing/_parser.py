@@ -1,9 +1,9 @@
-import builtins
 import contextlib
 import dataclasses
+import re
 import sys
 from types import EllipsisType
-from typing import Literal, TypeVar, overload
+from typing import Generic, Literal, TypeVar, overload
 
 from foamlib._files._util import add_to_mapping
 
@@ -29,23 +29,9 @@ from ...typing import (
     SubDict,
     Tensor,
 )
-from ._re import (
-    COMMENT,
-    FACES_LIKE_LIST,
-    FLOAT_LIST,
-    INTEGER_LIST,
-    SYMM_TENSOR_LIST,
-    TENSOR_LIST,
-    UNCOMMENTED_FACES_LIKE_LIST,
-    UNCOMMENTED_FLOAT_LIST,
-    UNCOMMENTED_INTEGER_LIST,
-    UNCOMMENTED_SYMM_TENSOR_LIST,
-    UNCOMMENTED_TENSOR_LIST,
-    UNCOMMENTED_VECTOR_LIST,
-    VECTOR_LIST,
-)
 from .exceptions import FoamFileDecodeError
 
+_NT = TypeVar("_NT", float, int)
 _DT = TypeVar("_DT", np.float64, np.float32, np.int64, np.int32)
 _ElShape = TypeVar(
     "_ElShape", tuple[()], tuple[Literal[3]], tuple[Literal[6]], tuple[Literal[9]]
@@ -134,134 +120,240 @@ def _expect(contents: bytes | bytearray, pos: int, expected: bytes | bytearray) 
     return pos + length
 
 
-@overload
-def _parse_ascii_numeric_list(
-    contents: bytes | bytearray,
-    pos: int,
-    *,
-    dtype: type[float],
-    elshape: _ElShape,
-    empty_ok: bool = False,
-) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[np.float64]], int]: ...
+_COMMENTS = re.compile(rb"(?:(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*))+")
+_SKIP = re.compile(rb"(?:\s+|" + _COMMENTS.pattern + rb")+")
+_ITEM = re.compile(rb"[\w\.\-\+]+")
 
 
-@overload
-def _parse_ascii_numeric_list(
-    contents: bytes | bytearray,
-    pos: int,
-    *,
-    dtype: type[int],
-    elshape: _ElShape,
-    empty_ok: bool = False,
-) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[np.int64]], int]: ...
+class _ASCIINumericListParser(Generic[_NT, _ElShape]):
+    def __init__(self, *, dtype: type[_NT], elshape: _ElShape) -> None:
+        self._dtype = dtype
+        self._elshape = elshape
 
+        if not elshape:
+            self._pattern = re.compile(
+                rb"(?:(?:"
+                + _SKIP.pattern
+                + rb")?(?:"
+                + _ITEM.pattern
+                + rb"))*(?:"
+                + _SKIP.pattern
+                + rb")?\)"
+            )
+            self._uncommented_pattern = re.compile(
+                rb"(?:\s*(?:" + _ITEM.pattern + rb"))*\s*\)", re.ASCII
+            )
+        else:
+            (dim,) = elshape
+            self._pattern = re.compile(
+                rb"(?:(?:"
+                + _SKIP.pattern
+                + rb")?\("
+                + (rb"(?:" + _ITEM.pattern + rb")" + _SKIP.pattern) * dim
+                + rb"\))*(?:"
+                + _SKIP.pattern
+                + rb")?\)"
+            )
+            self._uncommented_pattern = re.compile(
+                rb"(?:\s*\("
+                + (rb"(?:" + _ITEM.pattern + rb")\s*") * dim
+                + rb"\)\s*)*\)",
+                re.ASCII,
+            )
 
-def _parse_ascii_numeric_list(
-    contents: bytes | bytearray,
-    pos: int,
-    *,
-    dtype: type[float] | type[int],
-    elshape: _ElShape,
-    empty_ok: bool = False,
-) -> tuple[
-    np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[np.float64 | np.int64]], int
-]:
-    try:
-        count, pos = _parse_number(contents, pos, target=int)
-    except ParseError:
-        count = None
-    else:
-        if count < 0:
-            raise ParseError(contents, pos, expected="non-negative list count")
-        if count == 0 and not empty_ok:
-            raise ParseError(contents, pos, expected="non-empty numeric list")
-        pos = _skip(contents, pos)
+    @overload
+    def __call__(
+        self: "_ASCIINumericListParser[float, _ElShape]",
+        contents: bytes | bytearray,
+        pos: int,
+        *,
+        empty_ok: bool = ...,
+    ) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[np.float64]], int]: ...
 
-    if contents[pos : pos + 1] == b"(":
-        match dtype, elshape:
-            case builtins.float, ():
-                pattern = FLOAT_LIST
-                uncommented_pattern = UNCOMMENTED_FLOAT_LIST
-            case builtins.float, (3,):
-                pattern = VECTOR_LIST
-                uncommented_pattern = UNCOMMENTED_VECTOR_LIST
-            case builtins.float, (6,):
-                pattern = SYMM_TENSOR_LIST
-                uncommented_pattern = UNCOMMENTED_SYMM_TENSOR_LIST
-            case builtins.float, (9,):
-                pattern = TENSOR_LIST
-                uncommented_pattern = UNCOMMENTED_TENSOR_LIST
-            case builtins.int, ():
-                pattern = INTEGER_LIST
-                uncommented_pattern = UNCOMMENTED_INTEGER_LIST
-            case _:
-                raise NotImplementedError
+    @overload
+    def __call__(
+        self: "_ASCIINumericListParser[int, _ElShape]",
+        contents: bytes | bytearray,
+        pos: int,
+        *,
+        empty_ok: bool = ...,
+    ) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[np.int64]], int]: ...
 
-        if match := uncommented_pattern.match(contents, pos):
-            data = contents[pos + 1 : match.end() - 1]
+    def __call__(
+        self,
+        contents: bytes | bytearray,
+        pos: int,
+        *,
+        empty_ok: bool = False,
+    ) -> tuple[
+        np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[np.float64 | np.int64]], int
+    ]:
+        try:
+            count, pos = _parse_number(contents, pos, target=int)
+        except ParseError:
+            count = None
+        else:
+            if count < 0:
+                raise ParseError(contents, pos, expected="non-negative list count")
+            if count == 0 and not empty_ok:
+                raise ParseError(contents, pos, expected="non-empty numeric list")
+            pos = _skip(contents, pos)
+
+        if count is not None and contents[pos : pos + 1] == b"{":
+            pos += 1
+            pos = _skip(contents, pos)
+
+            if not self._elshape:
+                value, pos = _parse_number(contents, pos, target=self._dtype)
+                pos = _expect(contents, pos, b"}")
+                return np.full((count,), value, dtype=self._dtype), pos
+
+            pos = _expect(contents, pos, b"(")
+            values = []
+            for _ in range(self._elshape[0]):
+                pos = _skip(contents, pos)
+                value, pos = _parse_number(contents, pos, target=self._dtype)
+                values.append(value)
+            pos = _skip(contents, pos)
+            pos = _expect(contents, pos, b")")
+            pos = _expect(contents, pos, b"}")
+            return np.full((count, *self._elshape), values, dtype=self._dtype), pos
+
+        pos = _expect(contents, pos, b"(")
+        if match := self._uncommented_pattern.match(contents, pos):
+            data = contents[pos : match.end() - 1]
             pos = match.end()
 
-        elif match := pattern.match(contents, pos):
-            data = contents[pos + 1 : match.end() - 1]
+        elif match := self._pattern.match(contents, pos):
+            data = contents[pos : match.end() - 1]
             pos = match.end()
-
-            data = COMMENT.sub(b" ", data)
+            data = _COMMENTS.sub(b" ", data)
 
         if not match:
             raise ParseError(
                 contents,
                 pos,
-                expected=f"numeric list of type {dtype} and shape {elshape}",
+                expected=f"numeric list of type {self._dtype} and shape {self._elshape}",
             )
 
-        if elshape:
+        if self._elshape:
             data = data.replace(b"(", b" ").replace(b")", b" ")
 
+        data = data.decode("ascii")
+
         try:
-            data = data.decode("ascii")
-        except UnicodeDecodeError as e:
+            ret = np.fromstring(data, sep=" ", dtype=self._dtype)
+        except ValueError as e:
             raise ParseError(
                 contents,
                 pos,
-                expected="ASCII numeric list",
+                expected=f"numeric list of type {self._dtype} and shape {self._elshape}",
             ) from e
 
-        ret = np.fromstring(data, sep=" ", dtype=dtype)
+        if self._elshape:
+            ret = ret.reshape((-1, *self._elshape))
 
-        if elshape:
-            ret = ret.reshape((-1, *elshape))
-
-        if not empty_ok and len(ret) == 0:
-            raise ParseError(contents, pos, expected="non-empty numeric list")
-
-        if count is not None and len(ret) != count:
+        if count is None:
+            if not empty_ok and len(ret) == 0:
+                raise ParseError(contents, pos, expected="non-empty numeric list")
+        elif len(ret) != count:
             raise ParseError(
                 contents, pos, expected=f"{count} elements (got {len(ret)})"
             )
 
-    elif count is not None and contents[pos : pos + 1] == b"{":
-        pos += 1
-        pos = _skip(contents, pos)
-        if elshape:
-            elem = []
-            pos = _expect(contents, pos, b"(")
-            for _ in range(elshape[0]):
-                pos = _skip(contents, pos)
-                x, pos = _parse_number(contents, pos, target=dtype)
-                elem.append(x)
-            pos = _skip(contents, pos)
-            pos = _expect(contents, pos, b")")
-        else:
-            elem, pos = _parse_number(contents, pos, target=dtype)
+        return ret, pos
 
-        pos = _expect(contents, pos, b"}")
 
-        ret = np.full((count, *elshape), elem, dtype=dtype)
+_parse_ascii_integer_list = _ASCIINumericListParser(dtype=int, elshape=())
+_parse_ascii_float_list = _ASCIINumericListParser(dtype=float, elshape=())
+_parse_ascii_vector_list = _ASCIINumericListParser(dtype=float, elshape=(3,))
+_parse_ascii_symm_tensor_list = _ASCIINumericListParser(dtype=float, elshape=(6,))
+_parse_ascii_tensor_list = _ASCIINumericListParser(dtype=float, elshape=(9,))
 
-    else:
-        raise ParseError(contents, pos, expected="ASCII numeric list")
 
-    return ret, pos
+_THREE_FACE_LIKE = re.compile(
+    rb"3(?:"
+    + _SKIP.pattern
+    + rb")?\((?:"
+    + _SKIP.pattern
+    + rb")?(?:"
+    + _ITEM.pattern
+    + rb"(?:"
+    + _SKIP.pattern
+    + rb"))(?:"
+    + _ITEM.pattern
+    + rb"(?:"
+    + _SKIP.pattern
+    + rb"))(?:"
+    + _ITEM.pattern
+    + rb")(?:"
+    + _SKIP.pattern
+    + rb")?\)"
+)
+_UNCOMMENTED_THREE_FACE_LIKE = re.compile(
+    rb"3\s*\(\s*(?:"
+    + _ITEM.pattern
+    + rb"\s*)(?:"
+    + _ITEM.pattern
+    + rb"\s*)(?:"
+    + _ITEM.pattern
+    + rb")\s*\)",
+    re.ASCII,
+)
+_FOUR_FACE_LIKE = re.compile(
+    rb"4(?:"
+    + _SKIP.pattern
+    + rb")?\((?:"
+    + _SKIP.pattern
+    + rb")?(?:"
+    + _ITEM.pattern
+    + rb"(?:"
+    + _SKIP.pattern
+    + rb"))(?:"
+    + _ITEM.pattern
+    + rb"(?:"
+    + _SKIP.pattern
+    + rb"))(?:"
+    + _ITEM.pattern
+    + rb"(?:"
+    + _SKIP.pattern
+    + rb"))(?:"
+    + _ITEM.pattern
+    + rb")(?:"
+    + _SKIP.pattern
+    + rb")?\)"
+)
+_UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
+    rb"4\s*\(\s*(?:"
+    + _ITEM.pattern
+    + rb"\s*)(?:"
+    + _ITEM.pattern
+    + rb"\s*)(?:"
+    + _ITEM.pattern
+    + rb"\s*)(?:"
+    + _ITEM.pattern
+    + rb")\s*\)",
+    re.ASCII,
+)
+_FACES_LIKE_LIST = re.compile(
+    rb"(?:(?:"
+    + _SKIP.pattern
+    + rb")?(?:"
+    + _THREE_FACE_LIKE.pattern
+    + rb"|"
+    + _FOUR_FACE_LIKE.pattern
+    + rb"))*(?:"
+    + _SKIP.pattern
+    + rb")?\)"
+)
+_UNCOMMENTED_FACES_LIKE_LIST = re.compile(
+    rb"(?:\s*(?:"
+    + _UNCOMMENTED_THREE_FACE_LIKE.pattern
+    + rb"|"
+    + _UNCOMMENTED_FOUR_FACE_LIKE.pattern
+    + rb"))*\s*\)",
+    re.ASCII,
+)
 
 
 def _parse_ascii_faces_like_list(
@@ -276,17 +368,17 @@ def _parse_ascii_faces_like_list(
             raise ParseError(contents, pos, expected="non-negative list count")
         pos = _skip(contents, pos)
 
-    _ = _expect(contents, pos, b"(")
+    pos = _expect(contents, pos, b"(")
 
-    if match := UNCOMMENTED_FACES_LIKE_LIST.match(contents, pos):
-        data = contents[pos + 1 : match.end() - 1]
+    if match := _UNCOMMENTED_FACES_LIKE_LIST.match(contents, pos):
+        data = contents[pos : match.end() - 1]
         pos = match.end()
 
-    elif match := FACES_LIKE_LIST.match(contents, pos):
-        data = contents[pos + 1 : match.end() - 1]
+    elif match := _FACES_LIKE_LIST.match(contents, pos):
+        data = contents[pos : match.end() - 1]
         pos = match.end()
 
-        data = COMMENT.sub(b" ", data)
+        data = _COMMENTS.sub(b" ", data)
 
     if not match:
         raise ParseError(contents, pos, expected="faces-like list")
@@ -302,7 +394,10 @@ def _parse_ascii_faces_like_list(
             expected="ASCII faces-like list",
         ) from e
 
-    values = np.fromstring(data, sep=" ", dtype=int)
+    try:
+        values = np.fromstring(data, sep=" ", dtype=int)
+    except ValueError as e:
+        raise ParseError(contents, pos, expected="faces-like list") from e
 
     ret: list[np.ndarray] = []
     i = 0
@@ -391,12 +486,26 @@ def _parse_field(contents: bytes | bytearray, pos: int) -> tuple[Field, int]:
             match token:
                 case "List<scalar>":
                     elshape = ()
+                    pos = _skip(contents, pos)
+                    with contextlib.suppress(ParseError):
+                        return _parse_ascii_float_list(contents, pos, empty_ok=True)
                 case "List<vector>":
                     elshape = (3,)
+                    pos = _skip(contents, pos)
+                    with contextlib.suppress(ParseError):
+                        return _parse_ascii_vector_list(contents, pos, empty_ok=True)
                 case "List<symmTensor>":
                     elshape = (6,)
+                    pos = _skip(contents, pos)
+                    with contextlib.suppress(ParseError):
+                        return _parse_ascii_symm_tensor_list(
+                            contents, pos, empty_ok=True
+                        )
                 case "List<tensor>":
                     elshape = (9,)
+                    pos = _skip(contents, pos)
+                    with contextlib.suppress(ParseError):
+                        return _parse_ascii_tensor_list(contents, pos, empty_ok=True)
                 case _:
                     raise ParseError(
                         contents,
@@ -404,11 +513,6 @@ def _parse_field(contents: bytes | bytearray, pos: int) -> tuple[Field, int]:
                         expected="one of: List<scalar>, List<vector>, List<symmTensor>, or List<tensor>",
                     )
 
-            pos = _skip(contents, pos)
-            with contextlib.suppress(ParseError):
-                return _parse_ascii_numeric_list(
-                    contents, pos, dtype=float, elshape=elshape, empty_ok=True
-                )
             with contextlib.suppress(ParseError):
                 return _parse_binary_numeric_list(
                     contents, pos, dtype=np.float64, elshape=elshape, empty_ok=True
@@ -831,11 +935,11 @@ def _parse_standalone_data_entry(
     contents: bytes | bytearray, pos: int
 ) -> tuple[StandaloneDataEntry, int]:
     with contextlib.suppress(ParseError):
-        return _parse_ascii_numeric_list(contents, pos, dtype=int, elshape=())
+        return _parse_ascii_integer_list(contents, pos)
     with contextlib.suppress(ParseError):
-        return _parse_ascii_numeric_list(contents, pos, dtype=float, elshape=())
+        return _parse_ascii_float_list(contents, pos)
     with contextlib.suppress(ParseError):
-        return _parse_ascii_numeric_list(contents, pos, dtype=float, elshape=(3,))
+        return _parse_ascii_vector_list(contents, pos)
     with contextlib.suppress(ParseError):
         return _parse_ascii_faces_like_list(contents, pos)
 
