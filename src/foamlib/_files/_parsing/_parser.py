@@ -32,12 +32,8 @@ from ...typing import (
 from ._re import (
     COMMENT,
     FACES_LIKE_LIST,
-    FLOAT,
     FLOAT_LIST,
-    INTEGER,
     INTEGER_LIST,
-    SKIP,
-    SKIP_NO_NEWLINE,
     SYMM_TENSOR_LIST,
     TENSOR_LIST,
     UNCOMMENTED_FACES_LIKE_LIST,
@@ -46,7 +42,6 @@ from ._re import (
     UNCOMMENTED_SYMM_TENSOR_LIST,
     UNCOMMENTED_TENSOR_LIST,
     UNCOMMENTED_VECTOR_LIST,
-    UNSIGNED_INTEGER,
     VECTOR_LIST,
 )
 from .exceptions import FoamFileDecodeError
@@ -55,7 +50,7 @@ _DT = TypeVar("_DT", np.float64, np.float32, np.int64, np.int32)
 _ElShape = TypeVar(
     "_ElShape", tuple[()], tuple[Literal[3]], tuple[Literal[6]], tuple[Literal[9]]
 )
-_T = TypeVar("_T", type[FileDict], type[Data], type[StandaloneData], type[str])
+_T = TypeVar("_T", FileDict, Data, StandaloneData, str)
 
 
 class ParseError(Exception):
@@ -69,22 +64,56 @@ class ParseError(Exception):
         return FoamFileDecodeError(self._contents, self.pos, expected=self._expected)
 
 
+_WHITESPACE = b" \n\t\r\f\v"
+_WHITESPACE_NO_NEWLINE = b" \t\r\f\v"
+
+
 def _skip(
-    contents: bytes | bytearray,
+    data: bytes | bytearray,
     pos: int,
     *,
-    to_end: bool = False,
     newline_ok: bool = True,
 ) -> int:
-    pattern = SKIP if newline_ok else SKIP_NO_NEWLINE
+    n = len(data)
+    whitespace = _WHITESPACE if newline_ok else _WHITESPACE_NO_NEWLINE
 
-    if match := pattern.match(contents, pos):
-        return match.end()
+    while True:
+        while pos < n and data[pos] in whitespace:
+            pos += 1
 
-    if to_end and pos < len(contents):
-        raise ParseError(contents, pos, expected="end of file")
+        if pos + 1 >= n:
+            return pos
 
-    return pos
+        c = data[pos]
+        d = data[pos + 1]
+
+        if c == ord("/") and d == ord("/"):
+            pos += 2
+            while pos < n:
+                if data[pos] == ord("\n"):
+                    if newline_ok:
+                        pos += 1
+                    break
+                if (
+                    data[pos] == ord("\\")
+                    and pos + 1 < n
+                    and data[pos + 1] == ord("\n")
+                ):
+                    pos += 2
+                    continue
+                pos += 1
+            continue
+
+        if c == ord("/") and d == ord("*"):
+            pos += 2
+            while pos + 1 < n:
+                if data[pos] == ord("*") and data[pos + 1] == ord("/"):
+                    pos += 2
+                    break
+                pos += 1
+            continue
+
+        return pos
 
 
 def _expect(contents: bytes | bytearray, pos: int, expected: bytes | bytearray) -> int:
@@ -128,10 +157,12 @@ def _parse_ascii_numeric_list(
     np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[np.float64 | np.int64]], int
 ]:
     try:
-        count, pos = _parse_unsigned_integer(contents, pos)
+        count, pos = _parse_number(contents, pos, target=int)
     except ParseError:
         count = None
     else:
+        if count < 0:
+            raise ParseError(contents, pos, expected="non-negative list count")
         if count == 0 and not empty_ok:
             raise ParseError(contents, pos, expected="non-empty numeric list")
         pos = _skip(contents, pos)
@@ -199,13 +230,6 @@ def _parse_ascii_numeric_list(
             )
 
     elif count is not None and contents[pos : pos + 1] == b"{":
-        match dtype:
-            case builtins.float:
-                parse_number = _parse_float
-            case builtins.int:
-                parse_number = _parse_integer
-            case _:
-                raise NotImplementedError
         pos += 1
         pos = _skip(contents, pos)
         if elshape:
@@ -213,12 +237,12 @@ def _parse_ascii_numeric_list(
             pos = _expect(contents, pos, b"(")
             for _ in range(elshape[0]):
                 pos = _skip(contents, pos)
-                x, pos = parse_number(contents, pos)
+                x, pos = _parse_number(contents, pos, target=dtype)
                 elem.append(x)
             pos = _skip(contents, pos)
             pos = _expect(contents, pos, b")")
         else:
-            elem, pos = parse_number(contents, pos)
+            elem, pos = _parse_number(contents, pos, target=dtype)
 
         pos = _expect(contents, pos, b"}")
 
@@ -234,10 +258,12 @@ def _parse_ascii_faces_like_list(
     contents: bytes | bytearray, pos: int
 ) -> tuple[list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]], int]:
     try:
-        count, pos = _parse_unsigned_integer(contents, pos)
+        count, pos = _parse_number(contents, pos, target=int)
     except ParseError:
         count = None
     else:
+        if count < 0:
+            raise ParseError(contents, pos, expected="non-negative list count")
         pos = _skip(contents, pos)
 
     _ = _expect(contents, pos, b"(")
@@ -289,7 +315,9 @@ def _parse_binary_numeric_list(
     elshape: _ElShape,
     empty_ok: bool = False,
 ) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[_DT]], int]:
-    count, pos = _parse_unsigned_integer(contents, pos)
+    count, pos = _parse_number(contents, pos, target=int)
+    if count < 0:
+        raise ParseError(contents, pos, expected="non-negative list count")
     if count == 0 and not empty_ok:
         raise ParseError(contents, pos, expected="non-empty numeric list")
     pos = _skip(contents, pos)
@@ -320,7 +348,7 @@ def _parse_tensor(contents: bytes | bytearray, pos: int) -> tuple[Tensor, int]:
         for _ in range(9):
             pos = _skip(contents, pos)
             try:
-                value, pos = _parse_float(contents, pos)
+                value, pos = _parse_number(contents, pos, target=float)
             except ParseError:
                 break
             values.append(value)
@@ -334,7 +362,7 @@ def _parse_tensor(contents: bytes | bytearray, pos: int) -> tuple[Tensor, int]:
         return np.array(values), pos
 
     try:
-        return _parse_float(contents, pos)
+        return _parse_number(contents, pos, target=float)
     except ParseError as e:
         raise ParseError(contents, pos, expected="tensor") from e
 
@@ -429,69 +457,106 @@ def _parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
     raise ParseError(contents, pos, expected="token")
 
 
-def _parse_number(contents: bytes | bytearray, pos: int) -> tuple[int | float, int]:
-    try:
-        return _parse_integer(contents, pos)
-    except ParseError:
-        try:
-            return _parse_float(contents, pos)
-        except ParseError as e:
-            raise ParseError(contents, pos, expected="number") from e
+@overload
+def _parse_number(
+    contents: bytes | bytearray, pos: int, *, target: type[int] = ...
+) -> tuple[int, int]: ...
 
 
-def _parse_unsigned_integer(contents: bytes | bytearray, pos: int) -> tuple[int, int]:
-    if match := UNSIGNED_INTEGER.match(contents, pos):
-        try:
-            _, _ = _parse_token(contents, match.end())
-        except ParseError:
-            pass
-        else:
-            raise ParseError(contents, pos, expected="unsigned integer")
-
-        return int(match.group(0)), match.end()
-
-    raise ParseError(contents, pos, expected="unsigned integer")
+@overload
+def _parse_number(
+    contents: bytes | bytearray, pos: int, *, target: type[float] = ...
+) -> tuple[float, int]: ...
 
 
-def _parse_integer(contents: bytes | bytearray, pos: int) -> tuple[int, int]:
-    if match := INTEGER.match(contents, pos):
-        try:
-            _, _ = _parse_token(contents, match.end())
-        except ParseError:
-            pass
-        else:
+@overload
+def _parse_number(
+    contents: bytes | bytearray, pos: int, *, target: type[int | float] = ...
+) -> tuple[int | float, int]: ...
+
+
+def _parse_number(
+    contents: bytes | bytearray,
+    pos: int,
+    *,
+    target: type[int] | type[float] | type[int | float] = int | float,
+) -> tuple[int | float, int]:
+    start = pos
+    length = len(contents)
+
+    if pos >= length:
+        raise ParseError(contents, pos, expected="number")
+
+    has_decimal = False
+    has_exponent = False
+
+    if contents[pos] in b"+-":
+        pos += 1
+
+    if pos >= length:
+        raise ParseError(contents, pos, expected="number")
+
+    digit_start = pos
+
+    while pos < length and contents[pos] in b"0123456789":
+        pos += 1
+
+    if pos < length and contents[pos] == ord(b"."):
+        has_decimal = True
+        pos += 1
+
+        frac_start = pos
+        while pos < length and contents[pos] in b"0123456789":
+            pos += 1
+
+        if pos == digit_start + 1 and pos == frac_start:
+            raise ParseError(contents, pos, expected="number")
+    elif pos == digit_start:
+        raise ParseError(contents, pos, expected="number")
+
+    if pos < length and contents[pos] in b"eE":
+        has_exponent = True
+        pos += 1
+
+        if pos >= length:
+            raise ParseError(contents, pos, expected="number")
+
+        if contents[pos] in b"+-":
+            pos += 1
+
+        if pos >= length:
+            raise ParseError(contents, pos, expected="number")
+
+        exp_start = pos
+        while pos < length and contents[pos] in b"0123456789":
+            pos += 1
+
+        if pos == exp_start:
+            raise ParseError(contents, pos, expected="number")
+
+    is_float = has_decimal or has_exponent
+    if target is int:
+        if is_float:
             raise ParseError(contents, pos, expected="integer")
+        ret = int(contents[start:pos])
+    elif target is float or is_float:
+        ret = float(contents[start:pos])
+    else:
+        ret = int(contents[start:pos])
 
-        if contents[match.end() : match.end() + 1] == b".":
-            raise ParseError(contents, pos, expected="integer")
-
-        return int(match.group(0)), match.end()
-
-    raise ParseError(contents, pos, expected="integer")
-
-
-def _parse_float(contents: bytes | bytearray, pos: int) -> tuple[float, int]:
-    if match := FLOAT.match(contents, pos):
-        try:
-            _, _ = _parse_token(contents, match.end())
-        except ParseError:
-            pass
-        else:
-            raise ParseError(contents, pos, expected="float")
-
-        return float(match.group(0)), match.end()
-
-    raise ParseError(contents, pos, expected="float")
+    return ret, pos
 
 
 def _parse_list(
     contents: bytes | bytearray, pos: int
 ) -> tuple[list[DataEntry | KeywordEntry | Dict], int]:
     try:
-        count, pos = _parse_unsigned_integer(contents, pos)
+        count, pos = _parse_number(contents, pos, target=int)
     except ParseError:
         count = None
     else:
+        if count < 0:
+            raise ParseError(contents, pos, expected="non-negative list count")
         pos = _skip(contents, pos)
 
     if contents[pos : pos + 1] == b"(":
@@ -840,7 +905,7 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, in
     return ret, pos
 
 
-def parse(contents: bytes | bytearray | str, /, *, target: _T) -> _T:
+def parse(contents: bytes | bytearray | str, /, *, target: type[_T]) -> _T:
     if isinstance(contents, str):
         contents = contents.encode()
 
@@ -856,9 +921,16 @@ def parse(contents: bytes | bytearray | str, /, *, target: _T) -> _T:
             ret, pos = _parse_token(contents, pos)
         else:
             assert_never(target)  # ty: ignore[type-assertion-failure]
-        _skip(contents, pos, to_end=True)
+        _skip(contents, pos)
     except ParseError as e:
         raise e.make_fatal() from None
+
+    if pos != len(contents):
+        raise FoamFileDecodeError(
+            contents,
+            pos,
+            expected="end of file",
+        )
 
     return ret  # ty: ignore[invalid-return-type]
 
@@ -978,7 +1050,13 @@ def parse_located(
     try:
         pos = _skip(contents, 0)
         ret, pos = _parse_file_located(contents, pos)
-        _skip(contents, pos, to_end=True)
+        _skip(contents, pos)
     except ParseError as e:
         raise e.make_fatal() from None
+    if pos != len(contents):
+        raise FoamFileDecodeError(
+            contents,
+            pos,
+            expected="end of file",
+        )
     return ret
