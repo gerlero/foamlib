@@ -66,6 +66,8 @@ class ParseError(Exception):
 
 _WHITESPACE = b" \n\t\r\f\v"
 _WHITESPACE_NO_NEWLINE = b" \t\r\f\v"
+# Characters that can continue a token (used for boundary checking)
+_TOKEN_CONTINUATION_CHARS = b"._<>#$:+-*/|^%&=!"
 
 
 def _skip(
@@ -503,7 +505,7 @@ def _parse_number(
                 # Ensure 'nan' is not part of a larger token
                 if end_pos < length:
                     next_char = contents[end_pos:end_pos + 1]
-                    if next_char.isalnum() or next_char in b"._<>#$:+-*/|^%&=!":
+                    if next_char.isalnum() or next_char in _TOKEN_CONTINUATION_CHARS:
                         # This is part of a larger token, not a standalone nan
                         pass  # Fall through to normal number parsing
                     else:
@@ -520,7 +522,7 @@ def _parse_number(
                 # Ensure 'inf'/'infinity' is not part of a larger token
                 if end_pos < length:
                     next_char = contents[end_pos:end_pos + 1]
-                    if next_char.isalnum() or next_char in b"._<>#$:+-*/|^%&=!":
+                    if next_char.isalnum() or next_char in _TOKEN_CONTINUATION_CHARS:
                         # This is part of a larger token, not a standalone inf/infinity
                         pass  # Fall through to normal number parsing
                     else:
