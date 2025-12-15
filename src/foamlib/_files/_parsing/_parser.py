@@ -91,7 +91,8 @@ def _skip(
             pos += 2
             while pos < n:
                 if data[pos] == ord("\n"):
-                    pos += 1
+                    if newline_ok:
+                        pos += 1
                     break
                 if (
                     data[pos] == ord("\\")
