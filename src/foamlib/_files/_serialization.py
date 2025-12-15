@@ -641,7 +641,7 @@ def dumps(
             return dumps(str(data))
 
         case str(), _, _:
-            return data.encode("latin-1")  # ty: ignore[possibly-missing-attribute]
+            return data.encode()  # ty: ignore[possibly-missing-attribute]
 
         case _:
             assert_never(data)  # ty: ignore[type-assertion-failure]
