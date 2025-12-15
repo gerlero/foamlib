@@ -226,7 +226,14 @@ def _parse_ascii_numeric_list(
                 expected="ASCII numeric list",
             ) from e
 
-        ret = np.fromstring(data, sep=" ", dtype=dtype)
+        try:
+            ret = np.fromstring(data, sep=" ", dtype=dtype)
+        except ValueError as e:
+            raise ParseError(
+                contents,
+                pos,
+                expected=f"valid numeric data for type {dtype}",
+            ) from e
 
         if elshape:
             ret = ret.reshape((-1, *elshape))
@@ -302,7 +309,14 @@ def _parse_ascii_faces_like_list(
             expected="ASCII faces-like list",
         ) from e
 
-    values = np.fromstring(data, sep=" ", dtype=int)
+    try:
+        values = np.fromstring(data, sep=" ", dtype=int)
+    except ValueError as e:
+        raise ParseError(
+            contents,
+            pos,
+            expected="valid integer data in faces-like list",
+        ) from e
 
     ret: list[np.ndarray] = []
     i = 0

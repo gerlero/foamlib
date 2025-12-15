@@ -6,6 +6,13 @@ FLOAT = re.compile(
     rb"(?i:[+-]?(?:(?:\d+\.?\d*(?:e[+-]?\d+)?)|nan|inf(?:inity)?))", re.ASCII
 )
 
+# Simplified patterns for list parsing: match "number-like tokens" without strict validation
+# These patterns only validate structure, letting numpy.fromstring handle actual numeric validation
+# For floats: match any sequence that could be a float (with decimal point, exponent, or special words)
+_FLOAT_LIKE = rb"[A-Za-z0-9.+\-eE]+"  # Float-like: includes letters (NaN/Inf), digits, signs, decimal, exponent
+# For integers: match any sequence that could be an integer (digits and sign only, no decimal)
+_INTEGER_LIKE = rb"[A-Za-z0-9+\-]+"  # Integer-like: no decimal point allowed
+
 COMMENT = re.compile(rb"(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*)")
 SKIP = re.compile(rb"(?:\s+|(?:" + COMMENT.pattern + b"))+")
 SKIP_NO_NEWLINE = re.compile(rb"(?:[ \t\r]+|(?:" + COMMENT.pattern + b"))+")
@@ -14,26 +21,26 @@ _VECTOR = re.compile(
     rb"\((?:"
     + SKIP.pattern
     + rb")?(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb")(?:"
     + SKIP.pattern
     + rb")?\)"
 )
 _UNCOMMENTED_VECTOR = re.compile(
     rb"\(\s*(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb")\s*\)",
     re.ASCII,
 )
@@ -41,44 +48,44 @@ _SYMM_TENSOR = re.compile(
     rb"\((?:"
     + SKIP.pattern
     + rb")?(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb")(?:"
     + SKIP.pattern
     + rb")?\)"
 )
 _UNCOMMENTED_SYMM_TENSOR = re.compile(
     rb"\(\s*(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb")\s*\)",
     re.ASCII,
 )
@@ -86,62 +93,62 @@ _TENSOR = re.compile(
     rb"\((?:"
     + SKIP.pattern
     + rb")?(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb")(?:"
     + SKIP.pattern
     + rb")?\)"
 )
 _UNCOMMENTED_TENSOR = re.compile(
     rb"\(\s*(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"\s*)(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb")\s*\)",
     re.ASCII,
 )
@@ -150,24 +157,24 @@ INTEGER_LIST = re.compile(
     rb"\((?:(?:"
     + SKIP.pattern
     + rb")?(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"))*(?:"
     + SKIP.pattern
     + rb")?\)"
 )
-UNCOMMENTED_INTEGER_LIST = re.compile(rb"\((?:\s*(?:" + INTEGER.pattern + rb"))*\s*\)")
+UNCOMMENTED_INTEGER_LIST = re.compile(rb"\((?:\s*(?:" + _INTEGER_LIKE + rb"))*\s*\)")
 
 FLOAT_LIST = re.compile(
     rb"\((?:(?:"
     + SKIP.pattern
     + rb")?(?:"
-    + FLOAT.pattern
+    + _FLOAT_LIKE
     + rb"))*(?:"
     + SKIP.pattern
     + rb")?\)"
 )
 UNCOMMENTED_FLOAT_LIST = re.compile(
-    rb"\((?:\s*(?:" + FLOAT.pattern + rb"))*\s*\)", re.ASCII
+    rb"\((?:\s*(?:" + _FLOAT_LIKE + rb"))*\s*\)", re.ASCII
 )
 VECTOR_LIST = re.compile(
     rb"\((?:(?:"
@@ -212,26 +219,26 @@ _THREE_FACE_LIKE = re.compile(
     + rb")?\((?:"
     + SKIP.pattern
     + rb")?(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb")(?:"
     + SKIP.pattern
     + rb")?\)"
 )
 _UNCOMMENTED_THREE_FACE_LIKE = re.compile(
     rb"3\s*\(\s*(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"\s*)(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"\s*)(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb")\s*\)",
     re.ASCII,
 )
@@ -241,32 +248,32 @@ _FOUR_FACE_LIKE = re.compile(
     + rb")?\((?:"
     + SKIP.pattern
     + rb")?(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"(?:"
     + SKIP.pattern
     + rb"))(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb")(?:"
     + SKIP.pattern
     + rb")?\)"
 )
 _UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
     rb"4\s*\(\s*(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"\s*)(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"\s*)(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb"\s*)(?:"
-    + INTEGER.pattern
+    + _INTEGER_LIKE
     + rb")\s*\)",
     re.ASCII,
 )
