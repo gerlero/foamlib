@@ -70,13 +70,11 @@ _WHITESPACE_NO_NEWLINE = b" \t\r\f\v"
 _TOKEN_CONTINUATION_CHARS = b"._<>#$:+-*/|^%&=!"
 
 
-def _is_token_boundary(
-    contents: bytes | bytearray, pos: int
-) -> bool:
+def _is_token_boundary(contents: bytes | bytearray, pos: int) -> bool:
     """Check if position is at a token boundary (not followed by a token continuation character)."""
     if pos >= len(contents):
         return True
-    next_char = contents[pos:pos + 1]
+    next_char = contents[pos : pos + 1]
     return not (next_char.isalnum() or next_char in _TOKEN_CONTINUATION_CHARS)
 
 
@@ -507,19 +505,28 @@ def _parse_number(
         sign_pos = pos
         if contents[pos] in b"+-":
             sign_pos += 1
-        
+
         if sign_pos < length:
             # Check for 'nan' (case-insensitive)
-            if sign_pos + 3 <= length and contents[sign_pos:sign_pos + 3].lower() == b"nan":
+            if (
+                sign_pos + 3 <= length
+                and contents[sign_pos : sign_pos + 3].lower() == b"nan"
+            ):
                 end_pos = sign_pos + 3
                 if _is_token_boundary(contents, end_pos):
                     return float(contents[start:end_pos]), end_pos
-            
+
             # Check for 'inf' or 'infinity' (case-insensitive)
-            if sign_pos + 3 <= length and contents[sign_pos:sign_pos + 3].lower() == b"inf":
+            if (
+                sign_pos + 3 <= length
+                and contents[sign_pos : sign_pos + 3].lower() == b"inf"
+            ):
                 end_pos = sign_pos + 3
                 # Check for full 'infinity'
-                if end_pos + 5 <= length and contents[end_pos:end_pos + 5].lower() == b"inity":
+                if (
+                    end_pos + 5 <= length
+                    and contents[end_pos : end_pos + 5].lower() == b"inity"
+                ):
                     end_pos += 5
                 if _is_token_boundary(contents, end_pos):
                     return float(contents[start:end_pos]), end_pos
