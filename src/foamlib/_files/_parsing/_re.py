@@ -8,10 +8,11 @@ FLOAT = re.compile(
 
 # Simplified patterns for list parsing: match "number-like tokens" without strict validation
 # These patterns only validate structure, letting numpy.fromstring handle actual numeric validation
-# For floats: match any sequence that could be a float (with decimal point, exponent, or special words)
-_FLOAT_LIKE = rb"[A-Za-z0-9.+\-eE]+"  # Float-like: includes letters (NaN/Inf), digits, signs, decimal, exponent
-# For integers: match any sequence that could be an integer (digits and sign only, no decimal)
-_INTEGER_LIKE = rb"[A-Za-z0-9+\-]+"  # Integer-like: no decimal point allowed
+# For floats: match sequences that look like floats - more permissive than strict FLOAT but still reasonable
+# Matches: signed numbers with optional decimal/exponent, or NaN/Inf keywords (case-insensitive)
+_FLOAT_LIKE = rb"[+-]?(?:[0-9]+\.?[0-9]*(?:[eE][+-]?[0-9]+)?|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?|[Nn][Aa][Nn]|[Ii][Nn][Ff](?:[Ii][Nn][Ii][Tt][Yy])?)"
+# For integers: match sequences that look like integers (digits with optional sign, no decimal)
+_INTEGER_LIKE = rb"[+-]?[0-9]+"
 
 COMMENT = re.compile(rb"(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*)")
 SKIP = re.compile(rb"(?:\s+|(?:" + COMMENT.pattern + b"))+")
