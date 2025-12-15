@@ -7,17 +7,27 @@ from foamlib._files._parsing import ParsedFile
 def test_parse_nan() -> None:
     """Test that NaN is parsed correctly in various formats."""
     # Standalone nan
-    assert math.isnan(ParsedFile(b"nan")[()])
-    assert math.isnan(ParsedFile(b"NaN")[()])
-    assert math.isnan(ParsedFile(b"NAN")[()])
+    nan = ParsedFile(b"nan")[()]
+    assert isinstance(nan, float)
+    assert math.isnan(nan)
+    nan = ParsedFile(b"NaN")[()]
+    assert isinstance(nan, float)
+    assert math.isnan(nan)
+    nan = ParsedFile(b"NAN")[()]
+    assert isinstance(nan, float)
+    assert math.isnan(nan)
 
     # Signed nan
-    assert math.isnan(ParsedFile(b"+nan")[()])
-    assert math.isnan(ParsedFile(b"-nan")[()])
+    nan = ParsedFile(b"+nan")[()]
+    assert isinstance(nan, float)
+    assert math.isnan(nan)
+    nan = ParsedFile(b"-nan")[()]
+    assert isinstance(nan, float)
+    assert math.isnan(nan)
 
     # Uniform field with nan
-    value = ParsedFile(b"uniform nan")[()]
-    assert math.isnan(value)
+    field = ParsedFile(b"uniform nan")[()]
+    assert np.isnan(field)
 
     # Uniform tensor with nan
     tensor = ParsedFile(b"uniform (1 nan 3)")[()]
