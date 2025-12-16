@@ -63,7 +63,7 @@ for c in b"0123456789-+":
 
 _COMMENTS = re.compile(rb"(?:(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*))+")
 _SKIP = re.compile(rb"(?:\s+|" + _COMMENTS.pattern + rb")+")
-_POSSIBLE_FLOAT = re.compile(rb"[0-9.\-+einfnatyEINFNATY]+", re.ASCII)
+_POSSIBLE_FLOAT = re.compile(rb"[0-9.\-+einfatyEINFATY]+", re.ASCII)
 _POSSIBLE_INTEGER = re.compile(rb"[0-9\-+]+", re.ASCII)
 
 
