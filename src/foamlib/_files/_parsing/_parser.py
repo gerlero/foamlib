@@ -31,15 +31,12 @@ from ...typing import (
 )
 from .exceptions import FoamFileDecodeError
 
-_NT = TypeVar("_NT", float, int)
-_DT = TypeVar("_DT", np.float64, np.float32, np.int64, np.int32)
+_DType = TypeVar("_DType", float, int)
+_NumpyDType = TypeVar("_NumpyDType", np.float64, np.float32, np.int64, np.int32)
 _ElShape = TypeVar(
     "_ElShape", tuple[()], tuple[Literal[3]], tuple[Literal[6]], tuple[Literal[9]]
 )
-_T = TypeVar("_T", FileDict, Data, StandaloneData, str)
-
-_WHITESPACE = b" \n\t\r\f\v"
-_WHITESPACE_NO_NEWLINE = b" \t\r\f\v"
+_Output = TypeVar("_Output", FileDict, Data, StandaloneData, str)
 
 _IS_TOKEN_START = [False] * 256
 for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$":
@@ -48,6 +45,26 @@ for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$":
 _IS_TOKEN_CONTINUATION = _IS_TOKEN_START.copy()
 for c in b"0123456789._<>#$:+-*/|^%&=!":
     _IS_TOKEN_CONTINUATION[c] = True
+
+_IS_WHITESPACE = [False] * 256
+for c in b" \n\t\r\f\v":
+    _IS_WHITESPACE[c] = True
+
+_IS_WHITESPACE_NO_NEWLINE = _IS_WHITESPACE.copy()
+_IS_WHITESPACE_NO_NEWLINE[ord(b"\n")] = False
+
+_IS_POSSIBLE_FLOAT = [False] * 256
+for c in b"0123456789.-+eEinfnatyINFNATY":
+    _IS_POSSIBLE_FLOAT[c] = True
+
+_IS_POSSIBLE_INTEGER = [False] * 256
+for c in b"0123456789-+":
+    _IS_POSSIBLE_INTEGER[c] = True
+
+_COMMENTS = re.compile(rb"(?:(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*))+")
+_SKIP = re.compile(rb"(?:\s+|" + _COMMENTS.pattern + rb")+")
+_POSSIBLE_FLOAT = re.compile(rb"[0-9.\-+einfnatyEINFNATY]+", re.ASCII)
+_POSSIBLE_INTEGER = re.compile(rb"[0-9\-+]+", re.ASCII)
 
 
 class ParseError(Exception):
@@ -61,60 +78,56 @@ class ParseError(Exception):
         return FoamFileDecodeError(self._contents, self.pos, expected=self._expected)
 
 
-def _is_token_boundary(contents: bytes | bytearray, pos: int) -> bool:
-    try:
-        char = contents[pos]
-    except IndexError:
-        return True
-    return not _IS_TOKEN_CONTINUATION[char]
-
-
 def _skip(
-    data: bytes | bytearray,
+    contents: bytes | bytearray,
     pos: int,
     *,
     newline_ok: bool = True,
 ) -> int:
-    n = len(data)
-    whitespace = _WHITESPACE if newline_ok else _WHITESPACE_NO_NEWLINE
+    is_whitespace = _IS_WHITESPACE if newline_ok else _IS_WHITESPACE_NO_NEWLINE
 
-    while True:
-        while pos < n and data[pos] in whitespace:
-            pos += 1
-
-        if pos + 1 >= n:
-            return pos
-
-        c = data[pos]
-        d = data[pos + 1]
-
-        if c == ord("/") and d == ord("/"):
-            pos += 2
-            while pos < n:
-                if data[pos] == ord("\n"):
-                    if newline_ok:
-                        pos += 1
-                    break
-                if (
-                    data[pos] == ord("\\")
-                    and pos + 1 < n
-                    and data[pos + 1] == ord("\n")
-                ):
-                    pos += 2
-                    continue
+    with contextlib.suppress(IndexError):
+        while True:
+            while is_whitespace[contents[pos]]:
                 pos += 1
-            continue
 
-        if c == ord("/") and d == ord("*"):
-            pos += 2
-            while pos + 1 < n:
-                if data[pos] == ord("*") and data[pos + 1] == ord("/"):
-                    pos += 2
-                    break
-                pos += 1
-            continue
+            next1 = contents[pos]
+            next2 = contents[pos + 1]
 
-        return pos
+            if next1 == ord("/") and next2 == ord("/"):
+                pos += 2
+                while True:
+                    if contents[pos] == ord("\n"):
+                        if newline_ok:
+                            pos += 1
+                        break
+                    if contents[pos] == ord("\\"):
+                        newline_next = False
+                        with contextlib.suppress(IndexError):
+                            newline_next = contents[pos + 1] == ord("\n")
+                        if not newline_next:
+                            raise FoamFileDecodeError(
+                                contents,
+                                pos,
+                                expected="end of line after backslash",
+                            )
+                        pos += 2
+                        continue
+                    pos += 1
+                continue
+
+            if next1 == ord("/") and next2 == ord("*"):
+                if (pos := contents.find(b"*/", pos + 2)) == -1:
+                    raise FoamFileDecodeError(
+                        contents,
+                        len(contents),
+                        expected="*/",
+                    )
+                pos += 2
+
+            break
+
+    return pos
 
 
 def _expect(contents: bytes | bytearray, pos: int, expected: bytes | bytearray) -> int:
@@ -125,13 +138,119 @@ def _expect(contents: bytes | bytearray, pos: int, expected: bytes | bytearray) 
     return pos + length
 
 
-_COMMENTS = re.compile(rb"(?:(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*))+")
-_SKIP = re.compile(rb"(?:\s+|" + _COMMENTS.pattern + rb")+")
-_ITEM = re.compile(rb"[0-9.\-+einfnatyEINFNATY]+", re.ASCII)
+def _parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
+    try:
+        first = contents[pos]
+    except IndexError:
+        raise ParseError(contents, pos, expected="token") from None
+    try:
+        second = contents[pos + 1]
+    except IndexError:
+        second = None
+
+    if (first_ok := _IS_TOKEN_START[first]) and second is None:
+        return contents[pos : pos + 1].decode("ascii"), pos + 1
+
+    if first_ok and (first != ord(b"#") or second != ord(b"{")):
+        end = pos + 1
+        depth = 0
+        char: int = second  # ty: ignore[invalid-assignment]
+        with contextlib.suppress(IndexError):
+            while True:
+                if (depth == 0 and _IS_TOKEN_CONTINUATION[char]) or (
+                    depth > 0 and char not in b";(){}[]"
+                ):
+                    end += 1
+                elif char == ord(b"("):
+                    depth += 1
+                    end += 1
+                elif char == ord(b")") and depth > 0:
+                    depth -= 1
+                    end += 1
+                else:
+                    break
+                char = contents[end]
+
+        if depth != 0:
+            raise FoamFileDecodeError(contents, pos, expected=")")
+
+        return contents[pos:end].decode("ascii"), end
+
+    if first == ord(b'"'):
+        end = pos + 1
+        with contextlib.suppress(IndexError):
+            while True:
+                char = contents[end]
+                if char == ord(b"\\"):
+                    end += 2
+                elif char == ord(b'"'):
+                    return contents[pos : end + 1].decode(), end + 1
+                else:
+                    end += 1
+
+        raise FoamFileDecodeError(contents, pos, expected="end of quoted string")
+
+    if first == ord(b"#") and second == ord(b"{"):
+        if (end := contents.find(b"#}", pos + 2)) == -1:
+            raise FoamFileDecodeError(contents, len(contents), expected="#}")
+        return contents[pos : end + 2].decode(), end + 2
+
+    raise ParseError(contents, pos, expected="token")
 
 
-class _ASCIINumericListParser(Generic[_NT, _ElShape]):
-    def __init__(self, *, dtype: type[_NT], elshape: _ElShape) -> None:
+@overload
+def _parse_number(
+    contents: bytes | bytearray, pos: int, *, target: type[int] = ...
+) -> tuple[int, int]: ...
+
+
+@overload
+def _parse_number(
+    contents: bytes | bytearray, pos: int, *, target: type[float] = ...
+) -> tuple[float, int]: ...
+
+
+@overload
+def _parse_number(
+    contents: bytes | bytearray, pos: int, *, target: type[int | float] = ...
+) -> tuple[int | float, int]: ...
+
+
+def _parse_number(
+    contents: bytes | bytearray,
+    pos: int,
+    *,
+    target: type[int] | type[float] | type[int | float] = int | float,
+) -> tuple[int | float, int]:
+    is_numeric = _IS_POSSIBLE_INTEGER if target is int else _IS_POSSIBLE_FLOAT
+    end = pos
+    with contextlib.suppress(IndexError):
+        while is_numeric[contents[end]]:
+            end += 1
+
+        if _IS_TOKEN_CONTINUATION[contents[end]]:
+            raise ParseError(contents, pos, expected="number")
+
+    if pos == end:
+        raise ParseError(contents, pos, expected="number")
+
+    chars = contents[pos:end]
+    if target is not float:
+        try:
+            return int(chars), end
+        except ValueError as e:
+            if target is int:
+                raise ParseError(contents, pos, expected="integer") from e
+    try:
+        return float(chars), end
+    except ValueError as e:
+        if target is float:
+            raise ParseError(contents, pos, expected="float") from e
+        raise ParseError(contents, pos, expected="number") from e
+
+
+class _ASCIINumericListParser(Generic[_DType, _ElShape]):
+    def __init__(self, *, dtype: type[_DType], elshape: _ElShape) -> None:
         self._dtype = dtype
         self._elshape = elshape
 
@@ -140,13 +259,13 @@ class _ASCIINumericListParser(Generic[_NT, _ElShape]):
                 rb"(?:(?:"
                 + _SKIP.pattern
                 + rb")?(?:"
-                + _ITEM.pattern
+                + _POSSIBLE_FLOAT.pattern
                 + rb"))*(?:"
                 + _SKIP.pattern
                 + rb")?\)"
             )
             self._uncommented_pattern = re.compile(
-                rb"(?:\s*(?:" + _ITEM.pattern + rb"))*\s*\)", re.ASCII
+                rb"(?:\s*(?:" + _POSSIBLE_FLOAT.pattern + rb"))*\s*\)", re.ASCII
             )
         else:
             (dim,) = elshape
@@ -154,14 +273,14 @@ class _ASCIINumericListParser(Generic[_NT, _ElShape]):
                 rb"(?:(?:"
                 + _SKIP.pattern
                 + rb")?\("
-                + (rb"(?:" + _ITEM.pattern + rb")" + _SKIP.pattern) * dim
+                + (rb"(?:" + _POSSIBLE_FLOAT.pattern + rb")" + _SKIP.pattern) * dim
                 + rb"\))*(?:"
                 + _SKIP.pattern
                 + rb")?\)"
             )
             self._uncommented_pattern = re.compile(
                 rb"(?:\s*\("
-                + (rb"(?:" + _ITEM.pattern + rb")\s*") * dim
+                + (rb"(?:" + _POSSIBLE_FLOAT.pattern + rb")\s*") * dim
                 + rb"\)\s*)*\)",
                 re.ASCII,
             )
@@ -282,26 +401,26 @@ _THREE_FACE_LIKE = re.compile(
     + rb")?\((?:"
     + _SKIP.pattern
     + rb")?(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb"(?:"
     + _SKIP.pattern
     + rb"))(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb"(?:"
     + _SKIP.pattern
     + rb"))(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb")(?:"
     + _SKIP.pattern
     + rb")?\)"
 )
 _UNCOMMENTED_THREE_FACE_LIKE = re.compile(
     rb"3\s*\(\s*(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb"\s*)(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb"\s*)(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb")\s*\)",
     re.ASCII,
 )
@@ -311,32 +430,32 @@ _FOUR_FACE_LIKE = re.compile(
     + rb")?\((?:"
     + _SKIP.pattern
     + rb")?(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb"(?:"
     + _SKIP.pattern
     + rb"))(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb"(?:"
     + _SKIP.pattern
     + rb"))(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb"(?:"
     + _SKIP.pattern
     + rb"))(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb")(?:"
     + _SKIP.pattern
     + rb")?\)"
 )
 _UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
     rb"4\s*\(\s*(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb"\s*)(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb"\s*)(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb"\s*)(?:"
-    + _ITEM.pattern
+    + _POSSIBLE_INTEGER.pattern
     + rb")\s*\)",
     re.ASCII,
 )
@@ -413,10 +532,10 @@ def _parse_binary_numeric_list(
     contents: bytes | bytearray,
     pos: int,
     *,
-    dtype: type[_DT],
+    dtype: type[_NumpyDType],
     elshape: _ElShape,
     empty_ok: bool = False,
-) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[_DT]], int]:
+) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[_NumpyDType]], int]:
     count, pos = _parse_number(contents, pos, target=int)
     if count < 0:
         raise ParseError(contents, pos, expected="non-negative list count")
@@ -520,187 +639,6 @@ def _parse_field(contents: bytes | bytearray, pos: int) -> tuple[Field, int]:
 
         case _:
             raise ParseError(contents, pos, expected="'uniform' or 'nonuniform'")
-
-
-def _parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
-    try:
-        first = contents[pos]
-    except IndexError:
-        raise ParseError(contents, pos, expected="token") from None
-    try:
-        second = contents[pos + 1]
-    except IndexError:
-        second = None
-
-    if (first_ok := _IS_TOKEN_START[first]) and second is None:
-        return contents[pos : pos + 1].decode("ascii"), pos + 1
-
-    if first_ok and (first != ord(b"#") or second != ord(b"{")):
-        end = pos + 1
-        depth = 0
-        char: int = second  # ty: ignore[invalid-assignment]
-        with contextlib.suppress(IndexError):
-            while True:
-                if (depth == 0 and _IS_TOKEN_CONTINUATION[char]) or (
-                    depth > 0 and char not in b";(){}[]"
-                ):
-                    end += 1
-                elif char == ord(b"("):
-                    depth += 1
-                    end += 1
-                elif char == ord(b")") and depth > 0:
-                    depth -= 1
-                    end += 1
-                else:
-                    break
-                char = contents[end]
-
-        if depth != 0:
-            raise FoamFileDecodeError(contents, pos, expected=")")
-
-        return contents[pos:end].decode("ascii"), end
-
-    if first == ord(b'"'):
-        end = pos + 1
-        with contextlib.suppress(IndexError):
-            while True:
-                char = contents[end]
-                if char == ord(b"\\"):
-                    end += 2
-                elif char == ord(b'"'):
-                    return contents[pos : end + 1].decode(), end + 1
-                else:
-                    end += 1
-
-        raise FoamFileDecodeError(contents, pos, expected="end of quoted string")
-
-    if first == ord(b"#") and second == ord(b"{"):
-        if (end := contents.find(b"#}", pos + 2)) == -1:
-            raise FoamFileDecodeError(contents, len(contents), expected="#}")
-        return contents[pos : end + 2].decode(), end + 2
-
-    raise ParseError(contents, pos, expected="token")
-
-
-@overload
-def _parse_number(
-    contents: bytes | bytearray, pos: int, *, target: type[int] = ...
-) -> tuple[int, int]: ...
-
-
-@overload
-def _parse_number(
-    contents: bytes | bytearray, pos: int, *, target: type[float] = ...
-) -> tuple[float, int]: ...
-
-
-@overload
-def _parse_number(
-    contents: bytes | bytearray, pos: int, *, target: type[int | float] = ...
-) -> tuple[int | float, int]: ...
-
-
-def _parse_number(
-    contents: bytes | bytearray,
-    pos: int,
-    *,
-    target: type[int] | type[float] | type[int | float] = int | float,
-) -> tuple[int | float, int]:
-    start = pos
-    length = len(contents)
-
-    if pos >= length:
-        raise ParseError(contents, pos, expected="number")
-
-    has_decimal = False
-    has_exponent = False
-
-    # Check for NaN and infinity when float is allowed
-    if target is not int and pos < length:
-        sign_pos = pos
-        if contents[pos] in b"+-":
-            sign_pos += 1
-
-        if sign_pos < length:
-            # Check for 'nan' (case-insensitive)
-            if (
-                sign_pos + 3 <= length
-                and contents[sign_pos : sign_pos + 3].lower() == b"nan"
-            ):
-                end_pos = sign_pos + 3
-                if _is_token_boundary(contents, end_pos):
-                    return float(contents[start:end_pos]), end_pos
-
-            # Check for 'inf' or 'infinity' (case-insensitive)
-            if (
-                sign_pos + 3 <= length
-                and contents[sign_pos : sign_pos + 3].lower() == b"inf"
-            ):
-                end_pos = sign_pos + 3
-                # Check for full 'infinity'
-                if (
-                    end_pos + 5 <= length
-                    and contents[end_pos : end_pos + 5].lower() == b"inity"
-                ):
-                    end_pos += 5
-                if _is_token_boundary(contents, end_pos):
-                    return float(contents[start:end_pos]), end_pos
-
-    if contents[pos] in b"+-":
-        pos += 1
-
-    if pos >= length:
-        raise ParseError(contents, pos, expected="number")
-
-    digit_start = pos
-
-    while pos < length and contents[pos] in b"0123456789":
-        pos += 1
-
-    if pos < length and contents[pos] == ord(b"."):
-        has_decimal = True
-        pos += 1
-
-        frac_start = pos
-        while pos < length and contents[pos] in b"0123456789":
-            pos += 1
-
-        if pos == digit_start + 1 and pos == frac_start:
-            raise ParseError(contents, pos, expected="number")
-    elif pos == digit_start:
-        raise ParseError(contents, pos, expected="number")
-
-    if pos < length and contents[pos] in b"eE":
-        has_exponent = True
-        pos += 1
-
-        if pos >= length:
-            raise ParseError(contents, pos, expected="number")
-
-        if contents[pos] in b"+-":
-            pos += 1
-
-        if pos >= length:
-            raise ParseError(contents, pos, expected="number")
-
-        exp_start = pos
-        while pos < length and contents[pos] in b"0123456789":
-            pos += 1
-
-        if pos == exp_start:
-            raise ParseError(contents, pos, expected="number")
-
-    is_float = has_decimal or has_exponent
-    if target is int:
-        if is_float:
-            raise ParseError(contents, pos, expected="integer")
-        ret = int(contents[start:pos])
-    elif target is float or is_float:
-        ret = float(contents[start:pos])
-    else:
-        ret = int(contents[start:pos])
-
-    return ret, pos
 
 
 def _parse_list(
@@ -1061,7 +999,7 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, in
     return ret, pos
 
 
-def parse(contents: bytes | bytearray | str, /, *, target: type[_T]) -> _T:
+def parse(contents: bytes | bytearray | str, /, *, target: type[_Output]) -> _Output:
     if isinstance(contents, str):
         contents = contents.encode()
 
