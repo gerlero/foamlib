@@ -102,16 +102,10 @@ def _skip(
                             pos += 1
                         break
                     if contents[pos] == ord("\\"):
-                        newline_next = False
                         with contextlib.suppress(IndexError):
-                            newline_next = contents[pos + 1] == ord("\n")
-                        if not newline_next:
-                            raise FoamFileDecodeError(
-                                contents,
-                                pos,
-                                expected="end of line after backslash",
-                            )
-                        pos += 2
+                            if contents[pos + 1] == ord("\n"):
+                                pos += 1
+                        pos += 1
                         continue
                     pos += 1
                 continue
