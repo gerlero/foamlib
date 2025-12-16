@@ -389,15 +389,7 @@ def _parse_ascii_faces_like_list(
         raise ParseError(contents, pos, expected="faces-like list")
 
     data = data.replace(b"(", b" ").replace(b")", b" ")
-
-    try:
-        data = data.decode("ascii")
-    except UnicodeDecodeError as e:
-        raise ParseError(
-            contents,
-            pos,
-            expected="ASCII faces-like list",
-        ) from e
+    data = data.decode("ascii")
 
     try:
         values = np.fromstring(data, sep=" ", dtype=int)
