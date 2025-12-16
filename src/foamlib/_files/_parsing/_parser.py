@@ -124,7 +124,7 @@ def _skip(
                         expected="*/",
                     )
                 pos += 2
-
+                continue
             break
 
     return pos
