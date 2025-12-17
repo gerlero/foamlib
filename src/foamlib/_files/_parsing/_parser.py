@@ -128,9 +128,8 @@ def _skip(
                     if contents[pos] == ord("\\"):
                         with contextlib.suppress(IndexError):
                             if contents[pos + 1] == ord("\n"):
-                                pos += 1
-                        pos += 1
-                        continue
+                                pos += 2
+                                continue
                     pos += 1
                 continue
 
