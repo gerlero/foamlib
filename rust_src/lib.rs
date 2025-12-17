@@ -42,6 +42,10 @@ fn skip(contents: &Bound<'_, pyo3::types::PyAny>, mut pos: usize, newline_ok: bo
     let contents = if let Ok(bytes) = contents.downcast::<pyo3::types::PyBytes>() {
         bytes.as_bytes()
     } else if let Ok(bytearray) = contents.downcast::<pyo3::types::PyByteArray>() {
+        // SAFETY: This is safe because:
+        // 1. We only read from the bytearray (immutable access)
+        // 2. The reference doesn't escape this function
+        // 3. The GIL prevents concurrent modification by Python code
         unsafe { bytearray.as_bytes() }
     } else {
         return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
