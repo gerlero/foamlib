@@ -79,13 +79,13 @@ skip(PyObject *self, PyObject *args, PyObject *kwargs)
                 pos++;
             }
             if (!found) {
-                /* Unclosed comment - raise error */
+                /* Unclosed comment - raise error at end of file */
+                /* Get the original object that owns the buffer */
+                PyObject *contents_obj = buffer.obj;
+                Py_INCREF(contents_obj);
                 PyBuffer_Release(&buffer);
-                PyObject *contents_obj = PyBytes_FromStringAndSize((const char *)contents, len);
-                if (contents_obj == NULL) {
-                    return NULL;
-                }
-                /* Call FoamFileDecodeError with keyword argument expected */
+                
+                /* Call FoamFileDecodeError with position at end of file */
                 PyObject *kwargs = Py_BuildValue("{s:s}", "expected", "*/");
                 if (kwargs == NULL) {
                     Py_DECREF(contents_obj);
@@ -130,12 +130,36 @@ static PyMethodDef skip_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static int
+skip_module_traverse(PyObject *m, visitproc visit, void *arg)
+{
+    Py_VISIT(FoamFileDecodeError);
+    return 0;
+}
+
+static int
+skip_module_clear(PyObject *m)
+{
+    Py_CLEAR(FoamFileDecodeError);
+    return 0;
+}
+
+static void
+skip_module_free(void *m)
+{
+    skip_module_clear((PyObject *)m);
+}
+
 static struct PyModuleDef skip_module = {
     PyModuleDef_HEAD_INIT,
     "_skip_ext",
     "C extension module for fast whitespace and comment skipping in OpenFOAM parser",
     -1,
-    skip_methods
+    skip_methods,
+    NULL,
+    skip_module_traverse,
+    skip_module_clear,
+    skip_module_free
 };
 
 PyMODINIT_FUNC
