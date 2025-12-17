@@ -95,10 +95,10 @@ skip(PyObject *self, PyObject *args, PyObject *kwargs)
             continue;
         }
         
-        /* Handle block comments (slash-star ... star-slash) */
+        /* Handle block comments */
         if (next1 == '/' && next2 == '*') {
             pos += 2;
-            /* Find closing star-slash */ 
+            /* Find closing */ 
             int found = 0;
             while (pos + 1 < len) {
                 if (contents[pos] == '*' && contents[pos + 1] == '/') {
@@ -124,7 +124,7 @@ skip(PyObject *self, PyObject *args, PyObject *kwargs)
                     return NULL;
                 }
                 
-                /* Create exception with keyword argument: FoamFileDecodeError(contents, len, expected="star-slash") */
+                /* Create exception with keyword argument */
                 PyObject *kwargs_exc = Py_BuildValue("{s:s}", "expected", "*/");
                 PyObject *args_exc = Py_BuildValue("(On)", contents_obj, len);
                 
