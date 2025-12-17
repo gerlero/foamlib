@@ -79,9 +79,8 @@ class ParseError(Exception):
         return FoamFileDecodeError(self._contents, self.pos, expected=self._expected)
 
 
-# Python implementation of _skip has been moved to C extension module
-# The C extension is imported at the top of this file as:
-#   from foamlib._c._skip import skip as _skip
+# Python implementation of _skip has been moved to C extension module.
+# The C extension (foamlib._c._skip.skip) is imported at the top of this file.
 
 
 def _expect(contents: bytes | bytearray, pos: int, expected: bytes | bytearray) -> int:
