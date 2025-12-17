@@ -346,42 +346,54 @@ class _ASCIINumericListParser(Generic[_DType, _ElShape]):
             return np.full((count, *self._elshape), values, dtype=self._dtype), pos
 
         pos = _expect(contents, pos, b"(")
-        if match := self._uncommented_pattern.match(contents, pos):
-            data = contents[pos : match.end() - 1]
-            pos = match.end()
-
-        elif match := self._pattern.match(contents, pos):
-            data = contents[pos : match.end() - 1]
-            pos = match.end()
-            data = _COMMENTS.sub(b" ", data)
-
-        if not match:
-            raise ParseError(
-                contents,
-                pos,
-                expected=f"numeric list of type {self._dtype} and shape {self._elshape}",
-            )
-
-        if self._elshape:
-            data = data.replace(b"(", b" ").replace(b")", b" ")
-
-        # Use C extension if available, otherwise fall back to numpy.fromstring
-        try:
-            if _HAS_C_EXT:
+        
+        # Use C extension if available to parse directly from raw content
+        if _HAS_C_EXT:
+            try:
                 is_float = self._dtype is float
-                ret = _c_parse_ascii.parse_numeric_list(data, is_float)
-            else:
+                elshape_val = self._elshape[0] if self._elshape else 0
+                ret, pos = _c_parse_ascii.parse_ascii_list(
+                    contents, pos, is_float, elshape_val
+                )
+            except (ValueError, UnicodeDecodeError) as e:
+                raise ParseError(
+                    contents,
+                    pos,
+                    expected=f"numeric list of type {self._dtype} and shape {self._elshape}",
+                ) from e
+        else:
+            # Fall back to regex-based parsing
+            if match := self._uncommented_pattern.match(contents, pos):
+                data = contents[pos : match.end() - 1]
+                pos = match.end()
+
+            elif match := self._pattern.match(contents, pos):
+                data = contents[pos : match.end() - 1]
+                pos = match.end()
+                data = _COMMENTS.sub(b" ", data)
+
+            if not match:
+                raise ParseError(
+                    contents,
+                    pos,
+                    expected=f"numeric list of type {self._dtype} and shape {self._elshape}",
+                )
+
+            if self._elshape:
+                data = data.replace(b"(", b" ").replace(b")", b" ")
+
+            try:
                 data_str = data.decode("ascii")
                 ret = np.fromstring(data_str, sep=" ", dtype=self._dtype)
-        except (ValueError, UnicodeDecodeError) as e:
-            raise ParseError(
-                contents,
-                pos,
-                expected=f"numeric list of type {self._dtype} and shape {self._elshape}",
-            ) from e
+            except (ValueError, UnicodeDecodeError) as e:
+                raise ParseError(
+                    contents,
+                    pos,
+                    expected=f"numeric list of type {self._dtype} and shape {self._elshape}",
+                ) from e
 
-        if self._elshape:
-            ret = ret.reshape((-1, *self._elshape))
+            if self._elshape:
+                ret = ret.reshape((-1, *self._elshape))
 
         if count is None:
             if not empty_ok and len(ret) == 0:
@@ -500,31 +512,37 @@ def _parse_ascii_faces_like_list(
 
     pos = _expect(contents, pos, b"(")
 
-    if match := _UNCOMMENTED_FACES_LIKE_LIST.match(contents, pos):
-        data = contents[pos : match.end() - 1]
-        pos = match.end()
+    # Use C extension if available to parse directly from raw content
+    if _HAS_C_EXT:
+        try:
+            values, pos = _c_parse_ascii.parse_ascii_faces_list(contents, pos)
+            # If no count was specified and we got no values, this is not a valid faces list
+            if count is None and len(values) == 0:
+                raise ParseError(contents, pos, expected="faces-like list")
+        except (ValueError, UnicodeDecodeError) as e:
+            raise ParseError(contents, pos, expected="faces-like list") from e
+    else:
+        # Fall back to regex-based parsing
+        if match := _UNCOMMENTED_FACES_LIKE_LIST.match(contents, pos):
+            data = contents[pos : match.end() - 1]
+            pos = match.end()
 
-    elif match := _FACES_LIKE_LIST.match(contents, pos):
-        data = contents[pos : match.end() - 1]
-        pos = match.end()
+        elif match := _FACES_LIKE_LIST.match(contents, pos):
+            data = contents[pos : match.end() - 1]
+            pos = match.end()
 
-        data = _COMMENTS.sub(b" ", data)
+            data = _COMMENTS.sub(b" ", data)
 
-    if not match:
-        raise ParseError(contents, pos, expected="faces-like list")
+        if not match:
+            raise ParseError(contents, pos, expected="faces-like list")
 
-    data = data.replace(b"(", b" ").replace(b")", b" ")
+        data = data.replace(b"(", b" ").replace(b")", b" ")
 
-    # Use C extension if available, otherwise fall back to numpy.fromstring
-    # Note: False parameter indicates integer parsing
-    try:
-        if _HAS_C_EXT:
-            values = _c_parse_ascii.parse_numeric_list(data, False)
-        else:
+        try:
             data_str = data.decode("ascii")
             values = np.fromstring(data_str, sep=" ", dtype=int)
-    except (ValueError, UnicodeDecodeError) as e:
-        raise ParseError(contents, pos, expected="faces-like list") from e
+        except (ValueError, UnicodeDecodeError) as e:
+            raise ParseError(contents, pos, expected="faces-like list") from e
 
     ret: list[np.ndarray] = []
     i = 0
