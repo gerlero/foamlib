@@ -118,32 +118,32 @@ skip(PyObject *self, PyObject *args, PyObject *kwargs)
                     return NULL;
                 }
                 
-                PyObject *FoamFileDecodeError = PyObject_GetAttrString(exceptions_module, "FoamFileDecodeError");
+                PyObject *FoamFileDecodeError_class = PyObject_GetAttrString(exceptions_module, "FoamFileDecodeError");
                 Py_DECREF(exceptions_module);
-                if (!FoamFileDecodeError) {
+                if (!FoamFileDecodeError_class) {
                     return NULL;
                 }
                 
-                /* Create exception: FoamFileDecodeError(contents, len(contents), expected="star-slash") */
-                PyObject *exc = PyObject_CallFunction(FoamFileDecodeError, "OnO&", 
-                                                     contents_obj, len, 
-                                                     PyUnicode_FromString, "*/");
-                Py_DECREF(FoamFileDecodeError);
-                if (!exc) {
-                    return NULL;
-                }
-                
-                /* Set the exception with keyword argument */
-                Py_DECREF(exc);
+                /* Create exception with keyword argument: FoamFileDecodeError(contents, len, expected="star-slash") */
                 PyObject *kwargs_exc = Py_BuildValue("{s:s}", "expected", "*/");
-                PyObject *exc2 = PyObject_Call(FoamFileDecodeError, 
-                                              Py_BuildValue("(On)", contents_obj, len),
-                                              kwargs_exc);
-                Py_DECREF(kwargs_exc);
-                if (exc2) {
-                    PyErr_SetObject(FoamFileDecodeError, exc2);
-                    Py_DECREF(exc2);
+                PyObject *args_exc = Py_BuildValue("(On)", contents_obj, len);
+                
+                if (!kwargs_exc || !args_exc) {
+                    Py_XDECREF(kwargs_exc);
+                    Py_XDECREF(args_exc);
+                    Py_DECREF(FoamFileDecodeError_class);
+                    return NULL;
                 }
+                
+                PyObject *exc = PyObject_Call(FoamFileDecodeError_class, args_exc, kwargs_exc);
+                Py_DECREF(kwargs_exc);
+                Py_DECREF(args_exc);
+                
+                if (exc) {
+                    PyErr_SetObject(FoamFileDecodeError_class, exc);
+                    Py_DECREF(exc);
+                }
+                Py_DECREF(FoamFileDecodeError_class);
                 return NULL;
             }
             continue;
