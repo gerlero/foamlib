@@ -1,3 +1,5 @@
+"""Setup script for building C extension modules."""
+
 from setuptools import Extension, setup
 
 # Define the C extension module
