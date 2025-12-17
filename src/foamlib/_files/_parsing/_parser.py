@@ -29,6 +29,8 @@ from ...typing import (
     SubDict,
     Tensor,
 )
+from ._skip_ext import ParseError as _CParseError
+from ._skip_ext import _parse_number as _parse_number_c
 from ._skip_ext import _skip
 from .exceptions import FoamFileDecodeError
 
@@ -46,14 +48,6 @@ for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$":
 _IS_TOKEN_CONTINUATION = _IS_TOKEN_START.copy()
 for c in b"0123456789._<>#$:+-*/|^%&=!":
     _IS_TOKEN_CONTINUATION[c] = True
-
-_IS_POSSIBLE_FLOAT = [False] * 256
-for c in b"0123456789.-+eEinfnatyINFNATY":
-    _IS_POSSIBLE_FLOAT[c] = True
-
-_IS_POSSIBLE_INTEGER = [False] * 256
-for c in b"0123456789-+":
-    _IS_POSSIBLE_INTEGER[c] = True
 
 _COMMENTS = re.compile(rb"(?:(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*))+")
 _SKIP = re.compile(rb"(?:\s+|" + _COMMENTS.pattern + rb")+")
@@ -164,31 +158,13 @@ def _parse_number(
     *,
     target: type[int] | type[float] | type[int | float] = int | float,
 ) -> tuple[int | float, int]:
-    is_numeric = _IS_POSSIBLE_INTEGER if target is int else _IS_POSSIBLE_FLOAT
-    end = pos
-    with contextlib.suppress(IndexError):
-        while is_numeric[contents[end]]:
-            end += 1
-
-        if _IS_TOKEN_CONTINUATION[contents[end]]:
-            raise ParseError(contents, pos, expected="number")
-
-    if pos == end:
-        raise ParseError(contents, pos, expected="number")
-
-    chars = contents[pos:end]
-    if target is not float:
-        try:
-            return int(chars), end
-        except ValueError as e:
-            if target is int:
-                raise ParseError(contents, pos, expected="integer") from e
+    """Parse a number from contents and convert C ParseError to Python ParseError."""
     try:
-        return float(chars), end
-    except ValueError as e:
-        if target is float:
-            raise ParseError(contents, pos, expected="float") from e
-        raise ParseError(contents, pos, expected="number") from e
+        return _parse_number_c(contents, pos, target=target)
+    except _CParseError as e:
+        # Convert C ParseError to Python ParseError
+        # The C exception has attributes _contents, pos, and _expected
+        raise ParseError(e._contents, e.pos, expected=e._expected) from None
 
 
 class _ASCIINumericListParser(Generic[_DType, _ElShape]):
