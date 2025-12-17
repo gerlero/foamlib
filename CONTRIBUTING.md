@@ -19,6 +19,8 @@ source .venv/bin/activate
 pip install -e . --group dev
 ```
 
+**Note:** The project includes a C extension for optimized ASCII list parsing. The extension will be automatically compiled during installation if you have a C compiler and Python development headers available. If compilation fails, the package will still work using a pure Python fallback.
+
 ## Contributing changes via a pull request
 
 1. Create a new branch for your changes

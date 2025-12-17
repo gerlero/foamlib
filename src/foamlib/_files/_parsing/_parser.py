@@ -18,6 +18,7 @@ from multicollections import MultiDict
 # Try to import C extension for faster parsing
 try:
     from . import _parse_ascii as _c_parse_ascii  # type: ignore[import]
+
     _HAS_C_EXT = True
 except ImportError:
     _HAS_C_EXT = False
@@ -367,7 +368,7 @@ class _ASCIINumericListParser(Generic[_DType, _ElShape]):
         # Use C extension if available, otherwise fall back to numpy.fromstring
         try:
             if _HAS_C_EXT:
-                is_float = self._dtype == float
+                is_float = self._dtype is float
                 ret = _c_parse_ascii.parse_numeric_list(data, is_float)
             else:
                 data_str = data.decode("ascii")
@@ -515,9 +516,10 @@ def _parse_ascii_faces_like_list(
     data = data.replace(b"(", b" ").replace(b")", b" ")
 
     # Use C extension if available, otherwise fall back to numpy.fromstring
+    # Note: False parameter indicates integer parsing
     try:
         if _HAS_C_EXT:
-            values = _c_parse_ascii.parse_numeric_list(data, False)  # False for int
+            values = _c_parse_ascii.parse_numeric_list(data, False)
         else:
             data_str = data.decode("ascii")
             values = np.fromstring(data_str, sep=" ", dtype=int)
