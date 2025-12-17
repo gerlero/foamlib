@@ -148,3 +148,4 @@ uv.lock
 
 # Created folders in example 
 ./examples/parametricStudy/Cases
+_codeql_detected_source_root
