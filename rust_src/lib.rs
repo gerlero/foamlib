@@ -87,7 +87,8 @@ fn skip(contents: &Bound<'_, pyo3::types::PyAny>, mut pos: usize, newline_ok: bo
                     
                     // Handle line continuation
                     if contents[pos] == b'\\' && pos + 1 < contents.len() && contents[pos + 1] == b'\n' {
-                        pos += 1;
+                        pos += 2;
+                        continue;
                     }
                     
                     pos += 1;

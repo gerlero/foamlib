@@ -97,11 +97,15 @@ def _skip(
             return _skip_rust(contents, pos, newline_ok=newline_ok)
         except ValueError as e:
             # Convert ValueError from Rust to FoamFileDecodeError
-            raise FoamFileDecodeError(
-                contents,
-                len(contents),
-                expected="*/",
-            ) from e
+            # The Rust implementation raises ValueError for unterminated comments
+            if "Unterminated comment" in str(e):
+                raise FoamFileDecodeError(
+                    contents,
+                    len(contents),
+                    expected="*/",
+                ) from e
+            # Re-raise other ValueErrors (e.g., type errors)
+            raise
     
     # Fallback to Python implementation
     is_whitespace = _IS_WHITESPACE if newline_ok else _IS_WHITESPACE_NO_NEWLINE
