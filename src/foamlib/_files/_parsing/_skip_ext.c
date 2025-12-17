@@ -85,9 +85,22 @@ skip(PyObject *self, PyObject *args, PyObject *kwargs)
                 if (contents_obj == NULL) {
                     return NULL;
                 }
-                PyObject *error = PyObject_CallFunction(FoamFileDecodeError, "Ons", 
-                                                       contents_obj, len, "*/");
+                /* Call FoamFileDecodeError with keyword argument expected */
+                PyObject *kwargs = Py_BuildValue("{s:s}", "expected", "*/");
+                if (kwargs == NULL) {
+                    Py_DECREF(contents_obj);
+                    return NULL;
+                }
+                PyObject *args = Py_BuildValue("(On)", contents_obj, len);
+                if (args == NULL) {
+                    Py_DECREF(contents_obj);
+                    Py_DECREF(kwargs);
+                    return NULL;
+                }
+                PyObject *error = PyObject_Call(FoamFileDecodeError, args, kwargs);
                 Py_DECREF(contents_obj);
+                Py_DECREF(args);
+                Py_DECREF(kwargs);
                 if (error != NULL) {
                     PyErr_SetObject(FoamFileDecodeError, error);
                     Py_DECREF(error);
