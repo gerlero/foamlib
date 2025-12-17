@@ -1,14 +1,24 @@
 """Setup script for foamlib with C extension."""
 
+import sys
 from setuptools import setup, Extension
 import numpy as np
+
+# Platform-specific compiler flags
+extra_compile_args = []
+if sys.platform != "win32":
+    # Unix-like systems (Linux, macOS)
+    extra_compile_args = ["-O3", "-Wall"]
+else:
+    # Windows with MSVC
+    extra_compile_args = ["/O2"]
 
 # Define the C extension
 parse_ascii_ext = Extension(
     name="foamlib._files._parsing._parse_ascii",
     sources=["src/foamlib/_files/_parsing/_c_ext/parse_ascii.c"],
     include_dirs=[np.get_include()],
-    extra_compile_args=["-O3", "-Wall"],
+    extra_compile_args=extra_compile_args,
 )
 
 # Setup

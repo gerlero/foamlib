@@ -93,11 +93,20 @@ static const char* parse_number(const char* str, const char* end, double* result
     
     /* Convert to number */
     char buffer[128];
-    size_t len = p - str;
+    /* Calculate length from the beginning of sign/number to end of parsed content */
+    const char* copy_start = str;
+    while (copy_start < start && (*copy_start == '+' || *copy_start == '-')) {
+        copy_start++;
+    }
+    if (copy_start > start) {
+        copy_start = str;  /* Include the sign */
+    }
+    
+    size_t len = (size_t)(p - copy_start);
     if (len >= sizeof(buffer)) {
         return NULL;
     }
-    memcpy(buffer, str, len);
+    memcpy(buffer, copy_start, len);
     buffer[len] = '\0';
     
     *is_int = !(has_decimal || has_exp);
@@ -105,9 +114,17 @@ static const char* parse_number(const char* str, const char* end, double* result
     char* endptr;
     if (*is_int) {
         long long val = strtoll(buffer, &endptr, 10);
+        /* Check for parsing errors */
+        if (endptr == buffer || *endptr != '\0') {
+            return NULL;
+        }
         *result = (double)val;
     } else {
         *result = strtod(buffer, &endptr);
+        /* Check for parsing errors */
+        if (endptr == buffer || *endptr != '\0') {
+            return NULL;
+        }
     }
     
     return p;
