@@ -15,6 +15,13 @@ else:
 import numpy as np
 from multicollections import MultiDict
 
+# Try to import C extension for faster parsing
+try:
+    from . import _parse_ascii as _c_parse_ascii  # type: ignore[import]
+    _HAS_C_EXT = True
+except ImportError:
+    _HAS_C_EXT = False
+
 from ...typing import (
     Data,
     DataEntry,
@@ -357,11 +364,15 @@ class _ASCIINumericListParser(Generic[_DType, _ElShape]):
         if self._elshape:
             data = data.replace(b"(", b" ").replace(b")", b" ")
 
-        data = data.decode("ascii")
-
+        # Use C extension if available, otherwise fall back to numpy.fromstring
         try:
-            ret = np.fromstring(data, sep=" ", dtype=self._dtype)
-        except ValueError as e:
+            if _HAS_C_EXT:
+                is_float = self._dtype == float
+                ret = _c_parse_ascii.parse_numeric_list(data, is_float)
+            else:
+                data_str = data.decode("ascii")
+                ret = np.fromstring(data_str, sep=" ", dtype=self._dtype)
+        except (ValueError, UnicodeDecodeError) as e:
             raise ParseError(
                 contents,
                 pos,
@@ -502,11 +513,15 @@ def _parse_ascii_faces_like_list(
         raise ParseError(contents, pos, expected="faces-like list")
 
     data = data.replace(b"(", b" ").replace(b")", b" ")
-    data = data.decode("ascii")
 
+    # Use C extension if available, otherwise fall back to numpy.fromstring
     try:
-        values = np.fromstring(data, sep=" ", dtype=int)
-    except ValueError as e:
+        if _HAS_C_EXT:
+            values = _c_parse_ascii.parse_numeric_list(data, False)  # False for int
+        else:
+            data_str = data.decode("ascii")
+            values = np.fromstring(data_str, sep=" ", dtype=int)
+    except (ValueError, UnicodeDecodeError) as e:
         raise ParseError(contents, pos, expected="faces-like list") from e
 
     ret: list[np.ndarray] = []
