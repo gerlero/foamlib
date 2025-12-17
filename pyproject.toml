@@ -1,6 +1,6 @@
 [build-system]
-requires = ["uv_build>=0.9,<0.10"]
-build-backend = "uv_build"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "foamlib"
@@ -119,3 +119,7 @@ extend-ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
+
+[tool.maturin]
+python-source = "src"
+module-name = "foamlib.foamlib_rust"

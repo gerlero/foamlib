@@ -1,0 +1,12 @@
+[package]
+name = "foamlib"
+version = "1.5.4"
+edition = "2021"
+
+[lib]
+name = "foamlib_rust"
+crate-type = ["cdylib"]
+path = "rust_src/lib.rs"
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module"] }

@@ -13,6 +13,13 @@ else:
     from typing_extensions import Unpack, assert_never
 
 import numpy as np
+
+# Import the Rust implementation of _skip
+try:
+    from foamlib.foamlib_rust import skip as _skip_rust
+    _USE_RUST_SKIP = True
+except ImportError:
+    _USE_RUST_SKIP = False
 from multicollections import MultiDict
 
 from ...typing import (
@@ -84,6 +91,19 @@ def _skip(
     *,
     newline_ok: bool = True,
 ) -> int:
+    # Use Rust implementation if available
+    if _USE_RUST_SKIP:
+        try:
+            return _skip_rust(contents, pos, newline_ok=newline_ok)
+        except ValueError as e:
+            # Convert ValueError from Rust to FoamFileDecodeError
+            raise FoamFileDecodeError(
+                contents,
+                len(contents),
+                expected="*/",
+            ) from e
+    
+    # Fallback to Python implementation
     is_whitespace = _IS_WHITESPACE if newline_ok else _IS_WHITESPACE_NO_NEWLINE
 
     with contextlib.suppress(IndexError):
