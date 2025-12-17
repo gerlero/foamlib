@@ -5,6 +5,7 @@ import sys
 from types import EllipsisType
 from typing import Generic, Literal, TypeVar, overload
 
+from foamlib._c._skip import skip as _skip
 from foamlib._files._util import add_to_mapping
 
 if sys.version_info >= (3, 11):
@@ -78,50 +79,9 @@ class ParseError(Exception):
         return FoamFileDecodeError(self._contents, self.pos, expected=self._expected)
 
 
-def _skip(
-    contents: bytes | bytearray,
-    pos: int,
-    *,
-    newline_ok: bool = True,
-) -> int:
-    is_whitespace = _IS_WHITESPACE if newline_ok else _IS_WHITESPACE_NO_NEWLINE
-
-    with contextlib.suppress(IndexError):
-        while True:
-            while is_whitespace[contents[pos]]:
-                pos += 1
-
-            next1 = contents[pos]
-            next2 = contents[pos + 1]
-
-            if next1 == ord("/") and next2 == ord("/"):
-                pos += 2
-                while True:
-                    if contents[pos] == ord("\n"):
-                        if newline_ok:
-                            pos += 1
-                        break
-                    if contents[pos] == ord("\\"):
-                        with contextlib.suppress(IndexError):
-                            if contents[pos + 1] == ord("\n"):
-                                pos += 1
-                        pos += 1
-                        continue
-                    pos += 1
-                continue
-
-            if next1 == ord("/") and next2 == ord("*"):
-                if (pos := contents.find(b"*/", pos + 2)) == -1:
-                    raise FoamFileDecodeError(
-                        contents,
-                        len(contents),
-                        expected="*/",
-                    )
-                pos += 2
-                continue
-            break
-
-    return pos
+# Python implementation of _skip has been moved to C extension module
+# The C extension is imported at the top of this file as:
+#   from foamlib._c._skip import skip as _skip
 
 
 def _expect(contents: bytes | bytearray, pos: int, expected: bytes | bytearray) -> int:
