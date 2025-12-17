@@ -29,6 +29,7 @@ from ...typing import (
     SubDict,
     Tensor,
 )
+from ._skip_ext import _skip
 from .exceptions import FoamFileDecodeError
 
 _DType = TypeVar("_DType", float, int)
@@ -45,13 +46,6 @@ for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$":
 _IS_TOKEN_CONTINUATION = _IS_TOKEN_START.copy()
 for c in b"0123456789._<>#$:+-*/|^%&=!":
     _IS_TOKEN_CONTINUATION[c] = True
-
-_IS_WHITESPACE = [False] * 256
-for c in b" \n\t\r\f\v":
-    _IS_WHITESPACE[c] = True
-
-_IS_WHITESPACE_NO_NEWLINE = _IS_WHITESPACE.copy()
-_IS_WHITESPACE_NO_NEWLINE[ord(b"\n")] = False
 
 _IS_POSSIBLE_FLOAT = [False] * 256
 for c in b"0123456789.-+eEinfnatyINFNATY":
@@ -76,52 +70,6 @@ class ParseError(Exception):
 
     def make_fatal(self) -> FoamFileDecodeError:
         return FoamFileDecodeError(self._contents, self.pos, expected=self._expected)
-
-
-def _skip(
-    contents: bytes | bytearray,
-    pos: int,
-    *,
-    newline_ok: bool = True,
-) -> int:
-    is_whitespace = _IS_WHITESPACE if newline_ok else _IS_WHITESPACE_NO_NEWLINE
-
-    with contextlib.suppress(IndexError):
-        while True:
-            while is_whitespace[contents[pos]]:
-                pos += 1
-
-            next1 = contents[pos]
-            next2 = contents[pos + 1]
-
-            if next1 == ord("/") and next2 == ord("/"):
-                pos += 2
-                while True:
-                    if contents[pos] == ord("\n"):
-                        if newline_ok:
-                            pos += 1
-                        break
-                    if contents[pos] == ord("\\"):
-                        with contextlib.suppress(IndexError):
-                            if contents[pos + 1] == ord("\n"):
-                                pos += 1
-                        pos += 1
-                        continue
-                    pos += 1
-                continue
-
-            if next1 == ord("/") and next2 == ord("*"):
-                if (pos := contents.find(b"*/", pos + 2)) == -1:
-                    raise FoamFileDecodeError(
-                        contents,
-                        len(contents),
-                        expected="*/",
-                    )
-                pos += 2
-                continue
-            break
-
-    return pos
 
 
 def _expect(contents: bytes | bytearray, pos: int, expected: bytes | bytearray) -> int:
