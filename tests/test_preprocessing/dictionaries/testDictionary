@@ -15,7 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-test1      1;
+test1 1;
 test2      2.0;
 test3      "test3";
 test5      test5;
