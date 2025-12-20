@@ -370,10 +370,8 @@ class FoamFile(
         def popone(self, keyword: str, /) -> "Data | SubDict | None":
             with self._file:
                 ret = self._file[(*self._keywords, keyword)]
-                if ret is ...:
-                    ret = FoamFile.SubDict(
-                        self._file, (*self._keywords, keyword)
-                    ).as_dict()
+                if isinstance(ret, FoamFile.SubDict):
+                    ret = ret.as_dict()
                 else:
                     ret = deepcopy(ret)
                 self._file.popone((*self._keywords, keyword))
