@@ -328,7 +328,7 @@ class FoamFile(
         def getall(
             self, keyword: str, /
         ) -> Collection["Data | FoamFile.SubDict | None"]:
-            return self._file.getall((*self._keywords, keyword))
+            return self._file.getall((*self._keywords, keyword))  # ty: ignore[invalid-return-type]
 
         @override
         def __getitem__(self, keyword: str) -> "Data | FoamFile.SubDict | None":
@@ -367,8 +367,18 @@ class FoamFile(
 
         @override
         @with_default
-        def popone(self, keyword: str, /) -> "Data | FoamFile.SubDict | None":
-            return self._file.popone((*self._keywords, keyword))
+        def popone(self, keyword: str, /) -> "Data | SubDict | None":
+            with self._file:
+                ret = self._file[(*self._keywords, keyword)]
+                if ret is ...:
+                    ret = FoamFile.SubDict(
+                        self._file, (*self._keywords, keyword)
+                    ).as_dict()
+                else:
+                    ret = deepcopy(ret)
+                self._file.popone((*self._keywords, keyword))
+
+            return ret  # ty: ignore[invalid-return-type]
 
         @override
         def __delitem__(self, keyword: str | slice) -> None:
@@ -969,7 +979,7 @@ class FoamFile(
         self,
         keywords: str | tuple[str, Unpack[tuple[str, ...]]],
         /,
-    ) -> "Data | FoamFile.SubDict | None": ...
+    ) -> "Data | SubDict | None": ...
 
     @overload
     @with_default
@@ -981,11 +991,19 @@ class FoamFile(
         self,
         keywords: str | tuple[str, ...] | None,
         /,
-    ) -> "Data | StandaloneData | FoamFile.SubDict | None":
+    ) -> "Data | StandaloneData | SubDict | None":
         keywords = FoamFile._normalized_keywords(keywords)
 
         with self:
-            return self._get_parsed().popone(keywords)
+            ret = self._get_parsed()[keywords]
+            if ret is ...:
+                assert keywords
+                ret = FoamFile.SubDict(self, keywords).as_dict()
+            else:
+                ret = deepcopy(ret)
+            self._get_parsed().popone(keywords)
+
+        return ret  # ty: ignore[invalid-return-type]
 
     @overload
     def _iter(
@@ -1326,7 +1344,7 @@ class FoamFieldFile(FoamFile):
             for r in ret:
                 if isinstance(r, FoamFile.SubDict):
                     assert isinstance(r, FoamFieldFile.BoundarySubDict)
-            return ret
+            return ret  # ty: ignore[invalid-return-type]
 
     class BoundarySubDict(FoamFile.SubDict):
         """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""
