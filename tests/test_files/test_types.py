@@ -115,10 +115,11 @@ def test_dimensioned_invalid_name_type() -> None:
 
 
 def test_dimensioned_invalid_name_value() -> None:
-    """Test Dimensioned with invalid name value (not parseable)."""
+    """Test Dimensioned with invalid name value (not parseable due to spaces)."""
     from foamlib._files._parsing.exceptions import FoamFileDecodeError
     
-    with pytest.raises((ValueError, FoamFileDecodeError)):
+    # Name with spaces cannot be parsed as a valid OpenFOAM token
+    with pytest.raises(FoamFileDecodeError):
         Dimensioned(1.0, DimensionSet(), name="invalid name with spaces")
 
 

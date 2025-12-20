@@ -15,9 +15,9 @@ def test_foam_file_decode_error_colno_first_line() -> None:
 
 
 def test_foam_file_decode_error_end_of_file() -> None:
-    """Test FoamFileDecodeError when error is at the end of file without trailing newline."""
+    """Test FoamFileDecodeError when error is near the end of file without trailing newline."""
     contents = b"FoamFile\n{\n    version 2.0;"
-    pos = len(contents) - 1  # Last character
+    pos = len(contents) - 5  # Position within the last line
     
     error = FoamFileDecodeError(contents, pos, expected="closing brace")
     

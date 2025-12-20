@@ -7,20 +7,16 @@ import pytest
 from foamlib.postprocessing.table_reader import ReaderNotRegisteredError, TableReader
 
 
-def test_reader_not_registered_error() -> None:
+def test_reader_not_registered_error(tmp_path: Path) -> None:
     """Test that reading a file with an unregistered extension raises an error."""
     # Create a temporary file with an unregistered extension
-    with tempfile.NamedTemporaryFile(suffix=".unknown", delete=False) as tmp:
-        tmp_path = Path(tmp.name)
-        tmp.write(b"some data")
+    tmp_file = tmp_path / "test.unknown"
+    tmp_file.write_bytes(b"some data")
     
     reader = TableReader()
     
-    try:
-        with pytest.raises(ReaderNotRegisteredError, match="No reader registered for extension: '.unknown'"):
-            reader.read(tmp_path)
-    finally:
-        tmp_path.unlink()
+    with pytest.raises(ReaderNotRegisteredError, match="No reader registered for extension: '.unknown'"):
+        reader.read(tmp_file)
 
 
 def test_tablereader_init() -> None:
