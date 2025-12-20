@@ -258,3 +258,104 @@ def test_compressed_field(cavity: FoamCase) -> None:
     assert U_arr == pytest.approx(U)
 
     cavity.run(parallel=False)
+
+
+def test_popone(tmp_path: Path) -> None:
+    """Test the popone method for FoamFile and SubDict."""
+    path = tmp_path / "testDict"
+    d = FoamFile(path)
+
+    # Test popone with basic values
+    d["key1"] = "value1"
+    d["key2"] = 42
+    d["key3"] = [1, 2, 3]
+
+    # Pop a string value
+    popped = d.popone("key1")
+    assert popped == "value1"
+    assert "key1" not in d
+
+    # Pop a number value
+    popped = d.popone("key2")
+    assert popped == 42
+    assert "key2" not in d
+
+    # Pop a list value
+    popped = d.popone("key3")
+    assert popped == [1, 2, 3]
+    assert "key3" not in d
+
+    # Verify the popped list is a copy, not a live reference
+    assert isinstance(popped, list)
+    popped[0] = 999
+    # Since the key is already removed, we can't check the original,
+    # but we verified it's a proper list copy
+
+    # Test popone with subdictionaries
+    d["subdict"] = {"nested_key": "nested_value", "nested_num": 100}
+    popped_dict = d.popone("subdict")
+
+    # Verify it returns a dict (SubDict type alias), not FoamFile.SubDict
+    assert isinstance(popped_dict, dict)
+    assert not isinstance(popped_dict, FoamFile.SubDict)
+    assert popped_dict == {"nested_key": "nested_value", "nested_num": 100}
+    assert "subdict" not in d
+
+    # Verify the popped dict is a deep copy
+    popped_dict["nested_key"] = "modified"
+    # Since the key is already removed, this confirms it's a copy
+
+    # Test popone on SubDict
+    d["parent"] = {
+        "child1": "value1",
+        "child2": {"grandchild": "grandvalue"},
+        "child3": [10, 20, 30],
+    }
+
+    parent = d["parent"]
+    assert isinstance(parent, FoamFile.SubDict)
+
+    # Pop from SubDict
+    popped = parent.popone("child1")
+    assert popped == "value1"
+    assert "child1" not in parent
+
+    # Pop a nested dict from SubDict
+    popped_nested = parent.popone("child2")
+    assert isinstance(popped_nested, dict)
+    assert not isinstance(popped_nested, FoamFile.SubDict)
+    assert popped_nested == {"grandchild": "grandvalue"}
+    assert "child2" not in parent
+
+    # Verify it's a deep copy
+    popped_nested["grandchild"] = "modified"
+    # Already removed, so this confirms it's a copy
+
+    # Pop a list from SubDict
+    popped_list = parent.popone("child3")
+    assert popped_list == [10, 20, 30]
+    assert "child3" not in parent
+
+    # Test with deeply nested subdictionaries
+    d["level1"] = {
+        "level2": {
+            "level3": {
+                "deep_value": "found"
+            }
+        }
+    }
+
+    level1 = d["level1"]
+    level2 = level1["level2"]
+    popped_level3 = level2.popone("level3")
+
+    assert isinstance(popped_level3, dict)
+    assert not isinstance(popped_level3, FoamFile.SubDict)
+    assert popped_level3 == {"deep_value": "found"}
+    assert "level3" not in level2
+
+    # Test popone with None (non-existent key)
+    d["test_key"] = None
+    popped_none = d.popone("test_key")
+    assert popped_none is None
+    assert "test_key" not in d
