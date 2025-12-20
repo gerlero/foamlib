@@ -287,7 +287,8 @@ def test_popone(tmp_path: Path) -> None:
 
     # Verify the popped list is a copy, not a live reference
     assert isinstance(popped, list)
-    popped[0] = 999
+    assert isinstance(popped[0], int)
+    popped[0] = 999  # ty: ignore[invalid-assignment]
     # Since the key is already removed, we can't check the original,
     # but we verified it's a proper list copy
 
@@ -302,7 +303,8 @@ def test_popone(tmp_path: Path) -> None:
     assert "subdict" not in d
 
     # Verify the popped dict is a deep copy
-    popped_dict["nested_key"] = "modified"
+    assert isinstance(popped_dict, dict)
+    popped_dict["nested_key"] = "modified"  # ty: ignore[invalid-assignment]
     # Since the key is already removed, this confirms it's a copy
 
     # Test popone on SubDict
@@ -328,7 +330,8 @@ def test_popone(tmp_path: Path) -> None:
     assert "child2" not in parent
 
     # Verify it's a deep copy
-    popped_nested["grandchild"] = "modified"
+    assert isinstance(popped_nested, dict)
+    popped_nested["grandchild"] = "modified"  # ty: ignore[invalid-assignment]
     # Already removed, so this confirms it's a copy
 
     # Pop a list from SubDict
@@ -337,16 +340,12 @@ def test_popone(tmp_path: Path) -> None:
     assert "child3" not in parent
 
     # Test with deeply nested subdictionaries
-    d["level1"] = {
-        "level2": {
-            "level3": {
-                "deep_value": "found"
-            }
-        }
-    }
+    d["level1"] = {"level2": {"level3": {"deep_value": "found"}}}
 
     level1 = d["level1"]
+    assert isinstance(level1, FoamFile.SubDict)
     level2 = level1["level2"]
+    assert isinstance(level2, FoamFile.SubDict)
     popped_level3 = level2.popone("level3")
 
     assert isinstance(popped_level3, dict)
