@@ -22,7 +22,7 @@ def test_add_to_mapping_dict_converts_to_multidict() -> None:
     result = add_to_mapping(d, "key1", 2)
 
     assert isinstance(result, MultiDict)
-    assert list(result.getall("key1")) == [1, 2]
+    assert list(result.getall("key1")) == [1, 2]  # ty: ignore[invalid-argument-type,too-many-positional-arguments]
 
 
 def test_add_to_mapping_dict_new_key() -> None:
