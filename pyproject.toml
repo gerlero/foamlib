@@ -80,7 +80,7 @@ test = [
 docs = [
     "foamlib[preprocessing]",
     "foamlib[postprocessing]",
-    "sphinx>=5,<9",
+    "sphinx>=5,<10",
     "sphinx_rtd_theme",
     "sphinxcontrib-mermaid"
 ]
