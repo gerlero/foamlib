@@ -214,7 +214,7 @@ def _parse_number(
     contents: bytes | bytearray,
     pos: int,
     *,
-    target: type[int] | type[float] | type[int | float] = int | float,
+    target: type[int] | type[float] | type[int | float] = int | float,  # ty: ignore[invalid-parameter-default]
 ) -> tuple[int | float, int]:
     is_numeric = _IS_POSSIBLE_INTEGER if target is int else _IS_POSSIBLE_FLOAT
     end = pos
