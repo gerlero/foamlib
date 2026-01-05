@@ -1,7 +1,7 @@
 
 ARG BASE=python:3.14-slim
 
-ARG OPENFOAM_VERSION=2506
+ARG OPENFOAM_VERSION=2512
 FROM microfluidica/openfoam:${OPENFOAM_VERSION} AS openfoam
 
 ARG VIRTUAL_ENV=/opt/venv
