@@ -1191,7 +1191,7 @@ class FoamFile(
         )
 
         if not include_header and isinstance(ret, Mapping) and "FoamFile" in ret:
-            del ret["FoamFile"]
+            del ret["FoamFile"]  # ty: ignore[not-subscriptable,invalid-argument-type]
             if len(ret) == 1 and None in ret:
                 val = ret[None]
                 assert not isinstance(val, Mapping)
@@ -1222,7 +1222,7 @@ class FoamFile(
         if "FoamFile" not in file and ensure_header:  # ty: ignore[invalid-argument-type,unsupported-operator]
             class_ = "dictionary"
             try:
-                internal_field = file["internalField"]  # ty: ignore[invalid-argument-type,non-subscriptable]
+                internal_field = file["internalField"]  # ty: ignore[invalid-argument-type,not-subscriptable]
             except KeyError:
                 pass
             else:
@@ -1410,7 +1410,7 @@ class FoamFieldFile(FoamFile):
                         keywords = cast("tuple[str, str]", keywords)
                         ret[i] = FoamFieldFile.BoundarySubDict(self, keywords)
 
-        return ret
+        return ret  # type: ignore[invalid-return-type]
 
     @overload
     def __getitem__(

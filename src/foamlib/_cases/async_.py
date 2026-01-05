@@ -80,6 +80,7 @@ class AsyncFoamCase(FoamCaseRunBase):
             calls = ValuedGenerator(self._cell_centers_calls())
 
             for coro in calls:
+                assert asyncio.iscoroutine(coro)
                 await coro
 
             return calls.value
@@ -356,6 +357,7 @@ class AsyncFoamCase(FoamCaseRunBase):
         calls = ValuedGenerator(self._clone_calls(dst))
 
         for coro in calls:
+            assert asyncio.iscoroutine(coro)
             await coro
 
         yield calls.value
