@@ -628,11 +628,17 @@ class FoamFile(
         # Calculate after spacing
         # For updates to existing subdictionary entries, preserve trailing whitespace if present
         if not add and keywords in parsed and len(keywords) > 1:
-            # Check if the existing entry ends with a newline
+            # Get the existing entry to check if it already includes a trailing newline
             entry_start, entry_end = parsed.entry_location(keywords)
             existing_content = parsed.contents[entry_start:entry_end]
-            # If the existing entry ends with a newline, preserve it
+            
+            # Some entries (like FoamFile header entries) include the trailing newline
+            # in their content, while others (regular subdictionary entries) don't
             if existing_content and existing_content[-1:] == b"\n":
+                # Entry includes newline, preserve it in the new content
+                after = b"\n"
+            elif parsed.contents[end:end+1] == b"\n":
+                # Entry doesn't include newline but there's one after it, preserve it
                 after = b"\n"
             else:
                 after = b""
