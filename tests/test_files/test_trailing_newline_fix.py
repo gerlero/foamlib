@@ -112,21 +112,29 @@ def test_multiple_subdictionary_entry_modifications(tmp_path: Path) -> None:
 
     # Check that all entries remain on separate lines
     result = test_file.read_text()
-    lines = [line for line in result.split("\n") if line.strip() and "{" not in line and "}" not in line and "myDict" not in line]
+    # Filter to get only entry lines (skip dict name, braces, empty lines)
+    lines = result.split("\n")
+    entry_lines = [
+        line for line in lines
+        if line.strip()
+        and "{" not in line
+        and "}" not in line
+        and "myDict" not in line
+    ]
 
     # Should have 4 lines (one for each key)
-    assert len(lines) == 4, f"Should have 4 entry lines, got {len(lines)}"
+    assert len(entry_lines) == 4, f"Should have 4 entry lines, got {len(entry_lines)}"
 
-    # Each key should be on its own line
-    assert any("key1" in line and "key2" not in line for line in lines), (
-        "key1 should be on its own line"
-    )
-    assert any("key2" in line and "key1" not in line and "key3" not in line for line in lines), (
-        "key2 should be on its own line"
-    )
-    assert any("key3" in line and "key2" not in line and "key4" not in line for line in lines), (
-        "key3 should be on its own line"
-    )
+    # Each key should be on its own line (no two keys on the same line)
+    for key in ["key1", "key2", "key3", "key4"]:
+        # Find lines containing this key
+        key_lines = [line for line in entry_lines if key in line]
+        assert len(key_lines) == 1, f"{key} should appear in exactly one line"
+        # Verify this line doesn't contain other keys
+        other_keys = [k for k in ["key1", "key2", "key3", "key4"] if k != key]
+        assert not any(
+            other_key in key_lines[0] for other_key in other_keys
+        ), f"{key} line should not contain other keys"
 
 
 def test_nested_subdictionary_entry_preserves_newline(tmp_path: Path) -> None:
