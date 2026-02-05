@@ -98,7 +98,7 @@ def test_write_read(tmp_path: Path) -> None:
         assert isinstance(sd, FoamFile.SubDict)
         lst = sd["list"]
         assert isinstance(lst, list)
-        lst[0] = 0
+        lst[0] = 0  # ty: ignore[invalid-assignment]
         assert lst == [0, 2, 3]
         assert sd["list"] == [1, 2, 3]
 

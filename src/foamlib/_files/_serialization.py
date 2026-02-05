@@ -377,7 +377,7 @@ def normalized(
             isinstance(d, Real)
             for d in data  # ty: ignore[not-iterable]
         ):
-            return DimensionSet(*data)  # ty: ignore[invalid-argument-type]
+            return DimensionSet(*data)  # ty: ignore[invalid-argument-type, not-iterable]
 
         # List
         case [*_], _ if not isinstance(data, tuple):

@@ -161,10 +161,12 @@ def test_list_with_dict() -> None:
     assert len(boundary) == 1
 
     upper_boundary = boundary[0]
+    assert isinstance(upper_boundary, (list, tuple))
     assert upper_boundary[0] == "upperBoundary"
-    assert upper_boundary[1]["type"] == "cyclic"
-    assert upper_boundary[1]["neighbourPatch"] == "lowerBoundary"
-    assert np.array_equal(upper_boundary[1]["faces"], [[3, 7, 6, 2]])
+    assert isinstance(upper_boundary[1], dict)
+    assert upper_boundary[1]["type"] == "cyclic"  # ty: ignore[invalid-argument-type]
+    assert upper_boundary[1]["neighbourPatch"] == "lowerBoundary"  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(upper_boundary[1]["faces"], [[3, 7, 6, 2]])  # ty: ignore[invalid-argument-type]
 
 
 def test_list_with_str() -> None:

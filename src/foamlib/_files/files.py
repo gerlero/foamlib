@@ -1193,7 +1193,7 @@ class FoamFile(
         if not include_header and isinstance(ret, Mapping) and "FoamFile" in ret:
             del ret["FoamFile"]  # ty: ignore[not-subscriptable,invalid-argument-type]
             if len(ret) == 1 and None in ret:
-                val = ret[None]
+                val = ret[None]  # ty: ignore[invalid-argument-type]
                 assert not isinstance(val, Mapping)
                 return val
 

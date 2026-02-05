@@ -241,7 +241,7 @@ class ParsedFile(
                     assert isinstance(sub, (dict, MultiDict))
                     parent = sub
                 assert keywords[-1] not in parent
-                parent[keywords[-1]] = {}
+                parent[keywords[-1]] = {}  # ty: ignore[invalid-assignment]
             elif len(keywords) == 1:
                 ret = add_to_mapping(ret, keywords[0], entry.data)  # ty: ignore[invalid-assignment]
             else:
