@@ -498,7 +498,7 @@ class FoamFile(
             raise ValueError(msg)
         return cast("Literal['ascii', 'binary']", ret)
 
-    @format.setter
+    @format.setter  # noqa: A003
     def format(self, value: Literal["ascii", "binary"]) -> None:
         self["FoamFile", "format"] = value
 
@@ -1356,7 +1356,7 @@ class FoamFieldFile(FoamFile):
                 raise TypeError(msg)
             return ret
 
-        @type.setter
+        @type.setter  # noqa: A003
         def type(self, data: str) -> None:
             self["type"] = data
 
