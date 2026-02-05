@@ -102,8 +102,9 @@ class AsyncFoamCase(FoamCaseRunBase):
         if cpus > 0:
             async with AsyncFoamCase._cpus_cond:
                 await AsyncFoamCase._cpus_cond.wait_for(
-                    lambda: AsyncFoamCase.max_cpus - AsyncFoamCase._reserved_cpus
-                    >= cpus
+                    lambda: (
+                        AsyncFoamCase.max_cpus - AsyncFoamCase._reserved_cpus >= cpus
+                    )
                 )
                 AsyncFoamCase._reserved_cpus += cpus
         try:

@@ -55,7 +55,7 @@ def test_csv_generator(
         assert len(case.key_value_pairs) > 0
         assert case.case_parameters[0].category == "grid"
         assert case.case_parameters[1].category == "initHeight"
-        assert case.case_parameters[0].name in ["res1"]
+        assert case.case_parameters[0].name == "res1"
         assert case.case_parameters[1].name in expected_heights
 
 
