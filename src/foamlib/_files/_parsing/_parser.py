@@ -166,9 +166,12 @@ def _parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
                 char = contents[end]
 
         if depth != 0:
-            raise FoamFileDecodeError(contents, pos, expected=")")
+            raise ParseError(contents, pos, expected=")")
 
-        return contents[pos:end].decode("ascii"), end
+        try:
+            return contents[pos:end].decode("ascii"), end
+        except UnicodeDecodeError:
+            raise ParseError(contents, pos, expected="token") from None
 
     if first == ord(b'"'):
         end = pos + 1
@@ -178,16 +181,24 @@ def _parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
                 if char == ord(b"\\"):
                     end += 2
                 elif char == ord(b'"'):
-                    return contents[pos : end + 1].decode(), end + 1
+                    try:
+                        return contents[pos : end + 1].decode(), end + 1
+                    except UnicodeDecodeError:
+                        raise ParseError(
+                            contents, pos, expected="quoted string"
+                        ) from None
                 else:
                     end += 1
 
-        raise FoamFileDecodeError(contents, pos, expected="end of quoted string")
+        raise ParseError(contents, pos, expected="end of quoted string")
 
     if first == ord(b"#") and second == ord(b"{"):
         if (end := contents.find(b"#}", pos + 2)) == -1:
-            raise FoamFileDecodeError(contents, len(contents), expected="#}")
-        return contents[pos : end + 2].decode(), end + 2
+            raise ParseError(contents, len(contents), expected="#}")
+        try:
+            return contents[pos : end + 2].decode(), end + 2
+        except UnicodeDecodeError:
+            raise ParseError(contents, pos, expected="token") from None
 
     raise ParseError(contents, pos, expected="token")
 
@@ -357,7 +368,14 @@ class _ASCIINumericListParser(Generic[_DType, _ElShape]):
         if self._elshape:
             data = data.replace(b"(", b" ").replace(b")", b" ")
 
-        data = data.decode("ascii")
+        try:
+            data = data.decode("ascii")
+        except UnicodeDecodeError as e:
+            raise ParseError(
+                contents,
+                pos,
+                expected=f"numeric list of type {self._dtype} and shape {self._elshape}",
+            ) from e
 
         try:
             ret = np.fromstring(data, sep=" ", dtype=self._dtype)
@@ -369,7 +387,14 @@ class _ASCIINumericListParser(Generic[_DType, _ElShape]):
             ) from e
 
         if self._elshape:
-            ret = ret.reshape((-1, *self._elshape))
+            try:
+                ret = ret.reshape((-1, *self._elshape))
+            except ValueError as e:
+                raise ParseError(
+                    contents,
+                    pos,
+                    expected=f"numeric list of type {self._dtype} and shape {self._elshape}",
+                ) from e
 
         if count is None:
             if not empty_ok and len(ret) == 0:
@@ -502,7 +527,10 @@ def _parse_ascii_faces_like_list(
         raise ParseError(contents, pos, expected="faces-like list")
 
     data = data.replace(b"(", b" ").replace(b")", b" ")
-    data = data.decode("ascii")
+    try:
+        data = data.decode("ascii")
+    except UnicodeDecodeError as e:
+        raise ParseError(contents, pos, expected="faces-like list") from e
 
     try:
         values = np.fromstring(data, sep=" ", dtype=int)
@@ -551,7 +579,10 @@ def _parse_binary_numeric_list(
     ret = np.frombuffer(contents, dtype=dtype, count=items, offset=pos).copy()
 
     if elshape:
-        ret = ret.reshape((-1, *elshape))
+        try:
+            ret = ret.reshape((-1, *elshape))
+        except ValueError as e:
+            raise ParseError(contents, pos, expected="binary numeric list") from e
 
     return ret, end + 1
 
@@ -888,25 +919,28 @@ def _parse_standalone_data_entry(
 
     try:
         entry1, pos1 = _parse_data(contents, pos)
-    except ParseError:
+    except (ParseError, FoamFileDecodeError, UnicodeDecodeError):
         pos1 = None
 
-    try:
-        entry2, pos2 = _parse_binary_numeric_list(
-            contents, pos, dtype=np.int32, elshape=()
-        )
-    except ParseError:
-        try:
-            entry2, pos2 = _parse_binary_numeric_list(
-                contents, pos, dtype=np.float64, elshape=()
+    entry2: StandaloneDataEntry | None = None
+    pos2: int | None = None
+    for binary_dtype, binary_elshape in (
+        (np.int32, ()),
+        (np.float64, ()),
+        (np.float64, (3,)),
+    ):
+        with contextlib.suppress(ParseError):
+            entry_candidate, pos_candidate = _parse_binary_numeric_list(
+                contents, pos, dtype=binary_dtype, elshape=binary_elshape
             )
-        except ParseError:
-            try:
-                entry2, pos2 = _parse_binary_numeric_list(
-                    contents, pos, dtype=np.float64, elshape=(3,)
-                )
-            except ParseError:
-                pos2 = None
+            # Always keep the result that advances the furthest: binary float64 data
+            # consumes count*8 bytes while int32 would only consume count*4 bytes for
+            # the same count, so float64 will always win when the data is truly float64.
+            # The int32 parser can accidentally succeed if the ) byte (0x29) happens to
+            # appear at position count*4 within the float64 binary data.
+            if pos2 is None or pos_candidate > pos2:
+                entry2 = entry_candidate
+                pos2 = pos_candidate
 
     match pos1, pos2:
         case None, None:
