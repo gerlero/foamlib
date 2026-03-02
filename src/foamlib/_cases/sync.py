@@ -165,7 +165,7 @@ class FoamCase(FoamCaseRunBase):
             pass
 
     @override
-    def _prepare(self, *, check: bool = True, log: bool = True) -> None:
+    def _prepare(self, *, check: bool = True, log: bool | str | os.PathLike[str] = True) -> None:
         for _ in self._prepare_calls(check=check, log=log):
             pass
 
@@ -177,7 +177,7 @@ class FoamCase(FoamCaseRunBase):
         parallel: bool | None = None,
         cpus: int | None = None,
         check: bool = True,
-        log: bool = True,
+        log: bool | str | os.PathLike[str] = True,
     ) -> None:
         """
         Run this case, or a specified command in the context of this case.
@@ -223,19 +223,19 @@ class FoamCase(FoamCaseRunBase):
             pass
 
     @override
-    def block_mesh(self, *, check: bool = True, log: bool = True) -> None:
+    def block_mesh(self, *, check: bool = True, log: bool | str | os.PathLike[str] = True) -> None:
         """Run blockMesh on this case."""
         for _ in self._block_mesh_calls(check=check, log=log):
             pass
 
     @override
-    def decompose_par(self, *, check: bool = True, log: bool = True) -> None:
+    def decompose_par(self, *, check: bool = True, log: bool | str | os.PathLike[str] = True) -> None:
         """Decompose this case for parallel running."""
         for _ in self._decompose_par_calls(check=check, log=log):
             pass
 
     @override
-    def reconstruct_par(self, *, check: bool = True, log: bool = True) -> None:
+    def reconstruct_par(self, *, check: bool = True, log: bool | str | os.PathLike[str] = True) -> None:
         """Reconstruct this case after parallel running."""
         for _ in self._reconstruct_par_calls(check=check, log=log):
             pass

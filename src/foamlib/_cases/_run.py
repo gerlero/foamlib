@@ -112,7 +112,7 @@ class FoamCaseRunBase(FoamCaseBase):
 
     @abstractmethod
     def _prepare(
-        self, *, check: bool = True, log: bool = True
+        self, *, check: bool = True, log: bool | str | os.PathLike[str] = True
     ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
@@ -124,25 +124,25 @@ class FoamCaseRunBase(FoamCaseBase):
         parallel: bool | None = None,
         cpus: int | None = None,
         check: bool = True,
-        log: bool = True,
+        log: bool | str | os.PathLike[str] = True,
     ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @abstractmethod
     def block_mesh(
-        self, *, check: bool = True, log: bool = True
+        self, *, check: bool = True, log: bool | str | os.PathLike[str] = True
     ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @abstractmethod
     def decompose_par(
-        self, *, check: bool = True, log: bool = True
+        self, *, check: bool = True, log: bool | str | os.PathLike[str] = True
     ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
     @abstractmethod
     def reconstruct_par(
-        self, *, check: bool = True, log: bool = True
+        self, *, check: bool = True, log: bool | str | os.PathLike[str] = True
     ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
@@ -262,13 +262,20 @@ class FoamCaseRunBase(FoamCaseBase):
 
     @contextmanager
     def __output(
-        self, cmd: Sequence[str | os.PathLike[str]] | str, *, log: bool
+        self,
+        cmd: Sequence[str | os.PathLike[str]] | str,
+        *,
+        log: bool | str | os.PathLike[str],
     ) -> Generator[tuple[int | TextIOBase, int | TextIOBase], None, None]:
-        if log:
-            with (self.path / f"log.{self.__cmd_name(cmd)}").open("a") as stdout:
-                yield stdout, STDOUT
-        else:
+        if log is False:
             yield DEVNULL, DEVNULL
+            return
+
+        if log is True:
+            log = f"log.{self.__cmd_name(cmd)}"
+
+        with (self.path / log).open("a") as stdout:
+            yield stdout, STDOUT
 
     @contextmanager
     def __process_stdout(
@@ -364,22 +371,22 @@ class FoamCaseRunBase(FoamCaseBase):
         yield self._copytree(self.path / "0.orig", self.path / "0", symlinks=True)
 
     def _block_mesh_calls(
-        self, *, check: bool, log: bool
+        self, *, check: bool, log: bool | str | os.PathLike[str]
     ) -> Generator[object | Coroutine[None, None, object], None, None]:
         yield self.run(["blockMesh"], cpus=0, check=check, log=log)
 
     def _decompose_par_calls(
-        self, *, check: bool, log: bool
+        self, *, check: bool, log: bool | str | os.PathLike[str]
     ) -> Generator[object | Coroutine[None, None, object], None, None]:
         yield self.run(["decomposePar"], cpus=0, check=check, log=log)
 
     def _reconstruct_par_calls(
-        self, *, check: bool, log: bool
+        self, *, check: bool, log: bool | str | os.PathLike[str]
     ) -> Generator[object | Coroutine[None, None, object], None, None]:
         yield self.run(["reconstructPar"], cpus=0, check=check, log=log)
 
     def _prepare_calls(
-        self, *, check: bool, log: bool
+        self, *, check: bool, log: bool | str | os.PathLike[str]
     ) -> Generator[object | Coroutine[None, None, object], None, None]:
         if (script_path := self.__prepare_script()) is not None:
             yield self.run([script_path], log=log, check=check)
@@ -394,7 +401,7 @@ class FoamCaseRunBase(FoamCaseBase):
         cpus: int | None = None,
         parallel: bool | None,
         check: bool,
-        log: bool,
+        log: bool | str | os.PathLike[str],
         **kwargs: Any,
     ) -> Generator[object | Coroutine[None, None, object], None, None]:
         if cmd is not None:
