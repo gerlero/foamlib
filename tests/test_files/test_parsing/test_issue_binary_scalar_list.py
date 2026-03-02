@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-
 from foamlib._files._parsing._parser import parse_located
 from foamlib._files._serialization import dumps
 
@@ -65,5 +64,7 @@ def test_binary_scalar_list_large_random() -> None:
         result = parse_located(content)
         parsed = result[()].data
 
-        assert isinstance(parsed, np.ndarray), f"seed={seed}: expected ndarray, got {type(parsed)}"
+        assert isinstance(parsed, np.ndarray), (
+            f"seed={seed}: expected ndarray, got {type(parsed)}"
+        )
         assert np.allclose(data, parsed), f"seed={seed}: data mismatch"
