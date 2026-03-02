@@ -71,3 +71,32 @@ def test_run_cmd_shell(flange: FoamCase) -> None:
 
 def test_path(flange: FoamCase) -> None:
     assert Path(flange) == flange.path
+
+
+def test_run_cmd_log_false(flange: FoamCase) -> None:
+    if not flange:
+        flange.restore_0_dir()
+
+    ans_path = (
+        Path(os.environ["FOAM_TUTORIALS"]) / "resources" / "geometry" / "flange.ans"
+    )
+    if not ans_path.exists():
+        ans_path = Path("flange.ans")
+
+    flange.run(["ansysToFoam", ans_path, "-scale", "0.001"], log=False)
+    assert not (flange.path / "log.ansysToFoam").exists()
+
+
+def test_run_cmd_custom_log(flange: FoamCase) -> None:
+    if not flange:
+        flange.restore_0_dir()
+
+    ans_path = (
+        Path(os.environ["FOAM_TUTORIALS"]) / "resources" / "geometry" / "flange.ans"
+    )
+    if not ans_path.exists():
+        ans_path = Path("flange.ans")
+
+    flange.run(["ansysToFoam", ans_path, "-scale", "0.001"], log="custom_ansys.log")
+    assert not (flange.path / "log.ansysToFoam").exists()
+    assert (flange.path / "custom_ansys.log").exists()

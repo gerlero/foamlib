@@ -78,7 +78,7 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
         parallel: bool | None = None,
         cpus: int | None = None,
         check: bool = True,
-        log: bool = True,
+        log: bool | str | os.PathLike[str] = True,
         fallback: bool = False,
     ) -> None:
         """

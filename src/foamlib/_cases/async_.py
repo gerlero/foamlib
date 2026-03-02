@@ -205,7 +205,9 @@ class AsyncFoamCase(FoamCaseRunBase):
         return [AsyncFoamCase.TimeDirectory(r) for r in ret]
 
     @override
-    async def _prepare(self, *, check: bool = True, log: bool = True) -> None:
+    async def _prepare(
+        self, *, check: bool = True, log: bool | str | os.PathLike[str] = True
+    ) -> None:
         for coro in self._prepare_calls(check=check, log=log):
             assert isinstance(coro, Awaitable)
             await coro
@@ -218,7 +220,7 @@ class AsyncFoamCase(FoamCaseRunBase):
         parallel: bool | None = None,
         cpus: int | None = None,
         check: bool = True,
-        log: bool = True,
+        log: bool | str | os.PathLike[str] = True,
     ) -> None:
         """
         Run this case, or a specified command in the context of this case.
@@ -265,21 +267,27 @@ class AsyncFoamCase(FoamCaseRunBase):
             await coro
 
     @override
-    async def block_mesh(self, *, check: bool = True, log: bool = True) -> None:
+    async def block_mesh(
+        self, *, check: bool = True, log: bool | str | os.PathLike[str] = True
+    ) -> None:
         """Run blockMesh on this case."""
         for coro in self._block_mesh_calls(check=check, log=log):
             assert isinstance(coro, Awaitable)
             await coro
 
     @override
-    async def decompose_par(self, *, check: bool = True, log: bool = True) -> None:
+    async def decompose_par(
+        self, *, check: bool = True, log: bool | str | os.PathLike[str] = True
+    ) -> None:
         """Decompose this case for parallel running."""
         for coro in self._decompose_par_calls(check=check, log=log):
             assert isinstance(coro, Awaitable)
             await coro
 
     @override
-    async def reconstruct_par(self, *, check: bool = True, log: bool = True) -> None:
+    async def reconstruct_par(
+        self, *, check: bool = True, log: bool | str | os.PathLike[str] = True
+    ) -> None:
         """Reconstruct this case after parallel running."""
         for coro in self._reconstruct_par_calls(check=check, log=log):
             assert isinstance(coro, Awaitable)
