@@ -108,7 +108,9 @@ async def test_run_cmd_log_false(flange: AsyncFoamCase) -> None:
         ans_path = Path("flange.ans")
 
     if isinstance(flange, AsyncSlurmFoamCase):
-        await flange.run(["ansysToFoam", ans_path, "-scale", "0.001"], log=False, fallback=True)
+        await flange.run(
+            ["ansysToFoam", ans_path, "-scale", "0.001"], log=False, fallback=True
+        )
     else:
         await flange.run(["ansysToFoam", ans_path, "-scale", "0.001"], log=False)
 
@@ -127,9 +129,15 @@ async def test_run_cmd_custom_log(flange: AsyncFoamCase) -> None:
         ans_path = Path("flange.ans")
 
     if isinstance(flange, AsyncSlurmFoamCase):
-        await flange.run(["ansysToFoam", ans_path, "-scale", "0.001"], log="custom_ansys.log", fallback=True)
+        await flange.run(
+            ["ansysToFoam", ans_path, "-scale", "0.001"],
+            log="custom_ansys.log",
+            fallback=True,
+        )
     else:
-        await flange.run(["ansysToFoam", ans_path, "-scale", "0.001"], log="custom_ansys.log")
+        await flange.run(
+            ["ansysToFoam", ans_path, "-scale", "0.001"], log="custom_ansys.log"
+        )
 
     assert not (flange.path / "log.ansysToFoam").exists()
     assert (flange.path / "custom_ansys.log").exists()
