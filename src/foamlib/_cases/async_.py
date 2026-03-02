@@ -80,6 +80,7 @@ class AsyncFoamCase(FoamCaseRunBase):
             calls = ValuedGenerator(self._cell_centers_calls())
 
             for coro in calls:
+                assert isinstance(coro, Awaitable)
                 await coro
 
             return calls.value
@@ -101,8 +102,9 @@ class AsyncFoamCase(FoamCaseRunBase):
         if cpus > 0:
             async with AsyncFoamCase._cpus_cond:
                 await AsyncFoamCase._cpus_cond.wait_for(
-                    lambda: AsyncFoamCase.max_cpus - AsyncFoamCase._reserved_cpus
-                    >= cpus
+                    lambda: (
+                        AsyncFoamCase.max_cpus - AsyncFoamCase._reserved_cpus >= cpus
+                    )
                 )
                 AsyncFoamCase._reserved_cpus += cpus
         try:
@@ -182,7 +184,7 @@ class AsyncFoamCase(FoamCaseRunBase):
             non-zero exit code.
         """
         for coro in self._clean_calls(check=check):
-            assert asyncio.iscoroutine(coro)
+            assert isinstance(coro, Awaitable)
             await coro
 
     @overload
@@ -205,7 +207,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     @override
     async def _prepare(self, *, check: bool = True, log: bool | str | os.PathLike[str] = True) -> None:
         for coro in self._prepare_calls(check=check, log=log):
-            assert asyncio.iscoroutine(coro)
+            assert isinstance(coro, Awaitable)
             await coro
 
     @override
@@ -259,35 +261,35 @@ class AsyncFoamCase(FoamCaseRunBase):
         for coro in self._run_calls(
             cmd=cmd, parallel=parallel, cpus=cpus, check=check, log=log
         ):
-            assert asyncio.iscoroutine(coro)
+            assert isinstance(coro, Awaitable)
             await coro
 
     @override
     async def block_mesh(self, *, check: bool = True, log: bool | str | os.PathLike[str] = True) -> None:
         """Run blockMesh on this case."""
         for coro in self._block_mesh_calls(check=check, log=log):
-            assert asyncio.iscoroutine(coro)
+            assert isinstance(coro, Awaitable)
             await coro
 
     @override
     async def decompose_par(self, *, check: bool = True, log: bool | str | os.PathLike[str] = True) -> None:
         """Decompose this case for parallel running."""
         for coro in self._decompose_par_calls(check=check, log=log):
-            assert asyncio.iscoroutine(coro)
+            assert isinstance(coro, Awaitable)
             await coro
 
     @override
     async def reconstruct_par(self, *, check: bool = True, log: bool | str | os.PathLike[str] = True) -> None:
         """Reconstruct this case after parallel running."""
         for coro in self._reconstruct_par_calls(check=check, log=log):
-            assert asyncio.iscoroutine(coro)
+            assert isinstance(coro, Awaitable)
             await coro
 
     @override
     async def restore_0_dir(self) -> None:
         """Restore the 0 directory from the 0.orig directory."""
         for coro in self._restore_0_dir_calls():
-            assert asyncio.iscoroutine(coro)
+            assert isinstance(coro, Awaitable)
             await coro
 
     @override
@@ -318,7 +320,7 @@ class AsyncFoamCase(FoamCaseRunBase):
         calls = ValuedGenerator(self._copy_calls(dst))
 
         for coro in calls:
-            assert asyncio.iscoroutine(coro)
+            assert isinstance(coro, Awaitable)
             await coro
 
         yield calls.value
@@ -356,6 +358,7 @@ class AsyncFoamCase(FoamCaseRunBase):
         calls = ValuedGenerator(self._clone_calls(dst))
 
         for coro in calls:
+            assert isinstance(coro, Awaitable)
             await coro
 
         yield calls.value

@@ -1,10 +1,10 @@
 [build-system]
-requires = ["uv_build>=0.9,<0.10"]
+requires = ["uv_build>=0.9,<0.11"]
 build-backend = "uv_build"
 
 [project]
 name = "foamlib"
-version = "1.5.5"
+version = "1.5.6"
 license = "GPL-3.0-only"
 license-files = ["LICENSE.txt"]
 description = "Pythonic interface for working with OpenFOAM"
@@ -80,7 +80,7 @@ test = [
 docs = [
     "foamlib[preprocessing]",
     "foamlib[postprocessing]",
-    "sphinx>=5,<9",
+    "sphinx>=5,<10",
     "sphinx_rtd_theme",
     "sphinxcontrib-mermaid"
 ]

@@ -162,7 +162,7 @@ def test_mesh(cavity: FoamCase) -> None:
 
     assert isinstance(points, np.ndarray)
     assert points.ndim == 2
-    assert points.shape[-1] == 3  # ty: ignore[non-subscriptable]
+    assert points.shape[-1] == 3  # ty: ignore[not-subscriptable]
 
 
 def test_internal_field(cavity: FoamCase) -> None:
