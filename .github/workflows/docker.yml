@@ -50,7 +50,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
@@ -61,14 +61,14 @@ jobs:
           push: ${{ github.event_name == 'push' }}
       - name: Push build cache (amd64)
         if: github.event_name == 'push'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           platforms: linux/amd64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-amd64
           cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-amd64,mode=max
       - name: Push build cache (arm64)
         if: github.event_name == 'push'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           platforms: linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-arm64
@@ -115,7 +115,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
@@ -129,7 +129,7 @@ jobs:
             OPENFOAM_VERSION=${{ matrix.openfoam-version }}
       - name: Push build cache (amd64)
         if: github.event_name == 'push'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           platforms: linux/amd64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-amd64
@@ -139,7 +139,7 @@ jobs:
             OPENFOAM_VERSION=${{ matrix.openfoam-version }}
       - name: Push build cache (arm64)
         if: github.event_name == 'push'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           platforms: linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache-openfoam${{ matrix.openfoam-version }}-arm64
