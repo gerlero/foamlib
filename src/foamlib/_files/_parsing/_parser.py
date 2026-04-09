@@ -378,7 +378,7 @@ class _ASCIINumericListParser(Generic[_DType, _ElShape]):
             ) from e
 
         try:
-            ret = np.fromstring(data, sep=" ", dtype=self._dtype)
+            ret = np.array(data.split(), dtype=self._dtype)
         except ValueError as e:
             raise ParseError(
                 contents,
@@ -414,140 +414,112 @@ _parse_ascii_symm_tensor_list = _ASCIINumericListParser(dtype=float, elshape=(6,
 _parse_ascii_tensor_list = _ASCIINumericListParser(dtype=float, elshape=(9,))
 
 
-_THREE_FACE_LIKE = re.compile(
-    rb"3(?:"
-    + _SKIP.pattern
-    + rb")?\((?:"
-    + _SKIP.pattern
-    + rb")?(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")(?:"
-    + _SKIP.pattern
-    + rb")?\)"
+_SUB_LIST_LIKE = re.compile(
+    rb"(?:" + _POSSIBLE_INTEGER.pattern + rb")(?:" + _SKIP.pattern + rb")?\([^()]*?\)"
 )
-_UNCOMMENTED_THREE_FACE_LIKE = re.compile(
-    rb"3\s*\(\s*(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")\s*\)",
+_UNCOMMENTED_SUB_LIST_LIKE = re.compile(
+    rb"(?:" + _POSSIBLE_INTEGER.pattern + rb")\s*\([^()]*?\)",
     re.ASCII,
 )
-_FOUR_FACE_LIKE = re.compile(
-    rb"4(?:"
-    + _SKIP.pattern
-    + rb")?\((?:"
-    + _SKIP.pattern
-    + rb")?(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")(?:"
-    + _SKIP.pattern
-    + rb")?\)"
-)
-_UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
-    rb"4\s*\(\s*(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")\s*\)",
-    re.ASCII,
-)
-_FACES_LIKE_LIST = re.compile(
+_LIST_OF_LISTS_LIKE = re.compile(
     rb"(?:(?:"
     + _SKIP.pattern
-    + rb")?(?:"
-    + _THREE_FACE_LIKE.pattern
-    + rb"|"
-    + _FOUR_FACE_LIKE.pattern
-    + rb"))*(?:"
+    + rb")?"
+    + _SUB_LIST_LIKE.pattern
+    + rb")*(?:"
     + _SKIP.pattern
     + rb")?\)"
 )
-_UNCOMMENTED_FACES_LIKE_LIST = re.compile(
-    rb"(?:\s*(?:"
-    + _UNCOMMENTED_THREE_FACE_LIKE.pattern
-    + rb"|"
-    + _UNCOMMENTED_FOUR_FACE_LIKE.pattern
-    + rb"))*\s*\)",
+_UNCOMMENTED_LIST_OF_LISTS_LIKE = re.compile(
+    rb"(?:\s*" + _UNCOMMENTED_SUB_LIST_LIKE.pattern + rb")*\s*\)",
     re.ASCII,
 )
+
+
+class _ASCIINumericListListParser(Generic[_DType]):
+    def __init__(self, *, dtype: type[_DType]) -> None:
+        self._dtype = dtype
+
+    def __call__(
+        self,
+        contents: bytes | bytearray,
+        pos: int,
+        *,
+        empty_ok: bool = False,
+    ) -> tuple[list[np.ndarray[tuple[int], np.dtype[np.float64 | np.int64]]], int]:
+        try:
+            count, pos = _parse_number(contents, pos, target=int)
+        except ParseError:
+            count = None
+        else:
+            if count < 0:
+                raise ParseError(contents, pos, expected="non-negative list count")
+            pos = _skip(contents, pos)
+
+        pos = _expect(contents, pos, b"(")
+
+        if match := _UNCOMMENTED_LIST_OF_LISTS_LIKE.match(contents, pos):
+            data = contents[pos : match.end() - 1]
+            pos = match.end()
+
+        elif match := _LIST_OF_LISTS_LIKE.match(contents, pos):
+            data = contents[pos : match.end() - 1]
+            pos = match.end()
+
+            data = _COMMENTS.sub(b" ", data)
+
+        if not match:
+            raise ParseError(contents, pos, expected="numeric list of lists")
+
+        data = data.replace(b"(", b" ").replace(b")", b" ")
+        try:
+            data = data.decode("ascii")
+        except UnicodeDecodeError as e:
+            raise ParseError(contents, pos, expected="numeric list of lists") from e
+
+        # Resolve to explicit numpy dtype to ensure platform-consistent bit width
+        # (Python's `int` maps to int32 on Windows with numpy, but OpenFOAM labels
+        # should always be 64-bit when read in ASCII).
+        np_dtype: type = np.int64 if self._dtype is int else np.float64
+
+        # Use np.array(data.split()) rather than np.fromstring to:
+        #   - avoid DeprecationWarning from np.fromstring when data contains
+        #     trailing non-numeric content (which we use to detect type mismatch)
+        #   - raise ValueError immediately on any non-parseable token (e.g. a
+        #     float '0.1' when dtype=np.int64), which is caught below as ParseError
+        try:
+            values = np.array(data.split(), dtype=np_dtype)
+        except ValueError as e:
+            raise ParseError(contents, pos, expected="numeric list of lists") from e
+
+        ret: list[np.ndarray] = []
+        i = 0
+        while i < len(values):
+            n = int(values[i])
+            ret.append(values[i + 1 : i + n + 1])
+            i += n + 1
+
+        if count is None:
+            if not empty_ok and len(ret) == 0:
+                raise ParseError(
+                    contents, pos, expected="non-empty numeric list of lists"
+                )
+        elif len(ret) != count:
+            raise ParseError(
+                contents, pos, expected=f"{count} elements (got {len(ret)})"
+            )
+
+        return ret, pos
+
+
+_parse_ascii_integer_list_list = _ASCIINumericListListParser(dtype=int)
+_parse_ascii_float_list_list = _ASCIINumericListListParser(dtype=float)
 
 
 def _parse_ascii_faces_like_list(
     contents: bytes | bytearray, pos: int
-) -> tuple[list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]], int]:
-    try:
-        count, pos = _parse_number(contents, pos, target=int)
-    except ParseError:
-        count = None
-    else:
-        if count < 0:
-            raise ParseError(contents, pos, expected="non-negative list count")
-        pos = _skip(contents, pos)
-
-    pos = _expect(contents, pos, b"(")
-
-    if match := _UNCOMMENTED_FACES_LIKE_LIST.match(contents, pos):
-        data = contents[pos : match.end() - 1]
-        pos = match.end()
-
-    elif match := _FACES_LIKE_LIST.match(contents, pos):
-        data = contents[pos : match.end() - 1]
-        pos = match.end()
-
-        data = _COMMENTS.sub(b" ", data)
-
-    if not match:
-        raise ParseError(contents, pos, expected="faces-like list")
-
-    data = data.replace(b"(", b" ").replace(b")", b" ")
-    try:
-        data = data.decode("ascii")
-    except UnicodeDecodeError as e:
-        raise ParseError(contents, pos, expected="faces-like list") from e
-
-    try:
-        values = np.fromstring(data, sep=" ", dtype=int)
-    except ValueError as e:
-        raise ParseError(contents, pos, expected="faces-like list") from e
-
-    ret: list[np.ndarray] = []
-    i = 0
-    while i < len(values):
-        n = values[i]
-        ret.append(values[i + 1 : i + n + 1])
-        i += n + 1
-
-    if count is not None and len(ret) != count:
-        raise ParseError(contents, pos, expected=f"{count} faces (got {len(ret)})")
-
-    return ret, pos
+) -> tuple[list[np.ndarray[tuple[int], np.dtype[np.int64]]], int]:
+    return _parse_ascii_integer_list_list(contents, pos)
 
 
 def _parse_binary_numeric_list(
@@ -916,6 +888,10 @@ def _parse_standalone_data_entry(
         return _parse_ascii_vector_list(contents, pos)
     with contextlib.suppress(ParseError):
         return _parse_ascii_faces_like_list(contents, pos)
+    # _parse_ascii_float_list_list is tried after faces-like (integer list-of-lists)
+    # to handle sparse/non-uniform float lists that look like n(v1 v2 ...) per row.
+    with contextlib.suppress(ParseError):
+        return _parse_ascii_float_list_list(contents, pos)
 
     try:
         entry1, pos1 = _parse_data(contents, pos)
