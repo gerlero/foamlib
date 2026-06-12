@@ -132,8 +132,10 @@ def normalized(
                             ret = add_to_mapping(ret, k, normalized_v)  # ty: ignore[invalid-assignment]
                         else:
                             if k in ret:
-                                msg = f"duplicate keyword found: {k!r}"
-                                raise ValueError(msg)
+                                warn(
+                                    f"Duplicate file keyword found: {k!r}. Only the last entry will be stored.",
+                                    stacklevel=2,
+                                )
                             ret[k] = normalized_v
 
                     case _:
@@ -165,8 +167,10 @@ def normalized(
                             ret = add_to_mapping(ret, k, normalized_v)  # ty: ignore[invalid-assignment]
                         else:
                             if k in ret:
-                                msg = f"duplicate keyword found: {k!r}"
-                                raise ValueError(msg)
+                                warn(
+                                    f"Duplicate subdictionary keyword found: {k!r}. Only the last entry will be stored.",
+                                    stacklevel=2,
+                                )
                             ret[k] = normalized_v
 
                     case _:
@@ -196,8 +200,11 @@ def normalized(
                             raise ValueError(msg)
 
                         if k in ret:
-                            msg = f"duplicate keyword found: {k!r}"
-                            raise ValueError(msg)
+                            warn(
+                                f"Duplicate dictionary keyword found: {k!r}. Only the last entry will be stored.",
+                                stacklevel=2,
+                            )
+
                         ret[k] = normalized_v
 
                     case _:
