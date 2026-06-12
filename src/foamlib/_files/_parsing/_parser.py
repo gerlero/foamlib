@@ -39,7 +39,7 @@ _ElShape = TypeVar(
 _Output = TypeVar("_Output", FileDict, Data, StandaloneData, str)
 
 _IS_TOKEN_START = [False] * 256
-for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$":
+for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$./":
     _IS_TOKEN_START[c] = True
 
 _IS_TOKEN_CONTINUATION = _IS_TOKEN_START.copy()
