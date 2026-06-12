@@ -19,16 +19,16 @@ print(
     f"foamlib (ASCII): {min(timeit.repeat(lambda: FoamFieldFile('U').internal_field, number=1))} s"
 )
 print(
-    f"PyFoam (binary): {
+    f"""PyFoam (binary): {
         min(
             timeit.repeat(
-                lambda: ParsedParameterFile('U_binary')['internalField'], number=1
+                lambda: ParsedParameterFile("U_binary")["internalField"], number=1
             )
         )
-    } s"
+    } s"""
 )
 print(
-    f"PyFoam (ASCII): {
-        min(timeit.repeat(lambda: ParsedParameterFile('U')['internalField'], number=1))
-    } s"
+    f"""PyFoam (ASCII): {
+        min(timeit.repeat(lambda: ParsedParameterFile("U")["internalField"], number=1))
+    } s"""
 )
