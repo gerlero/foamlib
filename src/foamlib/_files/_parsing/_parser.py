@@ -39,11 +39,6 @@ _ElShape = TypeVar(
 _Output = TypeVar("_Output", FileDict, Data, StandaloneData, str)
 
 _IS_TOKEN_START = [False] * 256
-# A word/token may start with a letter, underscore, '#'/'$' (directives and
-# variable expansions), or with '.'/'/' so that file paths (e.g.
-# "./../mech.yaml" or "/abs/path") are read as a single unquoted word, matching
-# OpenFOAM, which accepts such paths unquoted. Numbers are parsed before tokens,
-# so genuine floats like ".5" or "-.5" are still parsed as numbers.
 for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$./":
     _IS_TOKEN_START[c] = True
 
