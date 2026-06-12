@@ -1,7 +1,6 @@
 import pytest
-from foamlib import FoamFile, FoamFileDecodeError
+from foamlib import FoamFile
 from foamlib._files._parsing import ParsedFile
-from foamlib._files._serialization import normalized
 from multicollections import MultiDict
 
 CONTENTS = b"""
