@@ -4,6 +4,7 @@ import re
 import sys
 from types import EllipsisType
 from typing import Generic, Literal, TypeVar, overload
+from warnings import warn
 
 from foamlib._files._util import add_to_mapping
 
@@ -809,10 +810,9 @@ def _parse_dictionary(contents: bytes | bytearray, pos: int) -> tuple[Dict, int]
             )
 
         if keyword in ret:
-            raise FoamFileDecodeError(
-                contents,
-                pos,
-                expected=f"non-duplicate keyword in dictionary (got {keyword!r})",
+            warn(
+                f"Duplicate dictionary entry for keyword: {keyword!r} at position {pos}. Only the last entry will be retained.",
+                stacklevel=2,
             )
 
         pos = _skip(contents, pos)
@@ -874,13 +874,6 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
 
         keyword, pos = _parse_token(contents, pos)
 
-        if not keyword.startswith("#") and keyword in ret:
-            raise FoamFileDecodeError(
-                contents,
-                pos,
-                expected=f"non-duplicate keyword in subdictionary (got {keyword!r})",
-            )
-
         pos = _skip(contents, pos)
 
         if keyword.startswith("#"):
@@ -900,7 +893,14 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
                     pos = _skip(contents, pos)
                 pos = _expect(contents, pos, b";")
 
-        ret = add_to_mapping(ret, keyword, value)  # ty: ignore[invalid-assignment]
+        if keyword in ret and not keyword.startswith("#"):
+            warn(
+                f"Duplicate non-directive dictionary entry for keyword: {keyword!r} at position {pos}. Only the last entry will be retained.",
+                stacklevel=2,
+            )
+            ret[keyword] = value
+        else:
+            ret = add_to_mapping(ret, keyword, value)  # ty: ignore[invalid-assignment]
 
     return ret, pos
 
@@ -981,12 +981,6 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, in
     while (pos := _skip(contents, pos)) < len(contents):
         try:
             keyword, new_pos = _parse_token(contents, pos)
-            if not keyword.startswith("#") and keyword in ret:
-                raise FoamFileDecodeError(
-                    contents,
-                    pos,
-                    expected=f"non-duplicate keyword in file (got {keyword!r})",
-                )
 
             new_pos = _skip(contents, new_pos)
 
@@ -1006,7 +1000,16 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, in
                     else:
                         new_pos = _skip(contents, new_pos)
                     new_pos = _expect(contents, new_pos, b";")
-            ret = add_to_mapping(ret, keyword, value)  # ty: ignore[invalid-assignment]
+
+            if keyword in ret and not keyword.startswith("#"):
+                warn(
+                    f"Duplicate non-directive file entry for keyword: {keyword!r} at position {pos}. Only the last entry will be retained.",
+                    stacklevel=2,
+                )
+                ret[keyword] = value
+            else:
+                ret = add_to_mapping(ret, keyword, value)  # ty: ignore[invalid-assignment]
+
             pos = new_pos
         except ParseError:  # noqa: PERF203
             try:
@@ -1092,12 +1095,10 @@ def _parse_file_located(
                 ret.add((*_keywords, keyword), ParsedEntry(value, entry_start, new_pos))
             # Check if this is a subdictionary
             elif contents[new_pos : new_pos + 1] == b"{":
-                # Check for duplicates
                 if (*_keywords, keyword) in ret:
-                    raise FoamFileDecodeError(
-                        contents,
-                        entry_start,
-                        expected=f"non-duplicate entry for keyword: {keyword}",
+                    warn(
+                        f"Duplicate non-directive file entry for keyword: {keyword!r} at position {entry_start} (previous entry at position {ret[(*_keywords, keyword)].start}). Only the last entry will be retained.",
+                        stacklevel=2,
                     )
 
                 # Skip opening brace
@@ -1127,15 +1128,19 @@ def _parse_file_located(
                     new_pos = _skip(contents, new_pos)
                 new_pos = _expect(contents, new_pos, b";")
 
-                # Check for duplicates
-                if (*_keywords, keyword) in ret and not keyword.startswith("#"):
-                    raise FoamFileDecodeError(
-                        contents,
-                        entry_start,
-                        expected=f"non-duplicate entry for keyword: {keyword}",
+                if not keyword.startswith("#"):
+                    if (*_keywords, keyword) in ret:
+                        warn(
+                            f"Duplicate non-directive file entry for keyword: {keyword!r} at position {entry_start} (previous entry at position {ret[(*_keywords, keyword)].start}). Only the last entry will be retained.",
+                            stacklevel=2,
+                        )
+                    ret[(*_keywords, keyword)] = ParsedEntry(
+                        value, entry_start, new_pos
                     )
-
-                ret.add((*_keywords, keyword), ParsedEntry(value, entry_start, new_pos))
+                else:
+                    ret.add(
+                        (*_keywords, keyword), ParsedEntry(value, entry_start, new_pos)
+                    )
 
             pos = new_pos
         except ParseError:
