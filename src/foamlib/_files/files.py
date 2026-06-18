@@ -105,6 +105,9 @@ class FoamFile(
             self._file = file
             self._include_header = include_header
 
+        def __repr__(self) -> str:
+            return f"{type(self).__qualname__}({list(self)!r})"
+
         @override
         def __iter__(self) -> Iterator[str | None]:
             return self._file._iter(include_header=self._include_header)
@@ -137,6 +140,9 @@ class FoamFile(
         def __init__(self, file: "FoamFile", *, include_header: bool = False) -> None:
             self._file = file
             self._include_header = include_header
+
+        def __repr__(self) -> str:
+            return f"{type(self).__qualname__}({list(self)!r})"
 
         @override
         def __iter__(
@@ -177,6 +183,9 @@ class FoamFile(
         ) -> None:
             self._file = file
             self._include_header = include_header
+
+        def __repr__(self) -> str:
+            return f"{type(self).__qualname__}({list(self)!r})"
 
         @override
         def __iter__(
@@ -244,6 +253,9 @@ class FoamFile(
             def __init__(self, subdict: "FoamFile.SubDict") -> None:
                 self._subdict = subdict
 
+            def __repr__(self) -> str:
+                return f"{type(self).__qualname__}({list(self)!r})"
+
             @override
             def __iter__(self) -> Iterator[str]:
                 return self._subdict._file._iter(keywords=self._subdict._keywords)
@@ -267,6 +279,9 @@ class FoamFile(
         ):
             def __init__(self, subdict: "FoamFile.SubDict") -> None:
                 self._subdict = subdict
+
+            def __repr__(self) -> str:
+                return f"{type(self).__qualname__}({list(self)!r})"
 
             @override
             def __iter__(self) -> Iterator["Data | FoamFile.SubDict | None"]:
@@ -293,6 +308,9 @@ class FoamFile(
         ):
             def __init__(self, subdict: "FoamFile.SubDict") -> None:
                 self._subdict = subdict
+
+            def __repr__(self) -> str:
+                return f"{type(self).__qualname__}({list(self)!r})"
 
             @override
             def __iter__(

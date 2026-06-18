@@ -307,6 +307,21 @@ def test_popone(tmp_path: Path) -> None:
     popped_dict["nested_key"] = "modified"  # ty: ignore[invalid-assignment]
     # Since the key is already removed, this confirms it's a copy
 
+
+def test_view_repr(tmp_path: Path) -> None:
+    path = tmp_path / "testDict"
+    d = FoamFile(path)
+    d["key"] = "value"
+    d["sub"] = {"nested": 1}
+
+    # The view repr used to raise AttributeError because the base
+    # MappingView.__repr__ expects a _mapping attribute that these views
+    # do not set.
+    assert repr(d.keys()) == "FoamFile.KeysView(['key', 'sub'])"
+    assert "'value'" in repr(d.values())
+    assert "('key', 'value')" in repr(d.items())
+    assert repr(d["sub"].keys()) == "FoamFile.SubDict.KeysView(['nested'])"
+
     # Test popone on SubDict
     d["parent"] = {
         "child1": "value1",
