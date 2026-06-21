@@ -308,4 +308,4 @@ def read_catch2_benchmark(
 
     if column_names:
         table = table[column_names]
-    return table  # ty: ignore[invalid-return-type]
+    return table

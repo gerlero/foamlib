@@ -142,7 +142,8 @@ def test_example(tmp_path: Path) -> None:
     y = y[end]
     z = z[end]
 
-    DT = case.transport_properties["DT"].value  # ty: ignore[possibly-missing-attribute]
+    DT = case.transport_properties["DT"].value
+
     assert isinstance(DT, float)
 
     internal_field = case[0]["U"].internal_field

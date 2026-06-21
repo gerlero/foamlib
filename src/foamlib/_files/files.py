@@ -122,7 +122,8 @@ class FoamFile(
             )
 
         @override
-        def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
+        def __contains__(self, x: object) -> bool:
+
             if not isinstance(x, str) and x is not None:
                 return False
             keywords = (x,) if x is not None else ()
@@ -214,7 +215,8 @@ class FoamFile(
             )
 
         @override
-        def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
+        def __contains__(self, x: object) -> bool:
+
             return any(i == x for i in iter(self))
 
     class SubDict(
@@ -266,7 +268,8 @@ class FoamFile(
                 return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
 
             @override
-            def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
+            def __contains__(self, x: object) -> bool:
+
                 if not isinstance(x, str):
                     return False
                 return (
@@ -332,7 +335,8 @@ class FoamFile(
                 return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
 
             @override
-            def __contains__(self, x: object) -> bool:  # ty: ignore[invalid-method-override]
+            def __contains__(self, x: object) -> bool:
+
                 return any(i == x for i in iter(self))
 
         def __init__(
@@ -346,11 +350,11 @@ class FoamFile(
         def getall(
             self, keyword: str, /
         ) -> Collection["Data | FoamFile.SubDict | None"]:
-            return self._file.getall((*self._keywords, keyword))  # ty: ignore[invalid-return-type]
+            return self._file.getall((*self._keywords, keyword))
 
         @override
         def __getitem__(self, keyword: str) -> "Data | FoamFile.SubDict | None":
-            return self._file[(*self._keywords, keyword)]  # ty: ignore[invalid-return-type]
+            return self._file[(*self._keywords, keyword)]
 
         @overload
         def __setitem__(
@@ -370,7 +374,7 @@ class FoamFile(
                     raise TypeError(msg)
                 with self._file:
                     self.clear()
-                    self.extend(data)  # type: ignore[invalid-argument-type]
+                    self.extend(data)  # ty: ignore[invalid-argument-type]
                 return
 
             if isinstance(keyword, slice):
@@ -394,7 +398,7 @@ class FoamFile(
                     ret = deepcopy(ret)
                 self._file.popone((*self._keywords, keyword))
 
-            return ret  # ty: ignore[invalid-return-type]
+            return ret
 
         @override
         def __delitem__(self, keyword: str | slice) -> None:
@@ -438,7 +442,7 @@ class FoamFile(
             return FoamFile.SubDict.ItemsView(self)
 
         @override
-        def update(  # ty: ignore[invalid-method-override]
+        def update(
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike | None]
             | Iterable[tuple[str, DataLike | SubDictLike | None]] = (),
@@ -446,10 +450,10 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike | None,
         ) -> None:
             with self._file:
-                super().update(other, **kwargs)  # ty: ignore[invalid-argument-type]
+                super().update(other, **kwargs)
 
         @override
-        def extend(  # ty: ignore[invalid-method-override]
+        def extend(
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike | None]
             | Iterable[tuple[str, DataLike | SubDictLike | None]] = (),
@@ -457,10 +461,10 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike | None,
         ) -> None:
             with self._file:
-                super().extend(other, **kwargs)  # ty: ignore[invalid-argument-type]
+                super().extend(other, **kwargs)
 
         @override
-        def merge(  # ty: ignore[invalid-method-override]
+        def merge(
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike | None]
             | Iterable[tuple[str, DataLike | SubDictLike | None]] = (),
@@ -468,7 +472,7 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike | None,
         ) -> None:
             with self._file:
-                super().merge(other, **kwargs)  # ty: ignore[invalid-argument-type]
+                super().merge(other, **kwargs)
 
         @override
         def clear(self) -> None:
@@ -489,7 +493,7 @@ class FoamFile(
                 ret = ret[k]
                 assert isinstance(ret, Mapping)
 
-            return ret  # ty: ignore[invalid-return-type]
+            return ret
 
     @property
     def version(self) -> float:
@@ -604,7 +608,7 @@ class FoamFile(
                 float() | np.ndarray(),
                 _common.FIELD_KEYWORDS,
             ):
-                self.class_ = FoamFile._vol_field_class(data)  # ty: ignore[invalid-argument-type]
+                self.class_ = FoamFile._vol_field_class(data)
 
     def _calculate_spacing(
         self,
@@ -705,13 +709,13 @@ class FoamFile(
                 msg = f"Invalid keyword string: {keywords[-1]!r}"
                 raise ValueError(msg)
 
-        data = normalized(data, keywords=keywords)  # ty: ignore[no-matching-overload]
+        data = normalized(data, keywords=keywords)
 
         indentation = b"    " * (len(keywords) - 1)
 
         with self:
             self._write_header_if_needed(keywords)
-            self._update_class_for_field_if_needed(keywords, data)  # ty: ignore[invalid-argument-type]
+            self._update_class_for_field_if_needed(keywords, data)
 
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords, add=add)
@@ -749,7 +753,7 @@ class FoamFile(
                 parsed.put(keywords, ..., empty_dict_content)
 
                 for k, v in data.items():
-                    self[(*keywords, k)] = v  # ty: ignore[invalid-assignment]
+                    self[(*keywords, k)] = v
 
             elif keywords:
                 keywords = cast("tuple[str, Unpack[tuple[str, ...]]]", keywords)
@@ -884,10 +888,10 @@ class FoamFile(
     ) -> StandaloneData | _D: ...
 
     @override
-    def get(  # ty: ignore[invalid-method-override]
+    def get(
         self,
         keywords: str | tuple[str, ...] | None,
-        default: _D = None,  # ty: ignore[invalid-parameter-default]
+        default: _D = None,
         /,
     ) -> "Data | StandaloneData | FoamFile.SubDict | None | _D":
         return self.getone(keywords, default=default)
@@ -905,7 +909,7 @@ class FoamFile(
     ) -> StandaloneData: ...
 
     @override
-    def __getitem__(  # ty: ignore[invalid-method-override]
+    def __getitem__(
         self,
         keywords: str | tuple[str, ...] | None,
     ) -> "Data | StandaloneData | FoamFile.SubDict | None":
@@ -931,7 +935,7 @@ class FoamFile(
     ) -> None: ...
 
     @override
-    def __setitem__(  # ty: ignore[invalid-method-override]
+    def __setitem__(
         self,
         keywords: str | tuple[str, ...] | None | slice,
         data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
@@ -945,11 +949,11 @@ class FoamFile(
             with self:
                 with contextlib.suppress(FileNotFoundError):
                     self.clear()
-                self.extend(data)  # ty: ignore[invalid-argument-type]
+                self.extend(data)
             return
 
         assert not isinstance(keywords, slice)
-        self._perform_entry_operation(keywords, data, add=False)  # ty: ignore[invalid-argument-type,no-matching-overload]
+        self._perform_entry_operation(keywords, data, add=False)
 
     @override
     def __delitem__(self, keywords: str | tuple[str, ...] | None | slice) -> None:
@@ -980,7 +984,7 @@ class FoamFile(
     ) -> None: ...
 
     @override
-    def add(  # ty: ignore[invalid-method-override]
+    def add(
         self,
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike | None,
@@ -1019,7 +1023,7 @@ class FoamFile(
                 ret = deepcopy(ret)
             self._get_parsed().popone(keywords)
 
-        return ret  # ty: ignore[invalid-return-type]
+        return ret
 
     @overload
     def _iter(
@@ -1052,7 +1056,7 @@ class FoamFile(
     def __contains__(self, keywords: object) -> bool:
         """Check if the FoamFile contains the given keyword or tuple of keywords."""
         try:
-            keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
+            keywords = FoamFile._normalized_keywords(keywords)
         except (ValueError, TypeError):
             return False
 
@@ -1104,7 +1108,7 @@ class FoamFile(
         return FoamFile.ItemsView(self, include_header=include_header)
 
     @override
-    def update(  # ty: ignore[invalid-method-override]
+    def update(
         self,
         other: SupportsKeysAndGetItem[
             str | None,
@@ -1120,10 +1124,10 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
         with self:
-            super().update(other, **kwargs)  # ty: ignore[invalid-argument-type]
+            super().update(other, **kwargs)
 
     @override
-    def extend(  # ty: ignore[invalid-method-override]
+    def extend(
         self,
         other: SupportsKeysAndGetItem[
             str | None,
@@ -1139,10 +1143,10 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
         with self:
-            super().extend(other, **kwargs)  # ty: ignore[invalid-argument-type]
+            super().extend(other, **kwargs)
 
     @override
-    def merge(  # ty: ignore[invalid-method-override]
+    def merge(
         self,
         other: SupportsKeysAndGetItem[
             str | None, DataLike | StandaloneDataLike | SubDictLike | None
@@ -1154,7 +1158,7 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
         with self:
-            super().merge(other, **kwargs)  # ty: ignore[invalid-argument-type]
+            super().merge(other, **kwargs)
 
     @override
     def clear(self, include_header: bool = False) -> None:
@@ -1200,7 +1204,7 @@ class FoamFile(
         :param include_header: Whether to include the "FoamFile" header in the output.
             If `True`, the header will be included if it is present in the input object.
         """
-        file = parse(s, target=FileDict)  # ty: ignore[invalid-argument-type]
+        file = parse(s, target=FileDict)
 
         ret = (
             cast("StandaloneData", file[None])
@@ -1209,7 +1213,7 @@ class FoamFile(
         )
 
         if not include_header and isinstance(ret, Mapping) and "FoamFile" in ret:
-            del ret["FoamFile"]  # ty: ignore[not-subscriptable,invalid-argument-type]
+            del ret["FoamFile"]
             if len(ret) == 1 and None in ret:
                 val = ret[None]
                 assert not isinstance(val, Mapping)
@@ -1235,25 +1239,26 @@ class FoamFile(
         file = normalized(file)
 
         if not isinstance(file, Mapping):
-            file = {None: file}  # ty: ignore[invalid-assignment]
+            file = {None: file}
 
-        if "FoamFile" not in file and ensure_header:  # ty: ignore[invalid-argument-type,unsupported-operator]
+        if "FoamFile" not in file and ensure_header:
             class_ = "dictionary"
             try:
-                internal_field = file["internalField"]  # ty: ignore[invalid-argument-type,not-subscriptable]
+                internal_field = file["internalField"]
+
             except KeyError:
                 pass
             else:
                 if isinstance(internal_field, (float, np.ndarray)):
-                    class_ = FoamFile._vol_field_class(internal_field)  # ty: ignore[invalid-argument-type]
+                    class_ = FoamFile._vol_field_class(internal_field)
 
             new = MultiDict(
                 FoamFile={"version": 2.0, "format": "ascii", "class": class_}
             )
-            new.extend(file)  # ty: ignore[invalid-argument-type]
+            new.extend(file)
             file = new
 
-        return dumps(file, keywords=())  # ty: ignore[invalid-argument-type,possibly-missing-attribute]
+        return dumps(file, keywords=())
 
     @overload
     @staticmethod
@@ -1288,8 +1293,9 @@ class FoamFile(
                 return ()
             case str():
                 return (keywords,)
-            case tuple((*_,)) if all(isinstance(k, str) for k in keywords):  # ty: ignore[not-iterable]
-                return tuple(keywords)  # ty: ignore[invalid-argument-type,invalid-return-type]
+            case tuple((*_,)) if all(isinstance(k, str) for k in keywords):
+                return tuple(keywords)
+
             case slice(start=None, stop=None, step=None) if slice_ok:
                 return slice(None)
             case slice() if slice_ok:
@@ -1311,7 +1317,7 @@ class FoamFile(
             case float() | np.ndarray(shape=(_,)):
                 return "volScalarField"
             case _:
-                assert_never(field)  # ty: ignore[type-assertion-failure]
+                assert_never(field)
 
 
 class FoamFieldFile(FoamFile):
@@ -1360,7 +1366,7 @@ class FoamFieldFile(FoamFile):
             for r in ret:
                 if isinstance(r, FoamFile.SubDict):
                     assert isinstance(r, FoamFieldFile.BoundarySubDict)
-            return ret  # ty: ignore[invalid-return-type]
+            return ret
 
     class BoundarySubDict(FoamFile.SubDict):
         """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""
@@ -1428,7 +1434,7 @@ class FoamFieldFile(FoamFile):
                         keywords = cast("tuple[str, str]", keywords)
                         ret[i] = FoamFieldFile.BoundarySubDict(self, keywords)
 
-        return ret  # type: ignore[invalid-return-type]
+        return ret
 
     @overload
     def __getitem__(
@@ -1443,13 +1449,13 @@ class FoamFieldFile(FoamFile):
     ) -> StandaloneData: ...
 
     @override
-    def __getitem__(  # ty: ignore[invalid-method-override]
+    def __getitem__(
         self,
         keywords: str | tuple[str, ...] | None,
     ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None":
         keywords = FoamFieldFile._normalized_keywords(keywords)
 
-        ret = super().__getitem__(keywords)  # ty: ignore[no-matching-overload]
+        ret = super().__getitem__(keywords)
 
         if (
             keywords

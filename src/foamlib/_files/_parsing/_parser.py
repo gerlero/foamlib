@@ -149,7 +149,7 @@ def _parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
     if first_ok and (first != ord(b"#") or second != ord(b"{")):
         end = pos + 1
         depth = 0
-        char: int = second  # ty: ignore[invalid-assignment]
+        char: int = second
         with contextlib.suppress(IndexError):
             while True:
                 if (depth == 0 and _IS_TOKEN_CONTINUATION[char]) or (
@@ -226,7 +226,7 @@ def _parse_number(
     contents: bytes | bytearray,
     pos: int,
     *,
-    target: type[int] | type[float] | type[int | float] = int | float,  # ty: ignore[invalid-parameter-default]
+    target: type[int] | type[float] | type[int | float] = int | float,
 ) -> tuple[int | float, int]:
     is_numeric = _IS_POSSIBLE_INTEGER if target is int else _IS_POSSIBLE_FLOAT
     end = pos
@@ -900,7 +900,7 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
             )
             ret[keyword] = value
         else:
-            ret = add_to_mapping(ret, keyword, value)  # ty: ignore[invalid-assignment]
+            ret = add_to_mapping(ret, keyword, value)
 
     return ret, pos
 
@@ -1008,7 +1008,7 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, in
                 )
                 ret[keyword] = value
             else:
-                ret = add_to_mapping(ret, keyword, value)  # ty: ignore[invalid-assignment]
+                ret = add_to_mapping(ret, keyword, value)
 
             pos = new_pos
         except ParseError:  # noqa: PERF203
@@ -1045,7 +1045,7 @@ def parse(contents: bytes | bytearray | str, /, *, target: type[_Output]) -> _Ou
         elif target is str:
             ret, pos = _parse_token(contents, pos)
         else:
-            assert_never(target)  # ty: ignore[type-assertion-failure]
+            assert_never(target)
         _skip(contents, pos)
     except ParseError as e:
         raise e.make_fatal() from None
@@ -1057,7 +1057,7 @@ def parse(contents: bytes | bytearray | str, /, *, target: type[_Output]) -> _Ou
             expected="end of file",
         )
 
-    return ret  # ty: ignore[invalid-return-type]
+    return ret
 
 
 @dataclasses.dataclass

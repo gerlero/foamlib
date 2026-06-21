@@ -12,11 +12,11 @@ from foamlib.preprocessing.system import (
 def test_deprecated_simulation_parameters() -> None:
     """Test deprecated simulationParameters function."""
     from foamlib.preprocessing.system import (  # noqa: PLC0415
-        simulationParameters,  # ty: ignore[deprecated]
+        simulationParameters,
     )
 
     with pytest.deprecated_call():
-        instruction = simulationParameters(["key1", "key2"])  # ty: ignore[deprecated]
+        instruction = simulationParameters(["key1", "key2"])
 
     assert instruction.keys == ["key1", "key2"]
     assert str(instruction.file_name) == "system/simulationParameters"
@@ -25,11 +25,11 @@ def test_deprecated_simulation_parameters() -> None:
 def test_deprecated_control_dict() -> None:
     """Test deprecated controlDict function."""
     from foamlib.preprocessing.system import (  # noqa: PLC0415
-        controlDict,  # ty: ignore[deprecated]
+        controlDict,
     )
 
     with pytest.deprecated_call():
-        instruction = controlDict(["endTime"])  # ty: ignore[deprecated]
+        instruction = controlDict(["endTime"])
 
     assert instruction.keys == ["endTime"]
     assert str(instruction.file_name) == "system/controlDict"
@@ -38,11 +38,11 @@ def test_deprecated_control_dict() -> None:
 def test_deprecated_fv_schemes() -> None:
     """Test deprecated fvSchemes function."""
     from foamlib.preprocessing.system import (  # noqa: PLC0415
-        fvSchemes,  # ty: ignore[deprecated]
+        fvSchemes,
     )
 
     with pytest.deprecated_call():
-        instruction = fvSchemes(["ddtSchemes"])  # ty: ignore[deprecated]
+        instruction = fvSchemes(["ddtSchemes"])
 
     assert instruction.keys == ["ddtSchemes"]
     assert str(instruction.file_name) == "system/fvSchemes"
@@ -51,11 +51,11 @@ def test_deprecated_fv_schemes() -> None:
 def test_deprecated_fv_solution() -> None:
     """Test deprecated fvSolution function."""
     from foamlib.preprocessing.system import (  # noqa: PLC0415
-        fvSolution,  # ty: ignore[deprecated]
+        fvSolution,
     )
 
     with pytest.deprecated_call():
-        instruction = fvSolution(["solvers"])  # ty: ignore[deprecated]
+        instruction = fvSolution(["solvers"])
 
     assert instruction.keys == ["solvers"]
     assert str(instruction.file_name) == "system/fvSolution"
