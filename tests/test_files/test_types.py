@@ -24,19 +24,19 @@ def test_dimension_set_not_implemented() -> None:
     dims = DimensionSet(length=1, time=-2)
 
     # Test __add__ with non-DimensionSet
-    assert dims.__add__("string") == NotImplemented  # ty: ignore[invalid-argument-type]
+    assert dims.__add__("string") == NotImplemented
 
     # Test __sub__ with non-DimensionSet
-    assert dims.__sub__("string") == NotImplemented  # ty: ignore[invalid-argument-type]
+    assert dims.__sub__("string") == NotImplemented
 
     # Test __mul__ with non-DimensionSet
-    assert dims.__mul__("string") == NotImplemented  # ty: ignore[invalid-argument-type]
+    assert dims.__mul__("string") == NotImplemented
 
     # Test __truediv__ with non-DimensionSet
-    assert dims.__truediv__("string") == NotImplemented  # ty: ignore[invalid-argument-type]
+    assert dims.__truediv__("string") == NotImplemented
 
     # Test __pow__ with non-number
-    assert dims.__pow__("string") == NotImplemented  # ty: ignore[invalid-argument-type]
+    assert dims.__pow__("string") == NotImplemented
 
 
 def test_dimensioned() -> None:
@@ -105,13 +105,13 @@ def test_dimensioned_invalid_sequence() -> None:
 def test_dimensioned_invalid_type() -> None:
     """Test Dimensioned with invalid types."""
     with pytest.raises(TypeError, match="Invalid type"):
-        Dimensioned("string", DimensionSet())  # type: ignore[arg-type]
+        Dimensioned("string", DimensionSet())
 
 
 def test_dimensioned_invalid_name_type() -> None:
     """Test Dimensioned with invalid name type."""
     with pytest.raises(TypeError, match="Invalid type for Dimensioned name"):
-        Dimensioned(1.0, DimensionSet(), name=123)  # type: ignore[arg-type]
+        Dimensioned(1.0, DimensionSet(), name=123)
 
 
 def test_dimensioned_invalid_name_value() -> None:

@@ -20,7 +20,7 @@ def max_height_filter(table: pd.DataFrame, parameters: list[dict[str, str]]) -> 
         "y": [table["y"].max()],
         "z": [table["z"].max()],
     }
-    d.update(parameters)  # ty: ignore[no-matching-overload]
+    d.update(parameters)
     return pd.DataFrame(d)
 
 
@@ -42,7 +42,7 @@ probe_u.to_csv(
     index=False,
 )
 
-file = DataSource(file_name="U_freeSurface.raw", folder="freeSurface")  # ty: ignore[missing-argument]
+file = DataSource(file_name="U_freeSurface.raw", folder="freeSurface")
 surface_heights = load_tables(
     source=file, dir_name=root / "Cases", filter_table=max_height_filter
 )

@@ -138,7 +138,8 @@ x = x[end]
 y = y[end]
 z = z[end]
 
-DT = case.transport_properties["DT"].value  # ty: ignore[possibly-missing-attribute]
+DT = case.transport_properties["DT"].value
+
 internal_field = case[0]["T"].internal_field
 assert isinstance(internal_field, np.ndarray)
 U = internal_field[0]

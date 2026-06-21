@@ -72,14 +72,13 @@ class ParsedFile(
     @override
     def __getitem__(
         self, keywords: tuple[str, ...]
-    ) -> Data | StandaloneData | EllipsisType | None:  # ty: ignore[invalid-method-override]
+    ) -> Data | StandaloneData | EllipsisType | None:
+
         entry = self._parsed[keywords]
         return entry.data
 
     @override
-    def __setitem__(  # ty: ignore[invalid-method-override]
-        self, key: Never, value: Never
-    ) -> None:  # pragma: no cover
+    def __setitem__(self, key: Never, value: Never) -> None:  # pragma: no cover
         msg = "Use 'put' method instead"
         raise NotImplementedError(msg)
 
@@ -133,7 +132,7 @@ class ParsedFile(
     ) -> None: ...
 
     @override
-    def add(  # ty: ignore[invalid-method-override]
+    def add(
         self,
         keywords: tuple[str, ...],
         data: Data | StandaloneData | EllipsisType | None,
@@ -243,7 +242,7 @@ class ParsedFile(
                 assert keywords[-1] not in parent
                 parent[keywords[-1]] = {}
             elif len(keywords) == 1:
-                ret = add_to_mapping(ret, keywords[0], entry.data)  # ty: ignore[invalid-assignment]
+                ret = add_to_mapping(ret, keywords[0], entry.data)
             else:
                 grandparent: FileDict | SubDict = ret
                 for k in keywords[:-2]:

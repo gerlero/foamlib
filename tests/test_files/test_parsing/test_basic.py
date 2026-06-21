@@ -157,11 +157,16 @@ def test_parse_value() -> None:
     assert lst[0] == "hex"
     assert isinstance(lst[1], list)
     assert lst[1] == [0, 1, 2, 3, 4, 5, 6, 7]
-    assert isinstance(lst[2], list)  # ty: ignore[index-out-of-bounds]
-    assert lst[2] == [1, 1, 1]  # ty: ignore[index-out-of-bounds]
-    assert lst[3] == "simpleGrading"  # ty: ignore[index-out-of-bounds]
-    assert isinstance(lst[4], list)  # ty: ignore[index-out-of-bounds]
-    assert lst[4] == [1, 1, 1]  # ty: ignore[index-out-of-bounds]
+    assert isinstance(lst[2], list)
+
+    assert lst[2] == [1, 1, 1]
+
+    assert lst[3] == "simpleGrading"
+
+    assert isinstance(lst[4], list)
+
+    assert lst[4] == [1, 1, 1]
+
     assert ParsedFile(b"(a b; c d;)")[()] == [("a", "b"), ("c", "d")]
     assert ParsedFile(b"(a {b c;} d {e g;})")[()] == [
         ("a", {"b": "c"}),

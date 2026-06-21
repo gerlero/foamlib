@@ -162,7 +162,7 @@ def test_mesh(cavity: FoamCase) -> None:
 
     assert isinstance(points, np.ndarray)
     assert points.ndim == 2
-    assert points.shape[-1] == 3  # ty: ignore[not-subscriptable]
+    assert points.shape[-1] == 3
 
 
 def test_internal_field(cavity: FoamCase) -> None:
@@ -288,7 +288,7 @@ def test_popone(tmp_path: Path) -> None:
     # Verify the popped list is a copy, not a live reference
     assert isinstance(popped, list)
     assert isinstance(popped[0], int)
-    popped[0] = 999  # ty: ignore[invalid-assignment]
+    popped[0] = 999
     # Since the key is already removed, we can't check the original,
     # but we verified it's a proper list copy
 
@@ -304,7 +304,7 @@ def test_popone(tmp_path: Path) -> None:
 
     # Verify the popped dict is a deep copy
     assert isinstance(popped_dict, dict)
-    popped_dict["nested_key"] = "modified"  # ty: ignore[invalid-assignment]
+    popped_dict["nested_key"] = "modified"
     # Since the key is already removed, this confirms it's a copy
 
 
@@ -346,7 +346,7 @@ def test_view_repr(tmp_path: Path) -> None:
 
     # Verify it's a deep copy
     assert isinstance(popped_nested, dict)
-    popped_nested["grandchild"] = "modified"  # ty: ignore[invalid-assignment]
+    popped_nested["grandchild"] = "modified"
     # Already removed, so this confirms it's a copy
 
     # Pop a list from SubDict

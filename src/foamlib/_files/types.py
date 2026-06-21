@@ -43,7 +43,7 @@ class DimensionSet(NamedTuple):
         return f"{type(self).__name__}({', '.join(f'{n}={v}' for n, v in zip(self._fields, self, strict=True) if v != 0)})"
 
     @override
-    def __add__(self, other: "DimensionSet", /) -> "DimensionSet":  # ty: ignore[invalid-method-override]
+    def __add__(self, other: "DimensionSet", /) -> "DimensionSet":
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
@@ -64,7 +64,7 @@ class DimensionSet(NamedTuple):
         return self
 
     @override
-    def __mul__(self, other: "DimensionSet", /) -> "DimensionSet":  # ty: ignore[invalid-method-override]
+    def __mul__(self, other: "DimensionSet", /) -> "DimensionSet":
         if not isinstance(other, DimensionSet):
             return NotImplemented
 
