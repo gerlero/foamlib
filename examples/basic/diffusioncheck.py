@@ -131,27 +131,26 @@ case.run()
 
 internal_field = case[0].cell_centers().internal_field
 assert isinstance(internal_field, np.ndarray)
-x, y, z = internal_field.T
-
+x, y, _ = internal_field.T
 end = x == x.max()
 x = x[end]
 y = y[end]
-z = z[end]
 
-DT = case.transport_properties["DT"].value
+DT = case.transport_properties["DT"]
+assert isinstance(DT, Dimensioned)
 
-internal_field = case[0]["T"].internal_field
+internal_field = case[0]["U"].internal_field
 assert isinstance(internal_field, np.ndarray)
-U = internal_field[0]
+Ux, _, _ = internal_field  # ty: ignore[not-iterable]
 
 for time in case[1:]:
-    if U * time.time < 2 * x.max():
+    if Ux * time.time < 2 * x.max():
         continue
 
     internal_field = time["T"].internal_field
     assert isinstance(internal_field, np.ndarray)
-    T = internal_field[end]
-    analytical = 0.5 * erfc((y - 0.5) / np.sqrt(4 * DT * x / U))
+    T = internal_field[end]  # ty: ignore[invalid-argument-type]
+    analytical = 0.5 * erfc((y - 0.5) / np.sqrt(4 * DT.value * x / Ux))
     if np.allclose(T, analytical, atol=0.1):
         print(f"Time {time.time}: OK")
     else:

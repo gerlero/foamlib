@@ -20,7 +20,7 @@ class FoamDictInstruction(BaseModel):
     def get_value(self) -> Any:
         """Get the value from the FoamFile based on the instruction."""
         of_dict = FoamFile(self.file_name)
-        return of_dict.get(tuple(self.keys))
+        return of_dict.get(tuple(self.keys))  # ty: ignore[no-matching-overload]
 
 
 class FoamDictAssignment(BaseModel):
@@ -38,5 +38,5 @@ class FoamDictAssignment(BaseModel):
             err_msg = f"The file {of_file} does not exist."
             raise FileNotFoundError(err_msg)
         of_dict = FoamFile(of_file)
-        of_dict[tuple(self.instruction.keys)] = self.value
+        of_dict[tuple(self.instruction.keys)] = self.value  # ty: ignore[invalid-assignment]
         return of_dict

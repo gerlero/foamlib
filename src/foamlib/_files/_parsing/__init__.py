@@ -132,7 +132,7 @@ class ParsedFile(
     ) -> None: ...
 
     @override
-    def add(
+    def add(  # ty: ignore[invalid-method-override]
         self,
         keywords: tuple[str, ...],
         data: Data | StandaloneData | EllipsisType | None,
@@ -238,7 +238,7 @@ class ParsedFile(
                 for k in keywords[:-1]:
                     sub = parent[k]
                     assert isinstance(sub, (dict, MultiDict))
-                    parent = sub
+                    parent = sub  # ty: ignore[invalid-assignment]
                 assert keywords[-1] not in parent
                 parent[keywords[-1]] = {}
             elif len(keywords) == 1:
@@ -248,7 +248,7 @@ class ParsedFile(
                 for k in keywords[:-2]:
                     sub = grandparent[k]
                     assert isinstance(sub, (dict, MultiDict))
-                    grandparent = sub
+                    grandparent = sub  # ty: ignore[invalid-assignment]
                 sub = grandparent[keywords[-2]]
                 assert isinstance(sub, (dict, MultiDict))
                 grandparent[keywords[-2]] = add_to_mapping(

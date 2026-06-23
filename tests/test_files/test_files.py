@@ -98,7 +98,7 @@ def test_write_read(tmp_path: Path) -> None:
         assert isinstance(sd, FoamFile.SubDict)
         lst = sd["list"]
         assert isinstance(lst, list)
-        lst[0] = 0
+        lst[0] = 0  # ty: ignore[invalid-assignment]
         assert lst == [0, 2, 3]
         assert sd["list"] == [1, 2, 3]
 
@@ -170,7 +170,7 @@ def test_internal_field(cavity: FoamCase) -> None:
     assert isinstance(blocks, list)
     sizes = blocks[2]
     assert isinstance(sizes, list)
-    size = np.prod(sizes)
+    size = np.prod(sizes)  # ty: ignore[no-matching-overload]
 
     p_arr = np.zeros(size)
     U_arr = np.zeros((size, 3))
@@ -288,7 +288,7 @@ def test_popone(tmp_path: Path) -> None:
     # Verify the popped list is a copy, not a live reference
     assert isinstance(popped, list)
     assert isinstance(popped[0], int)
-    popped[0] = 999
+    popped[0] = 999  # ty: ignore[invalid-assignment]
     # Since the key is already removed, we can't check the original,
     # but we verified it's a proper list copy
 
@@ -304,7 +304,7 @@ def test_popone(tmp_path: Path) -> None:
 
     # Verify the popped dict is a deep copy
     assert isinstance(popped_dict, dict)
-    popped_dict["nested_key"] = "modified"
+    popped_dict["nested_key"] = "modified"  # ty: ignore[invalid-assignment]
     # Since the key is already removed, this confirms it's a copy
 
 
@@ -320,7 +320,9 @@ def test_view_repr(tmp_path: Path) -> None:
     assert repr(d.keys()) == "FoamFile.KeysView(['key', 'sub'])"
     assert "'value'" in repr(d.values())
     assert "('key', 'value')" in repr(d.items())
-    assert repr(d["sub"].keys()) == "FoamFile.SubDict.KeysView(['nested'])"
+    sub = d["sub"]
+    assert isinstance(sub, FoamFile.SubDict)
+    assert repr(sub.keys()) == "FoamFile.SubDict.KeysView(['nested'])"
 
     # Test popone on SubDict
     d["parent"] = {
@@ -346,7 +348,7 @@ def test_view_repr(tmp_path: Path) -> None:
 
     # Verify it's a deep copy
     assert isinstance(popped_nested, dict)
-    popped_nested["grandchild"] = "modified"
+    popped_nested["grandchild"] = "modified"  # ty: ignore[invalid-assignment]
     # Already removed, so this confirms it's a copy
 
     # Pop a list from SubDict
