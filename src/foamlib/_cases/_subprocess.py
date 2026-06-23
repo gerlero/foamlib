@@ -83,7 +83,9 @@ def run_sync(
             with selectors.DefaultSelector() as selector:
                 selector.register(proc.stdout, selectors.EVENT_READ)
                 selector.register(proc.stderr, selectors.EVENT_READ)
-                open_streams = {proc.stdout, proc.stderr}
+                assert isinstance(proc.stdout, TextIOBase)
+                assert isinstance(proc.stderr, TextIOBase)
+                open_streams: set[TextIOBase] = {proc.stdout, proc.stderr}
                 while open_streams:
                     # Check for new log file content
                     log_monitor.monitor_once()

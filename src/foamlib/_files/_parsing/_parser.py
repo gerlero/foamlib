@@ -149,7 +149,7 @@ def _parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
     if first_ok and (first != ord(b"#") or second != ord(b"{")):
         end = pos + 1
         depth = 0
-        char: int = second
+        char = contents[end]
         with contextlib.suppress(IndexError):
             while True:
                 if (depth == 0 and _IS_TOKEN_CONTINUATION[char]) or (
@@ -226,7 +226,7 @@ def _parse_number(
     contents: bytes | bytearray,
     pos: int,
     *,
-    target: type[int] | type[float] | type[int | float] = int | float,
+    target: type[int] | type[float] | type[int | float] = int | float,  # ty: ignore[invalid-parameter-default]
 ) -> tuple[int | float, int]:
     is_numeric = _IS_POSSIBLE_INTEGER if target is int else _IS_POSSIBLE_FLOAT
     end = pos
@@ -859,7 +859,7 @@ def _parse_data(contents: bytes | bytearray, pos: int) -> tuple[Data, int]:
     if len(entries) == 1:
         return entries[0], pos
 
-    return tuple(entries), pos
+    return tuple(entries), pos  # ty: ignore[invalid-return-type]
 
 
 def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict, int]:
@@ -972,7 +972,7 @@ def _parse_standalone_data(
     if len(entries) == 1:
         return entries[0], pos
 
-    return tuple(entries), pos
+    return tuple(entries), pos  # ty: ignore[invalid-return-type]
 
 
 def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, int]:
@@ -1045,7 +1045,7 @@ def parse(contents: bytes | bytearray | str, /, *, target: type[_Output]) -> _Ou
         elif target is str:
             ret, pos = _parse_token(contents, pos)
         else:
-            assert_never(target)
+            assert_never(target)  # ty: ignore[type-assertion-failure]
         _skip(contents, pos)
     except ParseError as e:
         raise e.make_fatal() from None
@@ -1057,7 +1057,7 @@ def parse(contents: bytes | bytearray | str, /, *, target: type[_Output]) -> _Ou
             expected="end of file",
         )
 
-    return ret
+    return ret  # ty: ignore[invalid-return-type]
 
 
 @dataclasses.dataclass

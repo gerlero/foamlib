@@ -142,21 +142,20 @@ def test_example(tmp_path: Path) -> None:
     y = y[end]
     z = z[end]
 
-    DT = case.transport_properties["DT"].value
-
-    assert isinstance(DT, float)
+    DT = case.transport_properties["DT"]
+    assert isinstance(DT, Dimensioned)
 
     internal_field = case[0]["U"].internal_field
     assert isinstance(internal_field, np.ndarray)
-    U = internal_field[0]
-    assert isinstance(U, (int, float))
+    Ux, _, _ = internal_field  # ty: ignore[not-iterable]
+    assert isinstance(Ux, (int, float))
 
     for time in case[1:]:
-        if U * time.time < 2 * x.max():
+        if Ux * time.time < 2 * x.max():
             continue
 
         internal_field = time["T"].internal_field
         assert isinstance(internal_field, np.ndarray)
-        numerical = internal_field[end]
-        analytical = 0.5 * erfc((y - 0.5) / np.sqrt(4 * DT * x / U))
+        numerical = internal_field[end]  # ty: ignore[invalid-argument-type]
+        analytical = 0.5 * erfc((y - 0.5) / np.sqrt(4 * DT.value * x / Ux))
         assert numerical == pytest.approx(analytical, abs=1e-1)
