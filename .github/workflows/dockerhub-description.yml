@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Modify README.md for Docker Hub
       run: |
         sed -i "s|^\s*#\s\+\(.\+\)|# [\1]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)|" README.md
