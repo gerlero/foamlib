@@ -165,6 +165,18 @@ def test_serialize_data() -> None:
     assert dumps(normalized("div(phi,U)")) == b"div(phi,U)"
 
 
+def test_faces_like_list() -> None:
+    faces_like_list = normalized([[1, 2, 3], [4, 5, 6, 7]])
+    assert isinstance(faces_like_list, list)
+    assert isinstance(faces_like_list[0], np.ndarray)
+    assert faces_like_list[0].dtype == int
+    assert faces_like_list[0].tolist() == [1, 2, 3]
+    assert isinstance(faces_like_list[1], np.ndarray)
+    assert faces_like_list[1].dtype == int
+    assert faces_like_list[1].tolist() == [4, 5, 6, 7]
+    assert dumps(faces_like_list) == b"(3(1 2 3) 4(4 5 6 7))"
+
+
 def test_serialize_file() -> None:
     assert FoamFile.dumps(1.0, ensure_header=False) == b"1.0"
     assert (
