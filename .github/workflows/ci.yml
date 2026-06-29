@@ -57,10 +57,10 @@ jobs:
         slurm: [false]
         include:
           - openfoam-version: 2606
-            python-version: '3.13'
+            python-version: '3.14'
             slurm: true
           - openfoam-version: 13
-            python-version: '3.13'
+            python-version: '3.14'
             slurm: true
           - openfoam-version: 2006
             python-version: '3.10'
