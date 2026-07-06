@@ -211,7 +211,7 @@ class ParsedFile(
     ) -> tuple[int, int]:
         if add or keywords not in self._parsed:
             if len(keywords) > 1:
-                assert self[keywords[:-1]] is ...
+                assert self[keywords[:-1]] is ...  # ty: ignore[invalid-argument-type]
                 start, end = self.entry_location(keywords[:-1])
                 end = self.contents.rindex(b"}", start, end)
             else:
