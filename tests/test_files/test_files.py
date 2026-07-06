@@ -220,10 +220,14 @@ def test_binary_field(cavity: FoamCase) -> None:
     cavity.clean()
 
     p_arr = np.arange(len(p_bin)) * 1e-6
+    assert isinstance(p_arr, np.ndarray)
+    assert p_arr.shape == p_bin.shape
     U_arr = np.full_like(U_bin, [-1e-6, 1e-6, 0]) * np.arange(len(U_bin))[:, np.newaxis]
+    assert U_arr.shape == U_bin.shape
+    assert isinstance(U_arr, np.ndarray)
 
     cavity[0]["p"].internal_field = p_arr
-    cavity[0]["U"].internal_field = U_arr
+    cavity[0]["U"].internal_field = U_arr  # ty: ignore[invalid-assignment]
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
     U = cavity[0]["U"].internal_field
@@ -247,10 +251,14 @@ def test_compressed_field(cavity: FoamCase) -> None:
     cavity.clean()
 
     p_arr = np.arange(len(p_bin)) * 1e-6
+    assert isinstance(p_arr, np.ndarray)
+    assert p_arr.shape == p_bin.shape
     U_arr = np.full_like(U_bin, [-1e-6, 1e-6, 0]) * np.arange(len(U_bin))[:, np.newaxis]
+    assert isinstance(U_arr, np.ndarray)
+    assert U_arr.shape == U_bin.shape
 
     cavity[0]["p"].internal_field = p_arr
-    cavity[0]["U"].internal_field = U_arr
+    cavity[0]["U"].internal_field = U_arr  # ty: ignore[invalid-assignment]
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
     U = cavity[0]["U"].internal_field

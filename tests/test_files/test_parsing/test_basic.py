@@ -50,8 +50,8 @@ def test_parse_value() -> None:
     assert isinstance(field, np.ndarray)
     assert field.dtype == float
     assert field.shape == (2, 3)
-    assert np.array_equal(field[0], [np.nan, np.inf, -np.nan], equal_nan=True)
-    assert np.array_equal(field[1], [1e3, 0.1, 0.0])
+    assert np.array_equal(field[0], [np.nan, np.inf, -np.nan], equal_nan=True)  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(field[1], [1e3, 0.1, 0.0])  # ty: ignore[invalid-argument-type]
     field = ParsedFile(b"nonuniform List<symmTensor> 0()")[()]
     assert isinstance(field, np.ndarray)
     assert field.dtype == float
