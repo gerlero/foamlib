@@ -52,16 +52,16 @@ def test_get_cells_coords(tmp_path: Path) -> None:
     points = file[None]
     assert isinstance(points, np.ndarray)
 
-    assert np.array_equal(points[0], [0, 0, 0])
-    assert np.array_equal(points[1], [0.15707963268, 0, 0])
-    assert np.array_equal(points[2], [0.314159265359, 0, 0])
-    assert np.array_equal(points[3], [0.471238898038, 0, 0])
-    assert np.array_equal(points[4], [0.628318530718, 0, 0])
-    assert np.array_equal(points[5], [0, 0, 0])
-    assert np.array_equal(points[6], [0.15707963268, 0, 0])
-    assert np.array_equal(points[7], [0.314159265359, 0, 0])
-    assert np.array_equal(points[8], [0.471238898038, 0, 0])
-    assert np.array_equal(points[9], [0.628318530718, 0, 0])
+    assert np.array_equal(points[0], [0, 0, 0])  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(points[1], [0.15707963268, 0, 0])  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(points[2], [0.314159265359, 0, 0])  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(points[3], [0.471238898038, 0, 0])  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(points[4], [0.628318530718, 0, 0])  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(points[5], [0, 0, 0])  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(points[6], [0.15707963268, 0, 0])  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(points[7], [0.314159265359, 0, 0])  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(points[8], [0.471238898038, 0, 0])  # ty: ignore[invalid-argument-type]
+    assert np.array_equal(points[9], [0.628318530718, 0, 0])  # ty: ignore[invalid-argument-type]
 
     assert len(points) == 10
 

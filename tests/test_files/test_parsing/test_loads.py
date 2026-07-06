@@ -108,7 +108,8 @@ def test_loads() -> None:
     assert isinstance(faces[1], np.ndarray)
     assert faces[1].shape == (7,)
     assert faces[1].dtype == np.int32
-    assert np.array_equal(faces[1][faces[0][0] : faces[0][1]], [904040, 904479, 924424])
+    assert np.array_equal(faces[1][faces[0][0] : faces[0][1]], [904040, 904479, 924424])  # ty: ignore[invalid-argument-type]
     assert np.array_equal(
-        faces[1][faces[0][1] : faces[0][2]], [3516631, 3516634, 3516633, 3516632]
+        faces[1][faces[0][1] : faces[0][2]],  # ty: ignore[invalid-argument-type]
+        [3516631, 3516634, 3516633, 3516632],
     )
