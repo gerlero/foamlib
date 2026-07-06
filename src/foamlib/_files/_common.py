@@ -1,4 +1,4 @@
-def _expect_field(keywords: object) -> bool:
+def _expect_field(keywords: tuple[str, ...]) -> bool:
     match keywords:
         case ("internalField",):
             return True
@@ -11,7 +11,7 @@ def _expect_field(keywords: object) -> bool:
 
 
 class _FieldKeywords:
-    def __eq__(self, keywords: object) -> bool:
+    def __eq__(self, keywords: tuple[str, ...]) -> bool:  # ty: ignore[invalid-method-override]
         return _expect_field(keywords)
 
     __hash__ = None
