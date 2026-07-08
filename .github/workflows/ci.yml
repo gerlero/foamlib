@@ -19,9 +19,9 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v7
     - name: Lint with Ruff
-      uses: astral-sh/ruff-action@v3
+      uses: astral-sh/ruff-action@v4
     - name: Format with Ruff
-      uses: astral-sh/ruff-action@v3
+      uses: astral-sh/ruff-action@v4
       with:
         args: 'format --check'
 
