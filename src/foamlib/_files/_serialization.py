@@ -281,7 +281,7 @@ def normalized(
         case [Real(), *rest], () if not isinstance(data, tuple) and all(
             isinstance(r, Real) for r in rest
         ):
-            return normalized(np.asarray(data), keywords=keywords, format_=format_)  # ty: ignore[no-matching-overload]
+            return normalized(np.asarray(data), keywords=keywords, format_=format_)
 
         # Other possible numeric standalone data (n x 3 floats)
         case [_, *_], () if not isinstance(data, tuple) and all(
@@ -301,7 +301,7 @@ def normalized(
             )
             for r in data
         ):
-            return normalized(np.asarray(data), keywords=keywords, format_=format_)  # ty: ignore[no-matching-overload]
+            return normalized(np.asarray(data), keywords=keywords, format_=format_)
 
         # Uniform field (scalar)
         case Real(), _common.FIELD_KEYWORDS:
