@@ -18,8 +18,6 @@ Tensor: TypeAlias = float | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.floa
 """An OpenFOAM scalar, vector, symmetric tensor, or full tensor."""
 TensorLike: TypeAlias = (
     Tensor
-    | np.floating
-    | np.integer
     | Sequence[float | np.floating | np.integer]
     | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.floating | np.integer]]
 )
@@ -29,9 +27,7 @@ Field: TypeAlias = (
     float | np.ndarray[tuple[int] | tuple[int, Literal[3, 6, 9]], np.dtype[np.floating]]
 )
 """An OpenFOAM field of scalars, vectors, symmetric tensors, or full tensors."""
-FieldLike: TypeAlias = (
-    Field | np.floating | np.integer | TensorLike | Sequence[TensorLike]
-)
+FieldLike: TypeAlias = Field | TensorLike | Sequence[TensorLike]
 """Any type that could be interpreted as a :type:`Field`."""
 
 Dict: TypeAlias = dict[str, "Data | Dict"]
