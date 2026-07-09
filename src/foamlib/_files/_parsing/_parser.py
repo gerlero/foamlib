@@ -37,7 +37,9 @@ _NumpyDType = TypeVar("_NumpyDType", np.float64, np.float32, np.int64, np.int32)
 _ElShape = TypeVar(
     "_ElShape", tuple[()], tuple[Literal[3]], tuple[Literal[6]], tuple[Literal[9]]
 )
-_Output = TypeVar("_Output", FileDict, Data, StandaloneData, str)
+_Output = TypeVar(
+    "_Output", FileDict, Data, StandaloneData, DataEntry, StandaloneDataEntry, str
+)
 
 _IS_TOKEN_START = [False] * 256
 for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$./":
@@ -814,6 +816,7 @@ def _parse_dictionary(contents: bytes | bytearray, pos: int) -> tuple[Dict, int]
                 f"Duplicate dictionary entry for keyword: {keyword!r} at position {pos}. Only the last entry will be retained.",
                 stacklevel=2,
             )
+            del ret[keyword]
 
         pos = _skip(contents, pos)
 
@@ -898,6 +901,7 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
                 f"Duplicate non-directive dictionary entry for keyword: {keyword!r} at position {pos}. Only the last entry will be retained.",
                 stacklevel=2,
             )
+            del ret[keyword]
             ret[keyword] = value
         else:
             ret = add_to_mapping(ret, keyword, value)
@@ -1006,9 +1010,9 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, in
                     f"Duplicate non-directive file entry for keyword: {keyword!r} at position {pos}. Only the last entry will be retained.",
                     stacklevel=2,
                 )
-                ret[keyword] = value
-            else:
-                ret = add_to_mapping(ret, keyword, value)
+                del ret[keyword]
+
+            ret = add_to_mapping(ret, keyword, value)
 
             pos = new_pos
         except ParseError:  # noqa: PERF203
@@ -1040,8 +1044,12 @@ def parse(contents: bytes | bytearray | str, /, *, target: type[_Output]) -> _Ou
             ret, pos = _parse_file(contents, pos)
         elif target == Data:
             ret, pos = _parse_data(contents, pos)
+        elif target == DataEntry:
+            ret, pos = _parse_data_entry(contents, pos)
         elif target == StandaloneData:
             ret, pos = _parse_standalone_data(contents, pos)
+        elif target == StandaloneDataEntry:
+            ret, pos = _parse_standalone_data_entry(contents, pos)
         elif target is str:
             ret, pos = _parse_token(contents, pos)
         else:
@@ -1100,6 +1108,7 @@ def _parse_file_located(
                         f"Duplicate non-directive file entry for keyword: {keyword!r} at position {entry_start} (previous entry at position {ret[(*_keywords, keyword)].start}). Only the last entry will be retained.",
                         stacklevel=2,
                     )
+                    del ret[(*_keywords, keyword)]
 
                 # Skip opening brace
                 new_pos += 1
@@ -1134,6 +1143,7 @@ def _parse_file_located(
                             f"Duplicate non-directive file entry for keyword: {keyword!r} at position {entry_start} (previous entry at position {ret[(*_keywords, keyword)].start}). Only the last entry will be retained.",
                             stacklevel=2,
                         )
+                        del ret[(*_keywords, keyword)]
                     ret[(*_keywords, keyword)] = ParsedEntry(
                         value, entry_start, new_pos
                     )

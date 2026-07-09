@@ -34,8 +34,9 @@ from ..typing import (
     SubDictLike,
 )
 from ._io import FoamFileIO
+from ._normalization import normalized
 from ._parsing import parse
-from ._serialization import dumps, normalized
+from ._serialization import dumps
 from ._util import SupportsKeysAndGetItem
 from .types import Dimensioned, DimensionSet
 
@@ -695,7 +696,15 @@ class FoamFile(
                 msg = f"Invalid keyword string: {keywords[-1]!r}"
                 raise ValueError(msg)
 
-        data = normalized(data, keywords=keywords)  # ty: ignore[no-matching-overload]
+        match keywords, data:
+            case (), _:
+                data = normalized(data, target=StandaloneData)  # ty: ignore[no-matching-overload]
+            case _, {}:
+                data = normalized(data, target=SubDict, keywords=keywords)  # ty: ignore[no-matching-overload]
+            case _, None:
+                pass
+            case _, _:
+                data = normalized(data, target=Data, keywords=keywords)  # ty: ignore[no-matching-overload]
 
         indentation = b"    " * (len(keywords) - 1)
 
@@ -739,11 +748,11 @@ class FoamFile(
                 parsed.put(keywords, ..., empty_dict_content)
 
                 for k, v in data.items():
-                    self[(*keywords, k)] = v
+                    self[(*keywords, k)] = v  # ty: ignore[invalid-assignment]
 
             elif keywords:
                 keywords = cast("tuple[str, Unpack[tuple[str, ...]]]", keywords)
-                val = dumps(data, keywords=keywords, format_=format_)
+                val = dumps(data, keywords=keywords, format_=format_)  # ty: ignore[invalid-argument-type]
 
                 # When updating existing subdictionary entries, check if the existing entry
                 # includes indentation in its boundaries. If so, we need to preserve it.
@@ -781,17 +790,17 @@ class FoamFile(
                     if keywords in parsed and not keywords[-1].startswith("#"):
                         raise KeyError(keywords)
 
-                    parsed.add(keywords, data, content)
+                    parsed.add(keywords, data, content)  # ty: ignore[no-matching-overload]
                 else:
-                    parsed.put(keywords, data, content)
+                    parsed.put(keywords, data, content)  # ty: ignore[no-matching-overload]
 
             else:
                 if add and () in parsed:
                     raise KeyError(None)
 
-                content = before + dumps(data, keywords=(), format_=format_) + after
+                content = before + dumps(data, keywords=(), format_=format_) + after  # ty: ignore[invalid-argument-type]
 
-                parsed.put((), data, content)
+                parsed.put((), data, content)  # ty: ignore[no-matching-overload]
 
     @overload
     @with_default
@@ -894,7 +903,7 @@ class FoamFile(
     ) -> StandaloneData: ...
 
     @override
-    def __getitem__(
+    def __getitem__(  # ty: ignore[invalid-method-override]
         self,
         keywords: str | tuple[str, ...] | None,
     ) -> "Data | StandaloneData | FoamFile.SubDict | None":
@@ -920,7 +929,7 @@ class FoamFile(
     ) -> None: ...
 
     @override
-    def __setitem__(
+    def __setitem__(  # ty: ignore[invalid-method-override]
         self,
         keywords: str | tuple[str, ...] | None | slice,
         data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
@@ -1221,15 +1230,15 @@ class FoamFile(
             If ``True``, a header will be included if it is not already present in the
             input object.
         """
-        file = normalized(file)
-
         if not isinstance(file, Mapping):
             file = {None: file}
+
+        file = normalized(file, target=FileDict)  # ty: ignore[no-matching-overload]
 
         if "FoamFile" not in file and ensure_header:
             class_ = "dictionary"
             try:
-                internal_field = file["internalField"]  # ty: ignore[invalid-argument-type]
+                internal_field = file["internalField"]
 
             except KeyError:
                 pass
@@ -1245,15 +1254,15 @@ class FoamFile(
                         )
                     )
                 ):
-                    class_ = FoamFile._vol_field_class(internal_field)  # ty: ignore[invalid-argument-type]
+                    class_ = FoamFile._vol_field_class(internal_field)
 
             new: FileDict = MultiDict(
                 FoamFile={"version": 2.0, "format": "ascii", "class": class_}
             )
-            new.extend(file)  # ty: ignore[invalid-argument-type]
+            new.extend(file)
             file = new
 
-        return dumps(file, keywords=())  # ty: ignore[invalid-argument-type]
+        return dumps(file, keywords=())
 
     @overload
     @staticmethod

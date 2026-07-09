@@ -70,7 +70,7 @@ class ParsedFile(
     ) -> Data | EllipsisType | None: ...
 
     @override
-    def __getitem__(
+    def __getitem__(  # ty: ignore[invalid-method-override]
         self, keywords: tuple[str, ...]
     ) -> Data | StandaloneData | EllipsisType | None:
 
@@ -78,7 +78,7 @@ class ParsedFile(
         return entry.data
 
     @override
-    def __setitem__(self, key: Never, value: Never) -> None:  # pragma: no cover
+    def __setitem__(self, key: Never, value: Never) -> None:  # ty: ignore[invalid-method-override] # pragma: no cover
         msg = "Use 'put' method instead"
         raise NotImplementedError(msg)
 

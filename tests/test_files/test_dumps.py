@@ -1,6 +1,8 @@
 import numpy as np
 from foamlib import Dimensioned, DimensionSet, FoamFile
-from foamlib._files._serialization import dumps, normalized
+from foamlib._files._normalization import normalized
+from foamlib._files._serialization import dumps
+from foamlib.typing import Data
 from multicollections import MultiDict
 
 
@@ -14,44 +16,59 @@ def test_serialize_data() -> None:
     assert dumps(normalized(("word", "word"), keywords=())) == b"word word"
     assert dumps(normalized('"a string"')) == b'"a string"'
     assert (
-        dumps(normalized(1, keywords=("internalField",)), keywords=("internalField",))
-        == b"uniform 1.0"
-    )
-    assert (
-        dumps(normalized(1.0, keywords=("internalField",)), keywords=("internalField",))
+        dumps(
+            normalized(1, target=Data, keywords=("internalField",)),  # ty: ignore[no-matching-overload]
+            keywords=("internalField",),
+        )
         == b"uniform 1.0"
     )
     assert (
         dumps(
-            normalized(1.0e-3, keywords=("internalField",)), keywords=("internalField",)
+            normalized(1.0, target=Data, keywords=("internalField",)),  # ty: ignore[no-matching-overload]
+            keywords=("internalField",),
+        )
+        == b"uniform 1.0"
+    )
+    assert (
+        dumps(
+            normalized(1.0e-3, target=Data, keywords=("internalField",)),  # ty: ignore[no-matching-overload]
+            keywords=("internalField",),
         )
         == b"uniform 0.001"
     )
     assert dumps(normalized([1.0, 2.0, 3.0])) == b"(1.0 2.0 3.0)"
     assert (
         dumps(
-            normalized([1, 2, 3], keywords=("internalField",)),
+            normalized([1, 2, 3], target=Data, keywords=("internalField",)),  # ty: ignore[no-matching-overload]
             keywords=("internalField",),
         )
         == b"uniform (1.0 2.0 3.0)"
     )
     assert (
         dumps(
-            normalized([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], keywords=("internalField",)),
+            normalized(  # ty: ignore[no-matching-overload]
+                [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                target=Data,
+                keywords=("internalField",),
+            ),
             keywords=("internalField",),
         )
         == b"nonuniform List<scalar> 10(1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0)"
     )
     assert (
         dumps(
-            normalized([[1, 2, 3], [4, 5, 6]], keywords=("internalField",)),
+            normalized(  # ty: ignore[no-matching-overload]
+                [[1, 2, 3], [4, 5, 6]],
+                target=Data,
+                keywords=("internalField",),
+            ),
             keywords=("internalField",),
         )
         == b"nonuniform List<vector> 2((1.0 2.0 3.0) (4.0 5.0 6.0))"
     )
     assert (
         dumps(
-            normalized(1, keywords=("internalField",), format_="binary"),
+            normalized(1, target=Data, keywords=("internalField",), binary=True),  # ty: ignore[no-matching-overload]
             keywords=("internalField",),
             format_="binary",
         )
@@ -59,7 +76,7 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            normalized(1.0, keywords=("internalField",), format_="binary"),
+            normalized(1.0, target=Data, keywords=("internalField",), binary=True),  # ty: ignore[no-matching-overload]
             keywords=("internalField",),
             format_="binary",
         )
@@ -67,7 +84,12 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            normalized([1, 2, 3], keywords=("internalField",), format_="binary"),
+            normalized(  # ty: ignore[no-matching-overload]
+                [1, 2, 3],
+                target=Data,
+                keywords=("internalField",),
+                binary=True,
+            ),
             keywords=("internalField",),
             format_="binary",
         )
@@ -75,10 +97,11 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            normalized(
+            normalized(  # ty: ignore[no-matching-overload]
                 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                target=Data,
                 keywords=("internalField",),
-                format_="binary",
+                binary=True,
             ),
             keywords=("internalField",),
             format_="binary",
@@ -87,10 +110,11 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            normalized(
+            normalized(  # ty: ignore[no-matching-overload]
                 [[1, 2, 3], [4, 5, 6]],
+                target=Data,
                 keywords=("internalField",),
-                format_="binary",
+                binary=True,
             ),
             keywords=("internalField",),
             format_="binary",
@@ -99,10 +123,11 @@ def test_serialize_data() -> None:
     )
     assert (
         dumps(
-            normalized(
+            normalized(  # ty: ignore[no-matching-overload]
                 np.array([1, 2], dtype=np.float32),
+                target=Data,
                 keywords=("internalField",),
-                format_="binary",
+                binary=True,
             ),
             keywords=("internalField",),
             format_="binary",
