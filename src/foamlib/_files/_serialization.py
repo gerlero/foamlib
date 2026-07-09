@@ -77,7 +77,7 @@ def normalized(
     *,
     keywords: None = ...,
     format_: Literal["ascii", "binary"] | None = ...,
-) -> Data: ...
+) -> Dict: ...
 
 
 @overload
