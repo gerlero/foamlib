@@ -2,7 +2,6 @@
 
 import sys
 from collections.abc import Mapping, Sequence
-from numbers import Integral, Real
 from typing import Literal, TypeAlias
 
 if sys.version_info >= (3, 11):
@@ -19,8 +18,9 @@ Tensor: TypeAlias = float | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.floa
 """An OpenFOAM scalar, vector, symmetric tensor, or full tensor."""
 TensorLike: TypeAlias = (
     Tensor
-    | Real
-    | Sequence[float | Real]
+    | np.floating
+    | np.integer
+    | Sequence[float | np.floating | np.integer]
     | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.floating | np.integer]]
 )
 """Any type that could be interpreted as a :type:`Tensor`."""
@@ -29,7 +29,9 @@ Field: TypeAlias = (
     float | np.ndarray[tuple[int] | tuple[int, Literal[3, 6, 9]], np.dtype[np.floating]]
 )
 """An OpenFOAM field of scalars, vectors, symmetric tensors, or full tensors."""
-FieldLike: TypeAlias = Field | Real | TensorLike | Sequence[TensorLike]
+FieldLike: TypeAlias = (
+    Field | np.floating | np.integer | TensorLike | Sequence[TensorLike]
+)
 """Any type that could be interpreted as a :type:`Field`."""
 
 Dict: TypeAlias = dict[str, "Data | Dict"]
@@ -39,10 +41,10 @@ DictLike: TypeAlias = Mapping[str, "DataLike | DictLike"]
 
 KeywordEntry: TypeAlias = tuple["DataEntry", "Data | Dict"]
 """An OpenFOAM keyword entry (i.e., a key-value pair)."""
-KeywordEntryLike: TypeAlias = tuple["DataEntryLike", "Data | DictLike"]
+KeywordEntryLike: TypeAlias = tuple["DataEntryLike", "DataLike | DictLike"]
 """Any 2-tuple that could be interpreted as a :type:`KeywordEntry`."""
 
-List = list["DataEntry | KeywordEntry | Dict"]
+List: TypeAlias = list["DataEntry | KeywordEntry | Dict"]
 """An OpenFOAM list."""
 ListLike: TypeAlias = Sequence["DataEntryLike | KeywordEntryLike | DictLike"]
 """Any sequence that could be interpreted as a :type:`List`."""
@@ -57,7 +59,7 @@ DataEntry: TypeAlias = (
 A single OpenFOAM value.
 """
 DataEntryLike: TypeAlias = (
-    DataEntry | Integral | Real | DimensionSetLike | ListLike | FieldLike
+    DataEntry | np.integer | np.floating | DimensionSetLike | ListLike | FieldLike
 )
 """Any type that could be interpreted as a :type:`DataEntry`."""
 
