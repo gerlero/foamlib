@@ -78,8 +78,8 @@ test = [
     "scipy>=1,<2",
 ]
 docs = [
-    "foamlib[preprocessing]",
-    "foamlib[postprocessing]",
+    {include-group = "preprocessing"},
+    {include-group = "postprocessing"},
     "sphinx>=5,<10",
     "sphinx_rtd_theme",
     "sphinxcontrib-mermaid"
