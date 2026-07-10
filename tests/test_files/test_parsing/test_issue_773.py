@@ -1,7 +1,9 @@
 import pytest
 from foamlib import FoamFile
+from foamlib._files._normalization import normalized
 from foamlib._files._parsing import ParsedFile
-from foamlib._files._serialization import dumps, normalized
+from foamlib._files._serialization import dumps
+from foamlib.typing import Data
 from multicollections import MultiDict
 
 
@@ -74,7 +76,8 @@ def test_add_directives() -> None:
         #directive value1
         #directive value2
     """)
-    parsed.add(("#directive",), normalized("newValue"), dumps(normalized("newValue")))
+    new_value = normalized("newValue", target=Data, keywords=("#directive",))  # ty: ignore[no-matching-overload]
+    parsed.add(("#directive",), new_value, dumps(new_value))
     assert parsed[("#directive",)] == "value1"  # Should not overwrite or warn
 
 
@@ -87,7 +90,8 @@ def test_write_other() -> None:
         ("b", MultiDict([("entry1", "value2"), ("entry1", "value3")])),
     ]
     with pytest.warns(match="entry1"):
-        parsed.put(("list",), normalized(new_list), dumps(normalized(new_list)))
+        new_list = normalized(new_list, target=Data, keywords=("list",))  # ty: ignore[no-matching-overload]
+    parsed.put(("list",), new_list, dumps(new_list))
     assert parsed[("list",)] == [
         ("a", {"entry1": "value1"}),
         ("b", {"entry1": "value3"}),
