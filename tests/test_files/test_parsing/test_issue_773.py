@@ -13,6 +13,7 @@ def test_read() -> None:
                 entry1 value1;
                 entry1 value2;
             """)
+    assert len(parsed) == 1
     assert parsed[("entry1",)] == "value2"
 
 
@@ -29,7 +30,9 @@ def test_read_directives() -> None:
         #directive value1
         #directive value2
     """)
-    assert parsed[("#directive",)] == "value1"  # Should not overwrite or warn
+    assert len(parsed) == 2
+    assert parsed[("#directive",)] == "value1"
+    assert parsed.getall(("#directive",)) == ["value1", "value2"]
 
 
 def test_read_mixed() -> None:
@@ -39,8 +42,11 @@ def test_read_mixed() -> None:
             entry2 value2;
             entry1 value3;
         """)
-    assert parsed[("entry1",)] == "value3"
-    assert parsed[("entry2",)] == "value2"
+    assert len(parsed) == 2
+    assert list(parsed.as_dict().items()) == [
+        ("entry2", "value2"),
+        ("entry1", "value3"),
+    ]
 
 
 def test_read_subdictionary() -> None:
@@ -52,6 +58,7 @@ def test_read_subdictionary() -> None:
                 entry1 value2;
             }
         """)
+    assert len(parsed) == 2
     assert parsed[("subDict", "entry1")] == "value2"
 
 
@@ -60,6 +67,7 @@ def test_read_other() -> None:
         parsed = ParsedFile(b"""
             list (a { entry1 value1; } b { entry1 value2; entry1 value3; });
         """)
+    assert len(parsed) == 1
     assert parsed[("list",)] == [
         ("a", {"entry1": "value1"}),
         ("b", {"entry1": "value3"}),
@@ -76,6 +84,9 @@ def test_add_directives() -> None:
         #directive value1
         #directive value2
     """)
+    assert len(parsed) == 2
+    assert parsed[("#directive",)] == "value1"
+    assert parsed.getall(("#directive",)) == ["value1", "value2"]
     new_value = normalized("newValue", target=Data, keywords=("#directive",))  # ty: ignore[no-matching-overload]
     parsed.add(("#directive",), new_value, dumps(new_value))
     assert parsed[("#directive",)] == "value1"  # Should not overwrite or warn
@@ -85,6 +96,7 @@ def test_write_other() -> None:
     parsed = ParsedFile(b"""
         list (a { entry1 value1; } b { entry1 value2; });
     """)
+    assert len(parsed) == 1
     new_list = [
         ("a", {"entry1": "value1"}),
         ("b", MultiDict([("entry1", "value2"), ("entry1", "value3")])),
