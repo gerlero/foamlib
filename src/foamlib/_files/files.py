@@ -858,7 +858,6 @@ class FoamFile(
         keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
 
         parsed = self._get_parsed()
-        keywords = cast("tuple[str, Unpack[tuple[str, ...]]] | tuple[()]", keywords)
         ret = parsed[keywords]
         if ret is ...:
             assert keywords
@@ -984,7 +983,6 @@ class FoamFile(
         data: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
         keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
-        keywords = cast("tuple[str, Unpack[tuple[str, ...]]] | tuple[()]", keywords)
         self._perform_entry_operation(keywords, data, add=True)
 
     @overload
@@ -1428,14 +1426,14 @@ class FoamFieldFile(FoamFile):
 
         ret = list(super().getall(keywords))
 
-        if keywords[0] == "boundaryField":
-            for i, r in enumerate(ret):
-                if isinstance(r, FoamFile.SubDict):
-                    if len(keywords) == 1:
-                        keywords = cast("tuple[str]", keywords)
+        match keywords:
+            case ("boundaryField",):
+                for i, r in enumerate(ret):
+                    if isinstance(r, FoamFile.SubDict):
                         ret[i] = FoamFieldFile.BoundariesSubDict(self, keywords)
-                    elif len(keywords) == 2:
-                        keywords = cast("tuple[str, str]", keywords)
+            case ("boundaryField", _):
+                for i, r in enumerate(ret):
+                    if isinstance(r, FoamFile.SubDict):
                         ret[i] = FoamFieldFile.BoundarySubDict(self, keywords)
 
         return ret
@@ -1461,17 +1459,12 @@ class FoamFieldFile(FoamFile):
 
         ret = super().__getitem__(keywords)
 
-        if (
-            keywords
-            and keywords[0] == "boundaryField"
-            and isinstance(ret, FoamFile.SubDict)
-        ):
-            if len(keywords) == 1:
-                keywords = cast("tuple[str]", keywords)
-                ret = FoamFieldFile.BoundariesSubDict(self, keywords)
-            elif len(keywords) == 2:
-                keywords = cast("tuple[str, str]", keywords)
-                ret = FoamFieldFile.BoundarySubDict(self, keywords)
+        if isinstance(ret, FoamFile.SubDict):
+            match keywords:
+                case ("boundaryField",):
+                    return FoamFieldFile.BoundariesSubDict(self, keywords)
+                case ("boundaryField", _):
+                    return FoamFieldFile.BoundarySubDict(self, keywords)
 
         return ret
 
