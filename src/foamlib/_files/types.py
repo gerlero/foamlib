@@ -1,8 +1,13 @@
 import sys
 from numbers import Real
-from typing import TYPE_CHECKING, Literal, NamedTuple, TypeVar, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -16,7 +21,17 @@ if TYPE_CHECKING:
 _T = TypeVar("_T", bound=np.floating | np.integer)
 
 
-class DimensionSet(NamedTuple):
+class DimensionSet(
+    tuple[
+        int | float,
+        int | float,
+        int | float,
+        int | float,
+        int | float,
+        int | float,
+        int | float,
+    ]
+):
     """Set of physical dimensions represented as powers of base SI units.
 
     Corresponds to the `dimensionSet` type in OpenFOAM.
@@ -30,13 +45,126 @@ class DimensionSet(NamedTuple):
     :param luminous_intensity: Power of the luminous intensity dimension.
     """
 
-    mass: int | float = 0
-    length: int | float = 0
-    time: int | float = 0
-    temperature: int | float = 0
-    moles: int | float = 0
-    current: int | float = 0
-    luminous_intensity: int | float = 0
+    __slots__ = ()
+
+    _fields = (
+        "mass",
+        "length",
+        "time",
+        "temperature",
+        "moles",
+        "current",
+        "luminous_intensity",
+    )
+
+    @overload
+    def __new__(
+        cls,
+        mass: int | float,
+        length: int | float,
+        time: int | float,
+        temperature: int | float,
+        moles: int | float,
+        current: int | float = 0,
+        luminous_intensity: int | float = 0,
+        /,
+    ) -> Self: ...
+
+    @overload
+    def __new__(
+        cls,
+        *,
+        mass: int | float = 0,
+        length: int | float = 0,
+        time: int | float = 0,
+        temperature: int | float = 0,
+        moles: int | float = 0,
+        current: int | float = 0,
+        luminous_intensity: int | float = 0,
+    ) -> Self: ...
+
+    def __new__(
+        cls,
+        *args: int | float,
+        **kwargs: int | float,
+    ) -> Self:
+        if args and kwargs:
+            msg = "Cannot mix positional and keyword arguments for DimensionSet"
+            raise TypeError(msg)
+
+        if args:
+            match args:
+                case [*_] if 5 <= len(args) <= 7:
+                    values = list(args)
+                case _:
+                    msg = f"DimensionSet positional constructor requires 5 to 7 arguments, got {len(args)}"
+                    raise TypeError(msg)
+        else:
+            for name in kwargs:
+                if name not in cls._fields:
+                    msg = f"Invalid keyword argument for DimensionSet: {name}"
+                    raise TypeError(msg)
+            values = [kwargs.get(name, 0) for name in cls._fields]
+
+        for i, field in enumerate(cls._fields):
+            match values[i]:
+                case int():
+                    values[i] = int(values[i])
+                case float():
+                    values[i] = float(values[i])
+                case _:
+                    msg = f"Invalid type for DimensionSet dimension '{field}': {values[i]!r}"
+                    raise TypeError(msg)
+
+        return super().__new__(cls, values)  # ty: ignore[invalid-argument-type]
+
+    def __getnewargs__(
+        self,
+    ) -> tuple[
+        int | float,
+        int | float,
+        int | float,
+        int | float,
+        int | float,
+        int | float,
+        int | float,
+    ]:
+        return tuple(self)
+
+    @property
+    def mass(self) -> int | float:
+        """Power of the mass dimension."""
+        return self[0]
+
+    @property
+    def length(self) -> int | float:
+        """Power of the length dimension."""
+        return self[1]
+
+    @property
+    def time(self) -> int | float:
+        """Power of the time dimension."""
+        return self[2]
+
+    @property
+    def temperature(self) -> int | float:
+        """Power of the temperature dimension."""
+        return self[3]
+
+    @property
+    def moles(self) -> int | float:
+        """Power of the amount of substance dimension."""
+        return self[4]
+
+    @property
+    def current(self) -> int | float:
+        """Power of the electric current dimension."""
+        return self[5]
+
+    @property
+    def luminous_intensity(self) -> int | float:
+        """Power of the luminous intensity dimension."""
+        return self[6]
 
     @override
     def __repr__(self) -> str:
