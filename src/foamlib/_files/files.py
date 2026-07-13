@@ -516,7 +516,7 @@ class FoamFile(
         if ret not in ("ascii", "binary"):
             msg = "format is not 'ascii' or 'binary'"
             raise ValueError(msg)
-        return cast("Literal['ascii', 'binary']", ret)
+        return ret
 
     @format.setter  # noqa: A003
     def format(self, value: Literal["ascii", "binary"]) -> None:
