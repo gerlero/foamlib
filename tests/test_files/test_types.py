@@ -39,6 +39,23 @@ def test_dimension_set_not_implemented() -> None:
     assert dims.__pow__("string") is NotImplemented
 
 
+def test_bad_dimension_set() -> None:
+    with pytest.raises(TypeError, match="3"):
+        DimensionSet(0, 1, 2)  # ty: ignore[no-matching-overload]
+
+    with pytest.raises(TypeError, match="mix"):
+        DimensionSet(1, 2, 3, 4, 5, 6, luminous_intensity=7)  # ty: ignore[no-matching-overload]
+
+    with pytest.raises(TypeError, match="bad"):
+        DimensionSet(bad=0)  # ty: ignore[no-matching-overload]
+
+    with pytest.raises(TypeError, match="mass"):
+        DimensionSet(mass="string")  # ty: ignore[invalid-argument-type]
+
+    with pytest.raises(TypeError, match="time"):
+        DimensionSet(time=(1, 2, 3, 4, 5, 6, 7))  # ty: ignore[invalid-argument-type]
+
+
 def test_dimensioned() -> None:
     dimensioned = Dimensioned(9.81, DimensionSet(length=1, time=-2), "g")
     assert dimensioned.value == 9.81
