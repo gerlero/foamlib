@@ -135,7 +135,7 @@ def test_example(tmp_path: Path) -> None:
 
     internal_field = case[0].cell_centers().internal_field
     assert isinstance(internal_field, np.ndarray)
-    x, y, z = internal_field.T
+    x, y, z = internal_field.T  # ty: ignore[not-iterable]
 
     end = x == x.max()
     x = x[end]

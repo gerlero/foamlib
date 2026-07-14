@@ -1,13 +1,7 @@
 import contextlib
-import sys
 from collections.abc import Mapping
 from typing import overload
 from warnings import warn
-
-if sys.version_info >= (3, 11):
-    from typing import Unpack
-else:
-    from typing_extensions import Unpack
 
 import numpy as np
 
@@ -180,7 +174,7 @@ def _normalized_subdict(
     value: SubDictLike,
     /,
     *,
-    keywords: tuple[str, Unpack[tuple[str, ...]]],
+    keywords: tuple[str, *tuple[str, ...]],
     binary: bool,
 ) -> SubDict:
     assert keywords
@@ -453,7 +447,7 @@ def normalized(
     /,
     *,
     target: type[SubDict],
-    keywords: tuple[str, Unpack[tuple[str, ...]]],
+    keywords: tuple[str, *tuple[str, ...]],
     binary: bool = ...,
 ) -> SubDict: ...
 
@@ -464,7 +458,7 @@ def normalized(
     /,
     *,
     target: type[Data],
-    keywords: tuple[str, Unpack[tuple[str, ...]]] | None = ...,
+    keywords: tuple[str, *tuple[str, ...]] | None = ...,
     binary: bool = ...,
 ) -> Data: ...
 

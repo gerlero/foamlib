@@ -1,11 +1,6 @@
 import sys
 from collections.abc import Collection, Iterator
-from typing import cast, overload
-
-if sys.version_info >= (3, 11):
-    from typing import Never, Unpack
-else:
-    from typing_extensions import Never, Unpack
+from typing import Never, cast, overload
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -51,7 +46,7 @@ class ParsedFile(
     @overload
     @with_default
     def getall(
-        self, keywords: tuple[str, Unpack[tuple[str, ...]]], /
+        self, keywords: tuple[str, *tuple[str, ...]], /
     ) -> Collection[Data | EllipsisType | None]: ...
 
     @override
@@ -66,7 +61,7 @@ class ParsedFile(
 
     @overload
     def __getitem__(
-        self, keywords: tuple[str, Unpack[tuple[str, ...]]]
+        self, keywords: tuple[str, *tuple[str, ...]]
     ) -> Data | EllipsisType | None: ...
 
     @override
@@ -94,7 +89,7 @@ class ParsedFile(
     @overload
     def put(
         self,
-        keywords: tuple[str, Unpack[tuple[str, ...]]],
+        keywords: tuple[str, *tuple[str, ...]],
         /,
         data: Data | EllipsisType | None,
         content: bytes,
@@ -125,7 +120,7 @@ class ParsedFile(
     @overload
     def add(
         self,
-        keywords: tuple[str, Unpack[tuple[str, ...]]],
+        keywords: tuple[str, *tuple[str, ...]],
         data: Data | EllipsisType | None,
         content: bytes,
         /,
@@ -157,7 +152,7 @@ class ParsedFile(
     @overload
     @with_default
     def popone(
-        self, keywords: tuple[str, Unpack[tuple[str, ...]]]
+        self, keywords: tuple[str, *tuple[str, ...]]
     ) -> Data | EllipsisType | None: ...
 
     @override

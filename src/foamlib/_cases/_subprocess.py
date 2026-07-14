@@ -9,11 +9,7 @@ from collections.abc import Callable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from io import StringIO, TextIOBase
 from pathlib import Path
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
+from typing import Self
 
 if sys.version_info >= (3, 12):
     from typing import override

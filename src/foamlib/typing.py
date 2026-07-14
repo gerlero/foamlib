@@ -1,13 +1,7 @@
 """Type aliases for OpenFOAM data structures."""
 
-import sys
 from collections.abc import Mapping, Sequence
 from typing import Literal, TypeAlias
-
-if sys.version_info >= (3, 11):
-    from typing import Unpack
-else:
-    from typing_extensions import Unpack
 
 import numpy as np
 from multicollections import MultiDict
@@ -59,11 +53,10 @@ DataEntryLike: TypeAlias = (
 )
 """Any type that could be interpreted as a :type:`DataEntry`."""
 
-Data: TypeAlias = DataEntry | tuple[DataEntry, DataEntry, Unpack[tuple[DataEntry, ...]]]
+Data: TypeAlias = DataEntry | tuple[DataEntry, DataEntry, *tuple[DataEntry, ...]]
 """A single OpenFOAM value, or multiple values as a tuple."""
 DataLike: TypeAlias = (
-    DataEntryLike
-    | tuple[DataEntryLike, DataEntryLike, Unpack[tuple[DataEntryLike, ...]]]
+    DataEntryLike | tuple[DataEntryLike, DataEntryLike, *tuple[DataEntryLike, ...]]
 )
 """Any type that could be interpreted as a :type:`Data`."""
 
@@ -90,7 +83,7 @@ StandaloneData: TypeAlias = (
     | tuple[
         StandaloneDataEntry,
         StandaloneDataEntry,
-        Unpack[tuple[StandaloneDataEntry, ...]],
+        *tuple[StandaloneDataEntry, ...],
     ]
 )
 """One or more OpenFOAM values that can appear at the top level of a file."""
@@ -99,7 +92,7 @@ StandaloneDataLike: TypeAlias = (
     | tuple[
         StandaloneDataEntryLike,
         StandaloneDataEntryLike,
-        Unpack[tuple[StandaloneDataEntryLike, ...]],
+        *tuple[StandaloneDataEntryLike, ...],
     ]
 )
 """Any type that could be interpreted as a :type:`StandaloneData`."""

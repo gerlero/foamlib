@@ -1,20 +1,14 @@
 import contextlib
 import dataclasses
 import re
-import sys
 from types import EllipsisType
-from typing import Generic, Literal, TypeVar, overload
+from typing import Generic, Literal, TypeVar, TypeVarTuple, assert_never, overload
 from warnings import warn
-
-from foamlib._files._util import add_to_mapping
-
-if sys.version_info >= (3, 11):
-    from typing import Unpack, assert_never
-else:
-    from typing_extensions import Unpack, assert_never
 
 import numpy as np
 from multicollections import MultiDict
+
+from foamlib._files._util import add_to_mapping
 
 from ...typing import (
     Data,
@@ -34,9 +28,7 @@ from .exceptions import FoamFileDecodeError
 
 _DType = TypeVar("_DType", float, int)
 _NumpyDType = TypeVar("_NumpyDType", np.float64, np.float32, np.int64, np.int32)
-_ElShape = TypeVar(
-    "_ElShape", tuple[()], tuple[Literal[3]], tuple[Literal[6]], tuple[Literal[9]]
-)
+_ElShape = TypeVarTuple("_ElShape")
 _Output = TypeVar("_Output", FileDict, DataEntry, StandaloneDataEntry)
 
 _IS_TOKEN_START = [False] * 256
@@ -255,59 +247,62 @@ def _parse_number(
         raise ParseError(contents, pos, expected="number") from e
 
 
-class _ASCIINumericListParser(Generic[_DType, _ElShape]):
-    def __init__(self, *, dtype: type[_DType], elshape: _ElShape) -> None:
+class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
+    def __init__(self, *, dtype: type[_DType], elshape: tuple[*_ElShape]) -> None:
         self._dtype = dtype
         self._elshape = elshape
 
-        if not elshape:
-            self._pattern = re.compile(
-                rb"(?:(?:"
-                + _SKIP.pattern
-                + rb")?(?:"
-                + _POSSIBLE_FLOAT.pattern
-                + rb"))*(?:"
-                + _SKIP.pattern
-                + rb")?\)"
-            )
-            self._uncommented_pattern = re.compile(
-                rb"(?:\s*(?:" + _POSSIBLE_FLOAT.pattern + rb"))*\s*\)", re.ASCII
-            )
-        else:
-            (dim,) = elshape
-            self._pattern = re.compile(
-                rb"(?:(?:"
-                + _SKIP.pattern
-                + rb")?\("
-                + (rb"(?:" + _POSSIBLE_FLOAT.pattern + rb")" + _SKIP.pattern) * dim
-                + rb"\))*(?:"
-                + _SKIP.pattern
-                + rb")?\)"
-            )
-            self._uncommented_pattern = re.compile(
-                rb"(?:\s*\("
-                + (rb"(?:" + _POSSIBLE_FLOAT.pattern + rb")\s*") * dim
-                + rb"\)\s*)*\)",
-                re.ASCII,
-            )
+        match elshape:
+            case ():
+                self._pattern = re.compile(
+                    rb"(?:(?:"
+                    + _SKIP.pattern
+                    + rb")?(?:"
+                    + _POSSIBLE_FLOAT.pattern
+                    + rb"))*(?:"
+                    + _SKIP.pattern
+                    + rb")?\)"
+                )
+                self._uncommented_pattern = re.compile(
+                    rb"(?:\s*(?:" + _POSSIBLE_FLOAT.pattern + rb"))*\s*\)", re.ASCII
+                )
+            case (int() as dim,):
+                self._pattern = re.compile(
+                    rb"(?:(?:"
+                    + _SKIP.pattern
+                    + rb")?\("
+                    + (rb"(?:" + _POSSIBLE_FLOAT.pattern + rb")" + _SKIP.pattern) * dim
+                    + rb"\))*(?:"
+                    + _SKIP.pattern
+                    + rb")?\)"
+                )
+                self._uncommented_pattern = re.compile(
+                    rb"(?:\s*\("
+                    + (rb"(?:" + _POSSIBLE_FLOAT.pattern + rb")\s*") * dim
+                    + rb"\)\s*)*\)",
+                    re.ASCII,
+                )
+            case _:
+                msg = f"Unsupported element shape: {elshape}"
+                raise AssertionError(msg)
 
     @overload
     def __call__(
-        self: "_ASCIINumericListParser[float, _ElShape]",
+        self: "_ASCIINumericListParser[float, *_ElShape]",
         contents: bytes | bytearray,
         pos: int,
         *,
         empty_ok: bool = ...,
-    ) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[np.float64]], int]: ...
+    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.float64]], int]: ...
 
     @overload
     def __call__(
-        self: "_ASCIINumericListParser[int, _ElShape]",
+        self: "_ASCIINumericListParser[int, *_ElShape]",
         contents: bytes | bytearray,
         pos: int,
         *,
         empty_ok: bool = ...,
-    ) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[np.int64]], int]: ...
+    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.int64]], int]: ...
 
     def __call__(
         self,
@@ -315,9 +310,7 @@ class _ASCIINumericListParser(Generic[_DType, _ElShape]):
         pos: int,
         *,
         empty_ok: bool = False,
-    ) -> tuple[
-        np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[np.float64 | np.int64]], int
-    ]:
+    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.float64 | np.int64]], int]:
         try:
             count, pos = _parse_number(contents, pos, target=int)
         except ParseError:
@@ -556,9 +549,9 @@ def _parse_binary_numeric_list(
     pos: int,
     *,
     dtype: type[_NumpyDType],
-    elshape: _ElShape,
+    elshape: tuple[*_ElShape],
     empty_ok: bool = False,
-) -> tuple[np.ndarray[tuple[int, Unpack[_ElShape]], np.dtype[_NumpyDType]], int]:
+) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[_NumpyDType]], int]:
     count, pos = _parse_number(contents, pos, target=int)
     if count < 0:
         raise ParseError(contents, pos, expected="non-negative list count")
@@ -1013,7 +1006,7 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, in
             ret = add_to_mapping(ret, keyword, value)
 
             pos = new_pos
-        except ParseError:  # noqa: PERF203
+        except ParseError:
             try:
                 standalone_data, pos = _parse_standalone_data(contents, pos)
             except ParseError:

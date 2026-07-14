@@ -14,16 +14,11 @@ from collections.abc import Set as AbstractSet
 from contextlib import contextmanager
 from io import TextIOBase
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from rich.progress import Progress
 
 from ._util import SingletonContextManager
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 if sys.version_info >= (3, 12):
     from typing import override

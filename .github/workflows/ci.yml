@@ -53,7 +53,7 @@ jobs:
     strategy:
       matrix:
         openfoam-version: [2606, 2006, 13, 9]
-        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        python-version: ['3.11', '3.12', '3.13', '3.14']
         slurm: [false]
         include:
           - openfoam-version: 2606
@@ -63,10 +63,10 @@ jobs:
             python-version: '3.14'
             slurm: true
           - openfoam-version: 2006
-            python-version: '3.10'
+            python-version: '3.11'
             slurm: true
           - openfoam-version: 9
-            python-version: '3.10'
+            python-version: '3.11'
             slurm: true
       fail-fast: false
     steps:

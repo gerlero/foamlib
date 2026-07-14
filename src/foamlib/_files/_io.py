@@ -3,11 +3,7 @@ import sys
 import threading
 from contextlib import AbstractContextManager, nullcontext
 from pathlib import Path
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
+from typing import Self
 
 if sys.version_info >= (3, 12):
     from typing import override
