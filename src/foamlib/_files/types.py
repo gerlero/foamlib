@@ -1,5 +1,4 @@
 import sys
-from numbers import Real
 from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
@@ -232,57 +231,21 @@ class Dimensioned:
         dimensions: "DimensionSetLike",
         name: str | None = None,
     ) -> None:
-        match value:
-            case Real():
-                self.value = float(value)
-            case np.ndarray(
-                shape=(3 | 6 | 9,), dtype=np.float64 | np.float32 | np.int64 | np.int32
-            ):
-                self.value: Tensor = np.array(value, dtype=float)
-            case (
-                [Real(), Real(), Real()]
-                | [Real(), Real(), Real(), Real(), Real(), Real()]
-                | [
-                    Real(),
-                    Real(),
-                    Real(),
-                    Real(),
-                    Real(),
-                    Real(),
-                    Real(),
-                    Real(),
-                    Real(),
-                ]
-            ):
-                self.value: Tensor = np.array(value, dtype=float)
-            case np.ndarray():
-                msg = f"Invalid array for Dimensioned value: {value!r}"
-                raise ValueError(msg)
-            case [*_]:
-                msg = f"Invalid sequence for Dimensioned value: {value}"
-                raise ValueError(msg)
-            case _:
-                msg = f"Invalid type for Dimensioned value: {type(value)}"
-                raise TypeError(msg)
+        from ..typing import Tensor  # noqa: PLC0415
+        from ._normalization import normalized  # noqa: PLC0415
+
+        if isinstance(value, np.ndarray):
+            value = value.copy()
+        self.value: Tensor = normalized(value, target=Tensor)  # ty: ignore[no-matching-overload]
 
         if not isinstance(dimensions, DimensionSet):
             self.dimensions = DimensionSet(*dimensions)
         else:
             self.dimensions = dimensions
 
-        if name is not None:
-            if not isinstance(name, str):
-                msg = f"Invalid type for Dimensioned name: {type(name)}"
-                raise TypeError(msg)
-
-            from ._parsing import parse  # noqa: PLC0415
-
-            if name != parse(name, target=str):
-                msg = f"Invalid Dimensioned name: {name!r}"
-                raise ValueError(msg)
-
-            assert name
-
+        if name is not None and name != normalized(name, target=str):
+            msg = f"Invalid name for Dimensioned: {name!r}"
+            raise ValueError(msg)
         self.name = name
 
     @override

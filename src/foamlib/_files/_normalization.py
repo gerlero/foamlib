@@ -496,6 +496,15 @@ def normalized(
 ) -> StandaloneData: ...
 
 
+@overload
+def normalized(
+    value: TensorLike,
+    /,
+    *,
+    target: type[Tensor],
+) -> Tensor: ...
+
+
 def normalized(
     value: str | DataLike | StandaloneDataLike | DictLike | SubDictLike | FileDictLike,
     /,
@@ -522,5 +531,7 @@ def normalized(
     if target is StandaloneData:
         assert keywords == ()
         return _normalized_standalone_data(value, binary=binary)
+    if target is Tensor:
+        return _normalized_tensor(value)
     msg = f"unsupported target type: {target}"
     raise TypeError(msg)
