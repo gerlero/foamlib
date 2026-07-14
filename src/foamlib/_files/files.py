@@ -674,6 +674,26 @@ class FoamFile(
 
         return before, after
 
+    @overload
+    def _perform_entry_operation(
+        self,
+        keywords: tuple[str, Unpack[tuple[str, ...]]],
+        data: DataLike | SubDictLike | None,
+        /,
+        *,
+        add: bool,
+    ) -> None: ...
+
+    @overload
+    def _perform_entry_operation(
+        self,
+        keywords: tuple[()],
+        data: StandaloneDataLike,
+        /,
+        *,
+        add: bool,
+    ) -> None: ...
+
     def _perform_entry_operation(
         self,
         keywords: tuple[str, ...],
@@ -686,13 +706,7 @@ class FoamFile(
         if keywords:
             keyword = keywords[-1]
 
-            if not isinstance(keyword, str):
-                msg = (
-                    f"Invalid keyword type: {keywords[-1]} (type {type(keywords[-1])})"
-                )
-                raise TypeError(msg)
-
-            if keyword != parse(keyword, target=str):
+            if keyword != normalized(keyword, target=str):
                 msg = f"Invalid keyword string: {keywords[-1]!r}"
                 raise ValueError(msg)
 
@@ -946,7 +960,7 @@ class FoamFile(
             return
 
         assert not isinstance(keywords, slice)
-        self._perform_entry_operation(keywords, data, add=False)  # ty: ignore[invalid-argument-type]
+        self._perform_entry_operation(keywords, data, add=False)  # ty: ignore[no-matching-overload]
 
     @override
     def __delitem__(self, keywords: str | tuple[str, ...] | None | slice) -> None:

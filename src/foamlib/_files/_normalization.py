@@ -42,7 +42,7 @@ from ._util import add_to_mapping
 from .types import Dimensioned, DimensionSet
 
 
-def _normalized_str(value: str, /, *, keywords: tuple[str, ...] | None) -> str | bool:
+def _normalized_token(value: str, /, *, keywords: tuple[str, ...] | None) -> str | bool:
     if not isinstance(value, str):
         msg = f"expected a string, got {value!r}"
         raise TypeError(msg)
@@ -69,7 +69,7 @@ def _normalized_str(value: str, /, *, keywords: tuple[str, ...] | None) -> str |
             raise ValueError(msg)
 
 
-def _normalized_bool(value: bool, /) -> bool:  # noqa: FBT001
+def _normalized_switch(value: bool, /) -> bool:  # noqa: FBT001
     if not isinstance(value, bool):
         msg = f"expected a bool, got {value!r}"
         raise TypeError(msg)
@@ -105,7 +105,7 @@ def _normalized_tensor(value: TensorLike, /) -> Tensor:
             raise TypeError(msg)
 
 
-def _normalized_field(value: FieldLike, /, *, binary: bool | None = None) -> Field:
+def _normalized_field(value: FieldLike, /, *, binary: bool) -> Field:
     match value:
         case float() | int():
             return float(value)
@@ -145,12 +145,7 @@ def _normalized_dimension_set(value: DimensionSetLike, /) -> DimensionSet:
             raise TypeError(msg)
 
 
-def _normalized_dict(
-    value: DictLike,
-    /,
-    *,
-    binary: bool | None = None,
-) -> Dict:
+def _normalized_dict(value: DictLike, /) -> Dict:
     if not isinstance(value, Mapping):
         msg = f"expected a mapping, got {value!r}"
         raise TypeError(msg)
@@ -158,7 +153,7 @@ def _normalized_dict(
     for k, v in value.items():
         match k:
             case str():
-                if k != _normalized_str(k, keywords=None):
+                if k != _normalized_token(k, keywords=None):
                     msg = f"invalid keyword: {k!r}"
                     raise ValueError(msg)
                 if k.startswith("#"):
@@ -175,9 +170,9 @@ def _normalized_dict(
                 raise TypeError(msg)
         match v:
             case {}:
-                ret[k] = _normalized_dict(v, binary=binary)
+                ret[k] = _normalized_dict(v)
             case _:
-                ret[k] = _normalized_data(v, keywords=None, binary=binary)
+                ret[k] = _normalized_data(v, keywords=None, binary=False)
     return ret
 
 
@@ -186,7 +181,7 @@ def _normalized_subdict(
     /,
     *,
     keywords: tuple[str, Unpack[tuple[str, ...]]],
-    binary: bool | None = None,
+    binary: bool,
 ) -> SubDict:
     assert keywords
     if not isinstance(value, Mapping):
@@ -196,7 +191,7 @@ def _normalized_subdict(
     for k, v in value.items():
         match k:
             case str():
-                if k != _normalized_str(k, keywords=None):
+                if k != _normalized_token(k, keywords=None):
                     msg = f"invalid keyword: {k!r}"
                     raise ValueError(msg)
                 if k.startswith("#") and isinstance(v, Mapping):
@@ -225,21 +220,15 @@ def _normalized_subdict(
     return ret
 
 
-def _normalized_file_dict(
-    value: FileDictLike,
-    /,
-    *,
-    binary: bool | None = None,
-) -> FileDict:
+def _normalized_file_dict(value: FileDictLike, /) -> FileDict:
     if not isinstance(value, Mapping):
         msg = f"expected a mapping, got {value!r}"
         raise TypeError(msg)
-    if binary is None:
-        match value:
-            case {"FoamFile": {"format": "binary"}}:
-                binary = True
-            case {"FoamFile": {"format": "ascii"}}:
-                binary = False
+    match value:
+        case {"FoamFile": {"format": "binary"}}:
+            binary = True
+        case _:
+            binary = False
     ret: FileDict = {}
     for k, v in value.items():
         match k:
@@ -248,7 +237,7 @@ def _normalized_file_dict(
                     msg = "duplicate None keyword found"
                     raise ValueError(msg)
             case str():
-                if k != _normalized_str(k, keywords=None):
+                if k != _normalized_token(k, keywords=None):
                     msg = f"invalid keyword: {k!r}"
                     raise ValueError(msg)
                 if k.startswith("#") and isinstance(v, Mapping):
@@ -284,30 +273,28 @@ def _normalized_file_dict(
     return ret
 
 
-def _normalized_keyword_entry(
-    value: KeywordEntryLike, /, *, binary: bool | None = None
-) -> KeywordEntry:
+def _normalized_keyword_entry(value: KeywordEntryLike, /) -> KeywordEntry:
     match value:
         case DimensionSet():
             msg = f"expected a KeywordEntry (2-tuple), got {value!r}"
             raise TypeError(msg)
         case tuple((k, {} as d)):
-            return _normalized_str(k, keywords=None), _normalized_dict(d, binary=binary)  # ty: ignore[invalid-argument-type]
+            return _normalized_token(k, keywords=None), _normalized_dict(d)  # ty: ignore[invalid-argument-type]
         case tuple((k, v)):
-            return _normalized_str(k, keywords=None), _normalized_data_entry(  # ty: ignore[invalid-argument-type]
+            return _normalized_token(k, keywords=None), _normalized_data_entry(  # ty: ignore[invalid-argument-type]
                 v,  # ty: ignore[invalid-argument-type]
                 keywords=None,
-                binary=binary,
+                binary=False,
             )
         case _:
             msg = f"expected a KeywordEntry (2-tuple), got {value!r}"
             raise TypeError(msg)
 
 
-def _normalized_list(value: ListLike, /, *, binary: bool | None = None) -> List:
+def _normalized_list(value: ListLike, /) -> List:
     match value:
         case np.ndarray(shape=(_, *_)):
-            return _normalized_list(value.tolist(), binary=binary)  # ty: ignore[no-matching-overload]
+            return _normalized_list(value.tolist())  # ty: ignore[no-matching-overload]
         case tuple():
             msg = f"expected a List (sequence), got {value!r}"
             raise TypeError(msg)
@@ -316,12 +303,12 @@ def _normalized_list(value: ListLike, /, *, binary: bool | None = None) -> List:
             for v in value:
                 match v:
                     case {}:
-                        ret.append(_normalized_dict(v, binary=binary))  # ty: ignore[invalid-argument-type]
+                        ret.append(_normalized_dict(v))  # ty: ignore[invalid-argument-type]
                     case tuple():
-                        ret.append(_normalized_keyword_entry(v, binary=binary))  # ty: ignore[invalid-argument-type]
+                        ret.append(_normalized_keyword_entry(v))  # ty: ignore[invalid-argument-type]
                     case _:
                         ret.append(
-                            _normalized_data_entry(v, keywords=None, binary=binary)
+                            _normalized_data_entry(v, keywords=None, binary=False)
                         )
             return ret
         case _:
@@ -334,14 +321,14 @@ def _normalized_data_entry(
     /,
     *,
     keywords: tuple[str, ...] | None,
-    binary: bool | None = None,
+    binary: bool,
 ) -> DataEntry:
     if isinstance(value, (Dimensioned, DimensionSet)):
         return value
     if isinstance(value, str):
-        return _normalized_str(value, keywords=keywords)
+        return _normalized_token(value, keywords=keywords)
     if isinstance(value, bool):
-        return _normalized_bool(value)
+        return _normalized_switch(value)
     if keywords == _common.FIELD_KEYWORDS:
         with contextlib.suppress(TypeError):
             return _normalized_field(value, binary=binary)  # ty: ignore[invalid-argument-type]
@@ -353,13 +340,13 @@ def _normalized_data_entry(
     if isinstance(value, float):
         return _normalized_float(value)
     with contextlib.suppress(TypeError):
-        return _normalized_list(value, binary=binary)  # ty: ignore[invalid-argument-type]
+        return _normalized_list(value)  # ty: ignore[invalid-argument-type]
     msg = f"expected a DataEntry, got {value!r}"
     raise TypeError(msg)
 
 
 def _normalized_data(
-    value: DataLike, /, *, keywords: tuple[str, ...] | None, binary: bool | None = None
+    value: DataLike, /, *, keywords: tuple[str, ...] | None, binary: bool
 ) -> Data:
     match value:
         case DimensionSet():
@@ -374,7 +361,7 @@ def _normalized_data(
 
 
 def _normalized_standalone_data_entry(
-    value: StandaloneDataEntryLike, /, *, binary: bool | None = None
+    value: StandaloneDataEntryLike, /, *, binary: bool
 ) -> StandaloneDataEntry:
     match value:
         case np.ndarray(shape=(_,), dtype=np.dtype(kind="i")):
@@ -418,7 +405,7 @@ def _normalized_standalone_data_entry(
 
 
 def _normalized_standalone_data(
-    value: StandaloneDataLike, /, *, binary: bool | None = None
+    value: StandaloneDataLike, /, *, binary: bool
 ) -> StandaloneData:
     match value:
         case DimensionSet():
@@ -444,23 +431,11 @@ def normalized(
 
 @overload
 def normalized(
-    value: DictLike,
+    value: TensorLike,
     /,
     *,
-    target: type[Dict],
-    binary: bool | None = ...,
-) -> Dict: ...
-
-
-@overload
-def normalized(
-    value: SubDictLike,
-    /,
-    *,
-    target: type[SubDict],
-    keywords: tuple[str, ...],
-    binary: bool | None = ...,
-) -> SubDict: ...
+    target: type[Tensor],
+) -> Tensor: ...
 
 
 @overload
@@ -469,9 +444,18 @@ def normalized(
     /,
     *,
     target: type[FileDict],
-    keywords: tuple[()] = ...,
-    binary: bool | None = ...,
 ) -> FileDict: ...
+
+
+@overload
+def normalized(
+    value: SubDictLike,
+    /,
+    *,
+    target: type[SubDict],
+    keywords: tuple[str, Unpack[tuple[str, ...]]],
+    binary: bool = ...,
+) -> SubDict: ...
 
 
 @overload
@@ -480,8 +464,8 @@ def normalized(
     /,
     *,
     target: type[Data],
-    keywords: tuple[str, ...] | None = ...,
-    binary: bool | None = ...,
+    keywords: tuple[str, Unpack[tuple[str, ...]]] | None = ...,
+    binary: bool = ...,
 ) -> Data: ...
 
 
@@ -491,47 +475,44 @@ def normalized(
     /,
     *,
     target: type[StandaloneData] = ...,
-    keywords: tuple[str, ...] | None = ...,
-    binary: bool | None = ...,
+    binary: bool = ...,
 ) -> StandaloneData: ...
 
 
-@overload
 def normalized(
-    value: TensorLike,
-    /,
-    *,
-    target: type[Tensor],
-) -> Tensor: ...
-
-
-def normalized(
-    value: str | DataLike | StandaloneDataLike | DictLike | SubDictLike | FileDictLike,
+    value: str
+    | TensorLike
+    | FileDictLike
+    | SubDictLike
+    | DataLike
+    | StandaloneDataLike,
     /,
     *,
     target: type[
-        str | Data | StandaloneData | Dict | SubDict | FileDict
+        str | Tensor | FileDict | SubDict | Data | StandaloneData
     ] = StandaloneData,  # ty: ignore[invalid-parameter-default]
-    keywords: tuple[str, ...] | None = (),
-    binary: bool | None = None,
-) -> object:
+    keywords: tuple[str, ...] | None = None,
+    binary: bool = False,
+) -> str | bool | Tensor | FileDict | SubDict | Data | StandaloneData:
     if target is str:
-        return _normalized_str(value, keywords=keywords)  # ty: ignore[invalid-argument-type]
-    if target is Dict:
-        return _normalized_dict(value, binary=binary)  # ty: ignore[invalid-argument-type]
-    if target is SubDict:
-        assert keywords
-        return _normalized_subdict(value, keywords=keywords, binary=binary)
+        assert not binary
+        return _normalized_token(value, keywords=keywords)  # ty: ignore[invalid-argument-type]
+    if target is Tensor:
+        assert keywords is None
+        assert not binary
+        return _normalized_tensor(value)
     if target is FileDict:
-        assert keywords == ()
-        return _normalized_file_dict(value, binary=binary)
+        assert keywords is None
+        assert not binary
+        return _normalized_file_dict(value)
+    if target is SubDict:
+        assert keywords is not None
+        return _normalized_subdict(value, keywords=keywords, binary=binary)
     if target is Data:
-        assert keywords != ()
+        assert keywords is not None
         return _normalized_data(value, keywords=keywords, binary=binary)
     if target is StandaloneData:
-        assert keywords == ()
+        assert keywords is None
         return _normalized_standalone_data(value, binary=binary)
-    if target is Tensor:
-        return _normalized_tensor(value)
     msg = f"unsupported target type: {target}"
     raise TypeError(msg)
