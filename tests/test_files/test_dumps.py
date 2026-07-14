@@ -13,7 +13,7 @@ def test_serialize_data() -> None:
     assert dumps(normalized(True)) == b"yes"
     assert dumps(normalized(False)) == b"no"
     assert dumps(normalized("word")) == b"word"
-    assert dumps(normalized(("word", "word"), keywords=())) == b"word word"
+    assert dumps(normalized(("word", "word"))) == b"word word"
     assert dumps(normalized('"a string"')) == b'"a string"'
     assert (
         dumps(

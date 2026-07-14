@@ -37,9 +37,7 @@ _NumpyDType = TypeVar("_NumpyDType", np.float64, np.float32, np.int64, np.int32)
 _ElShape = TypeVar(
     "_ElShape", tuple[()], tuple[Literal[3]], tuple[Literal[6]], tuple[Literal[9]]
 )
-_Output = TypeVar(
-    "_Output", FileDict, Data, StandaloneData, DataEntry, StandaloneDataEntry, str
-)
+_Output = TypeVar("_Output", FileDict, DataEntry, StandaloneDataEntry)
 
 _IS_TOKEN_START = [False] * 256
 for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$./":
@@ -1042,16 +1040,10 @@ def parse(contents: bytes | bytearray | str, /, *, target: type[_Output]) -> _Ou
         pos = _skip(contents, 0)
         if target == FileDict:
             ret, pos = _parse_file(contents, pos)
-        elif target == Data:
-            ret, pos = _parse_data(contents, pos)
         elif target == DataEntry:
             ret, pos = _parse_data_entry(contents, pos)
-        elif target == StandaloneData:
-            ret, pos = _parse_standalone_data(contents, pos)
         elif target == StandaloneDataEntry:
             ret, pos = _parse_standalone_data_entry(contents, pos)
-        elif target is str:
-            ret, pos = _parse_token(contents, pos)
         else:
             assert_never(target)  # ty: ignore[type-assertion-failure]
         _skip(contents, pos)
