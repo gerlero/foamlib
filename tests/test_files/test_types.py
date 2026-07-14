@@ -100,7 +100,7 @@ def test_dimensioned() -> None:
 def test_dimensioned_invalid_array() -> None:
     """Test Dimensioned with invalid numpy array shapes."""
     # Array with wrong shape
-    with pytest.raises(ValueError, match="Invalid array"):
+    with pytest.raises(TypeError, match="Tensor"):
         Dimensioned(np.array([1, 2]), DimensionSet())
 
     # Array with wrong dtype but valid shape should work
@@ -112,31 +112,29 @@ def test_dimensioned_invalid_array() -> None:
 def test_dimensioned_invalid_sequence() -> None:
     """Test Dimensioned with invalid sequences."""
     # Wrong number of elements
-    with pytest.raises(ValueError, match="Invalid sequence"):
+    with pytest.raises(TypeError, match="Tensor"):
         Dimensioned([1, 2], DimensionSet())
 
-    with pytest.raises(ValueError, match="Invalid sequence"):
+    with pytest.raises(TypeError, match="Tensor"):
         Dimensioned([1, 2, 3, 4], DimensionSet())
 
 
 def test_dimensioned_invalid_type() -> None:
     """Test Dimensioned with invalid types."""
-    with pytest.raises(TypeError, match="Invalid type"):
+    with pytest.raises(TypeError, match="str"):
         Dimensioned("string", DimensionSet())  # ty: ignore[invalid-argument-type]
 
 
 def test_dimensioned_invalid_name_type() -> None:
     """Test Dimensioned with invalid name type."""
-    with pytest.raises(TypeError, match="Invalid type for Dimensioned name"):
+    with pytest.raises(TypeError, match="str"):
         Dimensioned(1.0, DimensionSet(), name=123)  # ty: ignore[invalid-argument-type]
 
 
 def test_dimensioned_invalid_name_value() -> None:
     """Test Dimensioned with invalid name value (not parseable due to spaces)."""
-    from foamlib._files._parsing.exceptions import FoamFileDecodeError  # noqa: PLC0415
-
     # Name with spaces cannot be parsed as a valid OpenFOAM token
-    with pytest.raises(FoamFileDecodeError):
+    with pytest.raises(ValueError, match="str"):
         Dimensioned(1.0, DimensionSet(), name="invalid name with spaces")
 
 
