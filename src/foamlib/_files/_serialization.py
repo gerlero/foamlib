@@ -1,11 +1,5 @@
-import sys
 from collections.abc import Mapping
-from typing import Literal
-
-if sys.version_info >= (3, 11):
-    from typing import assert_never
-else:
-    from typing_extensions import assert_never
+from typing import Literal, assert_never
 
 import numpy as np
 

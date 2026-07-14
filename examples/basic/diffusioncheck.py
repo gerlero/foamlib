@@ -131,7 +131,7 @@ case.run()
 
 internal_field = case[0].cell_centers().internal_field
 assert isinstance(internal_field, np.ndarray)
-x, y, _ = internal_field.T
+x, y, _ = internal_field.T  # ty: ignore[not-iterable]
 end = x == x.max()
 x = x[end]
 y = y[end]

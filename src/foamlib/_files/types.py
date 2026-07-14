@@ -1,12 +1,7 @@
 import sys
-from typing import TYPE_CHECKING, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Literal, Self, TypeVar, overload
 
 import numpy as np
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 if sys.version_info >= (3, 12):
     from typing import override
