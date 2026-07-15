@@ -52,14 +52,14 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     strategy:
       matrix:
-        openfoam-version: [2606, 2006, 13, 9]
+        openfoam-version: [2606, 2006, 14, 9]
         python-version: ['3.11', '3.12', '3.13', '3.14']
         slurm: [false]
         include:
           - openfoam-version: 2606
             python-version: '3.14'
             slurm: true
-          - openfoam-version: 13
+          - openfoam-version: 14
             python-version: '3.14'
             slurm: true
           - openfoam-version: 2006
