@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
-from foamlib import Dimensioned, DimensionSet
+from foamlib import Dimensioned, DimensionSet, FoamFile
+from foamlib._files.types import _NAMED_DIMENSION_IDS, _NAMED_DIMENSIONS
 
 
 def test_dimension_set() -> None:
@@ -54,6 +55,27 @@ def test_bad_dimension_set() -> None:
 
     with pytest.raises(TypeError, match="time"):
         DimensionSet(time=(1, 2, 3, 4, 5, 6, 7))  # ty: ignore[invalid-argument-type]
+
+
+def test_loads_openfoam_14_named_dimensions() -> None:
+    for name, dimensions in _NAMED_DIMENSIONS.items():
+        d = FoamFile.loads(f"[{name}]")
+        assert isinstance(d, DimensionSet)
+        assert d == dimensions
+        assert _NAMED_DIMENSION_IDS[id(d)] == name
+
+    assert id(DimensionSet()) not in _NAMED_DIMENSION_IDS
+
+
+def test_dumps_openfoam_14_named_dimensions() -> None:
+    for name, dimensions in _NAMED_DIMENSIONS.items():
+        s = FoamFile.dumps(dimensions, ensure_header=False).decode()
+        assert s == f"[{name}]"
+
+    assert (
+        FoamFile.dumps(DimensionSet(), ensure_header=False).decode()
+        == "[0 0 0 0 0 0 0]"
+    )
 
 
 def test_dimensioned() -> None:

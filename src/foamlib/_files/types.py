@@ -208,6 +208,168 @@ class DimensionSet(
         return any(v != 0 for v in self)
 
 
+_NAMED_DIMENSIONS: dict[str, DimensionSet] = {}
+_NAMED_DIMENSION_IDS: dict[int, str] = {}
+
+
+def _register_named_dimension(name: str, dimensions: DimensionSet) -> DimensionSet:
+    assert name not in _NAMED_DIMENSIONS
+    if (id_ := id(dimensions)) in _NAMED_DIMENSION_IDS:
+        dimensions = DimensionSet(*dimensions)
+        id_ = id(dimensions)
+    assert id_ not in _NAMED_DIMENSION_IDS
+    _NAMED_DIMENSIONS[name] = dimensions
+    _NAMED_DIMENSION_IDS[id_] = name
+    return dimensions
+
+
+# https://github.com/OpenFOAM/OpenFOAM-14/blob/master/src/OpenFOAM/dimensionSet/dimensions.C
+_register_named_dimension("dimless", DimensionSet())
+_register_named_dimension("mass", DimensionSet(mass=1))
+_register_named_dimension("length", DimensionSet(length=1))
+_register_named_dimension("time", DimensionSet(time=1))
+_register_named_dimension("temperature", DimensionSet(temperature=1))
+_register_named_dimension("moles", DimensionSet(moles=1))
+_register_named_dimension("current", DimensionSet(current=1))
+_register_named_dimension("luminousIntensity", DimensionSet(luminous_intensity=1))
+_register_named_dimension("area", _NAMED_DIMENSIONS["length"] ** 2)
+_register_named_dimension("volume", _NAMED_DIMENSIONS["length"] ** 3)
+_register_named_dimension(
+    "rate", _NAMED_DIMENSIONS["dimless"] / _NAMED_DIMENSIONS["time"]
+)
+_register_named_dimension(
+    "velocity", _NAMED_DIMENSIONS["length"] / _NAMED_DIMENSIONS["time"]
+)
+_register_named_dimension(
+    "momentum", _NAMED_DIMENSIONS["mass"] * _NAMED_DIMENSIONS["velocity"]
+)
+_register_named_dimension(
+    "acceleration", _NAMED_DIMENSIONS["velocity"] / _NAMED_DIMENSIONS["time"]
+)
+_register_named_dimension(
+    "density", _NAMED_DIMENSIONS["mass"] / _NAMED_DIMENSIONS["volume"]
+)
+_register_named_dimension(
+    "momentumDensity", _NAMED_DIMENSIONS["momentum"] / _NAMED_DIMENSIONS["volume"]
+)
+_register_named_dimension(
+    "force", _NAMED_DIMENSIONS["mass"] * _NAMED_DIMENSIONS["acceleration"]
+)
+_register_named_dimension(
+    "energy", _NAMED_DIMENSIONS["force"] * _NAMED_DIMENSIONS["length"]
+)
+_register_named_dimension(
+    "energyDensity", _NAMED_DIMENSIONS["energy"] / _NAMED_DIMENSIONS["volume"]
+)
+_register_named_dimension(
+    "specificEnergy", _NAMED_DIMENSIONS["energy"] / _NAMED_DIMENSIONS["mass"]
+)
+_register_named_dimension("kineticEnergy", _NAMED_DIMENSIONS["energy"])
+_register_named_dimension(
+    "kineticEnergyDensity",
+    _NAMED_DIMENSIONS["kineticEnergy"] / _NAMED_DIMENSIONS["volume"],
+)
+_register_named_dimension(
+    "power", _NAMED_DIMENSIONS["energy"] / _NAMED_DIMENSIONS["time"]
+)
+_register_named_dimension(
+    "powerDensity", _NAMED_DIMENSIONS["power"] / _NAMED_DIMENSIONS["volume"]
+)
+_register_named_dimension(
+    "specificPower", _NAMED_DIMENSIONS["power"] / _NAMED_DIMENSIONS["mass"]
+)
+_register_named_dimension(
+    "entropy", _NAMED_DIMENSIONS["energy"] / _NAMED_DIMENSIONS["temperature"]
+)
+_register_named_dimension(
+    "specificEntropy", _NAMED_DIMENSIONS["entropy"] / _NAMED_DIMENSIONS["mass"]
+)
+_register_named_dimension(
+    "heatCapacity", _NAMED_DIMENSIONS["energy"] / _NAMED_DIMENSIONS["temperature"]
+)
+_register_named_dimension(
+    "specificHeatCapacity",
+    _NAMED_DIMENSIONS["heatCapacity"] / _NAMED_DIMENSIONS["mass"],
+)
+_register_named_dimension("gasConstant", _NAMED_DIMENSIONS["specificHeatCapacity"])
+_register_named_dimension(
+    "pressure", _NAMED_DIMENSIONS["force"] / _NAMED_DIMENSIONS["area"]
+)
+_register_named_dimension(
+    "kinematicPressure", _NAMED_DIMENSIONS["pressure"] / _NAMED_DIMENSIONS["density"]
+)
+_register_named_dimension(
+    "compressibility", _NAMED_DIMENSIONS["density"] / _NAMED_DIMENSIONS["pressure"]
+)
+_register_named_dimension(
+    "kinematicViscosity", _NAMED_DIMENSIONS["area"] / _NAMED_DIMENSIONS["time"]
+)
+_register_named_dimension(
+    "dynamicViscosity",
+    _NAMED_DIMENSIONS["density"] * _NAMED_DIMENSIONS["kinematicViscosity"],
+)
+_register_named_dimension(
+    "kinematicDiffusivity", _NAMED_DIMENSIONS["kinematicViscosity"]
+)
+_register_named_dimension("dynamicDiffusivity", _NAMED_DIMENSIONS["dynamicViscosity"])
+_register_named_dimension(
+    "thermalConductivity",
+    _NAMED_DIMENSIONS["power"]
+    / _NAMED_DIMENSIONS["length"]
+    / _NAMED_DIMENSIONS["temperature"],
+)
+_register_named_dimension("turbulentKineticEnergy", _NAMED_DIMENSIONS["velocity"] ** 2)
+_register_named_dimension(
+    "kinematicStress", _NAMED_DIMENSIONS["turbulentKineticEnergy"]
+)
+_register_named_dimension("ReynoldsStress", _NAMED_DIMENSIONS["kinematicStress"])
+_register_named_dimension(
+    "turbulentEpsilon",
+    _NAMED_DIMENSIONS["turbulentKineticEnergy"] / _NAMED_DIMENSIONS["time"],
+)
+_register_named_dimension("turbulentOmega", _NAMED_DIMENSIONS["rate"])
+_register_named_dimension("turbulentViscosity", _NAMED_DIMENSIONS["kinematicViscosity"])
+_register_named_dimension(
+    "volumetricFlux",
+    _NAMED_DIMENSIONS["area"] * _NAMED_DIMENSIONS["velocity"],
+)
+_register_named_dimension(
+    "volumetricFluxDensity",
+    _NAMED_DIMENSIONS["volumetricFlux"] / _NAMED_DIMENSIONS["area"],
+)
+_register_named_dimension(
+    "massFlux",
+    _NAMED_DIMENSIONS["density"] * _NAMED_DIMENSIONS["volumetricFlux"],
+)
+_register_named_dimension(
+    "massFluxDensity",
+    _NAMED_DIMENSIONS["massFlux"] / _NAMED_DIMENSIONS["area"],
+)
+_register_named_dimension("heatFlux", _NAMED_DIMENSIONS["power"])
+_register_named_dimension(
+    "heatFluxDensity",
+    _NAMED_DIMENSIONS["heatFlux"] / _NAMED_DIMENSIONS["area"],
+)
+_register_named_dimension(
+    "charge", _NAMED_DIMENSIONS["current"] * _NAMED_DIMENSIONS["time"]
+)
+_register_named_dimension(
+    "chargeDensity", _NAMED_DIMENSIONS["charge"] / _NAMED_DIMENSIONS["volume"]
+)
+_register_named_dimension(
+    "electricPotential", _NAMED_DIMENSIONS["power"] / _NAMED_DIMENSIONS["current"]
+)
+_register_named_dimension(
+    "magneticFluxDensity",
+    _NAMED_DIMENSIONS["force"]
+    / (_NAMED_DIMENSIONS["length"] * _NAMED_DIMENSIONS["current"]),
+)
+_register_named_dimension(
+    "magneticFluxPressure",
+    _NAMED_DIMENSIONS["magneticFluxDensity"] * _NAMED_DIMENSIONS["velocity"],
+)
+
+
 class Dimensioned:
     """A numerical value with associated physical dimensions.
 

@@ -12,7 +12,7 @@ from ..typing import (
     StandaloneData,
     SubDict,
 )
-from .types import Dimensioned, DimensionSet
+from .types import _NAMED_DIMENSION_IDS, Dimensioned, DimensionSet
 
 
 def dumps(
@@ -99,7 +99,12 @@ def dumps(
             return dumps(data.tolist(), keywords=None, format_=format_)  # ty: ignore[no-matching-overload]
 
         case DimensionSet(), _, _:
-            return b"[" + dumps(tuple(data), keywords=None, format_=format_) + b"]"
+            try:
+                name = _NAMED_DIMENSION_IDS[id(data)]
+            except KeyError:
+                return b"[" + dumps(tuple(data), keywords=None, format_=format_) + b"]"
+            else:
+                return b"[" + dumps(name, keywords=None, format_=format_) + b"]"
 
         case Dimensioned(name=None), _, _:
             return (
