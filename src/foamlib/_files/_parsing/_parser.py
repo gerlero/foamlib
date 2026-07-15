@@ -9,6 +9,7 @@ import numpy as np
 from multicollections import MultiDict
 
 from foamlib._files._util import add_to_mapping
+from foamlib._files.types import _NAMED_DIMENSIONS
 
 from ...typing import (
     Data,
@@ -722,23 +723,42 @@ def _parse_dimensions(
     contents: bytes | bytearray, pos: int
 ) -> tuple[DimensionSet, int]:
     pos = _expect(contents, pos, b"[")
+    pos = _skip(contents, pos)
 
-    dimensions = []
-    for _ in range(7):
-        pos = _skip(contents, pos)
-        if contents[pos : pos + 1] == b"]":
-            break
+    if contents[pos : pos + 1] == b"]":
+        pos += 1
+        return DimensionSet(), pos
 
+    try:
+        first_dim, pos = _parse_number(contents, pos)
+    except ParseError:
+        name, pos = _parse_token(contents, pos)
         try:
-            dim, pos = _parse_number(contents, pos)
-        except ParseError:
-            break
-        dimensions.append(dim)
+            ret = _NAMED_DIMENSIONS[name]
+            assert isinstance(ret, DimensionSet)
+        except KeyError as e:
+            raise FoamFileDecodeError(
+                contents,
+                pos,
+                expected=f"known dimensions name (got {name!r})",
+            ) from e
+    else:
+        dims = [first_dim]
+        for _ in range(6):
+            pos = _skip(contents, pos)
+            if contents[pos : pos + 1] == b"]":
+                break
+            try:
+                dim, pos = _parse_number(contents, pos)
+            except ParseError:
+                break
+            dims.append(dim)
+        ret = DimensionSet(*dims)
 
     pos = _skip(contents, pos)
     pos = _expect(contents, pos, b"]")
 
-    return DimensionSet(*dimensions), pos
+    return ret, pos
 
 
 def _parse_dimensioned(

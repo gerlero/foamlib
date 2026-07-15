@@ -139,6 +139,8 @@ def test_parse_value() -> None:
     assert ParsedFile(b"[1 1 -2 0 0 0 0]")[()] == DimensionSet(
         mass=1, length=1, time=-2
     )
+    assert ParsedFile(b"[]")[()] == DimensionSet()
+    assert ParsedFile(b"[.5 0 0 0 0 0 0]")[()] == DimensionSet(mass=0.5)
     dimensioned = ParsedFile(b"g [1 1 -2 0 0 0 0] (0 0 -9.81)")[()]
     assert isinstance(dimensioned, Dimensioned)
     assert dimensioned.dimensions == DimensionSet(mass=1, length=1, time=-2)
