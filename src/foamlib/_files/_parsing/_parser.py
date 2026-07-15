@@ -753,6 +753,7 @@ def _parse_dimensions(
             except ParseError:
                 break
             dims.append(dim)
+        dims.extend([0] * (7 - len(dims)))
         ret = DimensionSet(*dims)
 
     pos = _skip(contents, pos)
