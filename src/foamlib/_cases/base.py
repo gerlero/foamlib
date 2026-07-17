@@ -3,7 +3,7 @@ import sys
 from collections.abc import Iterator, Sequence
 from collections.abc import Set as AbstractSet
 from pathlib import Path
-from typing import overload
+from typing import assert_never, overload
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -69,13 +69,17 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
             return FoamFieldFile(self.path / key)
 
         @override
-        def __contains__(self, x: object) -> bool:
+        def __contains__(self, obj: object) -> bool:
             """Return ``True`` if the given field file or name exists in this time directory."""
-            if isinstance(x, FoamFieldFile):
-                return x.path.parent == self.path and x.path.is_file()
-            if isinstance(x, str):
-                return (self.path / x).is_file() or (self.path / f"{x}.gz").is_file()
-            return False
+            match obj:
+                case FoamFieldFile():
+                    return obj.path.parent == self.path and obj.path.is_file()
+                case str():
+                    return (self.path / obj).is_file() or (
+                        self.path / f"{obj}.gz"
+                    ).is_file()
+                case _:
+                    return False
 
         @override
         def __iter__(self) -> Iterator[FoamFieldFile]:
@@ -146,15 +150,19 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         index: int | slice | float | str,
     ) -> "FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]":
         """Return the time directory at the given index (``int``), indices (``slice``), name (``str``), or time (``float``)."""
-        if isinstance(index, str):
-            return FoamCaseBase.TimeDirectory(self.path / index)
-        if isinstance(index, float):
-            for time in self._times:
-                if time.time == index:
-                    return time
-            msg = f"Time {index} not found"
-            raise IndexError(msg)
-        return self._times[index]
+        match index:
+            case int() | slice():
+                return self._times[index]
+            case str():
+                return FoamCaseBase.TimeDirectory(self.path / index)
+            case float():
+                for time in self._times:
+                    if time.time == index:
+                        return time
+                msg = f"Time {index} not found"
+                raise IndexError(msg)
+            case _:
+                assert_never()
 
     @override
     def __iter__(self) -> Iterator["FoamCaseBase.TimeDirectory"]:
@@ -162,15 +170,17 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         return iter(self._times)
 
     @override
-    def __contains__(self, value: object) -> bool:
+    def __contains__(self, obj: object) -> bool:
         """Return ``True`` if the given time directory, name, or time exists in the case."""
-        if isinstance(value, FoamCaseBase.TimeDirectory):
-            return value in self._times
-        if isinstance(value, str):
-            return any(time.name == value for time in self._times)
-        if isinstance(value, float):
-            return any(time.time == value for time in self._times)
-        return False
+        match obj:
+            case FoamCaseBase.TimeDirectory():
+                return obj in self._times
+            case str():
+                return any(time.name == obj for time in self._times)
+            case float():
+                return any(time.time == obj for time in self._times)
+            case _:
+                return False
 
     @override
     def __len__(self) -> int:
@@ -217,20 +227,20 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
     @property
     def application(self) -> str:
         """The application name."""
-        control_dict = self.control_dict
-        try:
-            ret = control_dict["application"]
-        except KeyError:
-            if "solver" in control_dict:
-                return "foamRun"
-            if "regionSolvers" in control_dict:
-                return "foamMultiRun"
-            raise
-        else:
-            if not isinstance(ret, str):
-                msg = f"application in {control_dict} is not a string: {ret}"
-                raise TypeError(msg)
-            return ret
+        with self.control_dict as control_dict:
+            match control_dict:
+                case {"application": str() as app}:
+                    return app
+                case {"application": _}:
+                    msg = f"application in {control_dict} is not a string: {control_dict['application']!r}"
+                    raise TypeError(msg)
+                case {"solver": _}:
+                    return "foamRun"
+                case {"regionSolvers": _}:
+                    return "foamMultiRun"
+                case _:
+                    msg = "controlDict does not specify application, solver, or regionSolvers"
+                    raise KeyError(msg)
 
     @property
     def control_dict(self) -> FoamFile:

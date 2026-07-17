@@ -22,12 +22,13 @@ CompletedProcess = subprocess.CompletedProcess
 class CalledProcessError(subprocess.CalledProcessError):
     @override
     def __str__(self) -> str:
-        if self.stderr:
-            if isinstance(self.stderr, bytes):
+        match self.stderr:
+            case bytes() if self.stderr:
                 return super().__str__() + "\n" + self.stderr.decode()
-            if isinstance(self.stderr, str):
+            case str() if self.stderr:
                 return super().__str__() + "\n" + self.stderr
-        return super().__str__()
+            case _:
+                return super().__str__()
 
 
 DEVNULL = subprocess.DEVNULL

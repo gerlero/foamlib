@@ -278,15 +278,15 @@ class FoamCaseRunBase(FoamCaseBase):
     ) -> Generator[Callable[[str], None], None, None]:
         try:
             with self.control_dict as control_dict:
-                if control_dict["stopAt"] == "endTime":
-                    control_dict_end_time = control_dict["endTime"]
-                    if isinstance(control_dict_end_time, (int, float)):
-                        end_time = control_dict_end_time
-                    else:
+                match control_dict:
+                    case {
+                        "stopAt": "endTime",
+                        "endTime": (float() | int()) as end_time,
+                    }:
+                        pass
+                    case _:
                         end_time = None
-                else:
-                    end_time = None
-        except (KeyError, FileNotFoundError):
+        except FileNotFoundError:
             end_time = None
 
         with self.__progress as progress:
