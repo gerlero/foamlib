@@ -118,16 +118,14 @@ class FoamFile(
             )
 
         @override
-        def __contains__(self, x: object) -> bool:
-
-            if not isinstance(x, str) and x is not None:
-                return False
-            keywords = (x,) if x is not None else ()
-            parsed = self._file._get_parsed()
-            if keywords in parsed:
-                # Check if this key should be included in the view
-                return keywords != ("FoamFile",) or self._include_header
-            return False
+        def __contains__(self, obj: object) -> bool:
+            match obj:
+                case str():
+                    return (obj,) in self._file._get_parsed()
+                case None:
+                    return () in self._file._get_parsed()
+                case _:
+                    return False
 
     class ValuesView(
         multicollections.abc.ValuesView[
@@ -164,8 +162,8 @@ class FoamFile(
             )
 
         @override
-        def __contains__(self, value: object) -> bool:
-            return any(v == value for v in iter(self))
+        def __contains__(self, obj: object) -> bool:
+            return any(v == obj for v in iter(self))
 
     class ItemsView(
         multicollections.abc.ItemsView[
@@ -210,9 +208,8 @@ class FoamFile(
             )
 
         @override
-        def __contains__(self, x: object) -> bool:
-
-            return any(i == x for i in iter(self))
+        def __contains__(self, obj: object) -> bool:
+            return any(i == obj for i in iter(self))
 
     class SubDict(
         MutableMultiMapping[str, "Data | FoamFile.SubDict | None"],
@@ -263,13 +260,12 @@ class FoamFile(
                 return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
 
             @override
-            def __contains__(self, x: object) -> bool:
-
-                if not isinstance(x, str):
+            def __contains__(self, obj: object) -> bool:
+                if not isinstance(obj, str):
                     return False
                 return (
                     *self._subdict._keywords,
-                    x,
+                    obj,
                 ) in self._subdict._file._get_parsed()
 
         class ValuesView(
@@ -329,8 +325,8 @@ class FoamFile(
                 return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
 
             @override
-            def __contains__(self, x: object) -> bool:
-                return any(i == x for i in iter(self))
+            def __contains__(self, obj: object) -> bool:
+                return any(i == obj for i in iter(self))
 
         def __init__(
             self, _file: "FoamFile", _keywords: tuple[str, *tuple[str, ...]]
@@ -505,13 +501,15 @@ class FoamFile(
     def format(self) -> Literal["ascii", "binary"]:
         """Alias of ``self["FoamFile"]["format"]``."""
         ret = self["FoamFile", "format"]
-        if not isinstance(ret, str):
-            msg = "format is not a string"
-            raise TypeError(msg)
-        if ret not in ("ascii", "binary"):
-            msg = "format is not 'ascii' or 'binary'"
-            raise ValueError(msg)
-        return ret
+        match ret:
+            case "ascii" | "binary":
+                return ret  # ty: ignore[invalid-return-type]
+            case str():
+                msg = "format is not 'ascii' or 'binary'"
+                raise ValueError(msg)
+            case _:
+                msg = "format is not a string"
+                raise TypeError(msg)
 
     @format.setter  # noqa: A003
     def format(self, value: Literal["ascii", "binary"]) -> None:
