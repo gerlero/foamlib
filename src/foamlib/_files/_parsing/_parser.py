@@ -251,9 +251,9 @@ def _parse_number(
 class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
     def __init__(self, *, dtype: type[_DType], elshape: tuple[*_ElShape]) -> None:
         self._dtype = dtype
-        self._elshape = elshape
+        self._elshape: tuple[()] | tuple[int] = elshape  # ty: ignore[invalid-assignment]
 
-        match elshape:
+        match self._elshape:
             case ():
                 self._pattern = re.compile(
                     rb"(?:(?:"
@@ -284,8 +284,7 @@ class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
                     re.ASCII,
                 )
             case _:
-                msg = f"Unsupported element shape: {elshape}"
-                raise AssertionError(msg)
+                assert_never(self._elshape)
 
     @overload
     def __call__(
@@ -294,7 +293,7 @@ class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
         pos: int,
         *,
         empty_ok: bool = ...,
-    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.float64]], int]: ...
+    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.float64]], int]: ...  # ty: ignore[invalid-type-arguments]
 
     @overload
     def __call__(
@@ -303,7 +302,7 @@ class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
         pos: int,
         *,
         empty_ok: bool = ...,
-    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.int64]], int]: ...
+    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.int64]], int]: ...  # ty: ignore[invalid-type-arguments]
 
     def __call__(
         self,
@@ -311,7 +310,7 @@ class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
         pos: int,
         *,
         empty_ok: bool = False,
-    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.float64 | np.int64]], int]:
+    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.float64 | np.int64]], int]:  # ty: ignore[invalid-type-arguments]
         try:
             count, pos = _parse_number(contents, pos, target=int)
         except ParseError:
@@ -552,7 +551,7 @@ def _parse_binary_numeric_list(
     dtype: type[_NumpyDType],
     elshape: tuple[*_ElShape],
     empty_ok: bool = False,
-) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[_NumpyDType]], int]:
+) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[_NumpyDType]], int]:  # ty: ignore[invalid-type-arguments]
     count, pos = _parse_number(contents, pos, target=int)
     if count < 0:
         raise ParseError(contents, pos, expected="non-negative list count")
@@ -563,6 +562,7 @@ def _parse_binary_numeric_list(
 
     if elshape:
         (dim,) = elshape
+        assert isinstance(dim, int)
         elsize = dim
     else:
         elsize = 1
@@ -575,7 +575,7 @@ def _parse_binary_numeric_list(
 
     if elshape:
         try:
-            ret = ret.reshape((-1, *elshape))
+            ret = ret.reshape((-1, *elshape))  # ty: ignore[no-matching-overload]
         except ValueError as e:
             raise ParseError(contents, pos, expected="binary numeric list") from e
 
