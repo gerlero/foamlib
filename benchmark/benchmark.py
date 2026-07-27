@@ -4,8 +4,9 @@
 
 import timeit
 
-from foamlib import FoamFieldFile
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+
+from foamlib import FoamFieldFile
 
 FoamFieldFile("U").internal_field = [[0.0, 0.0, 0.0]] * 1_000_000
 with FoamFieldFile("U_binary") as f:
