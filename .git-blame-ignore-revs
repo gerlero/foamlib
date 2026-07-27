@@ -9,3 +9,6 @@
 
 # Apply extra Ruff rules
 0af6da4324087876ff3ca2365e05c1c1c9ff2ddc
+
+# Fix Ruff errors
+70c130f765ea216578ac49494443d32a437cab67

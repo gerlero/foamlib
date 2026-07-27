@@ -3,6 +3,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+
 from foamlib.postprocessing.load_tables import functionobject, load_tables
 from foamlib.preprocessing.parameter_study import csv_generator
 

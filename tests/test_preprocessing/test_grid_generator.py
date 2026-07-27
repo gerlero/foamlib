@@ -1,9 +1,9 @@
-# ruff: noqa: ERA001
 import shutil
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+
 from foamlib.preprocessing.grid_parameter_sweep import CaseParameter, GridParameter
 from foamlib.preprocessing.of_dict import FoamDictInstruction
 from foamlib.preprocessing.parameter_study import grid_generator

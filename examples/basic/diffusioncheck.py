@@ -6,8 +6,9 @@ import shutil
 from pathlib import Path
 
 import numpy as np
-from foamlib import Dimensioned, DimensionSet, FoamCase
 from scipy.special import erfc
+
+from foamlib import Dimensioned, DimensionSet, FoamCase
 
 path = Path(__file__).parent / "diffusionCheck"
 shutil.rmtree(path, ignore_errors=True)

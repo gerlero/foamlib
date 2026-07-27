@@ -1,6 +1,7 @@
 import math
 
 import numpy as np
+
 from foamlib._files._parsing import ParsedFile
 
 

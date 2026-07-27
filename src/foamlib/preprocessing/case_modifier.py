@@ -1,4 +1,3 @@
-# ruff: noqa: D100
 from pathlib import Path
 
 try:

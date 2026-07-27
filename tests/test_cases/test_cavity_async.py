@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import pytest_asyncio
+
 from foamlib import AsyncFoamCase, FoamFieldFile
 
 

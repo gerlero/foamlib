@@ -54,13 +54,13 @@ class DimensionSet(
     @overload
     def __new__(
         cls,
-        mass: int | float,
-        length: int | float,
-        time: int | float,
-        temperature: int | float,
-        moles: int | float,
-        current: int | float = 0,
-        luminous_intensity: int | float = 0,
+        mass: float,
+        length: float,
+        time: float,
+        temperature: float,
+        moles: float,
+        current: float = 0,
+        luminous_intensity: float = 0,
         /,
     ) -> Self: ...
 
@@ -68,19 +68,19 @@ class DimensionSet(
     def __new__(
         cls,
         *,
-        mass: int | float = 0,
-        length: int | float = 0,
-        time: int | float = 0,
-        temperature: int | float = 0,
-        moles: int | float = 0,
-        current: int | float = 0,
-        luminous_intensity: int | float = 0,
+        mass: float = 0,
+        length: float = 0,
+        time: float = 0,
+        temperature: float = 0,
+        moles: float = 0,
+        current: float = 0,
+        luminous_intensity: float = 0,
     ) -> Self: ...
 
     def __new__(
         cls,
-        *args: int | float,
-        **kwargs: int | float,
+        *args: float,
+        **kwargs: float,
     ) -> Self:
         if args and kwargs:
             msg = "Cannot mix positional and keyword arguments for DimensionSet"
@@ -388,8 +388,8 @@ class Dimensioned:
         dimensions: "DimensionSetLike",
         name: str | None = None,
     ) -> None:
-        from ..typing import Tensor  # noqa: PLC0415
-        from ._normalization import normalized  # noqa: PLC0415
+        from ..typing import Tensor
+        from ._normalization import normalized
 
         if isinstance(value, np.ndarray):
             value = value.copy()

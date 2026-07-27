@@ -87,7 +87,9 @@ from pathlib import Path
 from foamlib import FoamCase
 
 # Clone and run a case
-my_case = FoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily").clone("myCase")
+my_case = FoamCase(
+    Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily"
+).clone("myCase")
 my_case.run()
 
 # Access results
@@ -111,7 +113,9 @@ import os
 from pathlib import Path
 from foamlib import FoamCase
 
-pitz_tutorial = FoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily")
+pitz_tutorial = FoamCase(
+    Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily"
+)
 my_pitz = pitz_tutorial.clone("myPitz")
 ```
 
@@ -186,26 +190,30 @@ from foamlib import AsyncSlurmFoamCase
 from scipy.optimize import differential_evolution
 
 # Set up base case for optimization
-base = AsyncSlurmFoamCase(Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily")
+base = AsyncSlurmFoamCase(
+    Path(os.environ["FOAM_TUTORIALS"]) / "incompressible/simpleFoam/pitzDaily"
+)
+
 
 async def objective_function(x):
     """Objective function for optimization."""
     async with base.clone() as case:
         # Set inlet velocity based on optimization parameters
         case[0]["U"].boundary_field["inlet"].value = [x[0], 0, 0]
-        
+
         # Run with fallback to local execution if Slurm unavailable
         await case.run(fallback=True)
-        
+
         # Return objective (minimize velocity magnitude at outlet)
         return abs(case[-1]["U"].internal_field[0][0])
 
+
 # Run optimization with parallel jobs
 result = differential_evolution(
-    objective_function, 
-    bounds=[(-1, 1)], 
+    objective_function,
+    bounds=[(-1, 1)],
     workers=AsyncSlurmFoamCase.map,  # Enables concurrent evaluations
-    polish=False
+    polish=False,
 )
 print(f"Optimal inlet velocity: {result.x[0]}")
 ```

@@ -63,7 +63,7 @@ def _normalized_token(value: str, /, *, keywords: tuple[str, ...] | None) -> str
             raise ValueError(msg)
 
 
-def _normalized_switch(value: bool, /) -> bool:  # noqa: FBT001
+def _normalized_switch(value: bool, /) -> bool:
     if not isinstance(value, bool):
         msg = f"expected a bool, got {value!r}"
         raise TypeError(msg)

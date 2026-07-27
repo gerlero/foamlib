@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+
 from foamlib.postprocessing.table_reader import ReaderNotRegisteredError, TableReader
 
 

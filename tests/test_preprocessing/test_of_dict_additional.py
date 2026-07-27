@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+
 from foamlib import FoamFile
 from foamlib.preprocessing.of_dict import FoamDictAssignment, FoamDictInstruction
 

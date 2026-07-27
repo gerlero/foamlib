@@ -5,6 +5,7 @@ from textwrap import dedent
 
 import numpy as np
 import pytest
+
 from foamlib import FoamFieldFile
 
 code_p = dedent(

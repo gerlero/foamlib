@@ -135,7 +135,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
     @overload
     def __getitem__(
         self,
-        index: int | float | str,
+        index: float | str,
     ) -> "FoamCaseBase.TimeDirectory": ...
 
     @overload
@@ -147,7 +147,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
     @override
     def __getitem__(
         self,
-        index: int | slice | float | str,
+        index: slice | float | str,
     ) -> "FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]":
         """Return the time directory at the given index (``int``), indices (``slice``), name (``str``), or time (``float``)."""
         match index:
@@ -187,7 +187,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         """Return the number of time directories in the case."""
         return len(self._times)
 
-    def __delitem__(self, key: int | float | str, /) -> None:
+    def __delitem__(self, key: float | str, /) -> None:
         """Delete the time directory at the given index (``int``), name (``str``), or time (``float``)."""
         shutil.rmtree(self[key].path)
 

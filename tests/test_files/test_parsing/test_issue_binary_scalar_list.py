@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+
 from foamlib._files._parsing._parser import parse_located
 from foamlib._files._serialization import dumps
 

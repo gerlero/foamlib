@@ -1,9 +1,10 @@
 import numpy as np
+from multicollections import MultiDict
+
 from foamlib import Dimensioned, DimensionSet, FoamFile
 from foamlib._files._normalization import normalized
 from foamlib._files._serialization import dumps
 from foamlib.typing import Data
-from multicollections import MultiDict
 
 
 def test_serialize_data() -> None:

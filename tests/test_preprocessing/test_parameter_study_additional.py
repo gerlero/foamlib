@@ -1,6 +1,7 @@
 """Tests for foamlib.preprocessing.parameter_study module - additional coverage."""
 
 import pytest
+
 from foamlib.preprocessing.parameter_study import record_generator
 
 

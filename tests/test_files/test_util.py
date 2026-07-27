@@ -1,7 +1,8 @@
 """Tests for foamlib._files._util module - additional coverage."""
 
-from foamlib._files._util import add_to_mapping
 from multicollections import MultiDict
+
+from foamlib._files._util import add_to_mapping
 
 
 def test_add_to_mapping_multidict_add() -> None:
