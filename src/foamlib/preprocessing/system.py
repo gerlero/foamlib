@@ -1,4 +1,3 @@
-# ruff: noqa: D100
 import sys
 from pathlib import Path
 
@@ -19,7 +18,7 @@ def simulation_parameters(keys: list[str]) -> FoamDictInstruction:
 
 
 @deprecated("Use 'simulation_parameters' instead")
-def simulationParameters(keys: list[str]) -> FoamDictInstruction:  # noqa: N802
+def simulationParameters(keys: list[str]) -> FoamDictInstruction:
     """
     Alias for :func:`simulation_parameters`.
 
@@ -37,7 +36,7 @@ def control_dict(keys: list[str]) -> FoamDictInstruction:
 
 
 @deprecated("Use 'control_dict' instead")
-def controlDict(keys: list[str]) -> FoamDictInstruction:  # noqa: N802
+def controlDict(keys: list[str]) -> FoamDictInstruction:
     """
     Alias for :func:`control_dict`.
 
@@ -55,7 +54,7 @@ def fv_schemes(keys: list[str]) -> FoamDictInstruction:
 
 
 @deprecated("Use 'fv_schemes' instead")
-def fvSchemes(keys: list[str]) -> FoamDictInstruction:  # noqa: N802
+def fvSchemes(keys: list[str]) -> FoamDictInstruction:
     """
     Alias for :func:`fv_schemes`.
 
@@ -73,7 +72,7 @@ def fv_solution(keys: list[str]) -> FoamDictInstruction:
 
 
 @deprecated("Use 'fv_solution' instead")
-def fvSolution(keys: list[str]) -> FoamDictInstruction:  # noqa: N802
+def fvSolution(keys: list[str]) -> FoamDictInstruction:
     """
     Alias for :func:`fv_solution`.
 

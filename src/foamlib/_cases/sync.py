@@ -107,14 +107,14 @@ class FoamCase(FoamCaseRunBase):
         shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
 
     @overload
-    def __getitem__(self, index: int | float | str) -> "FoamCase.TimeDirectory": ...
+    def __getitem__(self, index: float | str) -> "FoamCase.TimeDirectory": ...
 
     @overload
     def __getitem__(self, index: slice) -> Sequence["FoamCase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
-        self, index: int | slice | float | str
+        self, index: slice | float | str
     ) -> "FoamCase.TimeDirectory | Sequence[FoamCase.TimeDirectory]":
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):

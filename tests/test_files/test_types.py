@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from foamlib import Dimensioned, DimensionSet, FoamFile
 from foamlib._files.types import _NAMED_DIMENSION_IDS, _NAMED_DIMENSIONS
 

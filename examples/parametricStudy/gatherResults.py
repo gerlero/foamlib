@@ -3,7 +3,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from foamlib.postprocessing.load_tables import DataSource, list_function_objects, load_tables
+from foamlib.postprocessing.load_tables import (
+    DataSource,
+    list_function_objects,
+    load_tables,
+)
 
 # damBreak
 root = Path(__file__).parent
@@ -13,7 +17,9 @@ results.mkdir(exist_ok=True)
 out_files = list_function_objects(root / "Cases")
 
 
-def max_height_filter(table: pd.DataFrame, parameters: list[dict[str, str]]) -> pd.DataFrame:
+def max_height_filter(
+    table: pd.DataFrame, parameters: list[dict[str, str]]
+) -> pd.DataFrame:
     """Filter the table to get the maximum height."""
     d = {
         "x": [table["x"].max()],
@@ -25,9 +31,7 @@ def max_height_filter(table: pd.DataFrame, parameters: list[dict[str, str]]) -> 
 
 
 # %%
-forces = load_tables(
-    source=out_files["forces--force.dat"], dir_name=root / "Cases"
-)
+forces = load_tables(source=out_files["forces--force.dat"], dir_name=root / "Cases")
 # %%
 assert forces is not None
 forces.to_csv(

@@ -95,26 +95,5 @@ dev = [
     {include-group = "benchmark"},
 ]
 
-[tool.ruff.lint]
-extend-select = ["ALL"]
-extend-ignore = [
-    "ANN401",
-    "ARG004",
-    "C901",
-    "COM812",
-    "E501",
-    "ISC001",
-    "PLR0911",
-    "PLR0912",
-    "PLR0913",
-    "PLR0915",
-    "PLR2004",
-    "PYI041",
-    "S101",
-    "S603",
-    "SLF001",
-    "TID252"
-]
-
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"

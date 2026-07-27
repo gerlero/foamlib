@@ -1,7 +1,8 @@
 import pytest
+from multicollections import MultiDict
+
 from foamlib import FoamFile
 from foamlib._files._parsing import ParsedFile
-from multicollections import MultiDict
 
 CONTENTS = b"""
 #include "filename1"

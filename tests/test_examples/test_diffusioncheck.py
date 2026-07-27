@@ -2,8 +2,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from foamlib import Dimensioned, DimensionSet, FoamCase
 from scipy.special import erfc
+
+from foamlib import Dimensioned, DimensionSet, FoamCase
 
 
 def test_example(tmp_path: Path) -> None:

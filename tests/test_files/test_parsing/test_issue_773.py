@@ -1,10 +1,11 @@
 import pytest
+from multicollections import MultiDict
+
 from foamlib import FoamFile
 from foamlib._files._normalization import normalized
 from foamlib._files._parsing import ParsedFile
 from foamlib._files._serialization import dumps
 from foamlib.typing import Data
-from multicollections import MultiDict
 
 
 def test_read() -> None:

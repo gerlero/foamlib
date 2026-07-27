@@ -1,6 +1,7 @@
 """Tests for foamlib.preprocessing.system module."""
 
 import pytest
+
 from foamlib.preprocessing.system import (
     control_dict,
     fv_schemes,
@@ -11,7 +12,7 @@ from foamlib.preprocessing.system import (
 
 def test_deprecated_simulation_parameters() -> None:
     """Test deprecated simulationParameters function."""
-    from foamlib.preprocessing.system import (  # noqa: PLC0415
+    from foamlib.preprocessing.system import (
         simulationParameters,  # ty: ignore[deprecated]
     )
 
@@ -24,7 +25,7 @@ def test_deprecated_simulation_parameters() -> None:
 
 def test_deprecated_control_dict() -> None:
     """Test deprecated controlDict function."""
-    from foamlib.preprocessing.system import (  # noqa: PLC0415
+    from foamlib.preprocessing.system import (
         controlDict,  # ty: ignore[deprecated]
     )
 
@@ -37,7 +38,7 @@ def test_deprecated_control_dict() -> None:
 
 def test_deprecated_fv_schemes() -> None:
     """Test deprecated fvSchemes function."""
-    from foamlib.preprocessing.system import (  # noqa: PLC0415
+    from foamlib.preprocessing.system import (
         fvSchemes,  # ty: ignore[deprecated]
     )
 
@@ -50,7 +51,7 @@ def test_deprecated_fv_schemes() -> None:
 
 def test_deprecated_fv_solution() -> None:
     """Test deprecated fvSolution function."""
-    from foamlib.preprocessing.system import (  # noqa: PLC0415
+    from foamlib.preprocessing.system import (
         fvSolution,  # ty: ignore[deprecated]
     )
 

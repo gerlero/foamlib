@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from foamlib import Dimensioned, DimensionSet, FoamFileDecodeError
 from foamlib._files._parsing import ParsedFile
 

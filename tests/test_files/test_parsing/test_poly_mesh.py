@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import numpy as np
+
 from foamlib import FoamFile
 
 contents = r"""

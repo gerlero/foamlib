@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from foamlib.preprocessing.grid_parameter_sweep import CaseParameter, GridParameter
-from foamlib.preprocessing.of_dict import FoamDictInstruction
 from foamlib.preprocessing.parameter_study import grid_generator
 from foamlib.preprocessing.system import simulation_parameters
 

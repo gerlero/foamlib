@@ -10,6 +10,7 @@ string and round-trip unchanged.
 from pathlib import Path
 
 import pytest
+
 from foamlib import FoamFile
 
 

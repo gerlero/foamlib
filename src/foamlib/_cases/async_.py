@@ -183,16 +183,14 @@ class AsyncFoamCase(FoamCaseRunBase):
             await coro
 
     @overload
-    def __getitem__(
-        self, index: int | float | str
-    ) -> "AsyncFoamCase.TimeDirectory": ...
+    def __getitem__(self, index: float | str) -> "AsyncFoamCase.TimeDirectory": ...
 
     @overload
     def __getitem__(self, index: slice) -> Sequence["AsyncFoamCase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
-        self, index: int | slice | float | str
+        self, index: slice | float | str
     ) -> "AsyncFoamCase.TimeDirectory | Sequence[AsyncFoamCase.TimeDirectory]":
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):

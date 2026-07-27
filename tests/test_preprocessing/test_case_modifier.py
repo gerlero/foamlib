@@ -3,6 +3,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+
 from foamlib import FoamCase
 from foamlib.preprocessing.case_modifier import CaseModifier, CaseParameter
 from foamlib.preprocessing.of_dict import FoamDictAssignment, FoamDictInstruction
