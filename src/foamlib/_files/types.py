@@ -89,7 +89,7 @@ class DimensionSet(
         if args:
             match args:
                 case [*_] if 5 <= len(args) <= 7:
-                    values = list(args)
+                    values = [*args, *([0] * (7 - len(args)))]
                 case _:
                     msg = f"DimensionSet positional constructor requires 5 to 7 arguments, got {len(args)}"
                     raise TypeError(msg)
