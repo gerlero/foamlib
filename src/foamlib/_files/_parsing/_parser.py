@@ -753,6 +753,12 @@ def _parse_dimensions(
             except ParseError:
                 break
             dims.append(dim)
+        if len(dims) not in (5, 7):
+            raise FoamFileDecodeError(
+                contents,
+                pos,
+                expected=f"5 or 7 dimensions (got {len(dims)})",
+            )
         dims.extend([0] * (7 - len(dims)))
         ret = DimensionSet(*dims)
 
