@@ -147,7 +147,11 @@ def dumps(
                 ret += val
                 if isinstance(k, str) and k[0] == "#":
                     ret += b"\n"
-                elif k is not None and not isinstance(v, Mapping):
+                elif (
+                    k is not None
+                    and not isinstance(v, Mapping)
+                    and not (isinstance(k, str) and k.startswith("$") and v is None)
+                ):
                     ret += b";"
                 return ret
 
