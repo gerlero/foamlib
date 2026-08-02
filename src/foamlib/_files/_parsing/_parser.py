@@ -118,6 +118,31 @@ def _skip(
     return pos
 
 
+def _read_delimited(
+    contents: bytes | bytearray,
+    pos: int,
+    *,
+    begin: int,
+    end: int,
+) -> tuple[str, int]:
+    """Read a raw delimited string, mirroring ``ISstream::readDelimited``."""
+    start = pos
+    depth = 0
+    while pos < len(contents):
+        char = contents[pos]
+        if char == begin:
+            depth += 1
+        elif char == end:
+            depth -= 1
+            if depth <= 0:
+                pos += 1
+                break
+        pos += 1
+    if depth != 0:
+        raise ParseError(contents, pos, expected=chr(end))
+    return contents[start:pos].decode("ascii"), pos
+
+
 def _expect(contents: bytes | bytearray, pos: int, expected: bytes | bytearray) -> int:
     length = len(expected)
     if contents[pos : pos + length] != expected:
@@ -146,13 +171,15 @@ def _parse_token(contents: bytes | bytearray, pos: int) -> tuple[str, int]:
         with contextlib.suppress(IndexError):
             while True:
                 if (depth == 0 and _IS_TOKEN_CONTINUATION[char]) or (
-                    depth > 0 and char not in b";(){}[]"
+                    depth > 0 and char not in b"()[]{}"
                 ):
                     end += 1
-                elif char == ord(b"("):
+                elif char == ord(b"(") or (
+                    depth > 0 and char in (ord(b"["), ord(b"{"))
+                ):
                     depth += 1
                     end += 1
-                elif char == ord(b")") and depth > 0:
+                elif depth > 0 and char in (ord(b")"), ord(b"]"), ord(b"}")):
                     depth -= 1
                     end += 1
                 else:
@@ -719,6 +746,69 @@ def _parse_list(
     return ret, pos
 
 
+_UNIT_SYMBOLS: dict[str, tuple[int, int, int, int, int, int, int]] = {
+    # Default SI unit set (OpenFOAM etc/controlDict, DimensionSets/SICoeffs)
+    "kg": (1, 0, 0, 0, 0, 0, 0),
+    "m": (0, 1, 0, 0, 0, 0, 0),
+    "s": (0, 0, 1, 0, 0, 0, 0),
+    "K": (0, 0, 0, 1, 0, 0, 0),
+    "mol": (0, 0, 0, 0, 1, 0, 0),
+    "A": (0, 0, 0, 0, 0, 1, 0),
+    "Cd": (0, 0, 0, 0, 0, 0, 1),
+    "Hz": (0, 0, -1, 0, 0, 0, 0),
+    "N": (1, 1, -2, 0, 0, 0, 0),
+    "Pa": (1, -1, -2, 0, 0, 0, 0),
+    "J": (1, 2, -2, 0, 0, 0, 0),
+    "W": (1, 2, -3, 0, 0, 0, 0),
+    "area": (0, 2, 0, 0, 0, 0, 0),
+    "volume": (0, 3, 0, 0, 0, 0, 0),
+    "density": (1, -3, 0, 0, 0, 0, 0),
+    "acceleration": (0, 1, -2, 0, 0, 0, 0),
+    "kinematicPressure": (0, 2, -2, 0, 0, 0, 0),
+    "cm": (0, 1, 0, 0, 0, 0, 0),
+    "mm": (0, 1, 0, 0, 0, 0, 0),
+    "km": (0, 1, 0, 0, 0, 0, 0),
+}
+
+
+def _parse_unit_symbols(
+    contents: bytes | bytearray,
+    pos: int,
+    first: str,
+) -> tuple[DimensionSet, int]:
+    """Parse a symbolic dimension expression (``dimensionSet::read``)."""
+    exponents = [0] * 7
+    symbol = first
+    while True:
+        base, _, exp = symbol.partition("^")
+        try:
+            dims = _UNIT_SYMBOLS[base]
+        except KeyError:
+            raise FoamFileDecodeError(
+                contents,
+                pos,
+                expected=f"known dimensions name or unit symbol (got {symbol!r})",
+            ) from None
+
+        if exp:
+            try:
+                exponent: int | float = int(exp)
+            except ValueError:
+                exponent = float(exp)
+        else:
+            exponent = 1
+
+        for i, dim in enumerate(dims):
+            exponents[i] += dim * exponent
+
+        pos = _skip(contents, pos)
+        if contents[pos : pos + 1] == b"]":
+            break
+        symbol, pos = _parse_token(contents, pos)
+
+    return DimensionSet(*exponents), pos
+
+
 def _parse_dimensions(
     contents: bytes | bytearray, pos: int
 ) -> tuple[DimensionSet, int]:
@@ -736,12 +826,8 @@ def _parse_dimensions(
         try:
             ret = _NAMED_DIMENSIONS[name]
             assert isinstance(ret, DimensionSet)
-        except KeyError as e:
-            raise FoamFileDecodeError(
-                contents,
-                pos,
-                expected=f"known dimensions name (got {name!r})",
-            ) from e
+        except KeyError:
+            ret, pos = _parse_unit_symbols(contents, pos, name)
     else:
         dims = [first_dim]
         for _ in range(6):
@@ -803,11 +889,10 @@ def _parse_keyword_entry(
     try:
         value, pos = _parse_dictionary(contents, pos)
     except ParseError:
-        value, pos = _parse_data(contents, pos)
-        pos = _skip(contents, pos)
+        value, pos = _parse_entry_value(contents, pos)
         pos = _expect(contents, pos, b";")
 
-    return (keyword, value), pos
+    return (keyword, value), pos  # ty: ignore[invalid-return-type]
 
 
 def _parse_dictionary(contents: bytes | bytearray, pos: int) -> tuple[Dict, int]:
@@ -819,6 +904,9 @@ def _parse_dictionary(contents: bytes | bytearray, pos: int) -> tuple[Dict, int]
         if contents[pos : pos + 1] == b"}":
             pos += 1
             break
+        if contents[pos : pos + 1] == b";":
+            pos = _skip(contents, pos + 1)
+            continue
 
         keyword, pos = _parse_token(contents, pos)
 
@@ -841,8 +929,7 @@ def _parse_dictionary(contents: bytes | bytearray, pos: int) -> tuple[Dict, int]
         try:
             value, pos = _parse_dictionary(contents, pos)
         except ParseError:
-            value, pos = _parse_data(contents, pos)
-            pos = _skip(contents, pos)
+            value, pos = _parse_entry_value(contents, pos)
             pos = _expect(contents, pos, b";")
 
         ret[keyword] = value
@@ -892,6 +979,9 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
         if contents[pos : pos + 1] == b"}":
             pos += 1
             break
+        if contents[pos : pos + 1] == b";":
+            pos = _skip(contents, pos + 1)
+            continue
 
         keyword, pos = _parse_token(contents, pos)
 
@@ -899,20 +989,18 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
 
         if keyword.startswith("#"):
             value, pos = _parse_data_entry(contents, pos)
-            pos = _skip(contents, pos, newline_ok=False)
-            if pos < len(contents):
-                pos = _expect(contents, pos, b"\n")
+            value, pos = _parse_directive_value(contents, keyword, value, pos)
         else:
             try:
                 value, pos = _parse_subdictionary(contents, pos)
             except ParseError:
-                try:
-                    value, pos = _parse_data(contents, pos)
-                except ParseError:
-                    value = None
+                value, pos = _parse_entry_value(contents, pos)
+                if keyword.startswith("$") and value is None:
+                    # Bare '$'-reference entry (whole-entry substitution)
+                    if contents[pos : pos + 1] == b";":
+                        pos += 1
                 else:
-                    pos = _skip(contents, pos)
-                pos = _expect(contents, pos, b";")
+                    pos = _expect(contents, pos, b";")
 
         if keyword in ret and not keyword.startswith("#"):
             warn(
@@ -925,6 +1013,47 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
             ret = add_to_mapping(ret, keyword, value)
 
     return ret, pos
+
+
+def _parse_entry_value(
+    contents: bytes | bytearray, pos: int
+) -> tuple[Data | None, int]:
+    """Parse a keyword-entry value, allowing a trailing subdictionary.
+
+    OpenFOAM's ``primitiveEntry::read`` reads tokens until a ``;`` at block
+    depth zero, so ``key word(s) { ... };`` is a single entry whose value is
+    the data followed by the subdictionary.
+    """
+    try:
+        value, pos = _parse_data(contents, pos)
+    except ParseError:
+        return None, pos
+    pos = _skip(contents, pos)
+    if contents[pos : pos + 1] == b"{":
+        subdict, pos = _parse_subdictionary(contents, pos)
+        value = (value, subdict)
+    return value, pos
+
+
+def _parse_directive_value(
+    contents: bytes | bytearray,
+    keyword: str,
+    value: Data,
+    pos: int,
+) -> tuple[Data, int]:
+    """Parse a directive value, allowing ``#includeFunc`` arguments on the next line."""
+    if keyword == "#includeFunc" and isinstance(value, str) and "(" not in value:
+        # Optional arguments may start on the next line
+        # (functionEntry::readFuncNameArgs)
+        peek = _skip(contents, pos, newline_ok=True)
+        if contents[peek : peek + 1] == b"(":
+            args, pos = _read_delimited(contents, peek, begin=ord("("), end=ord(")"))
+            value = value + " ".join(args.split())
+            return value, pos
+    pos = _skip(contents, pos, newline_ok=False)
+    if pos < len(contents):
+        pos = _expect(contents, pos, b"\n")
+    return value, pos
 
 
 def _parse_standalone_data_entry(
@@ -1000,7 +1129,18 @@ def _parse_standalone_data(
 def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, int]:
     ret: FileDict = {}
 
-    while (pos := _skip(contents, pos)) < len(contents):
+    while True:
+        pos = _skip(contents, pos)
+        if pos >= len(contents):
+            break
+        if contents[pos : pos + 1] == b";":
+            # Discard spurious statement terminators (entry::getKeyword)
+            pos += 1
+            continue
+        if contents[pos : pos + 1] == b"}":
+            # A stray top-level block close ends the read (dictionary::read)
+            return ret, len(contents)
+
         try:
             keyword, new_pos = _parse_token(contents, pos)
 
@@ -1008,20 +1148,20 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, in
 
             if keyword.startswith("#"):
                 value, new_pos = _parse_data_entry(contents, new_pos)
-                new_pos = _skip(contents, new_pos, newline_ok=False)
-                if new_pos < len(contents):
-                    new_pos = _expect(contents, new_pos, b"\n")
+                value, new_pos = _parse_directive_value(
+                    contents, keyword, value, new_pos
+                )
             else:
                 try:
                     value, new_pos = _parse_subdictionary(contents, new_pos)
                 except ParseError:
-                    try:
-                        value, new_pos = _parse_data(contents, new_pos)
-                    except ParseError:
-                        value = None
+                    value, new_pos = _parse_entry_value(contents, new_pos)
+                    if keyword.startswith("$") and value is None:
+                        # Bare '$'-reference entry (whole-entry substitution)
+                        if contents[new_pos : new_pos + 1] == b";":
+                            new_pos += 1
                     else:
-                        new_pos = _skip(contents, new_pos)
-                    new_pos = _expect(contents, new_pos, b";")
+                        new_pos = _expect(contents, new_pos, b";")
 
             if keyword in ret and not keyword.startswith("#"):
                 warn(
@@ -1096,10 +1236,20 @@ def _parse_file_located(
 ) -> tuple[MultiDict[tuple[str, ...], ParsedEntry], int]:
     ret: MultiDict[tuple[str, ...], ParsedEntry] = MultiDict()
 
-    while (pos := _skip(contents, pos)) < len(contents):
+    while True:
+        pos = _skip(contents, pos)
+        if pos >= len(contents):
+            break
         # Check if we've hit a closing brace (end of subdictionary)
         if _keywords and contents[pos : pos + 1] == b"}":
             return ret, pos
+        if contents[pos : pos + 1] == b";":
+            # Discard spurious statement terminators (entry::getKeyword)
+            pos = _skip(contents, pos + 1)
+            continue
+        if contents[pos : pos + 1] == b"}":
+            # A stray top-level block close ends the read (dictionary::read)
+            return ret, len(contents)
 
         entry_start = pos
         try:
@@ -1108,10 +1258,9 @@ def _parse_file_located(
 
             if keyword.startswith("#"):
                 value, new_pos = _parse_data_entry(contents, new_pos)
-                new_pos = _skip(contents, new_pos, newline_ok=False)
-                # Expect newline or end for directives
-                if new_pos < len(contents):
-                    new_pos = _expect(contents, new_pos, b"\n")
+                value, new_pos = _parse_directive_value(
+                    contents, keyword, value, new_pos
+                )
                 ret.add((*_keywords, keyword), ParsedEntry(value, entry_start, new_pos))
             # Check if this is a subdictionary
             elif contents[new_pos : new_pos + 1] == b"{":
@@ -1141,13 +1290,13 @@ def _parse_file_located(
                 ret[(*_keywords, keyword)] = ParsedEntry(..., entry_start, new_pos)
                 ret.extend(subdict_result)
             else:
-                try:
-                    value, new_pos = _parse_data(contents, new_pos)
-                except ParseError:
-                    value = None
+                value, new_pos = _parse_entry_value(contents, new_pos)
+                if keyword.startswith("$") and value is None:
+                    # Bare '$'-reference entry (whole-entry substitution)
+                    if contents[new_pos : new_pos + 1] == b";":
+                        new_pos += 1
                 else:
-                    new_pos = _skip(contents, new_pos)
-                new_pos = _expect(contents, new_pos, b";")
+                    new_pos = _expect(contents, new_pos, b";")
 
                 if not keyword.startswith("#"):
                     if (*_keywords, keyword) in ret:

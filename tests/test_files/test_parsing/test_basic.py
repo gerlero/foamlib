@@ -215,7 +215,7 @@ def test_parse_invalid_content() -> None:
         ParsedFile(b"key value; unclosed {")
 
     with pytest.raises(FoamFileDecodeError):
-        ParsedFile(b"key { value; } extra }")
+        ParsedFile(b"key { value; } {")
 
     with pytest.raises(FoamFileDecodeError):
         ParsedFile(b"{ orphaned brace")

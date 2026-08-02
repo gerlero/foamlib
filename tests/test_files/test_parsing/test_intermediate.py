@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from foamlib import Dimensioned, DimensionSet, FoamFileDecodeError
+from foamlib import Dimensioned, DimensionSet
 from foamlib._files._parsing import ParsedFile
 
 
@@ -558,18 +558,27 @@ def test_list_numbered() -> None:
 
 
 def test_list_numbered_u() -> None:
-    with pytest.raises(FoamFileDecodeError):
-        ParsedFile(b"""
-            70
-            (
-                (5.74803 0 0)
-                (5.74803 0 0)
-                (11.3009 0 0)
-                (13.4518 0 0)
-                (13.4518 0 0)
-                (14.0472 0 0)
-            );
-        """)
+    # A standalone counted list that does not match its count falls through to
+    # general standalone data, and the trailing ';' is discarded like any
+    # spurious statement terminator (entry::getKeyword).
+    parsed = ParsedFile(
+        b"""
+        70
+        (
+            (5.74803 0 0)
+            (5.74803 0 0)
+            (11.3009 0 0)
+            (13.4518 0 0)
+            (13.4518 0 0)
+            (14.0472 0 0)
+        );
+        """
+    )
+    data = parsed[()]
+    assert isinstance(data, tuple)
+    assert data[0] == 70
+    assert isinstance(data[1], list)
+    assert len(data[1]) == 6
 
 
 def test_colon_double_name() -> None:
