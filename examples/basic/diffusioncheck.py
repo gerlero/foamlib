@@ -132,7 +132,7 @@ case.run()
 
 internal_field = case[0].cell_centers().internal_field
 assert isinstance(internal_field, np.ndarray)
-x, y, _ = internal_field.T  # ty: ignore[not-iterable]
+x, y, _ = internal_field.T
 end = x == x.max()
 x = x[end]
 y = y[end]
@@ -142,7 +142,7 @@ assert isinstance(DT, Dimensioned)
 
 internal_field = case[0]["U"].internal_field
 assert isinstance(internal_field, np.ndarray)
-Ux, _, _ = internal_field  # ty: ignore[not-iterable]
+Ux, _, _ = internal_field
 
 for time in case[1:]:
     if Ux * time.time < 2 * x.max():
@@ -150,7 +150,7 @@ for time in case[1:]:
 
     internal_field = time["T"].internal_field
     assert isinstance(internal_field, np.ndarray)
-    T = internal_field[end]  # ty: ignore[invalid-argument-type]
+    T = internal_field[end]
     analytical = 0.5 * erfc((y - 0.5) / np.sqrt(4 * DT.value * x / Ux))
     if np.allclose(T, analytical, atol=0.1):
         print(f"Time {time.time}: OK")

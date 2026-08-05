@@ -45,7 +45,7 @@ def add_to_mapping(
 
     ret = MultiDict(d)  # ty: ignore[invalid-argument-type]
     ret.add(key, value)
-    return ret  # ty: ignore[invalid-return-type]
+    return ret
 
 
 class SupportsKeysAndGetItem(Protocol[_K, _V_co]):

@@ -603,7 +603,7 @@ class FoamFile(
                     and np.issubdtype(data.dtype, np.floating)
                     and (
                         data.ndim == 1
-                        or (data.ndim == 2 and data.shape[1] in (3, 6, 9))  # ty: ignore[index-out-of-bounds]
+                        or (data.ndim == 2 and data.shape[1] in (3, 6, 9))
                     )
                 )
             )
