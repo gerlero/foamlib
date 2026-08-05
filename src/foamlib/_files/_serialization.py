@@ -58,7 +58,7 @@ def dumps(
             return b"uniform " + dumps(data, keywords=None, format_=format_)
 
         case np.ndarray(shape=(3,) | (6,) | (9,)), _common.FIELD_KEYWORDS, _:
-            return b"uniform " + dumps(data.tolist(), keywords=None, format_=format_)  # ty: ignore[no-matching-overload]
+            return b"uniform " + dumps(data.tolist(), keywords=None, format_=format_)
 
         case np.ndarray(shape=(_,)), _common.FIELD_KEYWORDS, _:
             return b"nonuniform List<scalar> " + dumps(
@@ -90,13 +90,13 @@ def dumps(
 
         case np.ndarray(), (_, *_) | None, "ascii" | None:
             return dumps(len(data), keywords=None, format_=None) + dumps(
-                data.tolist(),  # ty: ignore[no-matching-overload]
+                data.tolist(),
                 keywords=None,
                 format_=format_,
             )
 
         case np.ndarray(), (), "ascii" | None:
-            return dumps(data.tolist(), keywords=None, format_=format_)  # ty: ignore[no-matching-overload]
+            return dumps(data.tolist(), keywords=None, format_=format_)
 
         case DimensionSet(), _, _:
             try:

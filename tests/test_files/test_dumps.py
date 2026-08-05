@@ -196,10 +196,10 @@ def test_faces_like_list() -> None:
     assert isinstance(faces_like_list, list)
     assert isinstance(faces_like_list[0], np.ndarray)
     assert faces_like_list[0].dtype == int
-    assert faces_like_list[0].tolist() == [1, 2, 3]  # ty: ignore[no-matching-overload]
+    assert faces_like_list[0].tolist() == [1, 2, 3]
     assert isinstance(faces_like_list[1], np.ndarray)
     assert faces_like_list[1].dtype == int
-    assert faces_like_list[1].tolist() == [4, 5, 6, 7]  # ty: ignore[no-matching-overload]
+    assert faces_like_list[1].tolist() == [4, 5, 6, 7]
     assert dumps(faces_like_list) == b"(3(1 2 3) 4(4 5 6 7))"
 
 

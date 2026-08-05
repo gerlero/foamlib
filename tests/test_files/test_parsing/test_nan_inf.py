@@ -33,14 +33,14 @@ def test_parse_nan() -> None:
     # Uniform tensor with nan
     tensor = ParsedFile(b"uniform (1 nan 3)")[()]
     assert isinstance(tensor, np.ndarray)
-    assert tensor[0] == 1.0  # ty: ignore[invalid-argument-type]
-    assert math.isnan(tensor[1])  # ty: ignore[invalid-argument-type]
-    assert tensor[2] == 3.0  # ty: ignore[invalid-argument-type]
+    assert tensor[0] == 1.0
+    assert math.isnan(tensor[1])
+    assert tensor[2] == 3.0
 
     # Tensor with multiple nan values
     tensor = ParsedFile(b"uniform (nan nan nan)")[()]
     assert isinstance(tensor, np.ndarray)
-    assert all(math.isnan(x) for x in tensor)  # ty: ignore[invalid-argument-type, not-iterable]
+    assert all(math.isnan(x) for x in tensor)
 
 
 def test_parse_infinity() -> None:
@@ -71,15 +71,15 @@ def test_parse_infinity() -> None:
     # Uniform tensor with inf
     tensor = ParsedFile(b"uniform (1 inf 3)")[()]
     assert isinstance(tensor, np.ndarray)
-    assert tensor[0] == 1.0  # ty: ignore[invalid-argument-type]
-    assert tensor[1] == math.inf  # ty: ignore[invalid-argument-type]
-    assert tensor[2] == 3.0  # ty: ignore[invalid-argument-type]
+    assert tensor[0] == 1.0
+    assert tensor[1] == math.inf
+    assert tensor[2] == 3.0
 
     tensor = ParsedFile(b"uniform (-inf 0 inf)")[()]
     assert isinstance(tensor, np.ndarray)
-    assert tensor[0] == -math.inf  # ty: ignore[invalid-argument-type]
-    assert tensor[1] == 0.0  # ty: ignore[invalid-argument-type]
-    assert tensor[2] == math.inf  # ty: ignore[invalid-argument-type]
+    assert tensor[0] == -math.inf
+    assert tensor[1] == 0.0
+    assert tensor[2] == math.inf
 
 
 def test_parse_nan_inf_in_lists() -> None:
@@ -91,27 +91,27 @@ def test_parse_nan_inf_in_lists() -> None:
     field = ParsedFile(b"nonuniform List<scalar> 3(1.0 nan 3.0)")[()]
     assert isinstance(field, np.ndarray)
     assert field.dtype == float
-    assert field[0] == 1.0  # ty: ignore[invalid-argument-type]
-    assert math.isnan(field[1])  # ty: ignore[invalid-argument-type]
-    assert field[2] == 3.0  # ty: ignore[invalid-argument-type]
+    assert field[0] == 1.0
+    assert math.isnan(field[1])
+    assert field[2] == 3.0
 
     # Float list with inf
     field = ParsedFile(b"nonuniform List<scalar> 3(inf -inf 0)")[()]
     assert isinstance(field, np.ndarray)
     assert field.dtype == float
-    assert field[0] == math.inf  # ty: ignore[invalid-argument-type]
-    assert field[1] == -math.inf  # ty: ignore[invalid-argument-type]
-    assert field[2] == 0.0  # ty: ignore[invalid-argument-type]
+    assert field[0] == math.inf
+    assert field[1] == -math.inf
+    assert field[2] == 0.0
 
     # Vector list with nan and inf
     field = ParsedFile(b"nonuniform List<vector> 2((1 nan 3) (inf -inf 0))")[()]
     assert isinstance(field, np.ndarray)
-    assert field[0, 0] == 1.0  # ty: ignore[invalid-argument-type]
-    assert math.isnan(field[0, 1])  # ty: ignore[invalid-argument-type]
-    assert field[0, 2] == 3.0  # ty: ignore[invalid-argument-type]
-    assert field[1, 0] == math.inf  # ty: ignore[invalid-argument-type]
-    assert field[1, 1] == -math.inf  # ty: ignore[invalid-argument-type]
-    assert field[1, 2] == 0.0  # ty: ignore[invalid-argument-type]
+    assert field[0, 0] == 1.0
+    assert math.isnan(field[0, 1])
+    assert field[0, 2] == 3.0
+    assert field[1, 0] == math.inf
+    assert field[1, 1] == -math.inf
+    assert field[1, 2] == 0.0
 
 
 def test_parse_tokens_containing_nan_inf() -> None:

@@ -304,4 +304,4 @@ def test_cell_centers(tmp_path: Path) -> None:
 
     assert isinstance(field_c.internal_field, np.ndarray)
     assert field_c.internal_field.shape == (14, 3)
-    assert field_c.internal_field[:, 0] == pytest.approx(field_cx.internal_field)  # ty: ignore[invalid-argument-type]
+    assert field_c.internal_field[:, 0] == pytest.approx(field_cx.internal_field)
