@@ -233,7 +233,7 @@ class ParsedFile(
                 for k in keywords[:-1]:
                     sub = parent[k]
                     assert isinstance(sub, (dict, MultiDict))
-                    parent = sub  # ty: ignore[invalid-assignment]
+                    parent = sub
                 assert keywords[-1] not in parent
                 parent[keywords[-1]] = {}
             elif len(keywords) == 1:
@@ -243,7 +243,7 @@ class ParsedFile(
                 for k in keywords[:-2]:
                     sub = grandparent[k]
                     assert isinstance(sub, (dict, MultiDict))
-                    grandparent = sub  # ty: ignore[invalid-assignment]
+                    grandparent = sub
                 sub = grandparent[keywords[-2]]
                 assert isinstance(sub, (dict, MultiDict))
                 grandparent[keywords[-2]] = add_to_mapping(

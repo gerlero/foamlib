@@ -168,9 +168,9 @@ def test_list_with_dict() -> None:
     assert upper_boundary[0] == "upperBoundary"
     d = upper_boundary[1]
     assert isinstance(d, dict)
-    assert d["type"] == "cyclic"  # ty: ignore[invalid-argument-type]
-    assert d["neighbourPatch"] == "lowerBoundary"  # ty: ignore[invalid-argument-type]
-    assert np.array_equal(d["faces"], [[3, 7, 6, 2]])  # ty: ignore[invalid-argument-type]
+    assert d["type"] == "cyclic"
+    assert d["neighbourPatch"] == "lowerBoundary"
+    assert np.array_equal(d["faces"], [[3, 7, 6, 2]])
 
 
 def test_list_with_str() -> None:
