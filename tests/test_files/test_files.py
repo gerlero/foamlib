@@ -99,7 +99,7 @@ def test_write_read(tmp_path: Path) -> None:
         assert isinstance(sd, FoamFile.SubDict)
         lst = sd["list"]
         assert isinstance(lst, list)
-        lst[0] = 0  # ty: ignore[invalid-assignment]
+        lst[0] = 0
         assert lst == [0, 2, 3]
         assert sd["list"] == [1, 2, 3]
 
@@ -171,7 +171,7 @@ def test_internal_field(cavity: FoamCase) -> None:
     assert isinstance(blocks, list)
     sizes = blocks[2]
     assert isinstance(sizes, list)
-    size = np.prod(sizes)  # ty: ignore[no-matching-overload]
+    size = np.prod(sizes)
 
     p_arr = np.zeros(size)
     U_arr = np.zeros((size, 3))
@@ -228,7 +228,7 @@ def test_binary_field(cavity: FoamCase) -> None:
     assert isinstance(U_arr, np.ndarray)
 
     cavity[0]["p"].internal_field = p_arr
-    cavity[0]["U"].internal_field = U_arr  # ty: ignore[invalid-assignment]
+    cavity[0]["U"].internal_field = U_arr
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
     U = cavity[0]["U"].internal_field
@@ -259,7 +259,7 @@ def test_compressed_field(cavity: FoamCase) -> None:
     assert U_arr.shape == U_bin.shape
 
     cavity[0]["p"].internal_field = p_arr
-    cavity[0]["U"].internal_field = U_arr  # ty: ignore[invalid-assignment]
+    cavity[0]["U"].internal_field = U_arr
 
     assert cavity[0]["p"].internal_field == pytest.approx(p_arr)
     U = cavity[0]["U"].internal_field
@@ -313,7 +313,7 @@ def test_popone(tmp_path: Path) -> None:
 
     # Verify the popped dict is a deep copy
     assert isinstance(popped_dict, dict)
-    popped_dict["nested_key"] = "modified"  # ty: ignore[invalid-assignment]
+    popped_dict["nested_key"] = "modified"
     # Since the key is already removed, this confirms it's a copy
 
 
@@ -357,7 +357,7 @@ def test_view_repr(tmp_path: Path) -> None:
 
     # Verify it's a deep copy
     assert isinstance(popped_nested, dict)
-    popped_nested["grandchild"] = "modified"  # ty: ignore[invalid-assignment]
+    popped_nested["grandchild"] = "modified"
     # Already removed, so this confirms it's a copy
 
     # Pop a list from SubDict

@@ -132,9 +132,9 @@ def dumps(
 
                 ret = b"\n" if isinstance(k, str) and k[0] == "#" else b""
                 if k is not None:
-                    ret += dumps(k, keywords=keywords)  # ty: ignore[invalid-argument-type]
+                    ret += dumps(k, keywords=keywords)
                 val = dumps(
-                    v,  # ty: ignore[invalid-argument-type]
+                    v,
                     keywords=(*keywords, k)  # ty: ignore[invalid-argument-type]
                     if keywords is not None and k is not None
                     else ()
@@ -155,7 +155,7 @@ def dumps(
                     ret += b";"
                 return ret
 
-            return b" ".join(dumps(v, keywords=keywords, format_=format_) for v in data)  # ty: ignore[invalid-argument-type]
+            return b" ".join(dumps(v, keywords=keywords, format_=format_) for v in data)
 
         case [*_], _, _:
             return (

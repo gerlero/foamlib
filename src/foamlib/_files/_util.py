@@ -36,7 +36,7 @@ def add_to_mapping(
     /,
 ) -> _M | MultiDict[_K, _V]:
     if isinstance(d, MutableMultiMapping):
-        d.add(key, value)  # ty: ignore[invalid-argument-type]
+        d.add(key, value)
         return d
 
     if key not in d:  # ty: ignore[unsupported-operator]

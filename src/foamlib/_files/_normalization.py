@@ -89,7 +89,7 @@ def _normalized_tensor(value: TensorLike, /) -> Tensor:
         case float() | int():
             return float(value)
         case np.ndarray(shape=(3,) | (6,) | (9,), dtype=np.dtype(kind="f" | "i")):
-            return value.astype(float, copy=False)  # ty: ignore[invalid-return-type]
+            return value.astype(float, copy=False)
         case [*_] if len(value) in (3, 6, 9) and all(
             isinstance(v, (float, int)) for v in value
         ):
@@ -104,12 +104,12 @@ def _normalized_field(value: FieldLike, /, *, binary: bool) -> Field:
         case float() | int():
             return float(value)
         case np.ndarray(shape=(3,) | (6,) | (9,), dtype=np.dtype(kind="f" | "i")):
-            return value.astype(float, copy=False)  # ty: ignore[invalid-return-type]
+            return value.astype(float, copy=False)
         case np.ndarray(
             shape=(_,) | (_, 3) | (_, 6) | (_, 9), dtype=np.dtype(kind="f" | "i")
         ):
             if not binary or value.dtype not in (np.float64, np.float32):
-                return value.astype(float, copy=False)  # ty: ignore[invalid-return-type]
+                return value.astype(float, copy=False)
             return value  # ty: ignore[invalid-return-type]
         case np.ndarray():
             msg = f"expected a Field, got {value!r}"
@@ -353,7 +353,7 @@ def _normalized_data(
             )
         case tuple((_, _, *_)):
             return tuple(  # ty: ignore[invalid-return-type]
-                _normalized_data_entry(v, keywords=keywords, binary=binary)  # ty: ignore[invalid-argument-type]
+                _normalized_data_entry(v, keywords=keywords, binary=binary)
                 for v in value
             )
         case _:
@@ -366,14 +366,14 @@ def _normalized_standalone_data_entry(
     match value:
         case np.ndarray(shape=(_,), dtype=np.dtype(kind="i")):
             if not binary or value.dtype not in (np.int32, np.int64):
-                return value.astype(int, copy=False)  # ty: ignore[invalid-return-type]
+                return value.astype(int, copy=False)
             return value  # ty: ignore[invalid-return-type]
         case np.ndarray(shape=(_,), dtype=np.dtype(kind="f")):
-            return value.astype(np.float64, copy=False)  # ty: ignore[invalid-return-type]
+            return value.astype(np.float64, copy=False)
         case np.ndarray(shape=(_, 3), dtype=np.dtype(kind="f")):
             if not binary or value.dtype not in (np.float64, np.float32):
-                return value.astype(float, copy=False)  # ty: ignore[invalid-return-type]
-            return value  # ty: ignore[invalid-return-type]
+                return value.astype(float, copy=False)
+            return value
         case np.ndarray(shape=(_, 3 | 4), dtype=np.dtype(kind="i")):
             return list(value.astype(int, copy=False))
         case np.ndarray() | Dimensioned() | DimensionSet() | tuple():

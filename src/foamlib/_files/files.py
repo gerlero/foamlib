@@ -479,7 +479,7 @@ class FoamFile(
             ret = file[self._keywords[0]]
             assert isinstance(ret, Mapping)
             for k in self._keywords[1:]:
-                ret = ret[k]  # ty: ignore[invalid-argument-type]
+                ret = ret[k]
                 assert isinstance(ret, Mapping)
 
             return ret  # ty: ignore[invalid-return-type]
@@ -603,7 +603,7 @@ class FoamFile(
                     and np.issubdtype(data.dtype, np.floating)
                     and (
                         data.ndim == 1
-                        or (data.ndim == 2 and data.shape[1] in (3, 6, 9))
+                        or (data.ndim == 2 and data.shape[1] in (3, 6, 9))  # ty: ignore[index-out-of-bounds]
                     )
                 )
             )
@@ -755,7 +755,7 @@ class FoamFile(
                 parsed.put(keywords, ..., empty_dict_content)
 
                 for k, v in data.items():
-                    self[(*keywords, k)] = v  # ty: ignore[invalid-assignment]
+                    self[(*keywords, k)] = v
 
             elif keywords:
                 keywords = cast("tuple[str, *tuple[str, ...]]", keywords)
@@ -1214,9 +1214,9 @@ class FoamFile(
         if not include_header and isinstance(ret, Mapping) and "FoamFile" in ret:
             del ret["FoamFile"]  # ty: ignore[invalid-argument-type,not-subscriptable]
             if len(ret) == 1 and None in ret:
-                val = ret[None]  # ty: ignore[invalid-argument-type]
+                val = ret[None]
                 assert not isinstance(val, Mapping)
-                return val  # ty: ignore[invalid-return-type]
+                return val
 
         return ret
 
