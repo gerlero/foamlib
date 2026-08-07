@@ -104,8 +104,17 @@ def test_stray_top_level_brace() -> None:
         (b"[kg m s^-2]", DimensionSet(mass=1, length=1, time=-2)),
         (b"[Pa]", DimensionSet(mass=1, length=-1, time=-2)),
         (b"[N m^-2]", DimensionSet(mass=1, length=-1, time=-2)),
-        (b"[cm]", DimensionSet(length=1)),
         (b"[m^0.5]", DimensionSet(length=0.5)),
+        # Explicit operators: '*' and '/' bind at priority 2, '^' at 3, and
+        # parentheses group.
+        (b"[kg*m^-3]", DimensionSet(mass=1, length=-3)),
+        (b"[kg/m^3]", DimensionSet(mass=1, length=-3)),
+        (b"[N/m^2]", DimensionSet(mass=1, length=-1, time=-2)),
+        (b"[m^2/s]", DimensionSet(length=2, time=-1)),
+        (b"[m/s/s]", DimensionSet(length=1, time=-2)),
+        (b"[J/(kg K)]", DimensionSet(length=2, time=-2, temperature=-1)),
+        (b"[kg/(m s^2)]", DimensionSet(mass=1, length=-1, time=-2)),
+        (b"[(kg m)/s^2]", DimensionSet(mass=1, length=1, time=-2)),
     ],
 )
 def test_symbolic_dimensions(contents: bytes, expected: DimensionSet) -> None:
@@ -114,18 +123,80 @@ def test_symbolic_dimensions(contents: bytes, expected: DimensionSet) -> None:
     assert ParsedFile(b"dimensions " + contents + b";")[("dimensions",)] == expected
 
 
-def test_symbolic_dimensions_unknown_unit() -> None:
-    with pytest.raises(FoamFileDecodeError, match="unit symbol"):
-        ParsedFile(b"dimensions [foo];")
-    # '/' expressions belong to the dimensionedScalar grammar, not dimensionSet.
+@pytest.mark.parametrize(
+    "contents",
+    [
+        b"[foo]",
+        b"[m^]",
+        b"[m^x]",
+        b"[m^-]",
+        b"[m^++]",
+        b"[m)]",
+        b"[km^400]",
+    ],
+)
+def test_symbolic_dimensions_invalid(contents: bytes) -> None:
+    # FoamFileDecodeError is the parser's only error type; a non-numeric power
+    # used to escape as a bare ValueError from float().
     with pytest.raises(FoamFileDecodeError):
-        ParsedFile(b"dimensions [kg/m^3];")
+        ParsedFile(b"dimensions " + contents + b";")
 
 
 def test_named_dimensions_still_accepted() -> None:
     assert ParsedFile(b"dimensions [velocity];")[("dimensions",)] == DimensionSet(
         length=1, time=-1
     )
+
+
+# etc/controlDict DimensionSets/SICoeffs: the only unit symbols whose scale
+# multiplier is not 1.
+SCALED_UNITS = {"cm": 1e-2, "mm": 1e-3, "km": 1e3}
+
+
+@pytest.mark.parametrize("symbol", sorted(SCALED_UNITS))
+def test_scaled_units_rejected_in_dimension_set(symbol: str) -> None:
+    # operator>>(Istream&, dimensionSet&): "Cannot use scaled units in
+    # dimensionSet". Accepting them silently discarded the scale.
+    for contents in (
+        f"[{symbol}]".encode(),
+        f"[{symbol} s^-1]".encode(),
+        f"[{symbol}^2]".encode(),
+    ):
+        with pytest.raises(FoamFileDecodeError, match="unscaled units"):
+            ParsedFile(b"dimensions " + contents + b";")
+
+
+@pytest.mark.parametrize(
+    ("units", "expected"),
+    [
+        (b"m", 5.0),
+        (b"Pa", 5.0),
+        (b"mm km", 5.0),  # 1e-3 * 1e3 == 1
+        (b"cm", 5e-2),
+        (b"mm", 5e-3),
+        (b"km", 5e3),
+        (b"cm^2", 5e-4),
+        (b"cm^-1", 5e2),
+        (b"km^3", 5e9),
+        (b"cm s^-1", 5e-2),
+        (b"km/s", 5e3),
+        (b"m/mm", 5e3),
+        (b"kg/cm^3", 5e6),
+    ],
+)
+def test_dimensioned_value_scaled_by_units(units: bytes, expected: float) -> None:
+    # dimensioned<Type>::initialise reads the dimension set and its multiplier,
+    # then applies the multiplier to the value: "p [cm] 5" is 5 cm, i.e. 0.05 m.
+    value = ParsedFile(b"p p [" + units + b"] 5;")[("p",)]
+    assert isinstance(value, Dimensioned)
+    assert value.value == pytest.approx(expected, rel=1e-12, abs=0.0)
+
+
+def test_dimensioned_tensor_value_scaled_by_units() -> None:
+    value = ParsedFile(b"U U [cm s^-1] (1 2 3);")[("U",)]
+    assert isinstance(value, Dimensioned)
+    assert value.dimensions == DimensionSet(length=1, time=-1)
+    assert value.value == pytest.approx([1e-2, 2e-2, 3e-2], rel=1e-12, abs=0.0)
 
 
 def test_dimensioned_value_with_symbolic_units() -> None:

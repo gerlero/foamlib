@@ -1,6 +1,8 @@
 import contextlib
 import dataclasses
+import math
 import re
+import sys
 from types import EllipsisType
 from typing import Generic, Literal, TypeVar, TypeVarTuple, assert_never, overload
 from warnings import warn
@@ -770,64 +772,203 @@ _UNIT_SYMBOLS: dict[str, tuple[int, int, int, int, int, int, int]] = {
     "km": (0, 1, 0, 0, 0, 0, 0),
 }
 
+_UNIT_MULTIPLIERS: dict[str, float] = {
+    # Scaled units: the only SICoeffs entries whose multiplier is not 1
+    "cm": 1e-2,
+    "mm": 1e-3,
+    "km": 1e3,
+}
+
+# dimensionSet::smallExponent
+_SMALL_EXPONENT = math.sqrt(sys.float_info.epsilon)
+
+# Characters rejected by symbols::tokeniser::valid(), i.e. that end a unit symbol
+_SYMBOL_SEPARATORS = "\"'/;:{}()[]^* \t\n\r\f\v"
+_SYMBOL_OPERATORS = "*/^()"
+
+_MULTIPLY_PRIORITY = 2
+_POWER_PRIORITY = 3
+
+_SymbolToken = tuple[str, str | float]
+
+
+class _SymbolTokenizer:
+    """Token stream for a symbolic dimension set (``symbols::tokeniser``)."""
+
+    def __init__(self, contents: bytes | bytearray, pos: int, first: str) -> None:
+        self.contents = contents
+        self.pos = pos
+        self._pending: list[_SymbolToken] = []
+        self._split(first)
+
+    def _split(self, word: str) -> None:
+        """Break a word into unit symbols, numbers and operators."""
+        start = 0
+        for i, char in enumerate(word):
+            if char in _SYMBOL_SEPARATORS:
+                if i > start:
+                    self._push(word[start:i])
+                if not char.isspace():
+                    self._pending.append(("punctuation", char))
+                start = i + 1
+        if start < len(word):
+            self._push(word[start:])
+
+    def _push(self, word: str) -> None:
+        if word[0].isdigit() or word[0] == "-":
+            try:
+                number: int | float = int(word)
+            except ValueError:
+                try:
+                    number = float(word)
+                except ValueError:
+                    raise FoamFileDecodeError(
+                        self.contents, self.pos, expected=f"a number (got {word!r})"
+                    ) from None
+            self._pending.append(("number", number))
+        else:
+            self._pending.append(("symbol", word))
+
+    def next(self) -> _SymbolToken | None:
+        """Return the next token, or None at the end of the dimension set."""
+        while not self._pending:
+            self.pos = _skip(self.contents, self.pos)
+            char = self.contents[self.pos : self.pos + 1].decode("ascii", "replace")
+            if char in ("", "]"):
+                return None
+            if char in _SYMBOL_OPERATORS:
+                self.pos += 1
+                return ("punctuation", char)
+            word, self.pos = _parse_token(self.contents, self.pos)
+            self._split(word)
+        return self._pending.pop(0)
+
+    def put_back(self, token: _SymbolToken) -> None:
+        self._pending.insert(0, token)
+
 
 def _parse_unit_symbols(
-    contents: bytes | bytearray,
-    pos: int,
-    first: str,
-) -> tuple[DimensionSet, int]:
-    """Parse a symbolic dimension expression (``dimensionSet::read``)."""
-    exponents = [0] * 7
-    symbol = first
-    while True:
-        base, _, exp = symbol.partition("^")
-        try:
-            dims = _UNIT_SYMBOLS[base]
-        except KeyError:
-            raise FoamFileDecodeError(
-                contents,
-                pos,
-                expected=f"known dimensions name or unit symbol (got {symbol!r})",
-            ) from None
+    tokenizer: _SymbolTokenizer, last_priority: int = 0
+) -> tuple[list[float], float]:
+    """Evaluate a symbolic dimension expression (``symbols::parseNoBegin``).
 
-        if exp:
+    Returns the dimension exponents and the scale multiplier of the units used.
+    """
+    exponents: list[float] = [0] * 7
+    multiplier = 1.0
+    have_symbol = False
+
+    token = tokenizer.next()
+    while token is not None:
+        kind, value = token
+
+        if kind == "symbol":
+            assert isinstance(value, str)
             try:
-                exponent: int | float = int(exp)
-            except ValueError:
-                exponent = float(exp)
-        else:
-            exponent = 1
+                dims = _UNIT_SYMBOLS[value]
+            except KeyError:
+                raise FoamFileDecodeError(
+                    tokenizer.contents,
+                    tokenizer.pos,
+                    expected=f"known dimensions name or unit symbol (got {value!r})",
+                ) from None
+            exponents = [e + d for e, d in zip(exponents, dims)]
+            multiplier *= _UNIT_MULTIPLIERS.get(value, 1.0)
+            have_symbol = True
 
-        for i, dim in enumerate(dims):
-            exponents[i] += dim * exponent
+        elif value == "(":
+            sub_exponents, sub_multiplier = _parse_unit_symbols(tokenizer)
+            if tokenizer.next() != ("punctuation", ")"):
+                raise FoamFileDecodeError(
+                    tokenizer.contents, tokenizer.pos, expected=")"
+                )
+            exponents = [e + s for e, s in zip(exponents, sub_exponents)]
+            multiplier *= sub_multiplier
+            have_symbol = True
 
-        pos = _skip(contents, pos)
-        if contents[pos : pos + 1] == b"]":
+        elif value == ")":
+            tokenizer.put_back(token)
             break
-        symbol, pos = _parse_token(contents, pos)
 
-    return DimensionSet(*exponents), pos
+        elif value in ("*", "/"):
+            if _MULTIPLY_PRIORITY <= last_priority:
+                tokenizer.put_back(token)
+                break
+            sub_exponents, sub_multiplier = _parse_unit_symbols(
+                tokenizer, _MULTIPLY_PRIORITY
+            )
+            sign = 1 if value == "*" else -1
+            exponents = [e + sign * s for e, s in zip(exponents, sub_exponents)]
+            multiplier *= sub_multiplier**sign
+            have_symbol = False
+
+        elif value == "^":
+            if _POWER_PRIORITY <= last_priority:
+                tokenizer.put_back(token)
+                break
+            exponent = tokenizer.next()
+            if exponent is None or exponent[0] != "number":
+                raise FoamFileDecodeError(
+                    tokenizer.contents, tokenizer.pos, expected="an exponent after '^'"
+                )
+            power = exponent[1]
+            assert not isinstance(power, str)
+            exponents = [e * power for e in exponents]
+            try:
+                multiplier **= power
+            except OverflowError:
+                raise FoamFileDecodeError(
+                    tokenizer.contents, tokenizer.pos, expected="a finite unit scale"
+                ) from None
+            have_symbol = True
+
+        else:
+            raise FoamFileDecodeError(
+                tokenizer.contents,
+                tokenizer.pos,
+                expected=f"a unit symbol or operator (got {value!r})",
+            )
+
+        token = tokenizer.next()
+        if have_symbol and token is not None and token[0] != "punctuation":
+            # Consecutive symbols are multiplied
+            tokenizer.put_back(token)
+            token = ("punctuation", "*")
+
+    return exponents, multiplier
 
 
-def _parse_dimensions(
+def _parse_dimensions_and_multiplier(
     contents: bytes | bytearray, pos: int
-) -> tuple[DimensionSet, int]:
+) -> tuple[DimensionSet, float, int]:
     pos = _expect(contents, pos, b"[")
     pos = _skip(contents, pos)
 
+    multiplier = 1.0
+
     if contents[pos : pos + 1] == b"]":
         pos += 1
-        return DimensionSet(), pos
+        return DimensionSet(), multiplier, pos
 
     try:
         first_dim, pos = _parse_number(contents, pos)
     except ParseError:
-        name, pos = _parse_token(contents, pos)
+        try:
+            name, pos = _parse_token(contents, pos)
+        except ParseError:
+            if contents[pos : pos + 1] != b"(":
+                raise
+            name = ""
         try:
             ret = _NAMED_DIMENSIONS[name]
             assert isinstance(ret, DimensionSet)
         except KeyError:
-            ret, pos = _parse_unit_symbols(contents, pos, name)
+            tokenizer = _SymbolTokenizer(contents, pos, name)
+            exponents, multiplier = _parse_unit_symbols(tokenizer)
+            if tokenizer.next() is not None:
+                raise FoamFileDecodeError(contents, tokenizer.pos, expected="]")
+            ret = DimensionSet(*exponents)
+            pos = tokenizer.pos
     else:
         dims = [first_dim]
         for _ in range(6):
@@ -851,6 +992,24 @@ def _parse_dimensions(
     pos = _skip(contents, pos)
     pos = _expect(contents, pos, b"]")
 
+    return ret, multiplier, pos
+
+
+def _parse_dimensions(
+    contents: bytes | bytearray, pos: int
+) -> tuple[DimensionSet, int]:
+    ret, multiplier, pos = _parse_dimensions_and_multiplier(contents, pos)
+
+    if abs(multiplier - 1.0) > _SMALL_EXPONENT:
+        # operator>>(Istream&, dimensionSet&): scaled units are only meaningful
+        # where the multiplier can be applied to a value
+        raise FoamFileDecodeError(
+            contents,
+            pos,
+            expected="unscaled units (scaled units are only allowed in a"
+            " dimensioned value)",
+        )
+
     return ret, pos
 
 
@@ -863,9 +1022,13 @@ def _parse_dimensioned(
         name = None
     else:
         pos = _skip(contents, pos)
-    dimensions, pos = _parse_dimensions(contents, pos)
+    dimensions, multiplier, pos = _parse_dimensions_and_multiplier(contents, pos)
     pos = _skip(contents, pos)
     value, pos = _parse_tensor(contents, pos)
+
+    if abs(multiplier - 1.0) > _SMALL_EXPONENT:
+        # dimensioned<Type>::initialise: the value is given in the units read
+        value = value * multiplier
 
     return Dimensioned(value, dimensions, name), pos
 
