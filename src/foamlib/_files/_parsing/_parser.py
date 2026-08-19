@@ -1232,11 +1232,10 @@ def _parse_standalone_data_entry(
         return _parse_ascii_faces_like_list(contents, pos)
 
     try:
-        entry1, pos1 = _parse_data(contents, pos)
+        entry1, pos1 = _parse_data_entry(contents, pos)
     except (ParseError, FoamFileDecodeError, UnicodeDecodeError):
         pos1 = None
 
-    entry2: StandaloneDataEntry | None = None
     pos2: int | None = None
     for binary_dtype, binary_elshape in (
         (np.int32, ()),
@@ -1245,7 +1244,10 @@ def _parse_standalone_data_entry(
     ):
         with contextlib.suppress(ParseError):
             entry_candidate, pos_candidate = _parse_binary_numeric_list(
-                contents, pos, dtype=binary_dtype, elshape=binary_elshape
+                contents,
+                pos,
+                dtype=binary_dtype,  # ty: ignore[invalid-argument-type]
+                elshape=binary_elshape,
             )
             # Always keep the result that advances the furthest: binary float64 data
             # consumes count*8 bytes while int32 would only consume count*4 bytes for
@@ -1260,12 +1262,18 @@ def _parse_standalone_data_entry(
         case None, None:
             raise ParseError(contents, pos, expected="standalone data entry")
         case _, None:
+            assert pos1 is not None
             return entry1, pos1
         case None, _:
+            assert pos2 is not None
             return entry2, pos2
-        case _ if pos1 > pos2:
+        case _ if pos1 > pos2:  # ty: ignore[unsupported-operator]
+            assert pos1 is not None
+            assert pos2 is not None
             return entry1, pos1
         case _:
+            assert pos1 is not None
+            assert pos2 is not None
             return entry2, pos2
 
 
