@@ -577,8 +577,8 @@ def test_list_numbered_u() -> None:
     data = parsed[()]
     assert isinstance(data, tuple)
     assert data[0] == 70
-    assert isinstance(data[1], list)
-    assert len(data[1]) == 6
+    assert isinstance(data[1], np.ndarray)
+    assert data[1].shape == (6, 3)
 
 
 def test_colon_double_name() -> None:
