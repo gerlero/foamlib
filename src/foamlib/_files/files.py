@@ -797,9 +797,9 @@ class FoamFile(
                     if keywords in parsed and not keywords[-1].startswith("#"):
                         raise KeyError(keywords)
 
-                    parsed.add(keywords, data, content)  # ty: ignore[no-matching-overload]
+                    parsed.add(keywords, data, content)
                 else:
-                    parsed.put(keywords, data, content)  # ty: ignore[no-matching-overload]
+                    parsed.put(keywords, data, content)
 
             else:
                 if add and () in parsed:
