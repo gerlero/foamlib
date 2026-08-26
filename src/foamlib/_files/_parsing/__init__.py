@@ -106,7 +106,8 @@ class ParsedFile(
 
         self._update_content(start, end, content)
         self._parsed[keywords] = ParsedEntry(data, start, start + len(content))
-        self._remove_child_entries(keywords)
+        if keywords:
+            self._remove_child_entries(keywords)
 
     @overload
     def add(
@@ -162,7 +163,8 @@ class ParsedFile(
     ) -> Data | StandaloneData | EllipsisType | None:
         start, end = self.entry_location(keywords)
         entry = self._parsed.popone(keywords)
-        self._remove_child_entries(keywords)
+        if keywords:
+            self._remove_child_entries(keywords)
         self._update_content(start, end, b"")
         return entry.data
 

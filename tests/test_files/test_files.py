@@ -317,6 +317,23 @@ def test_popone(tmp_path: Path) -> None:
     # Since the key is already removed, this confirms it's a copy
 
 
+def test_slice_assign(tmp_path: Path) -> None:
+    path = tmp_path / "testDict"
+    assert not path.exists()
+    d = FoamFile(path)
+    assert not path.exists()
+    contents = {
+        "key1": "value1",
+        "key2": "value2",
+        "key3": {"subkey1": 1, "subkey2": 2},
+        None: "standalone",
+        "key4": [1, 2, 3],
+    }
+    d[:] = contents
+    assert path.is_file()
+    assert d.as_dict() == contents
+
+
 def test_view_repr(tmp_path: Path) -> None:
     path = tmp_path / "testDict"
     d = FoamFile(path)
