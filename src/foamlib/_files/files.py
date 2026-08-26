@@ -730,7 +730,7 @@ class FoamFile(
 
             if isinstance(data, Mapping):
                 if not keywords:
-                    msg = "Cannot set a mapping at the root level of a FoamFile\nUse update(), extend(), or merge() instead."
+                    msg = "Cannot set a mapping as a standalone value.\nNote: use file[:] = {...} to replace file contents with a mapping"
                     raise ValueError(msg)
                 keywords = cast("tuple[str, *tuple[str, ...]]", keywords)
 
