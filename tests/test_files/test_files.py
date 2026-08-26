@@ -117,6 +117,19 @@ def test_new_field(tmp_path: Path) -> None:
     assert f.class_ == "volVectorField"
 
 
+def test_case_file_property_assignment(tmp_path: Path) -> None:
+    case_path = tmp_path / "case"
+    (case_path / "constant").mkdir(parents=True)
+
+    case = FoamCase(case_path)
+    case.transport_properties = {"nu": 1e-6}
+    assert case.transport_properties["nu"] == 1e-6
+
+    case.transport_properties = {"DT": 1e-3}
+    assert "nu" not in case.transport_properties
+    assert case.transport_properties["DT"] == 1e-3
+
+
 @pytest.fixture
 def cavity() -> Generator[FoamCase, None, None]:
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])

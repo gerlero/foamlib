@@ -14,6 +14,7 @@ else:
 import os
 
 from .._files import FoamFieldFile, FoamFile
+from ..typing import FileDictLike
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
@@ -247,35 +248,63 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         """The controlDict file."""
         return self.file("system/controlDict")
 
+    @control_dict.setter
+    def control_dict(self, data: FileDictLike) -> None:
+        self.control_dict[:] = data
+
     @property
     def fv_schemes(self) -> FoamFile:
         """The fvSchemes file."""
         return self.file("system/fvSchemes")
+
+    @fv_schemes.setter
+    def fv_schemes(self, data: FileDictLike) -> None:
+        self.fv_schemes[:] = data
 
     @property
     def fv_solution(self) -> FoamFile:
         """The fvSolution file."""
         return self.file("system/fvSolution")
 
+    @fv_solution.setter
+    def fv_solution(self, data: FileDictLike) -> None:
+        self.fv_solution[:] = data
+
     @property
     def decompose_par_dict(self) -> FoamFile:
         """The decomposeParDict file."""
         return self.file("system/decomposeParDict")
+
+    @decompose_par_dict.setter
+    def decompose_par_dict(self, data: FileDictLike) -> None:
+        self.decompose_par_dict[:] = data
 
     @property
     def block_mesh_dict(self) -> FoamFile:
         """The blockMeshDict file."""
         return self.file("system/blockMeshDict")
 
+    @block_mesh_dict.setter
+    def block_mesh_dict(self, data: FileDictLike) -> None:
+        self.block_mesh_dict[:] = data
+
     @property
     def transport_properties(self) -> FoamFile:
         """The transportProperties file."""
         return self.file("constant/transportProperties")
 
+    @transport_properties.setter
+    def transport_properties(self, data: FileDictLike) -> None:
+        self.transport_properties[:] = data
+
     @property
     def turbulence_properties(self) -> FoamFile:
         """The turbulenceProperties file."""
         return self.file("constant/turbulenceProperties")
+
+    @turbulence_properties.setter
+    def turbulence_properties(self, data: FileDictLike) -> None:
+        self.turbulence_properties[:] = data
 
     @override
     def __fspath__(self) -> str:
