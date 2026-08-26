@@ -12,53 +12,53 @@ from foamlib import Dimensioned, DimensionSet, FoamCase
 
 path = Path(__file__).parent / "diffusionCheck"
 shutil.rmtree(path, ignore_errors=True)
-path.mkdir(parents=True)
-(path / "system").mkdir()
-(path / "constant").mkdir()
-(path / "0").mkdir()
 
 case = FoamCase(path)
 
-with case.control_dict as f:
-    f["application"] = "scalarTransportFoam"
-    f["startFrom"] = "latestTime"
-    f["stopAt"] = "endTime"
-    f["endTime"] = 5
-    f["deltaT"] = 1e-3
-    f["writeControl"] = "adjustableRunTime"
-    f["writeInterval"] = 1
-    f["purgeWrite"] = 0
-    f["writeFormat"] = "ascii"
-    f["writePrecision"] = 6
-    f["writeCompression"] = False
-    f["timeFormat"] = "general"
-    f["timePrecision"] = 6
-    f["adjustTimeStep"] = False
-    f["runTimeModifiable"] = False
+case.control_dict = {
+    "application": "scalarTransportFoam",
+    "startFrom": "latestTime",
+    "stopAt": "endTime",
+    "endTime": 5,
+    "deltaT": 1e-3,
+    "writeControl": "adjustableRunTime",
+    "writeInterval": 1,
+    "purgeWrite": 0,
+    "writeFormat": "ascii",
+    "writePrecision": 6,
+    "writeCompression": False,
+    "timeFormat": "general",
+    "timePrecision": 6,
+    "adjustTimeStep": False,
+    "runTimeModifiable": False,
+}
 
-with case.fv_schemes as f:
-    f["ddtSchemes"] = {"default": "Euler"}
-    f["gradSchemes"] = {"default": ("Gauss", "linear")}
-    f["divSchemes"] = {
+case.fv_schemes = {
+    "ddtSchemes": {"default": "Euler"},
+    "gradSchemes": {"default": ("Gauss", "linear")},
+    "divSchemes": {
         "default": "none",
         "div(phi,U)": ("Gauss", "linear"),
         "div(phi,T)": ("Gauss", "linear"),
-    }
-    f["laplacianSchemes"] = {"default": ("Gauss", "linear", "corrected")}
+    },
+    "laplacianSchemes": {"default": ("Gauss", "linear", "corrected")},
+}
 
-with case.fv_solution as f:
-    f["solvers"] = {
+case.fv_solution = {
+    "solvers": {
         "T": {
             "solver": "PBiCG",
             "preconditioner": "DILU",
             "tolerance": 1e-6,
             "relTol": 0,
         }
-    }
+    },
+    "SIMPLE": {},
+}
 
-with case.block_mesh_dict as f:
-    f["scale"] = 1
-    f["vertices"] = [
+case.block_mesh_dict = {
+    "scale": 1,
+    "vertices": [
         [0, 0, 0],
         [1, 0, 0],
         [1, 0.5, 0],
@@ -71,8 +71,8 @@ with case.block_mesh_dict as f:
         [1, 1, 0.1],
         [0, 1, 0.1],
         [0, 0.5, 0.1],
-    ]
-    f["blocks"] = [
+    ],
+    "blocks": [
         "hex",
         [0, 1, 2, 5, 6, 7, 8, 11],
         [400, 20, 1],
@@ -83,9 +83,9 @@ with case.block_mesh_dict as f:
         [400, 20, 1],
         "simpleGrading",
         [1, 1, 1],
-    ]
-    f["edges"] = []
-    f["boundary"] = [
+    ],
+    "edges": [],
+    "boundary": [
         ("inletUp", {"type": "patch", "faces": [[5, 4, 10, 11]]}),
         ("inletDown", {"type": "patch", "faces": [[0, 5, 11, 6]]}),
         ("outletUp", {"type": "patch", "faces": [[2, 3, 9, 8]]}),
@@ -95,44 +95,54 @@ with case.block_mesh_dict as f:
             "frontAndBack",
             {
                 "type": "empty",
-                "faces": [[0, 1, 2, 5], [5, 2, 3, 4], [6, 7, 8, 11], [11, 8, 9, 10]],
+                "faces": [
+                    [0, 1, 2, 5],
+                    [5, 2, 3, 4],
+                    [6, 7, 8, 11],
+                    [11, 8, 9, 10],
+                ],
             },
         ),
-    ]
-    f["mergePatchPairs"] = []
+    ],
+    "mergePatchPairs": [],
+}
 
-with case.transport_properties as f:
-    f["DT"] = Dimensioned(1e-3, DimensionSet(length=2, time=-1), "DT")
+case.transport_properties = {
+    "DT": Dimensioned(1e-3, DimensionSet(length=2, time=-1), "DT")
+}
 
-with case[0]["U"] as f:
-    f.dimensions = DimensionSet(length=1, time=-1)
-    f.internal_field = [1, 0, 0]
-    f.boundary_field = {
+case[0.0]["U"] = {
+    "dimensions": DimensionSet(length=1, time=-1),
+    "internalField": [1, 0, 0],
+    "boundaryField": {
         "inletUp": {"type": "fixedValue", "value": [1, 0, 0]},
         "inletDown": {"type": "fixedValue", "value": [1, 0, 0]},
         "outletUp": {"type": "zeroGradient"},
         "outletDown": {"type": "zeroGradient"},
         "walls": {"type": "zeroGradient"},
         "frontAndBack": {"type": "empty"},
-    }
+    },
+}
 
-with case[0]["T"] as f:
-    f.dimensions = DimensionSet(temperature=1)
-    f.internal_field = 0
-    f.boundary_field = {
+case[0.0]["T"] = {
+    "dimensions": DimensionSet(temperature=1),
+    "internalField": 0,
+    "boundaryField": {
         "inletUp": {"type": "fixedValue", "value": 0},
         "inletDown": {"type": "fixedValue", "value": 1},
         "outletUp": {"type": "zeroGradient"},
         "outletDown": {"type": "zeroGradient"},
         "walls": {"type": "zeroGradient"},
         "frontAndBack": {"type": "empty"},
-    }
+    },
+}
 
 case.run()
 
 internal_field = case[0].cell_centers().internal_field
 assert isinstance(internal_field, np.ndarray)
 x, y, _ = internal_field.T
+
 end = x == x.max()
 x = x[end]
 y = y[end]
@@ -143,8 +153,9 @@ assert isinstance(DT, Dimensioned)
 internal_field = case[0]["U"].internal_field
 assert isinstance(internal_field, np.ndarray)
 Ux, _, _ = internal_field
+assert isinstance(Ux, (int, float))
 
-for time in case[1:]:
+for time in case:
     if Ux * time.time < 2 * x.max():
         continue
 

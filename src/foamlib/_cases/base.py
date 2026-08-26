@@ -1,9 +1,10 @@
+import contextlib
 import shutil
 import sys
 from collections.abc import Iterator, Sequence
 from collections.abc import Set as AbstractSet
 from pathlib import Path
-from typing import assert_never, overload
+from typing import overload
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -14,6 +15,7 @@ else:
 import os
 
 from .._files import FoamFieldFile, FoamFile
+from ..typing import SubDictLike
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
@@ -62,14 +64,22 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
             """The name of this time directory (the time as a string)."""
             return self.path.name
 
-        def __getitem__(self, key: str, /) -> FoamFieldFile:
+        def __getitem__(self, name: str, /) -> FoamFieldFile:
             """Return the field file with the given name in this time directory."""
-            if (self.path / f"{key}.gz").is_file() and not (self.path / key).is_file():
-                return FoamFieldFile(self.path / f"{key}.gz")
-            return FoamFieldFile(self.path / key)
+            if (self.path / f"{name}.gz").is_file() and not (
+                self.path / name
+            ).is_file():
+                return FoamFieldFile(self.path / f"{name}.gz")
+            return FoamFieldFile(self.path / name)
+
+        def __setitem__(self, key: str, data: SubDictLike, /) -> None:
+            """Set the contents of the field file with the given name in this time directory."""
+            self._case.path.mkdir(exist_ok=True)
+            self.path.mkdir(exist_ok=True)
+            self[key][:] = data
 
         @override
-        def __contains__(self, obj: object) -> bool:
+        def __contains__(self, obj: object, /) -> bool:
             """Return ``True`` if the given field file or name exists in this time directory."""
             match obj:
                 case FoamFieldFile():
@@ -97,12 +107,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
 
         def __delitem__(self, name: str, /) -> None:
             """Delete the field file with the given name in this time directory."""
-            if (self.path / f"{name}.gz").is_file() and not (
-                self.path / name
-            ).is_file():
-                (self.path / f"{name}.gz").unlink()
-            else:
-                (self.path / name).unlink()
+            self[name].path.unlink()
 
         @override
         def __fspath__(self) -> str:
@@ -135,34 +140,38 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
     @overload
     def __getitem__(
         self,
-        index: float | str,
+        key: int | float | str,
+        /,
     ) -> "FoamCaseBase.TimeDirectory": ...
 
     @overload
     def __getitem__(
         self,
-        index: slice,
+        key: slice,
+        /,
     ) -> Sequence["FoamCaseBase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
         self,
-        index: slice | float | str,
+        key: int | slice | float | str,
+        /,
     ) -> "FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]":
         """Return the time directory at the given index (``int``), indices (``slice``), name (``str``), or time (``float``)."""
-        match index:
+        match key:
             case int() | slice():
-                return self._times[index]
+                return self._times[key]
             case str():
-                return FoamCaseBase.TimeDirectory(self.path / index)
+                return FoamCaseBase.TimeDirectory(self.path / key)
             case float():
-                for time in self._times:
-                    if time.time == index:
-                        return time
-                msg = f"Time {index} not found"
-                raise IndexError(msg)
+                with contextlib.suppress(FileNotFoundError):
+                    for time in self._times:
+                        if time.time == key:
+                            return time
+                return FoamCaseBase.TimeDirectory(self.path / f"{key:g}")
             case _:
-                assert_never()
+                msg = f"Invalid type for case lookup: {type(key)} (expected int, slice, str, or float)"
+                raise TypeError(msg)
 
     @override
     def __iter__(self) -> Iterator["FoamCaseBase.TimeDirectory"]:
@@ -170,7 +179,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         return iter(self._times)
 
     @override
-    def __contains__(self, obj: object) -> bool:
+    def __contains__(self, obj: object, /) -> bool:
         """Return ``True`` if the given time directory, name, or time exists in the case."""
         match obj:
             case FoamCaseBase.TimeDirectory():
@@ -187,9 +196,14 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         """Return the number of time directories in the case."""
         return len(self._times)
 
-    def __delitem__(self, key: float | str, /) -> None:
-        """Delete the time directory at the given index (``int``), name (``str``), or time (``float``)."""
-        shutil.rmtree(self[key].path)
+    def __delitem__(self, key: int | slice | float | str, /) -> None:
+        """Delete the time directory at the given index (``int``), indices (``slice``), name (``str``), or time (``float``)."""
+        match key:
+            case slice():
+                for time in self._times[key]:
+                    shutil.rmtree(time.path)
+            case _:
+                shutil.rmtree(self[key].path)
 
     @property
     def name(self) -> str:
@@ -247,35 +261,91 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         """The controlDict file."""
         return self.file("system/controlDict")
 
+    @control_dict.setter
+    def control_dict(self, data: SubDictLike) -> None:
+        """Set the contents of the controlDict file."""
+        file = self.control_dict
+        self.path.mkdir(exist_ok=True)
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = data
+
     @property
     def fv_schemes(self) -> FoamFile:
         """The fvSchemes file."""
         return self.file("system/fvSchemes")
+
+    @fv_schemes.setter
+    def fv_schemes(self, data: SubDictLike) -> None:
+        """Set the contents of the fvSchemes file."""
+        file = self.fv_schemes
+        self.path.mkdir(exist_ok=True)
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = data
 
     @property
     def fv_solution(self) -> FoamFile:
         """The fvSolution file."""
         return self.file("system/fvSolution")
 
+    @fv_solution.setter
+    def fv_solution(self, data: SubDictLike) -> None:
+        """Set the contents of the fvSolution file."""
+        file = self.fv_solution
+        self.path.mkdir(exist_ok=True)
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = data
+
     @property
     def decompose_par_dict(self) -> FoamFile:
         """The decomposeParDict file."""
         return self.file("system/decomposeParDict")
+
+    @decompose_par_dict.setter
+    def decompose_par_dict(self, data: SubDictLike) -> None:
+        """Set the contents of the decomposeParDict file."""
+        file = self.decompose_par_dict
+        self.path.mkdir(exist_ok=True)
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = data
 
     @property
     def block_mesh_dict(self) -> FoamFile:
         """The blockMeshDict file."""
         return self.file("system/blockMeshDict")
 
+    @block_mesh_dict.setter
+    def block_mesh_dict(self, data: SubDictLike) -> None:
+        """Set the contents of the blockMeshDict file."""
+        file = self.block_mesh_dict
+        self.path.mkdir(exist_ok=True)
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = data
+
     @property
     def transport_properties(self) -> FoamFile:
         """The transportProperties file."""
         return self.file("constant/transportProperties")
 
+    @transport_properties.setter
+    def transport_properties(self, data: SubDictLike) -> None:
+        """Set the contents of the transportProperties file."""
+        file = self.transport_properties
+        self.path.mkdir(exist_ok=True)
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = data
+
     @property
     def turbulence_properties(self) -> FoamFile:
         """The turbulenceProperties file."""
         return self.file("constant/turbulenceProperties")
+
+    @turbulence_properties.setter
+    def turbulence_properties(self, data: SubDictLike) -> None:
+        """Set the contents of the turbulenceProperties file."""
+        file = self.turbulence_properties
+        self.path.mkdir(exist_ok=True)
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = data
 
     @override
     def __fspath__(self) -> str:

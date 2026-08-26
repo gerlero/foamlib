@@ -357,20 +357,22 @@ class FoamFile(
         def __setitem__(
             self, keyword: str | slice, data: DataLike | SubDictLike | None
         ) -> None:
-            if keyword == slice(None):
-                if not isinstance(data, Mapping):
-                    msg = "Can only set entire SubDict with a mapping"
+            match keyword:
+                case str():
+                    self._file[(*self._keywords, keyword)] = data
+                case slice(start=None, stop=None, step=None):
+                    if not isinstance(data, Mapping):
+                        msg = "Can only set entire SubDict with a mapping"
+                        raise TypeError(msg)
+                    with self._file:
+                        self.clear()
+                        self.extend(data)  # ty: ignore[invalid-argument-type]
+                case slice():
+                    msg = "Only empty slices (:) are supported"
+                    raise ValueError(msg)
+                case _:
+                    msg = f"Invalid keyword type: {type(keyword)}"
                     raise TypeError(msg)
-                with self._file:
-                    self.clear()
-                    self.extend(data)  # ty: ignore[invalid-argument-type]
-                return
-
-            if isinstance(keyword, slice):
-                msg = "Only empty slices (:) are supported"
-                raise ValueError(msg)  # noqa: TRY004
-
-            self._file[(*self._keywords, keyword)] = data
 
         @override
         def add(self, keyword: str, data: DataLike | SubDictLike | None) -> None:
@@ -391,15 +393,17 @@ class FoamFile(
 
         @override
         def __delitem__(self, keyword: str | slice) -> None:
-            if keyword == slice(None):
-                self.clear()
-                return
-
-            if isinstance(keyword, slice):
-                msg = "Only empty slices (:) are supported"
-                raise ValueError(msg)  # noqa: TRY004
-
-            del self._file[(*self._keywords, keyword)]
+            match keyword:
+                case str():
+                    del self._file[(*self._keywords, keyword)]
+                case slice(start=None, stop=None, step=None):
+                    self.clear()
+                case slice():
+                    msg = "Only empty slices (:) are supported"
+                    raise ValueError(msg)
+                case _:
+                    msg = f"Invalid keyword type: {type(keyword)}"
+                    raise TypeError(msg)
 
         @override
         def __iter__(self) -> Iterator[str]:
@@ -730,8 +734,8 @@ class FoamFile(
 
             if isinstance(data, Mapping):
                 if not keywords:
-                    msg = "Cannot set a mapping as a standalone value.\nNote: use file[:] = {...} to replace file contents with a mapping"
-                    raise ValueError(msg)
+                    msg = "Cannot set a mapping at the root level of a FoamFile\nUse file[:] = ... to set the entire file content instead."
+                    raise TypeError(msg)
                 keywords = cast("tuple[str, *tuple[str, ...]]", keywords)
 
                 if keyword.startswith("#"):
@@ -931,7 +935,7 @@ class FoamFile(
     def __setitem__(
         self,
         keywords: slice,
-        data: FileDictLike,
+        data: FileDictLike | SubDictLike | StandaloneDataLike,
     ) -> None: ...
 
     @override
@@ -940,12 +944,17 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None | slice,
         data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
     ) -> None:
+        """Set the value of the given entry in the FoamFile.
+
+        If the file does not exist, it will be created.
+
+        When setting as ``file[:] = value``, the contents of the file (if it exists) will be replaced with ``value``.
+        """
         keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)  # ty: ignore[no-matching-overload]
 
         if keywords == slice(None):
             if not isinstance(data, Mapping):
-                msg = "Can only set the entire FoamFile from a mapping"
-                raise TypeError(msg)
+                data = {None: data}
             with self:
                 with contextlib.suppress(FileNotFoundError):
                     self.clear()
@@ -1304,7 +1313,6 @@ class FoamFile(
                 return (keywords,)
             case tuple((*_,)) if all(isinstance(k, str) for k in keywords):
                 return tuple(keywords)
-
             case slice(start=None, stop=None, step=None) if slice_ok:
                 return slice(None)
             case slice() if slice_ok:

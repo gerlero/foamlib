@@ -28,6 +28,7 @@
       .. autoproperty:: foamlib.FoamCaseBase.TimeDirectory.time
 
       .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__getitem__
+      .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__setitem__
       .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__iter__
       .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__contains__
       .. automethod:: foamlib.FoamCaseBase.TimeDirectory.__len__

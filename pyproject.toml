@@ -95,5 +95,8 @@ dev = [
     {include-group = "benchmark"},
 ]
 
+[tool.ruff.lint]
+extend-ignore = ["PYI041"]
+
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"

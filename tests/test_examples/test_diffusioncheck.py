@@ -151,7 +151,7 @@ def test_example(tmp_path: Path) -> None:
     Ux, _, _ = internal_field
     assert isinstance(Ux, (int, float))
 
-    for time in case[1:]:
+    for time in case:
         if Ux * time.time < 2 * x.max():
             continue
 
