@@ -119,9 +119,13 @@ def test_new_field(tmp_path: Path) -> None:
 
 def test_case_file_property_assignment(tmp_path: Path) -> None:
     case_path = tmp_path / "case"
+    (case_path / "system").mkdir(parents=True)
     (case_path / "constant").mkdir(parents=True)
 
     case = FoamCase(case_path)
+    case.control_dict = {"application": "icoFoam"}
+    assert case.control_dict["application"] == "icoFoam"
+
     case.transport_properties = {"nu": 1e-6}
     assert case.transport_properties["nu"] == 1e-6
 
