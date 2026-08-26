@@ -14,6 +14,7 @@ else:
 import os
 
 from .._files import FoamFieldFile, FoamFile
+from ..typing import SubDictLike
 
 
 class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
@@ -67,6 +68,10 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
             if (self.path / f"{key}.gz").is_file() and not (self.path / key).is_file():
                 return FoamFieldFile(self.path / f"{key}.gz")
             return FoamFieldFile(self.path / key)
+
+        def __setitem__(self, key: str, value: SubDictLike, /) -> None:
+            """Set the contents of the field file with the given name in this time directory."""
+            self[key][:] = value
 
         @override
         def __contains__(self, obj: object) -> bool:
@@ -247,35 +252,84 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         """The controlDict file."""
         return self.file("system/controlDict")
 
+    @control_dict.setter
+    def control_dict(self, value: SubDictLike) -> None:
+        """Set the contents of the controlDict file."""
+        control_dict = self.control_dict
+        control_dict.path.parent.mkdir(exist_ok=True)
+        control_dict[:] = value
+
     @property
     def fv_schemes(self) -> FoamFile:
         """The fvSchemes file."""
         return self.file("system/fvSchemes")
+
+    @fv_schemes.setter
+    def fv_schemes(self, value: SubDictLike) -> None:
+        """Set the contents of the fvSchemes file."""
+        file = self.fv_schemes
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = value
 
     @property
     def fv_solution(self) -> FoamFile:
         """The fvSolution file."""
         return self.file("system/fvSolution")
 
+    @fv_solution.setter
+    def fv_solution(self, value: SubDictLike) -> None:
+        """Set the contents of the fvSolution file."""
+        file = self.fv_solution
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = value
+
     @property
     def decompose_par_dict(self) -> FoamFile:
         """The decomposeParDict file."""
         return self.file("system/decomposeParDict")
+
+    @decompose_par_dict.setter
+    def decompose_par_dict(self, value: SubDictLike) -> None:
+        """Set the contents of the decomposeParDict file."""
+        file = self.decompose_par_dict
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = value
 
     @property
     def block_mesh_dict(self) -> FoamFile:
         """The blockMeshDict file."""
         return self.file("system/blockMeshDict")
 
+    @block_mesh_dict.setter
+    def block_mesh_dict(self, value: SubDictLike) -> None:
+        """Set the contents of the blockMeshDict file."""
+        file = self.block_mesh_dict
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = value
+
     @property
     def transport_properties(self) -> FoamFile:
         """The transportProperties file."""
         return self.file("constant/transportProperties")
 
+    @transport_properties.setter
+    def transport_properties(self, value: SubDictLike) -> None:
+        """Set the contents of the transportProperties file."""
+        file = self.transport_properties
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = value
+
     @property
     def turbulence_properties(self) -> FoamFile:
         """The turbulenceProperties file."""
         return self.file("constant/turbulenceProperties")
+
+    @turbulence_properties.setter
+    def turbulence_properties(self, value: SubDictLike) -> None:
+        """Set the contents of the turbulenceProperties file."""
+        file = self.turbulence_properties
+        file.path.parent.mkdir(exist_ok=True)
+        file[:] = value
 
     @override
     def __fspath__(self) -> str:

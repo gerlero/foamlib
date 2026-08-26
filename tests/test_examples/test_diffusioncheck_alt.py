@@ -10,13 +10,10 @@ from foamlib import Dimensioned, DimensionSet, FoamCase
 def test_example(tmp_path: Path) -> None:
     path = tmp_path / "diffusionCheck"
     path.mkdir()
-    (path / "system").mkdir()
-    (path / "constant").mkdir()
-    (path / "0").mkdir()
 
     case = FoamCase(path)
 
-    case.control_dict[:] = {
+    case.control_dict = {
         "application": "scalarTransportFoam",
         "startFrom": "latestTime",
         "stopAt": "endTime",
@@ -34,7 +31,7 @@ def test_example(tmp_path: Path) -> None:
         "runTimeModifiable": False,
     }
 
-    case.fv_schemes[:] = {
+    case.fv_schemes = {
         "ddtSchemes": {"default": "Euler"},
         "gradSchemes": {"default": ("Gauss", "linear")},
         "divSchemes": {
@@ -45,7 +42,7 @@ def test_example(tmp_path: Path) -> None:
         "laplacianSchemes": {"default": ("Gauss", "linear", "corrected")},
     }
 
-    case.fv_solution[:] = {
+    case.fv_solution = {
         "solvers": {
             "T": {
                 "solver": "PBiCG",
@@ -57,7 +54,7 @@ def test_example(tmp_path: Path) -> None:
         "SIMPLE": {},
     }
 
-    case.block_mesh_dict[:] = {
+    case.block_mesh_dict = {
         "scale": 1,
         "vertices": [
             [0, 0, 0],
@@ -108,11 +105,13 @@ def test_example(tmp_path: Path) -> None:
         "mergePatchPairs": [],
     }
 
-    case.transport_properties["DT"] = Dimensioned(
-        1e-3, DimensionSet(length=2, time=-1), "DT"
-    )
+    case.transport_properties = {
+        "DT": Dimensioned(1e-3, DimensionSet(length=2, time=-1), "DT")
+    }
 
-    case[0]["U"][:] = {
+    (case.path / "0").mkdir()
+
+    case[0]["U"] = {
         "dimensions": DimensionSet(length=1, time=-1),
         "internalField": [1, 0, 0],
         "boundaryField": {
@@ -125,7 +124,7 @@ def test_example(tmp_path: Path) -> None:
         },
     }
 
-    case[0]["T"][:] = {
+    case[0]["T"] = {
         "dimensions": DimensionSet(temperature=1),
         "internalField": 0,
         "boundaryField": {
