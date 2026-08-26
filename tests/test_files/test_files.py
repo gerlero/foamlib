@@ -126,12 +126,27 @@ def test_case_file_property_assignment(tmp_path: Path) -> None:
     case.control_dict = {"application": "icoFoam"}
     assert case.control_dict["application"] == "icoFoam"
 
+    case.fv_schemes = {"ddtSchemes": {"default": "Euler"}}
+    assert case.fv_schemes["ddtSchemes", "default"] == "Euler"
+
+    case.fv_solution = {"solvers": {"T": {"solver": "PBiCG"}}}
+    assert case.fv_solution["solvers", "T", "solver"] == "PBiCG"
+
+    case.decompose_par_dict = {"numberOfSubdomains": 2}
+    assert case.decompose_par_dict["numberOfSubdomains"] == 2
+
+    case.block_mesh_dict = {"convertToMeters": 1}
+    assert case.block_mesh_dict["convertToMeters"] == 1
+
     case.transport_properties = {"nu": 1e-6}
     assert case.transport_properties["nu"] == 1e-6
 
     case.transport_properties = {"DT": 1e-3}
     assert "nu" not in case.transport_properties
     assert case.transport_properties["DT"] == 1e-3
+
+    case.turbulence_properties = {"simulationType": "laminar"}
+    assert case.turbulence_properties["simulationType"] == "laminar"
 
 
 @pytest.fixture
