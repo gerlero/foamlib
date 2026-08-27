@@ -340,8 +340,7 @@ def test_slice_assign(tmp_path: Path) -> None:
 
 def test_invalid_standalone_assignment(tmp_path: Path) -> None:
     path = tmp_path / "testDict"
-    d = FoamFile(path)
-    with pytest.raises(TypeError, match="[:]"):
+    with pytest.raises(TypeError, match=r"file\[:\]"):
         d[None] = {"subkey": "value"}  # ty: ignore[invalid-assignment]
 
 
