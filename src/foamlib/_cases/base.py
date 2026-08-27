@@ -69,7 +69,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
             return FoamFieldFile(self.path / key)
 
         @override
-        def __contains__(self, obj: object) -> bool:
+        def __contains__(self, obj: object, /) -> bool:
             """Return ``True`` if the given field file or name exists in this time directory."""
             match obj:
                 case FoamFieldFile():
@@ -135,31 +135,34 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
     @overload
     def __getitem__(
         self,
-        index: float | str,
+        key: float | str,
+        /,
     ) -> "FoamCaseBase.TimeDirectory": ...
 
     @overload
     def __getitem__(
         self,
-        index: slice,
+        key: slice,
+        /,
     ) -> Sequence["FoamCaseBase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
         self,
-        index: slice | float | str,
+        key: int | slice | float | str,  # noqa: PYI041
+        /,
     ) -> "FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]":
         """Return the time directory at the given index (``int``), indices (``slice``), name (``str``), or time (``float``)."""
-        match index:
+        match key:
             case int() | slice():
-                return self._times[index]
+                return self._times[key]
             case str():
-                return FoamCaseBase.TimeDirectory(self.path / index)
+                return FoamCaseBase.TimeDirectory(self.path / key)
             case float():
                 for time in self._times:
-                    if time.time == index:
+                    if time.time == key:
                         return time
-                msg = f"Time {index} not found"
+                msg = f"Time {key} not found"
                 raise IndexError(msg)
             case _:
                 assert_never()
@@ -187,7 +190,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         """Return the number of time directories in the case."""
         return len(self._times)
 
-    def __delitem__(self, key: float | str, /) -> None:
+    def __delitem__(self, key: int | float | str, /) -> None:  # noqa: PYI041
         """Delete the time directory at the given index (``int``), name (``str``), or time (``float``)."""
         shutil.rmtree(self[key].path)
 
