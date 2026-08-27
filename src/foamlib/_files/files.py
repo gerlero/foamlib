@@ -731,7 +731,7 @@ class FoamFile(
             if isinstance(data, Mapping):
                 if not keywords:
                     msg = "Cannot set a mapping as a standalone value.\nNote: use file[:] = {...} to replace file contents with a mapping"
-                    raise ValueError(msg)
+                    raise TypeError(msg)
                 keywords = cast("tuple[str, *tuple[str, ...]]", keywords)
 
                 if keyword.startswith("#"):
@@ -931,7 +931,7 @@ class FoamFile(
     def __setitem__(
         self,
         keywords: slice,
-        data: FileDictLike,
+        data: FileDictLike | StandaloneDataLike,
     ) -> None: ...
 
     @override
@@ -940,12 +940,17 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None | slice,
         data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
     ) -> None:
+        """Set the value of the given entry in the FoamFile.
+
+        If the file does not exist, it will be created.
+
+        When setting as ``file[:] = value``, the contents of the file (if it exists) will be replaced with ``value``.
+        """
         keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)  # ty: ignore[no-matching-overload]
 
         if keywords == slice(None):
             if not isinstance(data, Mapping):
-                msg = "Can only set the entire FoamFile from a mapping"
-                raise TypeError(msg)
+                data = {None: data}
             with self:
                 with contextlib.suppress(FileNotFoundError):
                     self.clear()
@@ -1304,7 +1309,6 @@ class FoamFile(
                 return (keywords,)
             case tuple((*_,)) if all(isinstance(k, str) for k in keywords):
                 return tuple(keywords)
-
             case slice(start=None, stop=None, step=None) if slice_ok:
                 return slice(None)
             case slice() if slice_ok:

@@ -322,6 +322,7 @@ def test_slice_assign(tmp_path: Path) -> None:
     assert not path.exists()
     d = FoamFile(path)
     assert not path.exists()
+
     contents = {
         "key1": "value1",
         "key2": "value2",
@@ -332,6 +333,16 @@ def test_slice_assign(tmp_path: Path) -> None:
     d[:] = contents
     assert path.is_file()
     assert d.as_dict() == contents
+
+    d[:] = "standalone2"
+    assert d.as_dict() == {None: "standalone2"}
+
+
+def test_invalid_standalone_assignment(tmp_path: Path) -> None:
+    path = tmp_path / "testDict"
+    d = FoamFile(path)
+    with pytest.raises(TypeError, match="[:]"):
+        d[None] = {"subkey": "value"}  # ty: ignore[invalid-assignment]
 
 
 def test_view_repr(tmp_path: Path) -> None:
