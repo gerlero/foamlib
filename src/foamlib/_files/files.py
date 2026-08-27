@@ -704,6 +704,9 @@ class FoamFile(
                 raise ValueError(msg)
 
         match keywords, data:
+            case (), Mapping():
+                msg = "Cannot set a mapping as a standalone value.\nNote: use file[:] = {...} to replace file contents with a mapping"
+                raise TypeError(msg)
             case (), _:
                 data = normalized(data, target=StandaloneData)  # ty: ignore[no-matching-overload]
             case _, {}:
@@ -729,9 +732,6 @@ class FoamFile(
                 format_ = None
 
             if isinstance(data, Mapping):
-                if not keywords:
-                    msg = "Cannot set a mapping as a standalone value.\nNote: use file[:] = {...} to replace file contents with a mapping"
-                    raise TypeError(msg)
                 keywords = cast("tuple[str, *tuple[str, ...]]", keywords)
 
                 if keyword.startswith("#"):
