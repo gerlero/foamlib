@@ -282,7 +282,8 @@ def test_assignment_strange_name() -> None:
     table = parsed[("equations", '"(U|e|k|epsilon).*"')]
     assert isinstance(table, tuple)
     assert table[0] == "table"
-    assert np.array_equal(table[1], [[0, 0.4], [0.5, 0.7]])
+    assert isinstance(table[1], list)
+    assert table[1] == [[0, 0.4], [0.5, 0.7]]
 
 
 @pytest.mark.xfail(reason="Not currently supported")

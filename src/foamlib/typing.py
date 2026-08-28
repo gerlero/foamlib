@@ -31,7 +31,7 @@ type DictLike = Mapping[str, DataLike | DictLike]
 
 type KeywordEntry = tuple[DataEntry, Data | Dict]
 """An OpenFOAM keyword entry (i.e., a key-value pair)."""
-type KeywordEntryLike = tuple[DataEntryLike, DataLike | DictLike]
+type KeywordEntryLike = KeywordEntry | tuple[DataEntryLike, DataLike | DictLike]
 """Any 2-tuple that could be interpreted as a :type:`KeywordEntry`."""
 
 type List = list[DataEntry | KeywordEntry | Dict]

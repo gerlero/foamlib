@@ -909,7 +909,7 @@ class FoamFile(
     ) -> StandaloneData: ...
 
     @override
-    def __getitem__(  # ty: ignore[invalid-method-override]
+    def __getitem__(
         self,
         keywords: str | tuple[str, ...] | None,
         /,
