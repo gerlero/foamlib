@@ -345,12 +345,6 @@ def _normalized_data(
     match value:
         case DimensionSet():
             return value
-        case (v, {} as d):
-            # Data followed by a subdictionary (primitiveEntry value form)
-            return (
-                _normalized_data(v, keywords=keywords, binary=binary),  # ty: ignore[invalid-argument-type]
-                _normalized_dict(d),  # ty: ignore[invalid-argument-type]
-            )
         case tuple((_, _, *_)):
             return tuple(  # ty: ignore[invalid-return-type]
                 _normalized_data_entry(v, keywords=keywords, binary=binary)

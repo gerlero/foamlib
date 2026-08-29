@@ -1052,10 +1052,11 @@ def _parse_keyword_entry(
     try:
         value, pos = _parse_dictionary(contents, pos)
     except ParseError:
-        value, pos = _parse_entry_value(contents, pos)
+        value, pos = _parse_data(contents, pos)
+        pos = _skip(contents, pos)
         pos = _expect(contents, pos, b";")
 
-    return (keyword, value), pos  # ty: ignore[invalid-return-type]
+    return (keyword, value), pos
 
 
 def _parse_dictionary(contents: bytes | bytearray, pos: int) -> tuple[Dict, int]:
@@ -1092,7 +1093,8 @@ def _parse_dictionary(contents: bytes | bytearray, pos: int) -> tuple[Dict, int]
         try:
             value, pos = _parse_dictionary(contents, pos)
         except ParseError:
-            value, pos = _parse_entry_value(contents, pos)
+            value, pos = _parse_data(contents, pos)
+            pos = _skip(contents, pos)
             pos = _expect(contents, pos, b";")
 
         ret[keyword] = value
@@ -1157,7 +1159,10 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
             try:
                 value, pos = _parse_subdictionary(contents, pos)
             except ParseError:
-                value, pos = _parse_entry_value(contents, pos)
+                try:
+                    value, pos = _parse_data(contents, pos)
+                except ParseError:
+                    value = None
                 if keyword.startswith("$") and value is None:
                     # Bare '$'-reference entry (whole-entry substitution)
                     if contents[pos : pos + 1] == b";":
@@ -1176,26 +1181,6 @@ def _parse_subdictionary(contents: bytes | bytearray, pos: int) -> tuple[SubDict
             ret = add_to_mapping(ret, keyword, value)
 
     return ret, pos
-
-
-def _parse_entry_value(
-    contents: bytes | bytearray, pos: int
-) -> tuple[Data | None, int]:
-    """Parse a keyword-entry value, allowing a trailing subdictionary.
-
-    OpenFOAM's ``primitiveEntry::read`` reads tokens until a ``;`` at block
-    depth zero, so ``key word(s) { ... };`` is a single entry whose value is
-    the data followed by the subdictionary.
-    """
-    try:
-        value, pos = _parse_data(contents, pos)
-    except ParseError:
-        return None, pos
-    pos = _skip(contents, pos)
-    if contents[pos : pos + 1] == b"{":
-        subdict, pos = _parse_subdictionary(contents, pos)
-        value = (value, subdict)
-    return value, pos
 
 
 def _parse_directive_value(
@@ -1326,7 +1311,10 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, in
                 try:
                     value, new_pos = _parse_subdictionary(contents, new_pos)
                 except ParseError:
-                    value, new_pos = _parse_entry_value(contents, new_pos)
+                    try:
+                        value, new_pos = _parse_data(contents, new_pos)
+                    except ParseError:
+                        value = None
                     if keyword.startswith("$") and value is None:
                         # Bare '$'-reference entry (whole-entry substitution)
                         if contents[new_pos : new_pos + 1] == b";":
@@ -1461,7 +1449,10 @@ def _parse_file_located(
                 ret[(*_keywords, keyword)] = ParsedEntry(..., entry_start, new_pos)
                 ret.extend(subdict_result)
             else:
-                value, new_pos = _parse_entry_value(contents, new_pos)
+                try:
+                    value, new_pos = _parse_data(contents, new_pos)
+                except ParseError:
+                    value = None
                 if keyword.startswith("$") and value is None:
                     # Bare '$'-reference entry (whole-entry substitution)
                     if contents[new_pos : new_pos + 1] == b";":
