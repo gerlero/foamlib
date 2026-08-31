@@ -114,6 +114,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     @staticmethod
     async def _run(
         cmd: Sequence[str | os.PathLike[str]] | str,
+        /,
         *,
         cpus: int,
         case: os.PathLike[str],
@@ -147,6 +148,7 @@ class AsyncFoamCase(FoamCaseRunBase):
     async def _copytree(
         src: os.PathLike[str] | str,
         dest: os.PathLike[str] | str,
+        /,
         *,
         symlinks: bool = False,
         ignore: Callable[[os.PathLike[str] | str, Collection[str]], Collection[str]]
@@ -183,14 +185,20 @@ class AsyncFoamCase(FoamCaseRunBase):
             await coro
 
     @overload
-    def __getitem__(self, index: float | str) -> "AsyncFoamCase.TimeDirectory": ...
+    def __getitem__(
+        self,
+        index: int | float | str,  # noqa: PYI041
+        /,
+    ) -> "AsyncFoamCase.TimeDirectory": ...
 
     @overload
-    def __getitem__(self, index: slice) -> Sequence["AsyncFoamCase.TimeDirectory"]: ...
+    def __getitem__(
+        self, index: slice, /
+    ) -> Sequence["AsyncFoamCase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
-        self, index: slice | float | str
+        self, index: slice | float | str, /
     ) -> "AsyncFoamCase.TimeDirectory | Sequence[AsyncFoamCase.TimeDirectory]":
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):
@@ -254,7 +262,7 @@ class AsyncFoamCase(FoamCaseRunBase):
         :param log: If ``True``, log the command output to ``log.*`` files in the case directory.
         """
         for coro in self._run_calls(
-            cmd=cmd, parallel=parallel, cpus=cpus, check=check, log=log
+            cmd, parallel=parallel, cpus=cpus, check=check, log=log
         ):
             assert isinstance(coro, Awaitable)
             await coro

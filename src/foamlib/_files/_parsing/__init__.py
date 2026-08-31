@@ -1,6 +1,6 @@
 import sys
 from collections.abc import Collection, Iterator
-from typing import Never, cast, overload
+from typing import Never, NoReturn, cast, overload
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -57,23 +57,23 @@ class ParsedFile(
         return [entry.data for entry in self._parsed.getall(keywords)]
 
     @overload
-    def __getitem__(self, keywords: tuple[()]) -> StandaloneData: ...
+    def __getitem__(self, keywords: tuple[()], /) -> StandaloneData: ...
 
     @overload
     def __getitem__(
-        self, keywords: tuple[str, *tuple[str, ...]]
+        self, keywords: tuple[str, *tuple[str, ...]], /
     ) -> Data | EllipsisType | None: ...
 
     @override
     def __getitem__(  # ty: ignore[invalid-method-override]
-        self, keywords: tuple[str, ...]
+        self, keywords: tuple[str, ...], /
     ) -> Data | StandaloneData | EllipsisType | None:
 
         entry = self._parsed[keywords]
         return entry.data
 
     @override
-    def __setitem__(self, key: Never, value: Never) -> None:  # ty: ignore[invalid-method-override] # pragma: no cover
+    def __setitem__(self, key: Never, value: Never, /) -> NoReturn:  # ty: ignore[invalid-method-override] # pragma: no cover
         msg = "Use 'put' method instead"
         raise NotImplementedError(msg)
 
@@ -81,26 +81,26 @@ class ParsedFile(
     def put(
         self,
         keywords: tuple[()],
-        /,
         data: StandaloneData,
         content: bytes,
+        /,
     ) -> None: ...
 
     @overload
     def put(
         self,
         keywords: tuple[str, *tuple[str, ...]],
-        /,
         data: Data | EllipsisType | None,
         content: bytes,
+        /,
     ) -> None: ...
 
     def put(
         self,
         keywords: tuple[str, ...],
-        /,
         data: Data | StandaloneData | EllipsisType | None,
         content: bytes,
+        /,
     ) -> None:
         start, end = self.entry_location(keywords)
 
@@ -169,7 +169,7 @@ class ParsedFile(
         return entry.data
 
     @override
-    def __contains__(self, keywords: object) -> bool:
+    def __contains__(self, keywords: object, /) -> bool:
         return keywords in self._parsed
 
     @override
@@ -180,7 +180,7 @@ class ParsedFile(
     def __len__(self) -> int:
         return len(self._parsed)
 
-    def _update_content(self, start: int, end: int, new_content: bytes) -> None:
+    def _update_content(self, start: int, end: int, new_content: bytes, /) -> None:
         """Update content and adjust positions of other entries."""
         diff = len(new_content) - (end - start)
 

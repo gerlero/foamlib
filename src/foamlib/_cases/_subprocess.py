@@ -36,7 +36,7 @@ PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
 
 
-def _env(case: os.PathLike[str]) -> Mapping[str, str]:
+def _env(case: os.PathLike[str], /) -> Mapping[str, str]:
     env = os.environ.copy()
 
     env["PWD"] = str(Path(case))
@@ -51,6 +51,7 @@ def _env(case: os.PathLike[str]) -> Mapping[str, str]:
 
 def run_sync(
     cmd: Sequence[str | os.PathLike[str]],
+    /,
     *,
     case: os.PathLike[str],
     check: bool = True,
@@ -59,7 +60,7 @@ def run_sync(
     process_stdout: Callable[[str], None] = lambda _: None,
 ) -> CompletedProcess[str]:
     # Set up log file monitoring
-    with LogFileMonitor(case, process_stdout) as log_monitor:
+    with _LogFileMonitor(case, process_stdout) as log_monitor:
         with subprocess.Popen(
             cmd,
             cwd=case,
@@ -132,6 +133,7 @@ def run_sync(
 
 async def run_async(
     cmd: Sequence[str | os.PathLike[str]],
+    /,
     *,
     case: os.PathLike[str],
     check: bool = True,
@@ -140,7 +142,7 @@ async def run_async(
     process_stdout: Callable[[str], None] = lambda _: None,
 ) -> CompletedProcess[str]:
     # Set up log file monitoring
-    async with AsyncLogFileMonitor(case, process_stdout) as log_monitor:
+    async with _AsyncLogFileMonitor(case, process_stdout) as log_monitor:
         monitor_task = log_monitor.start_background_monitoring()
 
         try:
@@ -210,13 +212,14 @@ async def run_async(
                 await monitor_task
 
 
-class LogFileMonitor(AbstractContextManager["LogFileMonitor"]):
+class _LogFileMonitor(AbstractContextManager["_LogFileMonitor"]):
     """Monitor log files for progress information."""
 
     def __init__(
         self,
         case_path: os.PathLike[str],
         process_line: Callable[[str], None] | None = None,
+        /,
     ) -> None:
         """
         Initialize log file monitor.
@@ -241,6 +244,7 @@ class LogFileMonitor(AbstractContextManager["LogFileMonitor"]):
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: object,
+        /,
     ) -> None:
         """Exit context manager and stop monitoring."""
         self.stop_monitoring()
@@ -291,8 +295,8 @@ class LogFileMonitor(AbstractContextManager["LogFileMonitor"]):
         self._monitoring = False
 
 
-class AsyncLogFileMonitor(
-    LogFileMonitor, AbstractAsyncContextManager["AsyncLogFileMonitor"]
+class _AsyncLogFileMonitor(
+    _LogFileMonitor, AbstractAsyncContextManager["_AsyncLogFileMonitor"]
 ):
     """Asynchronous version of log file monitor."""
 
@@ -300,6 +304,7 @@ class AsyncLogFileMonitor(
         self,
         case_path: os.PathLike[str],
         process_line: Callable[[str], None] | None = None,
+        /,
     ) -> None:
         super().__init__(case_path, process_line)
         self._monitor_task: asyncio.Task[None] | None = None
@@ -315,6 +320,7 @@ class AsyncLogFileMonitor(
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: object,
+        /,
     ) -> None:
         """Exit async context manager and stop monitoring."""
         self.stop_background_monitoring()

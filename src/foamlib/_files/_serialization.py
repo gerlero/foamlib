@@ -23,6 +23,7 @@ def dumps(
     | SubDict
     | Dict
     | np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]],
+    /,
     *,
     keywords: tuple[str, ...] | None = (),
     format_: Literal["ascii", "binary"] | None = None,

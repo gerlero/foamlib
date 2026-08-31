@@ -49,6 +49,7 @@ class AwaitableAsyncContextManager(AbstractAsyncContextManager[_R], Awaitable[_R
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
+        /,
     ) -> bool | None:
         return await self._cm.__aexit__(exc_type, exc_val, exc_tb)
 
@@ -86,6 +87,7 @@ class SingletonContextManager(AbstractContextManager[_R]):
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
+        /,
     ) -> bool | None:
         with self._lock:
             self._users -= 1
