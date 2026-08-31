@@ -64,7 +64,9 @@ _POSSIBLE_INTEGER = re.compile(rb"[0-9\-+]+", re.ASCII)
 
 
 class ParseError(Exception):
-    def __init__(self, contents: bytes | bytearray, pos: int, *, expected: str) -> None:
+    def __init__(
+        self, contents: bytes | bytearray, pos: int, /, *, expected: str
+    ) -> None:
         self._contents = contents
         self.pos = pos
         self._expected = expected
@@ -77,6 +79,7 @@ class ParseError(Exception):
 def _skip(
     contents: bytes | bytearray,
     pos: int,
+    /,
     *,
     newline_ok: bool = True,
 ) -> int:
@@ -320,6 +323,7 @@ class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
         self: "_ASCIINumericListParser[float, *_ElShape]",
         contents: bytes | bytearray,
         pos: int,
+        /,
         *,
         empty_ok: bool = ...,
     ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.float64]], int]: ...  # ty: ignore[invalid-type-arguments]
@@ -329,6 +333,7 @@ class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
         self: "_ASCIINumericListParser[int, *_ElShape]",
         contents: bytes | bytearray,
         pos: int,
+        /,
         *,
         empty_ok: bool = ...,
     ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.int64]], int]: ...  # ty: ignore[invalid-type-arguments]
@@ -337,6 +342,7 @@ class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
         self,
         contents: bytes | bytearray,
         pos: int,
+        /,
         *,
         empty_ok: bool = False,
     ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.float64 | np.int64]], int]:  # ty: ignore[invalid-type-arguments]
@@ -795,7 +801,7 @@ _SymbolToken = tuple[str, str | float]
 class _SymbolTokenizer:
     """Token stream for a symbolic dimension set (``symbols::tokeniser``)."""
 
-    def __init__(self, contents: bytes | bytearray, pos: int, first: str) -> None:
+    def __init__(self, contents: bytes | bytearray, pos: int, first: str, /) -> None:
         self.contents = contents
         self.pos = pos
         self._pending: list[_SymbolToken] = []

@@ -17,7 +17,7 @@ from ._parsing import ParsedFile
 
 
 class FoamFileIO(AbstractContextManager["FoamFileIO"]):
-    def __init__(self, path: os.PathLike[str] | str) -> None:
+    def __init__(self, path: os.PathLike[str] | str, /) -> None:
         self.path = Path(path).absolute()
 
         self.__cached_parsed: ParsedFile | None = None
@@ -39,6 +39,7 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
+        /,
     ) -> None:
         """If this is the outermost context, write any deferred file changes to disk."""
         try:

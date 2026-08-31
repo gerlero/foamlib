@@ -31,6 +31,7 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
     @staticmethod
     async def _run(
         cmd: Sequence[str | os.PathLike[str]] | str,
+        /,
         *,
         cpus: int,
         case: os.PathLike[str],
@@ -92,7 +93,7 @@ class AsyncSlurmFoamCase(AsyncFoamCase):
         :param fallback: If ``True``, fall back to running the command locally if Slurm is not available.
         """
         for coro in self._run_calls(
-            cmd=cmd,
+            cmd,
             parallel=parallel,
             cpus=cpus,
             check=check,

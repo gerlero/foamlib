@@ -97,8 +97,10 @@ class FoamFile(
     DimensionSet = DimensionSet
 
     class KeysView(multicollections.abc.KeysView[str | None]):
-        def __init__(self, file: "FoamFile", *, include_header: bool = False) -> None:
-            self._file = file
+        def __init__(
+            self, _file: "FoamFile", /, *, include_header: bool = False
+        ) -> None:
+            self._file = _file
             self._include_header = include_header
 
         def __repr__(self) -> str:
@@ -118,7 +120,7 @@ class FoamFile(
             )
 
         @override
-        def __contains__(self, obj: object) -> bool:
+        def __contains__(self, obj: object, /) -> bool:
             match obj:
                 case str():
                     return (obj,) in self._file._get_parsed()
@@ -132,8 +134,10 @@ class FoamFile(
             "Data | StandaloneData | FoamFile.SubDict | None"
         ]
     ):
-        def __init__(self, file: "FoamFile", *, include_header: bool = False) -> None:
-            self._file = file
+        def __init__(
+            self, _file: "FoamFile", /, *, include_header: bool = False
+        ) -> None:
+            self._file = _file
             self._include_header = include_header
 
         def __repr__(self) -> str:
@@ -162,7 +166,7 @@ class FoamFile(
             )
 
         @override
-        def __contains__(self, obj: object) -> bool:
+        def __contains__(self, obj: object, /) -> bool:
             return any(v == obj for v in iter(self))
 
     class ItemsView(
@@ -172,11 +176,11 @@ class FoamFile(
     ):
         def __init__(
             self,
-            file: "FoamFile",
+            _file: "FoamFile",
             *,
             include_header: bool = False,
         ) -> None:
-            self._file = file
+            self._file = _file
             self._include_header = include_header
 
         def __repr__(self) -> str:
@@ -208,7 +212,7 @@ class FoamFile(
             )
 
         @override
-        def __contains__(self, obj: object) -> bool:
+        def __contains__(self, obj: object, /) -> bool:
             return any(i == obj for i in iter(self))
 
     class SubDict(
@@ -244,15 +248,15 @@ class FoamFile(
         """
 
         class KeysView(multicollections.abc.KeysView[str]):
-            def __init__(self, subdict: "FoamFile.SubDict") -> None:
-                self._subdict = subdict
+            def __init__(self, _subdict: "FoamFile.SubDict", /) -> None:
+                self._subdict = _subdict
 
             def __repr__(self) -> str:
                 return f"{type(self).__qualname__}({list(self)!r})"
 
             @override
             def __iter__(self) -> Iterator[str]:
-                return self._subdict._file._iter(keywords=self._subdict._keywords)
+                return self._subdict._file._iter(self._subdict._keywords)
 
             @override
             def __len__(self) -> int:
@@ -260,7 +264,7 @@ class FoamFile(
                 return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
 
             @override
-            def __contains__(self, obj: object) -> bool:
+            def __contains__(self, obj: object, /) -> bool:
                 if not isinstance(obj, str):
                     return False
                 return (
@@ -271,8 +275,8 @@ class FoamFile(
         class ValuesView(
             multicollections.abc.ValuesView["Data | FoamFile.SubDict | None"]
         ):
-            def __init__(self, subdict: "FoamFile.SubDict") -> None:
-                self._subdict = subdict
+            def __init__(self, _subdict: "FoamFile.SubDict", /) -> None:
+                self._subdict = _subdict
 
             def __repr__(self) -> str:
                 return f"{type(self).__qualname__}({list(self)!r})"
@@ -294,14 +298,14 @@ class FoamFile(
                 return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
 
             @override
-            def __contains__(self, value: object) -> bool:
+            def __contains__(self, value: object, /) -> bool:
                 return any(v == value for v in iter(self))
 
         class ItemsView(
             multicollections.abc.ItemsView[str, "Data | FoamFile.SubDict | None"]
         ):
-            def __init__(self, subdict: "FoamFile.SubDict") -> None:
-                self._subdict = subdict
+            def __init__(self, _subdict: "FoamFile.SubDict", /) -> None:
+                self._subdict = _subdict
 
             def __repr__(self) -> str:
                 return f"{type(self).__qualname__}({list(self)!r})"
@@ -325,11 +329,11 @@ class FoamFile(
                 return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
 
             @override
-            def __contains__(self, obj: object) -> bool:
+            def __contains__(self, obj: object, /) -> bool:
                 return any(i == obj for i in iter(self))
 
         def __init__(
-            self, _file: "FoamFile", _keywords: tuple[str, *tuple[str, ...]]
+            self, _file: "FoamFile", _keywords: tuple[str, *tuple[str, ...]], /
         ) -> None:
             self._file = _file
             self._keywords = _keywords
@@ -342,20 +346,20 @@ class FoamFile(
             return self._file.getall((*self._keywords, keyword))  # ty: ignore[invalid-return-type]
 
         @override
-        def __getitem__(self, keyword: str) -> "Data | FoamFile.SubDict | None":
+        def __getitem__(self, keyword: str, /) -> "Data | FoamFile.SubDict | None":
             return self._file[(*self._keywords, keyword)]
 
         @overload
         def __setitem__(
-            self, keyword: str, data: DataLike | SubDictLike | None
+            self, keyword: str, data: DataLike | SubDictLike | None, /
         ) -> None: ...
 
         @overload
-        def __setitem__(self, keyword: slice, data: SubDictLike) -> None: ...
+        def __setitem__(self, keyword: slice, data: SubDictLike, /) -> None: ...
 
         @override
         def __setitem__(
-            self, keyword: str | slice, data: DataLike | SubDictLike | None
+            self, keyword: str | slice, data: DataLike | SubDictLike | None, /
         ) -> None:
             if keyword == slice(None):
                 if not isinstance(data, Mapping):
@@ -363,7 +367,7 @@ class FoamFile(
                     raise TypeError(msg)
                 with self._file:
                     self.clear()
-                    self.extend(data)  # ty: ignore[invalid-argument-type]
+                    self.extend(data)
                 return
 
             if isinstance(keyword, slice):
@@ -373,7 +377,7 @@ class FoamFile(
             self._file[(*self._keywords, keyword)] = data
 
         @override
-        def add(self, keyword: str, data: DataLike | SubDictLike | None) -> None:
+        def add(self, keyword: str, data: DataLike | SubDictLike | None, /) -> None:
             self._file.add((*self._keywords, keyword), data)
 
         @override
@@ -390,7 +394,7 @@ class FoamFile(
             return ret
 
         @override
-        def __delitem__(self, keyword: str | slice) -> None:
+        def __delitem__(self, keyword: str | slice, /) -> None:
             if keyword == slice(None):
                 self.clear()
                 return
@@ -408,7 +412,7 @@ class FoamFile(
                 yield k
 
         @override
-        def __contains__(self, keyword: object) -> bool:
+        def __contains__(self, keyword: object, /) -> bool:
             if not isinstance(keyword, str):
                 return False
             return (*self._keywords, keyword) in self._file._get_parsed()
@@ -431,7 +435,7 @@ class FoamFile(
             return FoamFile.SubDict.ItemsView(self)
 
         @override
-        def update(  # ty: ignore[invalid-method-override]
+        def update(
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike | None]
             | Iterable[tuple[str, DataLike | SubDictLike | None]] = (),
@@ -442,7 +446,7 @@ class FoamFile(
                 super().update(other, **kwargs)  # ty: ignore[no-matching-overload]
 
         @override
-        def extend(  # ty: ignore[invalid-method-override]
+        def extend(
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike | None]
             | Iterable[tuple[str, DataLike | SubDictLike | None]] = (),
@@ -453,7 +457,7 @@ class FoamFile(
                 super().extend(other, **kwargs)  # ty: ignore[no-matching-overload]
 
         @override
-        def merge(  # ty: ignore[invalid-method-override]
+        def merge(
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike | None]
             | Iterable[tuple[str, DataLike | SubDictLike | None]] = (),
@@ -900,18 +904,21 @@ class FoamFile(
     def __getitem__(
         self,
         keywords: str | tuple[str, *tuple[str, ...]],
+        /,
     ) -> "Data | FoamFile.SubDict | None": ...
 
     @overload
     def __getitem__(
         self,
         keywords: None | tuple[()],
+        /,
     ) -> StandaloneData: ...
 
     @override
     def __getitem__(  # ty: ignore[invalid-method-override]
         self,
         keywords: str | tuple[str, ...] | None,
+        /,
     ) -> "Data | StandaloneData | FoamFile.SubDict | None":
         return self.getone(keywords)
 
@@ -920,11 +927,12 @@ class FoamFile(
         self,
         keywords: str | tuple[str, *tuple[str, ...]],
         data: DataLike | SubDictLike | None,
+        /,
     ) -> None: ...
 
     @overload
     def __setitem__(
-        self, keywords: None | tuple[()], data: StandaloneDataLike
+        self, keywords: None | tuple[()], data: StandaloneDataLike, /
     ) -> None: ...
 
     @overload
@@ -932,6 +940,7 @@ class FoamFile(
         self,
         keywords: slice,
         data: FileDictLike | StandaloneDataLike,
+        /,
     ) -> None: ...
 
     @override
@@ -939,6 +948,7 @@ class FoamFile(
         self,
         keywords: str | tuple[str, ...] | None | slice,
         data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
+        /,
     ) -> None:
         """Set the value of the given entry in the FoamFile.
 
@@ -961,7 +971,7 @@ class FoamFile(
         self._perform_entry_operation(keywords, data, add=False)  # ty: ignore[no-matching-overload]
 
     @override
-    def __delitem__(self, keywords: str | tuple[str, ...] | None | slice) -> None:
+    def __delitem__(self, keywords: str | tuple[str, ...] | None | slice, /) -> None:
         keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)  # ty: ignore[no-matching-overload]
 
         if keywords == slice(None):
@@ -1033,17 +1043,18 @@ class FoamFile(
     def _iter(
         self,
         keywords: tuple[str, *tuple[str, ...]],
+        /,
         *,
         include_header: bool = ...,
     ) -> Iterator[str]: ...
 
     @overload
     def _iter(
-        self, keywords: tuple[()] = ..., *, include_header: bool = ...
+        self, keywords: tuple[()] = ..., /, *, include_header: bool = ...
     ) -> Iterator[str | None]: ...
 
     def _iter(
-        self, keywords: tuple[str, ...] = (), *, include_header: bool = False
+        self, keywords: tuple[str, ...] = (), /, *, include_header: bool = False
     ) -> Iterator[str | None]:
         yield from (
             k[-1] if k else None
@@ -1057,7 +1068,7 @@ class FoamFile(
         return self._iter()
 
     @override
-    def __contains__(self, keywords: object) -> bool:
+    def __contains__(self, keywords: object, /) -> bool:
         """Check if the FoamFile contains the given keyword or tuple of keywords."""
         try:
             keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
@@ -1411,6 +1422,7 @@ class FoamFieldFile(FoamFile):
         def value(
             self,
             value: FieldLike,
+            /,
         ) -> None:
             self["value"] = value
 
@@ -1453,18 +1465,21 @@ class FoamFieldFile(FoamFile):
     def __getitem__(
         self,
         keywords: str | tuple[str, *tuple[str, ...]],
+        /,
     ) -> "Data | FoamFieldFile.SubDict | None": ...
 
     @overload
     def __getitem__(
         self,
         keywords: None | tuple[()],
+        /,
     ) -> StandaloneData: ...
 
     @override
     def __getitem__(
         self,
         keywords: str | tuple[str, ...] | None,
+        /,
     ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None":
         keywords = FoamFieldFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
 
@@ -1489,7 +1504,7 @@ class FoamFieldFile(FoamFile):
         return ret
 
     @dimensions.setter
-    def dimensions(self, value: DimensionSet | Sequence[float]) -> None:
+    def dimensions(self, value: DimensionSet | Sequence[float], /) -> None:
         self["dimensions"] = value
 
     @property
@@ -1503,6 +1518,7 @@ class FoamFieldFile(FoamFile):
     def internal_field(
         self,
         value: FieldLike,
+        /,
     ) -> None:
         self["internalField"] = value
 
@@ -1517,5 +1533,5 @@ class FoamFieldFile(FoamFile):
         return ret
 
     @boundary_field.setter
-    def boundary_field(self, value: Mapping[str, SubDictLike]) -> None:
+    def boundary_field(self, value: Mapping[str, SubDictLike], /) -> None:
         self["boundaryField"] = value

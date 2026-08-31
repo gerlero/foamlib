@@ -26,7 +26,7 @@ else:
     from typing_extensions import override
 
 from .._files import FoamFieldFile
-from ._subprocess import DEVNULL, STDOUT, LogFileMonitor
+from ._subprocess import DEVNULL, STDOUT, _LogFileMonitor
 from .base import FoamCaseBase
 
 
@@ -64,6 +64,7 @@ class FoamCaseRunBase(FoamCaseBase):
     @abstractmethod
     def _run(
         cmd: Sequence[str | os.PathLike[str]] | str,
+        /,
         *,
         cpus: int,
         case: os.PathLike[str],
@@ -77,7 +78,7 @@ class FoamCaseRunBase(FoamCaseBase):
     @staticmethod
     @abstractmethod
     def _rmtree(
-        path: os.PathLike[str] | str, *, ignore_errors: bool = False
+        path: os.PathLike[str] | str, /, *, ignore_errors: bool = False
     ) -> None | Coroutine[None, None, None]:
         raise NotImplementedError
 
@@ -86,6 +87,7 @@ class FoamCaseRunBase(FoamCaseBase):
     def _copytree(
         src: os.PathLike[str] | str,
         dest: os.PathLike[str] | str,
+        /,
         *,
         symlinks: bool = False,
         ignore: Callable[[os.PathLike[str] | str, Collection[str]], Collection[str]]
@@ -249,7 +251,7 @@ class FoamCaseRunBase(FoamCaseBase):
         return script
 
     @staticmethod
-    def __cmd_name(cmd: Sequence[str | os.PathLike[str]] | str) -> str:
+    def __cmd_name(cmd: Sequence[str | os.PathLike[str]] | str, /) -> str:
         if isinstance(cmd, str):
             cmd = shlex.split(cmd)
 
@@ -259,6 +261,7 @@ class FoamCaseRunBase(FoamCaseBase):
     def __output(
         self,
         cmd: Sequence[str | os.PathLike[str]] | str,
+        /,
         *,
         log: bool | str | os.PathLike[str],
     ) -> Generator[tuple[int | TextIOBase, int | TextIOBase], None, None]:
@@ -274,7 +277,7 @@ class FoamCaseRunBase(FoamCaseBase):
 
     @contextmanager
     def __process_stdout(
-        self, cmd: Sequence[str | os.PathLike[str]] | str
+        self, cmd: Sequence[str | os.PathLike[str]] | str, /
     ) -> Generator[Callable[[str], None], None, None]:
         try:
             with self.control_dict as control_dict:
@@ -306,7 +309,7 @@ class FoamCaseRunBase(FoamCaseBase):
                     progress.update(task)
 
             # Set up log file monitoring
-            with LogFileMonitor(self.path, process_stdout) as log_monitor:
+            with _LogFileMonitor(self.path, process_stdout) as log_monitor:
                 yield process_stdout
 
                 # Check for any final progress updates from log files
@@ -322,7 +325,9 @@ class FoamCaseRunBase(FoamCaseBase):
         return ret
 
     def _copy_calls(
-        self, dst: os.PathLike[str] | str | None
+        self,
+        dst: os.PathLike[str] | str | None,
+        /,
     ) -> Generator[object | Coroutine[None, None, object], None, Self]:
         if dst is None:
             dst = self.__mkrundir()
@@ -392,6 +397,7 @@ class FoamCaseRunBase(FoamCaseBase):
     def _run_calls(
         self,
         cmd: Sequence[str | os.PathLike[str]] | str | None = None,
+        /,
         *,
         cpus: int | None = None,
         parallel: bool | None,

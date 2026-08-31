@@ -173,7 +173,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
         return iter(self._times)
 
     @override
-    def __contains__(self, obj: object) -> bool:
+    def __contains__(self, obj: object, /) -> bool:
         """Return ``True`` if the given time directory, name, or time exists in the case."""
         match obj:
             case FoamCaseBase.TimeDirectory():

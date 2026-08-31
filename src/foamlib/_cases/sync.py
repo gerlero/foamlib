@@ -99,6 +99,7 @@ class FoamCase(FoamCaseRunBase):
     def _copytree(
         src: os.PathLike[str] | str,
         dest: os.PathLike[str] | str,
+        /,
         *,
         symlinks: bool = False,
         ignore: Callable[[os.PathLike[str] | str, Collection[str]], Collection[str]]
@@ -107,10 +108,10 @@ class FoamCase(FoamCaseRunBase):
         shutil.copytree(src, dest, symlinks=symlinks, ignore=ignore)
 
     @overload
-    def __getitem__(self, index: float | str) -> "FoamCase.TimeDirectory": ...
+    def __getitem__(self, index: int | float | str, /) -> "FoamCase.TimeDirectory": ...  # noqa: PYI041
 
     @overload
-    def __getitem__(self, index: slice) -> Sequence["FoamCase.TimeDirectory"]: ...
+    def __getitem__(self, index: slice, /) -> Sequence["FoamCase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
@@ -129,6 +130,7 @@ class FoamCase(FoamCaseRunBase):
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
+        /,
     ) -> None:
         self._rmtree(self.path)
 
@@ -215,7 +217,7 @@ class FoamCase(FoamCaseRunBase):
         :param log: If ``True``, log the command output to ``log.*`` files in the case directory.
         """
         for _ in self._run_calls(
-            cmd=cmd, parallel=parallel, cpus=cpus, check=check, log=log
+            cmd, parallel=parallel, cpus=cpus, check=check, log=log
         ):
             pass
 

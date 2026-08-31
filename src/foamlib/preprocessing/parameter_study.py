@@ -51,7 +51,7 @@ class ParameterStudy(BaseModel):
             of_case.create_case()
             of_case.modify_case()
 
-    def __add__(self, other: "ParameterStudy") -> "ParameterStudy":
+    def __add__(self, other: "ParameterStudy", /) -> "ParameterStudy":
         """Combine two ParameterStudy instances."""
         return ParameterStudy(cases=self.cases + other.cases)
 
