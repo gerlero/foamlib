@@ -41,7 +41,7 @@ jobs:
         uv run ty check
 
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     services:
       mysql:
         image: mysql:8.0
@@ -52,26 +52,49 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     strategy:
       matrix:
-        openfoam-version: [2606, 2006, 14, 9]
+        os: [ubuntu-latest]
+        openfoam-version: [2606, 14]
         python-version: ['3.11', '3.12', '3.13', '3.14']
+        dependency-resolution: ['highest']
         slurm: [false]
         include:
-          - openfoam-version: 2606
-            python-version: '3.14'
-            slurm: true
-          - openfoam-version: 14
-            python-version: '3.14'
-            slurm: true
-          - openfoam-version: 2006
+          - os: ubuntu-22.04
+            openfoam-version: 2006
             python-version: '3.11'
-            slurm: true
-          - openfoam-version: 9
+            dependency-resolution: 'lowest-direct'
+            slurm: false
+          - os: ubuntu-22.04
+            openfoam-version: 9
             python-version: '3.11'
+            dependency-resolution: 'lowest-direct'
+            slurm: false
+          - os: ubuntu-latest
+            openfoam-version: 2606
+            python-version: '3.14'
+            dependency-resolution: 'highest'
+            slurm: true
+          - os: ubuntu-latest
+            openfoam-version: 14
+            python-version: '3.14'
+            dependency-resolution: 'highest'
+            slurm: true
+          - os: ubuntu-22.04
+            openfoam-version: 2006
+            python-version: '3.11'
+            dependency-resolution: 'lowest-direct'
+            slurm: true
+          - os: ubuntu-22.04
+            openfoam-version: 9
+            python-version: '3.11'
+            dependency-resolution: 'lowest-direct'
             slurm: true
       fail-fast: false
     steps:
     - name: Checkout
       uses: actions/checkout@v7
+    - name: Set up Slurm
+      if: matrix.slurm
+      uses: koesterlab/setup-slurm-action@v1
     - name: Set up OpenFOAM
       uses: gerlero/setup-openfoam@v1
       with:
@@ -82,12 +105,9 @@ jobs:
       uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Set up Slurm
-      if: matrix.slurm
-      uses: koesterlab/setup-slurm-action@v1
     - name: Install test dependencies
       run: |
-        uv sync
+        uv sync --python ${{ matrix.python-version }} --group test --resolution ${{ matrix.dependency-resolution }}
     - name: Test with pytest
       run: |
         uv run pytest --cov=foamlib --cov-report xml
