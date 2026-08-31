@@ -44,7 +44,7 @@ postprocessing = [
     "defusedxml>=0.7.1,<0.8",
 ]
 examples = [
-    "plotly>=6,<7",
+    "plotly>=6,<8",
     "scipy>=1.10,<2",
     "foamlib[preprocessing]",
     "foamlib[postprocessing]",
