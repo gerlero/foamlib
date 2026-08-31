@@ -431,7 +431,7 @@ class FoamFile(
             return FoamFile.SubDict.ItemsView(self)
 
         @override
-        def update(
+        def update(  # ty: ignore[invalid-method-override]
             self,
             other: SupportsKeysAndGetItem[str, DataLike | SubDictLike | None]
             | Iterable[tuple[str, DataLike | SubDictLike | None]] = (),
@@ -439,7 +439,7 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike | None,
         ) -> None:
             with self._file:
-                super().update(other, **kwargs)  # ty: ignore[invalid-argument-type]
+                super().update(other, **kwargs)  # ty: ignore[no-matching-overload]
 
         @override
         def extend(  # ty: ignore[invalid-method-override]
@@ -450,7 +450,7 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike | None,
         ) -> None:
             with self._file:
-                super().extend(other, **kwargs)  # ty: ignore[invalid-argument-type]
+                super().extend(other, **kwargs)  # ty: ignore[no-matching-overload]
 
         @override
         def merge(  # ty: ignore[invalid-method-override]
@@ -461,7 +461,7 @@ class FoamFile(
             **kwargs: DataLike | SubDictLike | None,
         ) -> None:
             with self._file:
-                super().merge(other, **kwargs)  # ty: ignore[invalid-argument-type]
+                super().merge(other, **kwargs)  # ty: ignore[no-matching-overload]
 
         @override
         def clear(self) -> None:
@@ -1112,7 +1112,7 @@ class FoamFile(
         return FoamFile.ItemsView(self, include_header=include_header)
 
     @override
-    def update(
+    def update(  # ty: ignore[invalid-method-override]
         self,
         other: SupportsKeysAndGetItem[
             str | None,
@@ -1128,7 +1128,7 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
         with self:
-            super().update(other, **kwargs)  # ty: ignore[invalid-argument-type]
+            super().update(other, **kwargs)  # ty: ignore[no-matching-overload]
 
     @override
     def extend(  # ty: ignore[invalid-method-override]
@@ -1147,7 +1147,7 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
         with self:
-            super().extend(other, **kwargs)  # ty: ignore[invalid-argument-type]
+            super().extend(other, **kwargs)  # ty: ignore[no-matching-overload]
 
     @override
     def merge(  # ty: ignore[invalid-method-override]
@@ -1162,7 +1162,7 @@ class FoamFile(
         **kwargs: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
         with self:
-            super().merge(other, **kwargs)  # ty: ignore[invalid-argument-type]
+            super().merge(other, **kwargs)  # ty: ignore[no-matching-overload]
 
     @override
     def clear(self, include_header: bool = False) -> None:

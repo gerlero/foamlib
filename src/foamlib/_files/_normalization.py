@@ -202,11 +202,11 @@ def _normalized_subdict(
                 raise TypeError(msg)
         match v:
             case {}:
-                ret[k] = _normalized_subdict(v, keywords=(*keywords, k), binary=binary)
+                ret[k] = _normalized_subdict(v, keywords=(*keywords, k), binary=binary)  # ty: ignore[invalid-assignment]
             case None:
-                ret = add_to_mapping(ret, k, None)
+                ret = add_to_mapping(ret, k, None)  # ty: ignore[no-matching-overload]
             case _:
-                ret = add_to_mapping(
+                ret = add_to_mapping(  # ty: ignore[no-matching-overload]
                     ret,
                     k,
                     _normalized_data(v, keywords=(*keywords, k), binary=binary),

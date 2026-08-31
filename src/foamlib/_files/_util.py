@@ -1,4 +1,4 @@
-from collections.abc import Iterable, MutableMapping
+from collections.abc import Iterable
 from typing import Protocol, TypeVar, overload
 
 from multicollections import MultiDict
@@ -7,43 +7,41 @@ from multicollections.abc import MutableMultiMapping
 _K = TypeVar("_K")
 _V = TypeVar("_V")
 _V_co = TypeVar("_V_co", covariant=True)
-_M = TypeVar("_M", bound=MutableMapping[_K, _V])  # ty: ignore[invalid-type-variable-bound]
-_MM = TypeVar("_MM", bound=MutableMultiMapping[_K, _V])  # ty: ignore[invalid-type-variable-bound]
 
 
 @overload
 def add_to_mapping(
-    d: _MM,
+    d: MultiDict[_K, _V],
     key: _K,
     value: _V,
     /,
-) -> _MM: ...
+) -> MultiDict[_K, _V]: ...
 
 
 @overload
 def add_to_mapping(
-    d: _M,
+    d: dict[_K, _V],
     key: _K,
     value: _V,
     /,
-) -> _M | MultiDict[_K, _V]: ...
+) -> dict[_K, _V] | MultiDict[_K, _V]: ...
 
 
 def add_to_mapping(
-    d: _M,
+    d: dict[_K, _V] | MultiDict[_K, _V],
     key: _K,
     value: _V,
     /,
-) -> _M | MultiDict[_K, _V]:
+) -> dict[_K, _V] | MultiDict[_K, _V]:
     if isinstance(d, MutableMultiMapping):
         d.add(key, value)
         return d
 
-    if key not in d:  # ty: ignore[unsupported-operator]
-        d[key] = value  # ty: ignore[invalid-assignment]
+    if key not in d:
+        d[key] = value
         return d
 
-    ret = MultiDict(d)  # ty: ignore[invalid-argument-type]
+    ret = MultiDict(d)
     ret.add(key, value)
     return ret
 
