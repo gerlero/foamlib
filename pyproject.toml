@@ -29,23 +29,23 @@ classifiers = [
 dependencies = [
     "aioshutil>=1,<2",
     "multicollections>=1.1.6,<2",
-    "numpy>=1,<3",
+    "numpy>=2,<3",
     "rich>=13,<16",
     "typing-extensions>=4.5,<5; python_version<'3.13'",
 ]
 
 [project.optional-dependencies]
 preprocessing = [
-    "pandas>=1,<4",
+    "pandas>=2.2,<4",
     "pydantic>=2,<3",
 ]
 postprocessing = [
-    "pandas>=1,<4",
+    "pandas>=2.2,<4",
     "defusedxml>=0.7.1,<0.8",
 ]
 examples = [
     "plotly>=6,<7",
-    "scipy>=1,<2",
+    "scipy>=1.10,<2",
     "foamlib[preprocessing]",
     "foamlib[postprocessing]",
 ]
@@ -59,31 +59,31 @@ Documentation = "https://foamlib.readthedocs.io"
 preprocessing = ["foamlib[preprocessing]"]
 postprocessing = ["foamlib[postprocessing]"]
 examples = ["foamlib[examples]"]
-lint = ["ruff"]
+lint = ["ruff>=0.16.5,<0.17"]
 typing = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
-    "pandas-stubs",
-    "scipy-stubs",
-    "ty",
-    "types-defusedxml",
+    "pandas-stubs>=1,<2",
+    "scipy-stubs>=1,<2",
+    "ty>=0.0.75,<0.1",
+    "types-defusedxml>=0.7,<0.8",
 ]
 test = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
     "pytest>=9,<10",
     "pytest-asyncio>=1,<2",
-    "pytest-cov",
-    "scipy>=1,<2",
+    "pytest-cov>=7,<8",
+    "scipy>=1.10,<2",
 ]
 docs = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
     "sphinx>=9,<10",
-    "sphinx_rtd_theme",
-    "sphinxcontrib-mermaid"
+    "sphinx_rtd_theme>=3,<4",
+    "sphinxcontrib-mermaid>=2,<3",
 ]
-benchmark = ["PyFoam"]
+benchmark = ["PyFoam==2026.6"]
 dev = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
