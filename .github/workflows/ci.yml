@@ -38,7 +38,7 @@ jobs:
         python-version-file: pyproject.toml
     - name: Check types with ty
       run: |
-        uv run ty check
+        uv run --group typing ty check
 
   test:
     runs-on: ${{ matrix.os }}
@@ -55,38 +55,38 @@ jobs:
         os: [ubuntu-latest]
         openfoam-version: [2606, 14]
         python-version: ['3.11', '3.12', '3.13', '3.14']
-        dependency-resolution: ['highest']
+        dependency-resolution: [highest]
         slurm: [false]
         include:
           - os: ubuntu-22.04
             openfoam-version: 2006
             python-version: '3.11'
-            dependency-resolution: 'lowest-direct'
+            dependency-resolution: lowest-direct
             slurm: false
           - os: ubuntu-22.04
             openfoam-version: 9
             python-version: '3.11'
-            dependency-resolution: 'lowest-direct'
+            dependency-resolution: lowest-direct
             slurm: false
           - os: ubuntu-latest
             openfoam-version: 2606
             python-version: '3.14'
-            dependency-resolution: 'highest'
+            dependency-resolution: highest
             slurm: true
           - os: ubuntu-latest
             openfoam-version: 14
             python-version: '3.14'
-            dependency-resolution: 'highest'
+            dependency-resolution: highest
             slurm: true
           - os: ubuntu-22.04
             openfoam-version: 2006
             python-version: '3.11'
-            dependency-resolution: 'lowest-direct'
+            dependency-resolution: lowest-direct
             slurm: true
           - os: ubuntu-22.04
             openfoam-version: 9
             python-version: '3.11'
-            dependency-resolution: 'lowest-direct'
+            dependency-resolution: lowest-direct
             slurm: true
       fail-fast: false
     steps:
