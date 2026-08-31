@@ -63,7 +63,7 @@ lint = ["ruff>=0.16.5,<0.17"]
 typing = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
-    "pandas-stubs>=1,<2",
+    "pandas-stubs>=1,<4",
     "scipy-stubs>=1,<2",
     "ty>=0.0.75,<0.1",
     "types-defusedxml>=0.7,<0.8",
