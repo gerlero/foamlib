@@ -377,7 +377,7 @@ class FoamFile(
             self._file[(*self._keywords, keyword)] = data
 
         @override
-        def add(self, keyword: str, data: DataLike | SubDictLike | None, /) -> None:
+        def add(self, keyword: str, data: DataLike | SubDictLike | None) -> None:
             self._file.add((*self._keywords, keyword), data)
 
         @override
