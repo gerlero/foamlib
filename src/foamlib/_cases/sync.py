@@ -84,7 +84,9 @@ class FoamCase(FoamCaseRunBase):
 
     @override
     @staticmethod
-    def _rmtree(path: os.PathLike[str] | str, *, ignore_errors: bool = False) -> None:
+    def _rmtree(
+        path: os.PathLike[str] | str, /, *, ignore_errors: bool = False
+    ) -> None:
         shutil.rmtree(path, ignore_errors=ignore_errors)
 
     @override

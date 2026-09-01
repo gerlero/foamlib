@@ -170,18 +170,18 @@ class ParsedFile(
 
     @overload
     @with_default
-    def popone(self, keywords: tuple[()]) -> StandaloneData: ...
+    def popone(self, keywords: tuple[()], /) -> StandaloneData: ...
 
     @overload
     @with_default
     def popone(
-        self, keywords: tuple[str, *tuple[str, ...]]
+        self, keywords: tuple[str, *tuple[str, ...]], /
     ) -> Data | EllipsisType | None: ...
 
     @overload
     @with_default
     def popone(
-        self, keywords: tuple[str, ...]
+        self, keywords: tuple[str, ...], /
     ) -> Data | StandaloneData | EllipsisType | None: ...
 
     @override

@@ -247,7 +247,7 @@ class _LogFileMonitor(AbstractContextManager["_LogFileMonitor"]):
         """Find all log files in the case directory."""
         return list(self.case_path.glob("log.*"))
 
-    def _read_new_lines(self, log_file: Path) -> list[str]:
+    def _read_new_lines(self, log_file: Path, /) -> list[str]:
         """Read new lines from a log file since last check."""
         try:
             current_size = log_file.stat().st_size
@@ -277,7 +277,7 @@ class _LogFileMonitor(AbstractContextManager["_LogFileMonitor"]):
                 # Process all lines through the callback
                 self.process_line(line)
 
-    def start_monitoring(self, interval: float = 0.5) -> None:
+    def start_monitoring(self, interval: float = 0.5, /) -> None:
         """Start monitoring log files synchronously (for use in sync contexts)."""
         self._monitoring = True
         while self._monitoring:
@@ -325,7 +325,7 @@ class _AsyncLogFileMonitor(
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.monitor_once)
 
-    async def start_monitoring_async(self, interval: float = 0.5) -> None:
+    async def start_monitoring_async(self, interval: float = 0.5, /) -> None:
         """Start monitoring log files asynchronously."""
         self._monitoring = True
         try:
@@ -336,7 +336,9 @@ class _AsyncLogFileMonitor(
             self._monitoring = False
             raise
 
-    def start_background_monitoring(self, interval: float = 0.5) -> asyncio.Task[None]:
+    def start_background_monitoring(
+        self, interval: float = 0.5, /
+    ) -> asyncio.Task[None]:
         """Start monitoring in the background as an asyncio task."""
         if self._monitor_task is not None and not self._monitor_task.done():
             self._monitor_task.cancel()
