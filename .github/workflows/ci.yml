@@ -37,8 +37,7 @@ jobs:
       with:
         python-version-file: pyproject.toml
     - name: Check types with ty
-      run: |
-        uv run --group typing ty check
+      run: uv run --group typing ty check
 
   test:
     runs-on: ${{ matrix.os }}
@@ -105,12 +104,13 @@ jobs:
       uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install test dependencies
-      run: |
-        uv sync --python ${{ matrix.python-version }} --group test --resolution ${{ matrix.dependency-resolution }}
     - name: Test with pytest
-      run: |
-        uv run pytest --cov=foamlib --cov-report xml
+      run: >
+        uv run
+        --python ${{ matrix.python-version }}
+        --group test
+        --resolution ${{ matrix.dependency-resolution }}
+        pytest --cov=foamlib --cov-report xml
       env:
         OMPI_MCA_rmaps_base_oversubscribe: 1
         OMPI_ALLOW_RUN_AS_ROOT: 1
@@ -128,5 +128,4 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v10.0.1
     - name: Check package build
-      run: |
-        uv build
+      run: uv build
