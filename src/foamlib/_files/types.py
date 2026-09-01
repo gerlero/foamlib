@@ -1,12 +1,9 @@
-from typing import TYPE_CHECKING, Literal, Self, TypeVar, overload, override
+from typing import TYPE_CHECKING, Literal, Self, overload, override
 
 import numpy as np
 
 if TYPE_CHECKING:
     from ..typing import DimensionSetLike, Tensor, TensorLike
-
-
-_T = TypeVar("_T", bound=np.floating | np.integer)
 
 
 class DimensionSet(
@@ -483,13 +480,13 @@ class Dimensioned:
     ) -> np.ndarray[tuple[()] | tuple[Literal[3, 6, 9]], np.dtype[np.float64]]: ...
 
     @overload
-    def __array__(
-        self, dtype: np.dtype[_T], *, copy: bool | None = ...
-    ) -> np.ndarray[tuple[()] | tuple[Literal[3, 6, 9]], np.dtype[_T]]: ...
+    def __array__[T: (np.floating | np.integer)](
+        self, dtype: np.dtype[T], *, copy: bool | None = ...
+    ) -> np.ndarray[tuple[()] | tuple[Literal[3, 6, 9]], np.dtype[T]]: ...
 
-    def __array__(
-        self, dtype: np.dtype | None = None, *, copy: bool | None = None
-    ) -> np.ndarray[tuple[()] | tuple[Literal[3, 6, 9]], np.dtype[np.float64 | _T]]:
+    def __array__[T: (np.floating | np.integer)](
+        self, dtype: np.dtype[T] | None = None, *, copy: bool | None = None
+    ) -> np.ndarray[tuple[()] | tuple[Literal[3, 6, 9]], np.dtype[np.float64 | T]]:
         if self.dimensions:
             msg = f"Cannot convert non-dimensionless Dimensioned object to array: {self.dimensions}"
             raise ValueError(msg)

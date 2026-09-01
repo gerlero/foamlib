@@ -2,7 +2,7 @@ import contextlib
 import os
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
-from typing import Literal, TypeVar, assert_never, cast, overload, override
+from typing import Literal, assert_never, cast, overload, override
 
 import multicollections.abc
 import numpy as np
@@ -28,8 +28,6 @@ from ._parsing import parse
 from ._serialization import dumps
 from ._util import SupportsKeysAndGetItem
 from .types import Dimensioned, DimensionSet
-
-_D = TypeVar("_D")
 
 
 class FoamFile(
@@ -913,12 +911,12 @@ class FoamFile(
     ) -> "Data | StandaloneData | FoamFile.SubDict | None": ...
 
     @override
-    def get(
+    def get[D](
         self,
         keywords: str | tuple[str, ...] | None,
-        default: _D = None,  # ty: ignore[invalid-parameter-default]
+        default: D = None,  # ty: ignore[invalid-parameter-default]
         /,
-    ) -> "Data | StandaloneData | FoamFile.SubDict | None | _D":  # ty: ignore[invalid-method-override]
+    ) -> "Data | StandaloneData | FoamFile.SubDict | None | D":  # ty: ignore[invalid-method-override]
         return super().get(keywords, default)
 
     @overload
