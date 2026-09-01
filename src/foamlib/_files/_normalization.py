@@ -164,7 +164,7 @@ def _normalized_dict(value: DictLike, /) -> Dict:
                 raise TypeError(msg)
         match v:
             case {}:
-                ret[k] = _normalized_dict(v)
+                ret[k] = _normalized_dict(v)  # ty: ignore[invalid-argument-type]
             case _:
                 ret[k] = _normalized_data(v, keywords=None, binary=False)
     return ret
@@ -202,11 +202,11 @@ def _normalized_subdict(
                 raise TypeError(msg)
         match v:
             case {}:
-                ret[k] = _normalized_subdict(v, keywords=(*keywords, k), binary=binary)  # ty: ignore[invalid-assignment]
+                ret[k] = _normalized_subdict(v, keywords=(*keywords, k), binary=binary)  # ty: ignore[invalid-argument-type]
             case None:
-                ret = add_to_mapping(ret, k, None)  # ty: ignore[no-matching-overload]
+                ret = add_to_mapping(ret, k, None)
             case _:
-                ret = add_to_mapping(  # ty: ignore[no-matching-overload]
+                ret = add_to_mapping(
                     ret,
                     k,
                     _normalized_data(v, keywords=(*keywords, k), binary=binary),
@@ -347,7 +347,7 @@ def _normalized_data(
             return value
         case tuple((_, _, *_)):
             return tuple(  # ty: ignore[invalid-return-type]
-                _normalized_data_entry(v, keywords=keywords, binary=binary)
+                _normalized_data_entry(v, keywords=keywords, binary=binary)  # ty: ignore[invalid-argument-type]
                 for v in value
             )
         case _:
@@ -367,7 +367,7 @@ def _normalized_standalone_data_entry(
         case np.ndarray(shape=(_, 3), dtype=np.dtype(kind="f")):
             if not binary or value.dtype not in (np.float64, np.float32):
                 return value.astype(float, copy=False)
-            return value
+            return value  # ty: ignore[invalid-return-type]
         case np.ndarray(shape=(_, 3 | 4), dtype=np.dtype(kind="i")):
             return list(value.astype(int, copy=False))
         case np.ndarray() | Dimensioned() | DimensionSet() | tuple():
@@ -410,7 +410,7 @@ def _normalized_standalone_data(
                 for v in value
             )
         case _:
-            return _normalized_standalone_data_entry(value, binary=binary)
+            return _normalized_standalone_data_entry(value, binary=binary)  # ty: ignore[invalid-argument-type]
 
 
 @overload

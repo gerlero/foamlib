@@ -1,5 +1,4 @@
 import functools
-import sys
 import threading
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
 from contextlib import (
@@ -7,40 +6,29 @@ from contextlib import (
     AbstractContextManager,
     asynccontextmanager,
 )
-from typing import Generic, TypeVar, cast
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
-
-
 from types import TracebackType
-
-_Y = TypeVar("_Y")
-_S = TypeVar("_S")
-_R = TypeVar("_R")
+from typing import cast, override
 
 
-class ValuedGenerator(Generic[_Y, _S, _R]):
-    def __init__(self, generator: Generator[_Y, _S, _R], /) -> None:
+class ValuedGenerator[Y, S, R]:
+    def __init__(self, generator: Generator[Y, S, R], /) -> None:
         self._generator = generator
 
-    def __iter__(self) -> Generator[_Y, _S, _R]:
+    def __iter__(self) -> Generator[Y, S, R]:
         self.value = yield from self._generator
         return self.value
 
 
-class AwaitableAsyncContextManager(AbstractAsyncContextManager[_R], Awaitable[_R]):
-    def __init__(self, cm: AbstractAsyncContextManager[_R], /) -> None:
+class AwaitableAsyncContextManager[R](AbstractAsyncContextManager[R], Awaitable[R]):
+    def __init__(self, cm: AbstractAsyncContextManager[R], /) -> None:
         self._cm = cm
 
     @override
-    def __await__(self) -> Generator[object, None, _R]:
+    def __await__(self) -> Generator[object, None, R]:
         return self._cm.__aenter__().__await__()
 
     @override
-    async def __aenter__(self) -> _R:
+    async def __aenter__(self) -> R:
         return await self._cm.__aenter__()
 
     @override
@@ -54,32 +42,32 @@ class AwaitableAsyncContextManager(AbstractAsyncContextManager[_R], Awaitable[_R
         return await self._cm.__aexit__(exc_type, exc_val, exc_tb)
 
 
-def awaitableasynccontextmanager(
-    func: Callable[..., AsyncGenerator[_R]], /
-) -> Callable[..., AwaitableAsyncContextManager[_R]]:
+def awaitableasynccontextmanager[R](
+    func: Callable[..., AsyncGenerator[R]], /
+) -> Callable[..., AwaitableAsyncContextManager[R]]:
     @functools.wraps(func)
-    def wrapper(*args: object, **kwargs: object) -> AwaitableAsyncContextManager[_R]:
+    def wrapper(*args: object, **kwargs: object) -> AwaitableAsyncContextManager[R]:
         return AwaitableAsyncContextManager(asynccontextmanager(func)(*args, **kwargs))
 
     return wrapper
 
 
-class SingletonContextManager(AbstractContextManager[_R]):
-    def __init__(self, factory: Callable[[], AbstractContextManager[_R]], /) -> None:
+class SingletonContextManager[R](AbstractContextManager[R]):
+    def __init__(self, factory: Callable[[], AbstractContextManager[R]], /) -> None:
         self._factory = factory
         self._users = 0
-        self._cm: AbstractContextManager[_R] | None = None
-        self._ret: _R | None = None
+        self._cm: AbstractContextManager[R] | None = None
+        self._ret: R | None = None
         self._lock = threading.Lock()
 
     @override
-    def __enter__(self) -> _R:
+    def __enter__(self) -> R:
         with self._lock:
             if self._users == 0:
                 self._cm = self._factory()
                 self._ret = self._cm.__enter__()
             self._users += 1
-            return cast("_R", self._ret)
+            return cast(R, self._ret)
 
     @override
     def __exit__(

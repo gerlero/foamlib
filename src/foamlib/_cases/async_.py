@@ -1,15 +1,5 @@
 import asyncio
 import multiprocessing
-import sys
-from contextlib import asynccontextmanager
-from typing import Self, TypeVar, overload
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
-
-
 import os
 from collections.abc import (
     AsyncGenerator,
@@ -19,7 +9,9 @@ from collections.abc import (
     Iterable,
     Sequence,
 )
+from contextlib import asynccontextmanager
 from io import TextIOBase
+from typing import Self, overload, override
 
 import aioshutil
 
@@ -28,9 +20,6 @@ from ._run import FoamCaseRunBase
 from ._subprocess import DEVNULL, STDOUT, run_async
 from ._util import ValuedGenerator, awaitableasynccontextmanager
 from .base import FoamCaseBase
-
-_X = TypeVar("_X")
-_Y = TypeVar("_Y")
 
 
 class AsyncFoamCase(FoamCaseRunBase):
@@ -375,9 +364,9 @@ class AsyncFoamCase(FoamCaseRunBase):
         await self._rmtree(calls.value.path)
 
     @staticmethod
-    def map(
-        coro: Callable[[_X], Awaitable[_Y]], iterable: Iterable[_X], /
-    ) -> Iterable[_Y]:
+    def map[X, Y](
+        coro: Callable[[X], Awaitable[Y]], iterable: Iterable[X], /
+    ) -> Iterable[Y]:
         """
         Run an async function on each element of an iterable concurrently.
 

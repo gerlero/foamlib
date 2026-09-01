@@ -28,7 +28,8 @@ def test_parse_nan() -> None:
 
     # Uniform field with nan
     field = ParsedFile(b"uniform nan")[()]
-    assert np.isnan(field)
+    assert isinstance(field, float)
+    assert math.isnan(field)
 
     # Uniform tensor with nan
     tensor = ParsedFile(b"uniform (1 nan 3)")[()]

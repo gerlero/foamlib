@@ -1,17 +1,9 @@
+import os
 import shutil
-import sys
 from collections.abc import Iterator, Sequence
 from collections.abc import Set as AbstractSet
 from pathlib import Path
-from typing import assert_never, overload
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
-
-
-import os
+from typing import assert_never, overload, override
 
 from .._files import FoamFieldFile, FoamFile
 

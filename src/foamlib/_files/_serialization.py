@@ -39,7 +39,7 @@ def dumps(
                 (b"{" if keywords != () else b"")
                 + b" ".join(
                     dumps(
-                        (k, v),
+                        (k, v),  # ty: ignore[invalid-argument-type]
                         keywords=keywords,
                         format_=format_,
                         _tuple_is_keyword_entry=True,
@@ -59,7 +59,7 @@ def dumps(
             return b"uniform " + dumps(data, keywords=None, format_=format_)
 
         case np.ndarray(shape=(3,) | (6,) | (9,)), _common.FIELD_KEYWORDS, _:
-            return b"uniform " + dumps(data.tolist(), keywords=None, format_=format_)
+            return b"uniform " + dumps(data.tolist(), keywords=None, format_=format_)  # ty: ignore[invalid-argument-type]
 
         case np.ndarray(shape=(_,)), _common.FIELD_KEYWORDS, _:
             return b"nonuniform List<scalar> " + dumps(
@@ -91,13 +91,13 @@ def dumps(
 
         case np.ndarray(), (_, *_) | None, "ascii" | None:
             return dumps(len(data), keywords=None, format_=None) + dumps(
-                data.tolist(),
+                data.tolist(),  # ty: ignore[invalid-argument-type]
                 keywords=None,
                 format_=format_,
             )
 
         case np.ndarray(), (), "ascii" | None:
-            return dumps(data.tolist(), keywords=None, format_=format_)
+            return dumps(data.tolist(), keywords=None, format_=format_)  # ty: ignore[invalid-argument-type]
 
         case DimensionSet(), _, _:
             try:
@@ -124,38 +124,40 @@ def dumps(
             )
 
         case (
-            tuple((_, _, *_)),
+            tuple((_, _)),
             _,
             _,
-        ) if not isinstance(data, DimensionSet):
-            if _tuple_is_keyword_entry:
-                k, v = data
+        ) if _tuple_is_keyword_entry and not isinstance(data, DimensionSet):
+            assert len(data) == 2
+            k, v = data
 
-                ret = b"\n" if isinstance(k, str) and k[0] == "#" else b""
-                if k is not None:
-                    ret += dumps(k, keywords=keywords)
-                val = dumps(
-                    v,
-                    keywords=(*keywords, k)  # ty: ignore[invalid-argument-type]
-                    if keywords is not None and k is not None
-                    else ()
-                    if k is None
-                    else None,
-                    format_=format_,
-                )
-                if k is not None and val:
-                    ret += b" "
-                ret += val
-                if isinstance(k, str) and k[0] == "#":
-                    ret += b"\n"
-                elif (
-                    k is not None
-                    and not isinstance(v, Mapping)
-                    and not (isinstance(k, str) and k.startswith("$") and v is None)
-                ):
-                    ret += b";"
-                return ret
+            ret = b"\n" if isinstance(k, str) and k[0] == "#" else b""
+            if k is not None:
+                ret += dumps(k, keywords=keywords)
+            val = dumps(
+                v,
+                keywords=(*keywords, k)  # ty: ignore[invalid-argument-type]
+                if keywords is not None and k is not None
+                else ()
+                if k is None
+                else None,
+                format_=format_,
+            )
+            if k is not None and val:
+                ret += b" "
+            ret += val
+            if isinstance(k, str) and k[0] == "#":
+                ret += b"\n"
+            elif (
+                k is not None
+                and not isinstance(v, Mapping)
+                and not (isinstance(k, str) and k.startswith("$") and v is None)
+            ):
+                ret += b";"
 
+            return ret
+
+        case tuple((_, _, *_)), _, _ if not isinstance(data, DimensionSet):
             return b" ".join(dumps(v, keywords=keywords, format_=format_) for v in data)
 
         case [*_], _, _:

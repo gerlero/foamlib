@@ -1,12 +1,6 @@
-import sys
-from typing import TYPE_CHECKING, Literal, Self, TypeVar, overload
+from typing import TYPE_CHECKING, Literal, Self, TypeVar, overload, override
 
 import numpy as np
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
 
 if TYPE_CHECKING:
     from ..typing import DimensionSetLike, Tensor, TensorLike

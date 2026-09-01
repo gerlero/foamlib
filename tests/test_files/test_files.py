@@ -171,7 +171,7 @@ def test_internal_field(cavity: FoamCase) -> None:
     assert isinstance(blocks, list)
     sizes = blocks[2]
     assert isinstance(sizes, list)
-    size = np.prod(sizes)
+    size = np.prod(sizes)  # ty: ignore[no-matching-overload]
 
     p_arr = np.zeros(size)
     U_arr = np.zeros((size, 3))

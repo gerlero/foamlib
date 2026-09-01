@@ -1,14 +1,8 @@
 import contextlib
 import os
-import sys
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
-from typing import Literal, TypeVar, assert_never, cast, overload
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
+from typing import Literal, TypeVar, assert_never, cast, overload, override
 
 import multicollections.abc
 import numpy as np
@@ -915,7 +909,7 @@ class FoamFile(
     ) -> StandaloneData: ...
 
     @override
-    def __getitem__(  # ty: ignore[invalid-method-override]
+    def __getitem__(
         self,
         keywords: str | tuple[str, ...] | None,
         /,

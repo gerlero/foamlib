@@ -1,13 +1,6 @@
-import sys
 from collections.abc import Collection, Iterator
-from typing import Never, NoReturn, cast, overload
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
-
 from types import EllipsisType
+from typing import Never, NoReturn, cast, overload, override
 
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default

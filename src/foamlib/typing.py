@@ -1,73 +1,71 @@
 """Type aliases for OpenFOAM data structures."""
 
 from collections.abc import Mapping, Sequence
-from typing import Literal, TypeAlias
+from typing import Literal
 
 import numpy as np
 from multicollections import MultiDict
 
 from ._files.types import Dimensioned, DimensionSet
 
-Tensor: TypeAlias = float | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.float64]]
+type Tensor = float | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.float64]]
 """An OpenFOAM scalar, vector, symmetric tensor, or full tensor."""
-TensorLike: TypeAlias = (
+type TensorLike = (
     Tensor
     | Sequence[float | np.floating | np.integer]
     | np.ndarray[tuple[Literal[3, 6, 9]], np.dtype[np.floating | np.integer]]
 )
 """Any type that could be interpreted as a :type:`Tensor`."""
 
-Field: TypeAlias = (
+type Field = (
     float | np.ndarray[tuple[int] | tuple[int, Literal[3, 6, 9]], np.dtype[np.floating]]
 )
 """An OpenFOAM field of scalars, vectors, symmetric tensors, or full tensors."""
-FieldLike: TypeAlias = Field | TensorLike | Sequence[TensorLike]
+type FieldLike = Field | TensorLike | Sequence[TensorLike]
 """Any type that could be interpreted as a :type:`Field`."""
 
-Dict: TypeAlias = dict[str, "Data | Dict"]
+type Dict = dict[str, Data | Dict]
 """An OpenFOAM dictionary."""
-DictLike: TypeAlias = Mapping[str, "DataLike | DictLike"]
+type DictLike = Mapping[str, DataLike | DictLike]
 """Any mapping that could be interpreted as a :type:`Dict`."""
 
-KeywordEntry: TypeAlias = tuple["DataEntry", "Data | Dict"]
+type KeywordEntry = tuple[DataEntry, Data | Dict]
 """An OpenFOAM keyword entry (i.e., a key-value pair)."""
-KeywordEntryLike: TypeAlias = tuple["DataEntryLike", "DataLike | DictLike"]
+type KeywordEntryLike = KeywordEntry | tuple[DataEntryLike, DataLike | DictLike]
 """Any 2-tuple that could be interpreted as a :type:`KeywordEntry`."""
 
-List: TypeAlias = list["DataEntry | KeywordEntry | Dict"]
+type List = list[DataEntry | KeywordEntry | Dict]
 """An OpenFOAM list."""
-ListLike: TypeAlias = Sequence["DataEntryLike | KeywordEntryLike | DictLike"]
+type ListLike = Sequence[DataEntryLike | KeywordEntryLike | DictLike]
 """Any sequence that could be interpreted as a :type:`List`."""
 
-DimensionSetLike: TypeAlias = DimensionSet | Sequence[int | float]
+type DimensionSetLike = DimensionSet | Sequence[int | float]
 """Any type that could be interpreted as a :class:`foamlib.DimensionSet`."""
 
-DataEntry: TypeAlias = (
-    str | int | float | bool | Dimensioned | DimensionSet | List | Field
-)
+type DataEntry = str | int | float | bool | Dimensioned | DimensionSet | List | Field
 """
 A single OpenFOAM value.
 """
-DataEntryLike: TypeAlias = (
+type DataEntryLike = (
     DataEntry | np.integer | np.floating | DimensionSetLike | ListLike | FieldLike
 )
 """Any type that could be interpreted as a :type:`DataEntry`."""
 
-Data: TypeAlias = DataEntry | tuple[DataEntry, DataEntry, *tuple[DataEntry, ...]]
+type Data = DataEntry | tuple[DataEntry, DataEntry, *tuple[DataEntry, ...]]
 """A single OpenFOAM value, or multiple values as a tuple."""
-DataLike: TypeAlias = (
+type DataLike = (
     DataEntryLike | tuple[DataEntryLike, DataEntryLike, *tuple[DataEntryLike, ...]]
 )
 """Any type that could be interpreted as a :type:`Data`."""
 
-StandaloneDataEntry: TypeAlias = (
+type StandaloneDataEntry = (
     DataEntry
     | np.ndarray[tuple[int], np.dtype[np.int64 | np.int32 | np.float64]]
     | np.ndarray[tuple[int, Literal[3]], np.dtype[np.float64 | np.float32]]
     | list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]]
 )
 """A single OpenFOAM value that can appear at the top level of a file."""
-StandaloneDataEntryLike: TypeAlias = (
+type StandaloneDataEntryLike = (
     StandaloneDataEntry
     | DataEntryLike
     | Sequence[int]
@@ -78,7 +76,7 @@ StandaloneDataEntryLike: TypeAlias = (
 )
 """Any type that could be interpreted as a :type:`StandaloneDataEntry`."""
 
-StandaloneData: TypeAlias = (
+type StandaloneData = (
     StandaloneDataEntry
     | tuple[
         StandaloneDataEntry,
@@ -87,7 +85,7 @@ StandaloneData: TypeAlias = (
     ]
 )
 """One or more OpenFOAM values that can appear at the top level of a file."""
-StandaloneDataLike: TypeAlias = (
+type StandaloneDataLike = (
     StandaloneDataEntryLike
     | tuple[
         StandaloneDataEntryLike,
@@ -97,19 +95,17 @@ StandaloneDataLike: TypeAlias = (
 )
 """Any type that could be interpreted as a :type:`StandaloneData`."""
 
-SubDict: TypeAlias = (
-    dict[str, "Data | SubDict | None"] | MultiDict[str, "Data | SubDict | None"]
-)
+type SubDict = dict[str, Data | SubDict | None] | MultiDict[str, Data | SubDict | None]
 """An OpenFOAM dictionary nested in a file."""
-SubDictLike: TypeAlias = Mapping[str, "DataLike | SubDictLike | None"]
+type SubDictLike = Mapping[str, "DataLike | SubDictLike | None"]
 """Any mapping that could be interpreted as a :type:`SubDict`."""
 
-FileDict: TypeAlias = (
+type FileDict = (
     dict[str | None, StandaloneData | Data | SubDict | None]
     | MultiDict[str | None, StandaloneData | Data | SubDict | None]
 )
 """An entire OpenFOAM file as a :class:`dict` or :class:`MultiDict`."""
-FileDictLike: TypeAlias = Mapping[
+type FileDictLike = Mapping[
     str | None, StandaloneDataLike | DataLike | SubDictLike | None
 ]
 """Any mapping that could be interpreted as a :type:`FileDict`."""
