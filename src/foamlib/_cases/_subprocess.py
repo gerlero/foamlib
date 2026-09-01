@@ -3,18 +3,12 @@ import contextlib
 import os
 import selectors
 import subprocess
-import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from io import StringIO, TextIOBase
 from pathlib import Path
-from typing import Self
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
+from typing import Self, override
 
 CompletedProcess = subprocess.CompletedProcess
 

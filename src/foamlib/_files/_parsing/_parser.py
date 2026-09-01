@@ -4,7 +4,7 @@ import math
 import re
 import sys
 from types import EllipsisType
-from typing import Generic, Literal, TypeVar, TypeVarTuple, assert_never, overload
+from typing import Literal, assert_never, overload
 from warnings import warn
 
 import numpy as np
@@ -28,11 +28,6 @@ from ...typing import (
     Tensor,
 )
 from .exceptions import FoamFileDecodeError
-
-_DType = TypeVar("_DType", float, int)
-_NumpyDType = TypeVar("_NumpyDType", np.float64, np.float32, np.int64, np.int32)
-_ElShape = TypeVarTuple("_ElShape")
-_Output = TypeVar("_Output", FileDict, DataEntry, StandaloneDataEntry)
 
 _IS_TOKEN_START = [False] * 256
 for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_#$./":
@@ -280,8 +275,8 @@ def _parse_number(
         raise ParseError(contents, pos, expected="number") from e
 
 
-class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
-    def __init__(self, *, dtype: type[_DType], elshape: tuple[*_ElShape]) -> None:
+class _ASCIINumericListParser[DType: (float, int), *ElShape]:
+    def __init__(self, *, dtype: type[DType], elshape: tuple[*ElShape]) -> None:
         self._dtype = dtype
         self._elshape: tuple[()] | tuple[int] = elshape  # ty: ignore[invalid-assignment]
 
@@ -320,23 +315,23 @@ class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
 
     @overload
     def __call__(
-        self: "_ASCIINumericListParser[float, *_ElShape]",
+        self: "_ASCIINumericListParser[float, *ElShape]",
         contents: bytes | bytearray,
         pos: int,
         /,
         *,
         empty_ok: bool = ...,
-    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.float64]], int]: ...  # ty: ignore[invalid-type-arguments]
+    ) -> tuple[np.ndarray[tuple[int, *ElShape], np.dtype[np.float64]], int]: ...  # ty: ignore[invalid-type-arguments]
 
     @overload
     def __call__(
-        self: "_ASCIINumericListParser[int, *_ElShape]",
+        self: "_ASCIINumericListParser[int, *ElShape]",
         contents: bytes | bytearray,
         pos: int,
         /,
         *,
         empty_ok: bool = ...,
-    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.int64]], int]: ...  # ty: ignore[invalid-type-arguments]
+    ) -> tuple[np.ndarray[tuple[int, *ElShape], np.dtype[np.int64]], int]: ...  # ty: ignore[invalid-type-arguments]
 
     def __call__(
         self,
@@ -345,7 +340,7 @@ class _ASCIINumericListParser(Generic[_DType, *_ElShape]):
         /,
         *,
         empty_ok: bool = False,
-    ) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[np.float64 | np.int64]], int]:  # ty: ignore[invalid-type-arguments]
+    ) -> tuple[np.ndarray[tuple[int, *ElShape], np.dtype[np.float64 | np.int64]], int]:  # ty: ignore[invalid-type-arguments]
         try:
             count, pos = _parse_number(contents, pos, target=int)
         except ParseError:
@@ -579,14 +574,17 @@ def _parse_ascii_faces_like_list(
     return ret, pos
 
 
-def _parse_binary_numeric_list(
+def _parse_binary_numeric_list[
+    NumpyDType: (np.float64, np.float32, np.int64, np.int32),
+    *ElShape,
+](
     contents: bytes | bytearray,
     pos: int,
     *,
-    dtype: type[_NumpyDType],
-    elshape: tuple[*_ElShape],
+    dtype: type[NumpyDType],
+    elshape: tuple[*ElShape],
     empty_ok: bool = False,
-) -> tuple[np.ndarray[tuple[int, *_ElShape], np.dtype[_NumpyDType]], int]:  # ty: ignore[invalid-type-arguments]
+) -> tuple[np.ndarray[tuple[int, *ElShape], np.dtype[NumpyDType]], int]:  # ty: ignore[invalid-type-arguments]
     count, pos = _parse_number(contents, pos, target=int)
     if count < 0:
         raise ParseError(contents, pos, expected="non-negative list count")
@@ -1357,7 +1355,9 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0) -> tuple[FileDict, in
     return ret, pos
 
 
-def parse(contents: bytes | bytearray | str, /, *, target: type[_Output]) -> _Output:
+def parse[Output: (FileDict, DataEntry, StandaloneDataEntry)](
+    contents: bytes | bytearray | str, /, *, target: type[Output]
+) -> Output:
     if isinstance(contents, str):
         contents = contents.encode()
 

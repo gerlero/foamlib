@@ -1,17 +1,10 @@
 import gzip
-import sys
+import os
 import threading
 from contextlib import AbstractContextManager, nullcontext
 from pathlib import Path
-from typing import Self
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
-
-import os
 from types import TracebackType
+from typing import Self, override
 
 from ._parsing import ParsedFile
 

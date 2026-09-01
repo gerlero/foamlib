@@ -1,15 +1,9 @@
 import asyncio
-import shutil
-import sys
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
-
 import os
+import shutil
 from collections.abc import Callable, Sequence
 from io import TextIOBase
+from typing import override
 
 from ._subprocess import DEVNULL, STDOUT, run_async
 from .async_ import AsyncFoamCase

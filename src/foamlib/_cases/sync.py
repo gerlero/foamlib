@@ -1,16 +1,9 @@
-import shutil
-import sys
-from typing import Self, overload
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
-
 import os
+import shutil
 from collections.abc import Callable, Collection, Sequence
 from io import TextIOBase
 from types import TracebackType
+from typing import Self, overload, override
 
 from .._files import FoamFieldFile
 from ._run import FoamCaseRunBase

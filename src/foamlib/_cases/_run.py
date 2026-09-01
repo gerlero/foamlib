@@ -14,19 +14,13 @@ from collections.abc import Set as AbstractSet
 from contextlib import contextmanager
 from io import TextIOBase
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Self, override
 
 from rich.progress import Progress
 
-from ._util import SingletonContextManager
-
-if sys.version_info >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
-
 from .._files import FoamFieldFile
 from ._subprocess import DEVNULL, STDOUT, _LogFileMonitor
+from ._util import SingletonContextManager
 from .base import FoamCaseBase
 
 
