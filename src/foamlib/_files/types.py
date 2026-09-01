@@ -206,7 +206,7 @@ _NAMED_DIMENSIONS: dict[str, DimensionSet] = {}
 _NAMED_DIMENSION_IDS: dict[int, str] = {}
 
 
-def _register_named_dimension(name: str, dimensions: DimensionSet) -> DimensionSet:
+def _register_named_dimension(name: str, dimensions: DimensionSet, /) -> DimensionSet:
     assert name not in _NAMED_DIMENSIONS
     if (id_ := id(dimensions)) in _NAMED_DIMENSION_IDS:
         dimensions = DimensionSet(*dimensions)
