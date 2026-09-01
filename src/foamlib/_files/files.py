@@ -887,7 +887,6 @@ class FoamFile(
         return deepcopy(ret)
 
     @overload
-    @with_default
     def get(
         self,
         keywords: str | tuple[str, *tuple[str, ...]],
@@ -895,26 +894,48 @@ class FoamFile(
     ) -> "Data | FoamFile.SubDict | None": ...
 
     @overload
-    @with_default
+    def get[D](
+        self,
+        keywords: str | tuple[str, *tuple[str, ...]],
+        default: D,
+        /,
+    ) -> "Data | FoamFile.SubDict | None | D": ...
+
+    @overload
     def get(
         self,
         keywords: None | tuple[()],
         /,
-    ) -> StandaloneData: ...
+    ) -> StandaloneData | None: ...
 
     @overload
-    @with_default
+    def get[D](
+        self,
+        keywords: None | tuple[()],
+        default: D,
+        /,
+    ) -> StandaloneData | D: ...
+
+    @overload
     def get(
         self,
         keywords: str | tuple[str, ...] | None,
         /,
     ) -> "Data | StandaloneData | FoamFile.SubDict | None": ...
 
+    @overload
+    def get[D](
+        self,
+        keywords: str | tuple[str, ...] | None,
+        default: D,
+        /,
+    ) -> "Data | StandaloneData | FoamFile.SubDict | None | D": ...
+
     @override
     def get[D](
         self,
         keywords: str | tuple[str, ...] | None,
-        default: D = None,  # ty: ignore[invalid-parameter-default]
+        default: D | None = None,
         /,
     ) -> "Data | StandaloneData | FoamFile.SubDict | None | D":  # ty: ignore[invalid-method-override]
         return super().get(keywords, default)
