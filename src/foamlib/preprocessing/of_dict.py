@@ -19,7 +19,7 @@ class FoamDictInstruction(BaseModel):
     def get_value(self) -> Any:
         """Get the value from the FoamFile based on the instruction."""
         of_dict = FoamFile(self.file_name)
-        return of_dict.get(tuple(self.keys))  # ty: ignore[no-matching-overload]
+        return of_dict.get(tuple(self.keys))
 
 
 class FoamDictAssignment(BaseModel):

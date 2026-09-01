@@ -42,6 +42,12 @@ class ParsedFile(
         self, keywords: tuple[str, *tuple[str, ...]], /
     ) -> Collection[Data | EllipsisType | None]: ...
 
+    @overload
+    @with_default
+    def getall(
+        self, keywords: tuple[str, ...], /
+    ) -> Collection[Data | StandaloneData | EllipsisType | None]: ...
+
     @override
     @with_default
     def getall(
@@ -57,8 +63,13 @@ class ParsedFile(
         self, keywords: tuple[str, *tuple[str, ...]], /
     ) -> Data | EllipsisType | None: ...
 
+    @overload
+    def __getitem__(
+        self, keywords: tuple[str, ...], /
+    ) -> Data | StandaloneData | EllipsisType | None: ...
+
     @override
-    def __getitem__(  # ty: ignore[invalid-method-override]
+    def __getitem__(
         self, keywords: tuple[str, ...], /
     ) -> Data | StandaloneData | EllipsisType | None:
 
@@ -84,6 +95,15 @@ class ParsedFile(
         self,
         keywords: tuple[str, *tuple[str, ...]],
         data: Data | EllipsisType | None,
+        content: bytes,
+        /,
+    ) -> None: ...
+
+    @overload
+    def put(
+        self,
+        keywords: tuple[str, ...],
+        data: Data | StandaloneData | EllipsisType | None,
         content: bytes,
         /,
     ) -> None: ...
@@ -120,6 +140,15 @@ class ParsedFile(
         /,
     ) -> None: ...
 
+    @overload
+    def add(
+        self,
+        keywords: tuple[str, ...],
+        data: Data | StandaloneData | EllipsisType | None,
+        content: bytes,
+        /,
+    ) -> None: ...
+
     @override
     def add(  # ty: ignore[invalid-method-override]
         self,
@@ -148,6 +177,12 @@ class ParsedFile(
     def popone(
         self, keywords: tuple[str, *tuple[str, ...]]
     ) -> Data | EllipsisType | None: ...
+
+    @overload
+    @with_default
+    def popone(
+        self, keywords: tuple[str, ...]
+    ) -> Data | StandaloneData | EllipsisType | None: ...
 
     @override
     @with_default
@@ -201,7 +236,7 @@ class ParsedFile(
     ) -> tuple[int, int]:
         if add or keywords not in self._parsed:
             if len(keywords) > 1:
-                assert self[keywords[:-1]] is ...  # ty: ignore[invalid-argument-type]
+                assert self[keywords[:-1]] is ...
                 start, end = self.entry_location(keywords[:-1])
                 end = self.contents.rindex(b"}", start, end)
             else:
