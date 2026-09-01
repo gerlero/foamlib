@@ -371,7 +371,7 @@ class FoamFile(
             self._file[(*self._keywords, keyword)] = data
 
         @override
-        def add(self, keyword: str, data: DataLike | SubDictLike | None) -> None:
+        def add(self, keyword: str, data: DataLike | SubDictLike | None, /) -> None:
             self._file.add((*self._keywords, keyword), data)
 
         @override
@@ -1017,6 +1017,7 @@ class FoamFile(
         self,
         keywords: str | tuple[str, *tuple[str, ...]],
         data: DataLike | SubDictLike | None,
+        /,
     ) -> None: ...
 
     @overload
@@ -1024,6 +1025,7 @@ class FoamFile(
         self,
         keywords: None | tuple[()],
         data: StandaloneDataLike,
+        /,
     ) -> None: ...
 
     @override
@@ -1031,6 +1033,7 @@ class FoamFile(
         self,
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike | None,
+        /,
     ) -> None:
         keywords = FoamFile._normalized_keywords(keywords)
         self._perform_entry_operation(keywords, data, add=True)  # ty: ignore[no-matching-overload]
