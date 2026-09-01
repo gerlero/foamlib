@@ -582,6 +582,11 @@ class FoamFile(
         self, keywords: tuple[()], data: StandaloneData, /
     ) -> None: ...
 
+    @overload
+    def _update_class_for_field_if_needed(
+        self, keywords: tuple[str, ...], data: Data | StandaloneData | SubDict, /
+    ) -> None: ...
+
     def _update_class_for_field_if_needed(
         self, keywords: tuple[str, ...], data: Data | StandaloneData | SubDict, /
     ) -> None:
@@ -805,7 +810,7 @@ class FoamFile(
 
                 content = before + dumps(data, keywords=(), format_=format_) + after  # ty: ignore[invalid-argument-type]
 
-                parsed.put((), data, content)  # ty: ignore[no-matching-overload]
+                parsed.put((), data, content)
 
     @overload
     @with_default
@@ -819,6 +824,14 @@ class FoamFile(
     @with_default
     def getall(self, keywords: None | tuple[()], /) -> Collection[StandaloneData]: ...
 
+    @overload
+    @with_default
+    def getall(
+        self,
+        keywords: str | tuple[str, ...] | None,
+        /,
+    ) -> Collection["Data | StandaloneData | FoamFile.SubDict | None"]: ...
+
     @override
     @with_default
     def getall(
@@ -826,7 +839,7 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         /,
     ) -> Collection["Data | StandaloneData | FoamFile.SubDict | None"]:
-        keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
+        keywords = FoamFile._normalized_keywords(keywords)
 
         parsed = self._get_parsed()
 
@@ -836,7 +849,7 @@ class FoamFile(
         for v in values:
             if v is ...:
                 assert keywords
-                ret.append(FoamFile.SubDict(self, keywords))
+                ret.append(FoamFile.SubDict(self, keywords))  # ty: ignore[invalid-argument-type]
             else:
                 ret.append(deepcopy(v))
         return ret
@@ -853,6 +866,12 @@ class FoamFile(
     @with_default
     def getone(self, keywords: None | tuple[()], /) -> StandaloneData: ...
 
+    @overload
+    @with_default
+    def getone(
+        self, keywords: str | tuple[str, ...] | None, /
+    ) -> "Data | StandaloneData | FoamFile.SubDict | None": ...
+
     @override
     @with_default
     def getone(
@@ -860,39 +879,47 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         /,
     ) -> "Data | StandaloneData | FoamFile.SubDict | None":
-        keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
+        keywords = FoamFile._normalized_keywords(keywords)
 
         parsed = self._get_parsed()
         ret = parsed[keywords]
         if ret is ...:
             assert keywords
-            return FoamFile.SubDict(self, keywords)
+            return FoamFile.SubDict(self, keywords)  # ty: ignore[invalid-argument-type]
         return deepcopy(ret)
 
     @overload
+    @with_default
     def get(
         self,
         keywords: str | tuple[str, *tuple[str, ...]],
-        default: _D = ...,
         /,
-    ) -> "Data | FoamFile.SubDict | None | _D": ...
+    ) -> "Data | FoamFile.SubDict | None": ...
 
     @overload
+    @with_default
     def get(
         self,
         keywords: None | tuple[()],
-        default: _D = ...,
         /,
-    ) -> StandaloneData | _D: ...
+    ) -> StandaloneData: ...
+
+    @overload
+    @with_default
+    def get(
+        self,
+        keywords: str | tuple[str, ...] | None,
+        /,
+    ) -> "Data | StandaloneData | FoamFile.SubDict | None": ...
 
     @override
-    def get(  # ty: ignore[invalid-method-override]
+    def get(
         self,
         keywords: str | tuple[str, ...] | None,
         default: _D = None,  # ty: ignore[invalid-parameter-default]
         /,
-    ) -> "Data | StandaloneData | FoamFile.SubDict | None | _D":
-        return self.getone(keywords, default=default)
+    ) -> "Data | StandaloneData | FoamFile.SubDict | None | _D":  # ty: ignore[invalid-method-override]
+        return super().get(keywords, default)
 
     @overload
     def __getitem__(
@@ -907,6 +934,13 @@ class FoamFile(
         keywords: None | tuple[()],
         /,
     ) -> StandaloneData: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: str | tuple[str, ...] | None,
+        /,
+    ) -> "Data | StandaloneData | FoamFile.SubDict | None": ...
 
     @override
     def __getitem__(
@@ -950,7 +984,7 @@ class FoamFile(
 
         When setting as ``file[:] = value``, the contents of the file (if it exists) will be replaced with ``value``.
         """
-        keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)  # ty: ignore[no-matching-overload]
+        keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
 
         if keywords == slice(None):
             if not isinstance(data, Mapping):
@@ -966,7 +1000,7 @@ class FoamFile(
 
     @override
     def __delitem__(self, keywords: str | tuple[str, ...] | None | slice, /) -> None:
-        keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)  # ty: ignore[no-matching-overload]
+        keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
 
         if keywords == slice(None):
             with self:
@@ -998,8 +1032,8 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike | None,
     ) -> None:
-        keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
-        self._perform_entry_operation(keywords, data, add=True)
+        keywords = FoamFile._normalized_keywords(keywords)
+        self._perform_entry_operation(keywords, data, add=True)  # ty: ignore[no-matching-overload]
 
     @overload
     @with_default
@@ -1013,6 +1047,14 @@ class FoamFile(
     @with_default
     def popone(self, keywords: None | tuple[()], /) -> StandaloneData: ...
 
+    @overload
+    @with_default
+    def popone(
+        self,
+        keywords: str | tuple[str, ...] | None,
+        /,
+    ) -> "Data | StandaloneData | SubDict | None": ...
+
     @override
     @with_default
     def popone(
@@ -1020,13 +1062,13 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         /,
     ) -> "Data | StandaloneData | SubDict | None":
-        keywords = FoamFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
+        keywords = FoamFile._normalized_keywords(keywords)
 
         with self:
             ret = self._get_parsed()[keywords]
             if ret is ...:
                 assert keywords
-                ret = FoamFile.SubDict(self, keywords).as_dict()
+                ret = FoamFile.SubDict(self, keywords).as_dict()  # ty: ignore[invalid-argument-type]
             else:
                 ret = deepcopy(ret)
             self._get_parsed().popone(keywords)
@@ -1044,7 +1086,7 @@ class FoamFile(
 
     @overload
     def _iter(
-        self, keywords: tuple[()] = ..., /, *, include_header: bool = ...
+        self, keywords: tuple[str, ...] = ..., /, *, include_header: bool = ...
     ) -> Iterator[str | None]: ...
 
     def _iter(
@@ -1282,7 +1324,7 @@ class FoamFile(
     @overload
     @staticmethod
     def _normalized_keywords(
-        keywords: str, /, *, slice_ok: bool = ...
+        keywords: str | tuple[str], /, *, slice_ok: bool = ...
     ) -> tuple[str]: ...
 
     @overload
@@ -1302,6 +1344,12 @@ class FoamFile(
     def _normalized_keywords(
         keywords: slice, /, *, slice_ok: Literal[True] = ...
     ) -> slice: ...
+
+    @overload
+    @staticmethod
+    def _normalized_keywords(
+        keywords: str | tuple[str, ...] | None, /, *, slice_ok: bool = ...
+    ) -> tuple[str, ...]: ...
 
     @staticmethod
     def _normalized_keywords(
@@ -1434,12 +1482,18 @@ class FoamFieldFile(FoamFile):
     @with_default
     def getall(self, keywords: None | tuple[()], /) -> Collection[StandaloneData]: ...
 
+    @overload
+    @with_default
+    def getall(
+        self, keywords: str | tuple[str, ...] | None, /
+    ) -> Collection["Data | StandaloneData | FoamFieldFile.SubDict | None"]: ...
+
     @override
     @with_default
     def getall(
         self, keywords: str | tuple[str, ...] | None, /
     ) -> Collection["Data | StandaloneData | FoamFieldFile.SubDict | None"]:
-        keywords = FoamFieldFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
+        keywords = FoamFieldFile._normalized_keywords(keywords)
 
         ret = list(super().getall(keywords))
 
@@ -1469,13 +1523,20 @@ class FoamFieldFile(FoamFile):
         /,
     ) -> StandaloneData: ...
 
+    @overload
+    def __getitem__(
+        self,
+        keywords: str | tuple[str, ...] | None,
+        /,
+    ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None": ...
+
     @override
     def __getitem__(
         self,
         keywords: str | tuple[str, ...] | None,
         /,
     ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None":
-        keywords = FoamFieldFile._normalized_keywords(keywords)  # ty: ignore[no-matching-overload]
+        keywords = FoamFieldFile._normalized_keywords(keywords)
 
         ret = super().__getitem__(keywords)
 
