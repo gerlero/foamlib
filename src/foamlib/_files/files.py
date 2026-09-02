@@ -2,7 +2,7 @@ import contextlib
 import os
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
-from typing import Literal, assert_never, cast, overload, override
+from typing import Literal, cast, overload, override
 
 import multicollections.abc
 import numpy as np
@@ -567,50 +567,6 @@ class FoamFile(
             self.location = f'"{self.path.parent.name}"'
             self.object_ = self.path.name.removesuffix(".gz")
 
-    @overload
-    def _update_class_for_field_if_needed(  # ty: ignore[invalid-overload]
-        self,
-        keywords: tuple[str, *tuple[str, ...]],
-        data: Data | SubDict | None,
-        /,
-    ) -> None: ...
-
-    @overload
-    def _update_class_for_field_if_needed(
-        self, keywords: tuple[()], data: StandaloneData, /
-    ) -> None: ...
-
-    @overload
-    def _update_class_for_field_if_needed(
-        self, keywords: tuple[str, ...], data: Data | StandaloneData | SubDict, /
-    ) -> None: ...
-
-    def _update_class_for_field_if_needed(
-        self, keywords: tuple[str, ...], data: Data | StandaloneData | SubDict, /
-    ) -> None:
-        """Update class field to appropriate field type if this is a field entry."""
-        try:
-            class_ = self.class_
-        except (KeyError, FileNotFoundError):
-            class_ = None
-
-        if (
-            class_ == "dictionary"
-            and keywords == _common.FIELD_KEYWORDS
-            and (
-                isinstance(data, float)
-                or (
-                    isinstance(data, np.ndarray)
-                    and np.issubdtype(data.dtype, np.floating)
-                    and (
-                        data.ndim == 1
-                        or (data.ndim == 2 and data.shape[1] in (3, 6, 9))  # ty: ignore[index-out-of-bounds]
-                    )
-                )
-            )
-        ):
-            self.class_ = FoamFile._vol_field_class(data)  # ty: ignore[invalid-argument-type]
-
     def _calculate_spacing(
         self,
         keywords: tuple[str, ...],
@@ -721,7 +677,15 @@ class FoamFile(
 
         with self:
             self._write_header_if_needed(keywords)
-            self._update_class_for_field_if_needed(keywords, data)  # ty: ignore[no-matching-overload]
+            if keywords == _common.FIELD_KEYWORDS:
+                try:
+                    class_ = self.class_
+                except (KeyError, FileNotFoundError):
+                    pass
+                else:
+                    if class_ == "dictionary":
+                        with contextlib.suppress(TypeError):
+                            self.class_ = FoamFile._vol_field_class(data)
 
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords, add=add)
@@ -1316,24 +1280,8 @@ class FoamFile(
 
         if "FoamFile" not in file and ensure_header:
             class_ = "dictionary"
-            try:
-                internal_field = file["internalField"]
-
-            except KeyError:
-                pass
-            else:
-                if isinstance(internal_field, float) or (
-                    isinstance(internal_field, np.ndarray)
-                    and np.issubdtype(internal_field.dtype, np.floating)
-                    and (
-                        internal_field.ndim == 1
-                        or (
-                            internal_field.ndim == 2
-                            and internal_field.shape[1] in (3, 6, 9)  # ty: ignore[index-out-of-bounds]
-                        )
-                    )
-                ):
-                    class_ = FoamFile._vol_field_class(internal_field)  # ty: ignore[invalid-argument-type]
+            with contextlib.suppress(KeyError, TypeError):
+                class_ = FoamFile._vol_field_class(file["internalField"])
 
             new: FileDict = MultiDict(
                 FoamFile={"version": 2.0, "format": "ascii", "class": class_}
@@ -1394,18 +1342,19 @@ class FoamFile(
                 raise TypeError(msg)
 
     @staticmethod
-    def _vol_field_class(field: Field, /) -> str:
+    def _vol_field_class(field: object, /) -> str:
         match field:
-            case np.ndarray(shape=(3,) | (_, 3)):
+            case np.ndarray(shape=(3,) | (_, 3), dtype=np.dtype(kind="f")):
                 return "volVectorField"
-            case np.ndarray(shape=(6,) | (_, 6)):
+            case np.ndarray(shape=(6,) | (_, 6), dtype=np.dtype(kind="f")):
                 return "volSymmTensorField"
-            case np.ndarray(shape=(9,) | (_, 9)):
+            case np.ndarray(shape=(9,) | (_, 9), dtype=np.dtype(kind="f")):
                 return "volTensorField"
-            case float() | np.ndarray(shape=(_,)):
+            case float() | np.ndarray(shape=(_,), dtype=np.dtype(kind="f")):
                 return "volScalarField"
             case _:
-                assert_never(field)  # ty: ignore[type-assertion-failure]
+                msg = "Cannot determine field class for data"
+                raise TypeError(msg)
 
 
 class FoamFieldFile(FoamFile):
