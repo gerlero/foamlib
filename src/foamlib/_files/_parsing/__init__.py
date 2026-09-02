@@ -99,15 +99,6 @@ class ParsedFile(
         /,
     ) -> None: ...
 
-    @overload
-    def put(
-        self,
-        keywords: tuple[str, ...],
-        data: Data | StandaloneData | EllipsisType | None,
-        content: bytes,
-        /,
-    ) -> None: ...
-
     def put(
         self,
         keywords: tuple[str, ...],
