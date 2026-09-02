@@ -1,4 +1,4 @@
-from collections.abc import Collection, Iterator
+from collections.abc import Iterator
 from types import EllipsisType
 from typing import Never, NoReturn, cast, overload, override
 
@@ -34,25 +34,25 @@ class ParsedFile(
 
     @overload
     @with_default
-    def getall(self, keywords: tuple[()], /) -> Collection[StandaloneData]: ...
+    def getall(self, keywords: tuple[()], /) -> list[StandaloneData]: ...
 
     @overload
     @with_default
     def getall(
         self, keywords: tuple[str, *tuple[str, ...]], /
-    ) -> Collection[Data | EllipsisType | None]: ...
+    ) -> list[Data | EllipsisType | None]: ...
 
     @overload
     @with_default
     def getall(
         self, keywords: tuple[str, ...], /
-    ) -> Collection[Data | StandaloneData | EllipsisType | None]: ...
+    ) -> list[Data | StandaloneData | EllipsisType | None]: ...
 
     @override
     @with_default
     def getall(
         self, keywords: tuple[str, ...], /
-    ) -> Collection[Data | StandaloneData | EllipsisType | None]:
+    ) -> list[Data | StandaloneData | EllipsisType | None]:
         return [entry.data for entry in self._parsed.getall(keywords)]
 
     @overload

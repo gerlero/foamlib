@@ -144,7 +144,6 @@ class FoamFile(
                 if k != ("FoamFile",) or self._include_header:
                     if v is ...:
                         assert k
-
                         yield FoamFile.SubDict(self._file, k)  # ty: ignore[invalid-argument-type]
                     else:
                         yield v
@@ -746,19 +745,13 @@ class FoamFile(
     ) -> Collection["Data | StandaloneData | FoamFile.SubDict | None"]:
         keywords = FoamFile._normalized_keywords(keywords)
 
-        parsed = self._get_parsed()
+        ret = self._get_parsed().getall(keywords)
 
-        ret = parsed.getall(keywords)
-
-        try:
-            (r,) = ret
-        except (ValueError, TypeError):
-            return deepcopy(ret)  # ty: ignore[invalid-return-type]
-
-        if r is ...:
+        if len(ret) == 1 and ret[0] is ...:
             assert keywords
             return [FoamFile.SubDict(self, keywords)]  # ty: ignore[invalid-argument-type]
 
+        assert ... not in ret
         return deepcopy(ret)  # ty: ignore[invalid-return-type]
 
     @overload
@@ -1520,18 +1513,17 @@ class FoamFieldFile(FoamFile):
         keywords = FoamFieldFile._normalized_keywords(keywords)
 
         ret = super().getall(keywords)
+        assert isinstance(ret, Sequence)
 
-        match keywords:
-            case ("boundaryField",):
-                (r,) = ret
-                if isinstance(r, FoamFile.SubDict):
-                    return [FoamFieldFile.BoundariesSubDict(self, keywords)]
-            case ("boundaryField", _):
-                (r,) = ret
-                if isinstance(r, FoamFile.SubDict):
-                    return [FoamFieldFile.BoundarySubDict(self, keywords)]
+        match keywords, ret:
+            case ("boundaryField",), [FoamFile.SubDict()]:
+                return [FoamFieldFile.BoundariesSubDict(self, keywords)]
 
-        return ret
+            case ("boundaryField", _), [FoamFile.SubDict()]:
+                return [FoamFieldFile.BoundarySubDict(self, keywords)]
+
+            case _:
+                return ret
 
     @overload
     def __getitem__(
