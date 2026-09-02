@@ -587,18 +587,47 @@ def _parse_ascii_faces_like_list(
     return ret, pos
 
 
+@overload
 def _parse_binary_numeric_list[
-    NumpyDType: (np.float64, np.float32, np.int64, np.int32),
-    *ElShape,
+    T: (np.float64, np.float32, np.int64, np.int32),
 ](
     contents: bytes | bytearray,
     pos: int,
     /,
     *,
-    dtype: type[NumpyDType],
-    elshape: tuple[*ElShape],
+    dtype: type[T],
+    elshape: tuple[()],
     empty_ok: bool = False,
-) -> tuple[np.ndarray[tuple[int, *ElShape], np.dtype[NumpyDType]], int]:  # ty: ignore[invalid-type-arguments]
+) -> tuple[np.ndarray[tuple[int], np.dtype[T]], int]: ...
+
+
+@overload
+def _parse_binary_numeric_list[
+    T: (np.float64, np.float32, np.int64, np.int32),
+    N: int,
+](
+    contents: bytes | bytearray,
+    pos: int,
+    /,
+    *,
+    dtype: type[T],
+    elshape: tuple[N],
+    empty_ok: bool = False,
+) -> tuple[np.ndarray[tuple[int, N], np.dtype[T]], int]: ...
+
+
+def _parse_binary_numeric_list[
+    T: (np.float64, np.float32, np.int64, np.int32),
+    N: int,
+](
+    contents: bytes | bytearray,
+    pos: int,
+    /,
+    *,
+    dtype: type[T],
+    elshape: tuple[()] | tuple[N],
+    empty_ok: bool = False,
+) -> tuple[np.ndarray[tuple[int] | tuple[int, N], np.dtype[T]], int]:
     count, pos = _parse_number(contents, pos, target=int)
     if count < 0:
         raise ParseError(contents, pos, expected="non-negative list count")
@@ -622,11 +651,11 @@ def _parse_binary_numeric_list[
 
     if elshape:
         try:
-            ret = ret.reshape((-1, *elshape))  # ty: ignore[no-matching-overload]
+            ret = ret.reshape((-1, *elshape))
         except ValueError as e:
             raise ParseError(contents, pos, expected="binary numeric list") from e
 
-    return ret, end + 1
+    return ret, end + 1  # ty: ignore[invalid-return-type]
 
 
 def _parse_tensor(contents: bytes | bytearray, pos: int, /) -> tuple[Tensor, int]:
@@ -1256,7 +1285,7 @@ def _parse_standalone_data_entry(
             entry_candidate, pos_candidate = _parse_binary_numeric_list(
                 contents,
                 pos,
-                dtype=binary_dtype,  # ty: ignore[invalid-argument-type]
+                dtype=binary_dtype,
                 elshape=binary_elshape,
             )
             # Always keep the result that advances the furthest: binary float64 data
@@ -1276,7 +1305,7 @@ def _parse_standalone_data_entry(
             return entry1, pos1
         case None, _:
             assert pos2 is not None
-            return entry2, pos2
+            return entry2, pos2  # ty: ignore[invalid-return-type]
         case _ if pos1 > pos2:  # ty: ignore[unsupported-operator]
             assert pos1 is not None
             assert pos2 is not None
@@ -1284,7 +1313,7 @@ def _parse_standalone_data_entry(
         case _:
             assert pos1 is not None
             assert pos2 is not None
-            return entry2, pos2
+            return entry2, pos2  # ty: ignore[invalid-return-type]
 
 
 def _parse_standalone_data(
