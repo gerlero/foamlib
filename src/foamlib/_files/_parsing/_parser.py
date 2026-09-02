@@ -7,6 +7,11 @@ from types import EllipsisType
 from typing import Literal, assert_never, overload
 from warnings import warn
 
+if sys.version_info >= (3, 15):
+    from typing import TypeForm
+else:
+    from typing_extensions import TypeForm
+
 import numpy as np
 from multicollections import MultiDict
 
@@ -229,19 +234,23 @@ def _parse_token(contents: bytes | bytearray, pos: int, /) -> tuple[str, int]:
 
 @overload
 def _parse_number(
-    contents: bytes | bytearray, pos: int, /, *, target: type[int] = ...
+    contents: bytes | bytearray, pos: int, /, *, target: type[int]
 ) -> tuple[int, int]: ...
 
 
 @overload
 def _parse_number(
-    contents: bytes | bytearray, pos: int, /, *, target: type[float] = ...
+    contents: bytes | bytearray, pos: int, /, *, target: type[float]
 ) -> tuple[float, int]: ...
 
 
 @overload
 def _parse_number(
-    contents: bytes | bytearray, pos: int, /, *, target: type[int | float] = ...
+    contents: bytes | bytearray,
+    pos: int,
+    /,
+    *,
+    target: TypeForm[int | float] = int | float,
 ) -> tuple[int | float, int]: ...
 
 
@@ -250,7 +259,7 @@ def _parse_number(
     pos: int,
     /,
     *,
-    target: type[int] | type[float] | type[int | float] = int | float,  # ty: ignore[invalid-parameter-default]
+    target: TypeForm[int | float] = int | float,
 ) -> tuple[int | float, int]:
     is_numeric = _IS_POSSIBLE_INTEGER if target is int else _IS_POSSIBLE_FLOAT
     end = pos
@@ -1367,9 +1376,9 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0, /) -> tuple[FileDict,
     return ret, pos
 
 
-def parse[Output: (FileDict, DataEntry, StandaloneDataEntry)](
-    contents: bytes | bytearray | str, /, *, target: type[Output]
-) -> Output:
+def parse[T: (FileDict, DataEntry, StandaloneDataEntry)](
+    contents: bytes | bytearray | str, /, *, target: TypeForm[T]
+) -> T:
     if isinstance(contents, str):
         contents = contents.encode()
 

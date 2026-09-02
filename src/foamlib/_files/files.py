@@ -1277,7 +1277,7 @@ class FoamFile(
         :param include_header: Whether to include the "FoamFile" header in the output.
             If `True`, the header will be included if it is present in the input object.
         """
-        file = parse(s, target=FileDict)  # ty: ignore[invalid-argument-type]
+        file = parse(s, target=FileDict)
 
         ret = (
             cast("StandaloneData", file[None])
@@ -1290,7 +1290,7 @@ class FoamFile(
             if len(ret) == 1 and None in ret:
                 val = ret[None]
                 assert not isinstance(val, Mapping)
-                return val
+                return val  # ty: ignore[invalid-return-type]
 
         return ret
 
@@ -1312,7 +1312,7 @@ class FoamFile(
         if not isinstance(file, Mapping):
             file = {None: file}
 
-        file = normalized(file, target=FileDict)  # ty: ignore[no-matching-overload]
+        file = normalized(file, target=FileDict)
 
         if "FoamFile" not in file and ensure_header:
             class_ = "dictionary"
@@ -1329,11 +1329,11 @@ class FoamFile(
                         internal_field.ndim == 1
                         or (
                             internal_field.ndim == 2
-                            and internal_field.shape[1] in (3, 6, 9)
+                            and internal_field.shape[1] in (3, 6, 9)  # ty: ignore[index-out-of-bounds]
                         )
                     )
                 ):
-                    class_ = FoamFile._vol_field_class(internal_field)
+                    class_ = FoamFile._vol_field_class(internal_field)  # ty: ignore[invalid-argument-type]
 
             new: FileDict = MultiDict(
                 FoamFile={"version": 2.0, "format": "ascii", "class": class_}

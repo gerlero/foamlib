@@ -30,7 +30,7 @@ dependencies = [
     "multicollections>=1.1.6,<2",
     "numpy>=2,<3",
     "rich>=13,<16",
-    "typing-extensions>=4.5,<5; python_version<'3.13'",
+    "typing-extensions>=4.13,<5; python_version<'3.15'",
 ]
 
 [project.optional-dependencies]

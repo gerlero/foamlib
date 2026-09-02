@@ -1,7 +1,13 @@
 import contextlib
+import sys
 from collections.abc import Mapping
 from typing import overload
 from warnings import warn
+
+if sys.version_info >= (3, 15):
+    from typing import TypeForm
+else:
+    from typing_extensions import TypeForm
 
 import numpy as np
 
@@ -43,7 +49,7 @@ def _normalized_token(value: str, /, *, keywords: tuple[str, ...] | None) -> str
     try:
         parsed = parse(
             value,
-            target=StandaloneDataEntry if keywords == () else DataEntry,  # ty: ignore[invalid-argument-type]
+            target=StandaloneDataEntry if keywords == () else DataEntry,
         )
     except FoamFileDecodeError:
         msg = f"invalid string: {value!r}"
@@ -428,7 +434,7 @@ def normalized(
     value: TensorLike,
     /,
     *,
-    target: type[Tensor],
+    target: TypeForm[Tensor],
 ) -> Tensor: ...
 
 
@@ -437,7 +443,7 @@ def normalized(
     value: FileDictLike,
     /,
     *,
-    target: type[FileDict],
+    target: TypeForm[FileDict],
 ) -> FileDict: ...
 
 
@@ -446,7 +452,7 @@ def normalized(
     value: SubDictLike,
     /,
     *,
-    target: type[SubDict],
+    target: TypeForm[SubDict],
     keywords: tuple[str, *tuple[str, ...]],
     binary: bool = ...,
 ) -> SubDict: ...
@@ -457,7 +463,7 @@ def normalized(
     value: DataLike,
     /,
     *,
-    target: type[Data],
+    target: TypeForm[Data],
     keywords: tuple[str, *tuple[str, ...]] | None = ...,
     binary: bool = ...,
 ) -> Data: ...
@@ -468,7 +474,7 @@ def normalized(
     value: StandaloneDataLike,
     /,
     *,
-    target: type[StandaloneData] = ...,
+    target: TypeForm[StandaloneData] = StandaloneData,
     binary: bool = ...,
 ) -> StandaloneData: ...
 
@@ -482,9 +488,9 @@ def normalized(
     | StandaloneDataLike,
     /,
     *,
-    target: type[
+    target: TypeForm[
         str | Tensor | FileDict | SubDict | Data | StandaloneData
-    ] = StandaloneData,  # ty: ignore[invalid-parameter-default]
+    ] = StandaloneData,
     keywords: tuple[str, ...] | None = None,
     binary: bool = False,
 ) -> str | bool | Tensor | FileDict | SubDict | Data | StandaloneData:
@@ -494,19 +500,19 @@ def normalized(
     if target is Tensor:
         assert keywords is None
         assert not binary
-        return _normalized_tensor(value)
+        return _normalized_tensor(value)  # ty: ignore[invalid-argument-type]
     if target is FileDict:
         assert keywords is None
         assert not binary
-        return _normalized_file_dict(value)
+        return _normalized_file_dict(value)  # ty: ignore[invalid-argument-type]
     if target is SubDict:
         assert keywords is not None
-        return _normalized_subdict(value, keywords=keywords, binary=binary)
+        return _normalized_subdict(value, keywords=keywords, binary=binary)  # ty: ignore[invalid-argument-type]
     if target is Data:
         assert keywords is not None
-        return _normalized_data(value, keywords=keywords, binary=binary)
+        return _normalized_data(value, keywords=keywords, binary=binary)  # ty: ignore[invalid-argument-type]
     if target is StandaloneData:
         assert keywords is None
-        return _normalized_standalone_data(value, binary=binary)
+        return _normalized_standalone_data(value, binary=binary)  # ty: ignore[invalid-argument-type]
     msg = f"unsupported target type: {target}"
     raise TypeError(msg)
