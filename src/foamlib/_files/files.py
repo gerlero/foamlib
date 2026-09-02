@@ -4,10 +4,15 @@ from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
 from typing import Literal, cast, overload, override
 
-import multicollections.abc
 import numpy as np
 from multicollections import MultiDict
-from multicollections.abc import MutableMultiMapping, with_default
+from multicollections.abc import (
+    ItemsView,
+    KeysView,
+    MutableMultiMapping,
+    ValuesView,
+    with_default,
+)
 
 from .._files import _common
 from ..typing import (
@@ -88,7 +93,7 @@ class FoamFile(
     Dimensioned = Dimensioned
     DimensionSet = DimensionSet
 
-    class KeysView(multicollections.abc.KeysView[str | None]):
+    class KeysView(KeysView[str | None]):
         def __init__(
             self, _file: "FoamFile", /, *, include_header: bool = False
         ) -> None:
@@ -121,11 +126,7 @@ class FoamFile(
                 case _:
                     return False
 
-    class ValuesView(
-        multicollections.abc.ValuesView[
-            "Data | StandaloneData | FoamFile.SubDict | None"
-        ]
-    ):
+    class ValuesView(ValuesView["Data | StandaloneData | FoamFile.SubDict | None"]):
         def __init__(
             self, _file: "FoamFile", /, *, include_header: bool = False
         ) -> None:
@@ -162,9 +163,7 @@ class FoamFile(
             return any(v == obj for v in iter(self))
 
     class ItemsView(
-        multicollections.abc.ItemsView[
-            str | None, "Data | StandaloneData | FoamFile.SubDict | None"
-        ]
+        ItemsView[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]
     ):
         def __init__(
             self,
@@ -239,7 +238,7 @@ class FoamFile(
                 file["ddtSchemes"]["default"] = "Euler"
         """
 
-        class KeysView(multicollections.abc.KeysView[str]):
+        class KeysView(KeysView[str]):
             def __init__(self, _subdict: "FoamFile.SubDict", /) -> None:
                 self._subdict = _subdict
 
@@ -264,9 +263,7 @@ class FoamFile(
                     obj,
                 ) in self._subdict._file._get_parsed()
 
-        class ValuesView(
-            multicollections.abc.ValuesView["Data | FoamFile.SubDict | None"]
-        ):
+        class ValuesView(ValuesView["Data | FoamFile.SubDict | None"]):
             def __init__(self, _subdict: "FoamFile.SubDict", /) -> None:
                 self._subdict = _subdict
 
@@ -293,9 +290,7 @@ class FoamFile(
             def __contains__(self, value: object, /) -> bool:
                 return any(v == value for v in iter(self))
 
-        class ItemsView(
-            multicollections.abc.ItemsView[str, "Data | FoamFile.SubDict | None"]
-        ):
+        class ItemsView(ItemsView[str, "Data | FoamFile.SubDict | None"]):
             def __init__(self, _subdict: "FoamFile.SubDict", /) -> None:
                 self._subdict = _subdict
 
