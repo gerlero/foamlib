@@ -144,8 +144,8 @@ class FoamFile(
                 if k != ("FoamFile",) or self._include_header:
                     if v is ...:
                         assert k
-                        k = cast("tuple[str, *tuple[str, ...]]", k)
-                        yield FoamFile.SubDict(self._file, k)
+
+                        yield FoamFile.SubDict(self._file, k)  # ty: ignore[invalid-argument-type]
                     else:
                         yield v
 
@@ -478,11 +478,7 @@ class FoamFile(
     @property
     def version(self) -> float:
         """Alias of ``self["FoamFile"]["version"]``."""
-        ret = self["FoamFile", "version"]
-        if not isinstance(ret, (int, float)):
-            msg = "version is not a number"
-            raise TypeError(msg)
-        return ret
+        return self["FoamFile", "version"]
 
     @version.setter
     def version(self, value: float) -> None:
@@ -491,16 +487,7 @@ class FoamFile(
     @property
     def format(self) -> Literal["ascii", "binary"]:
         """Alias of ``self["FoamFile"]["format"]``."""
-        ret = self["FoamFile", "format"]
-        match ret:
-            case "ascii" | "binary":
-                return ret  # ty: ignore[invalid-return-type]
-            case str():
-                msg = "format is not 'ascii' or 'binary'"
-                raise ValueError(msg)
-            case _:
-                msg = "format is not a string"
-                raise TypeError(msg)
+        return self["FoamFile", "format"]
 
     @format.setter
     def format(self, value: Literal["ascii", "binary"]) -> None:
@@ -509,11 +496,7 @@ class FoamFile(
     @property
     def class_(self) -> str:
         """Alias of ``self["FoamFile"]["class"]``."""
-        ret = self["FoamFile", "class"]
-        if not isinstance(ret, str):
-            msg = "class is not a string"
-            raise TypeError(msg)
-        return ret
+        return self["FoamFile", "class"]
 
     @class_.setter
     def class_(self, value: str) -> None:
@@ -522,11 +505,7 @@ class FoamFile(
     @property
     def location(self) -> str:
         """Alias of ``self["FoamFile"]["location"]``."""
-        ret = self["FoamFile", "location"]
-        if not isinstance(ret, str):
-            msg = "location is not a string"
-            raise TypeError(msg)
-        return ret
+        return self["FoamFile", "location"]
 
     @location.setter
     def location(self, value: str) -> None:
@@ -535,11 +514,7 @@ class FoamFile(
     @property
     def object_(self) -> str:
         """Alias of ``self["FoamFile"]["object"]``."""
-        ret = self["FoamFile", "object"]
-        if not isinstance(ret, str):
-            msg = "object is not a string"
-            raise TypeError(msg)
-        return ret
+        return self["FoamFile", "object"]
 
     @object_.setter
     def object_(self, value: str) -> None:
@@ -666,7 +641,6 @@ class FoamFile(
 
             if isinstance(data, Mapping):
                 assert keywords
-                keywords = cast("tuple[str, *tuple[str, ...]]", keywords)
 
                 if keywords[-1].startswith("#"):
                     msg = f"Cannot set a directive as the keyword for a dictionary: {keywords[-1]!r}"
@@ -686,10 +660,11 @@ class FoamFile(
                     + b"}"
                     + after
                 )
-                parsed.put(keywords, ..., empty_dict_content)
+                parsed.put(keywords, ..., empty_dict_content)  # ty: ignore[no-matching-overload]
 
                 for k, v in data.items():
-                    self[(*keywords, k)] = v
+                    assert isinstance(k, str)
+                    self[(*keywords, k)] = v  # ty: ignore[invalid-assignment]
 
             elif keywords:
                 val = dumps(data, keywords=keywords, format_=format_)  # ty: ignore[invalid-argument-type]
@@ -732,7 +707,7 @@ class FoamFile(
 
                     parsed.add(keywords, data, content)
                 else:
-                    parsed.put(keywords, data, content)
+                    parsed.put(keywords, data, content)  # ty: ignore[no-matching-overload]
 
             else:
                 if add and () in parsed:
@@ -740,7 +715,7 @@ class FoamFile(
 
                 content = before + dumps(data, keywords=(), format_=format_) + after  # ty: ignore[invalid-argument-type]
 
-                parsed.put((), data, content)
+                parsed.put((), data, content)  # ty: ignore[no-matching-overload]
 
     @overload
     @with_default
@@ -773,50 +748,18 @@ class FoamFile(
 
         parsed = self._get_parsed()
 
-        values = parsed.getall(keywords)
+        ret = parsed.getall(keywords)
 
-        ret = []
-        for v in values:
-            if v is ...:
-                assert keywords
-                ret.append(FoamFile.SubDict(self, keywords))  # ty: ignore[invalid-argument-type]
-            else:
-                ret.append(deepcopy(v))
-        return ret
+        try:
+            (r,) = ret
+        except (ValueError, TypeError):
+            return deepcopy(ret)  # ty: ignore[invalid-return-type]
 
-    @overload
-    @with_default
-    def getone(
-        self,
-        keywords: str | tuple[str, *tuple[str, ...]],
-        /,
-    ) -> "Data | FoamFile.SubDict | None": ...
-
-    @overload
-    @with_default
-    def getone(self, keywords: None | tuple[()], /) -> StandaloneData: ...
-
-    @overload
-    @with_default
-    def getone(
-        self, keywords: str | tuple[str, ...] | None, /
-    ) -> "Data | StandaloneData | FoamFile.SubDict | None": ...
-
-    @override
-    @with_default
-    def getone(
-        self,
-        keywords: str | tuple[str, ...] | None,
-        /,
-    ) -> "Data | StandaloneData | FoamFile.SubDict | None":
-        keywords = FoamFile._normalized_keywords(keywords)
-
-        parsed = self._get_parsed()
-        ret = parsed[keywords]
-        if ret is ...:
+        if r is ...:
             assert keywords
-            return FoamFile.SubDict(self, keywords)  # ty: ignore[invalid-argument-type]
-        return deepcopy(ret)
+            return [FoamFile.SubDict(self, keywords)]  # ty: ignore[invalid-argument-type]
+
+        return deepcopy(ret)  # ty: ignore[invalid-return-type]
 
     @overload
     def get(
@@ -875,6 +818,48 @@ class FoamFile(
     @overload
     def __getitem__(
         self,
+        keywords: Literal["FoamFile"] | tuple[Literal["FoamFile"]],
+        /,
+    ) -> "FoamFile.SubDict": ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["version"]],
+        /,
+    ) -> float: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["format"]],
+        /,
+    ) -> Literal["ascii", "binary"]: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["class"]],
+        /,
+    ) -> str: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["location"]],
+        /,
+    ) -> str: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["object"]],
+        /,
+    ) -> str: ...
+
+    @overload
+    def __getitem__(
+        self,
         keywords: str | tuple[str, *tuple[str, ...]],
         /,
     ) -> "Data | FoamFile.SubDict | None": ...
@@ -899,7 +884,55 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         /,
     ) -> "Data | StandaloneData | FoamFile.SubDict | None":
-        return self.getone(keywords)
+        return super().__getitem__(keywords)  # ty: ignore[invalid-argument-type]
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: Literal["FoamFile"] | tuple[Literal["FoamFile"]],
+        data: SubDictLike,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["version"]],
+        data: float,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["format"]],
+        data: Literal["ascii", "binary"],
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["class"]],
+        data: str,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["location"]],
+        data: str,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["object"]],
+        data: str,
+        /,
+    ) -> None: ...
 
     @overload
     def __setitem__(
@@ -1370,27 +1403,91 @@ class FoamFieldFile(FoamFile):
 
     class BoundariesSubDict(FoamFile.SubDict):
         @override
-        @with_default
-        def getall(
-            self, keyword: str, /
-        ) -> Collection["FoamFieldFile.BoundarySubDict | Data | None"]:
-            ret = super().getall(keyword)
-            for r in ret:
-                if isinstance(r, FoamFile.SubDict):
-                    assert isinstance(r, FoamFieldFile.BoundarySubDict)
-            return ret  # ty: ignore[invalid-return-type]
+        def __getitem__(
+            self,
+            keyword: str,
+            /,
+        ) -> "FoamFieldFile.BoundarySubDict":
+            return super().__getitem__(keyword)  # ty: ignore[invalid-return-type]
+
+        @override
+        def __setitem__(  # ty: ignore[invalid-method-override]
+            self,
+            keyword: str,
+            data: SubDictLike,
+            /,
+        ) -> None:
+            super().__setitem__(keyword, data)
 
     class BoundarySubDict(FoamFile.SubDict):
         """An OpenFOAM dictionary representing a boundary condition as a mutable mapping."""
 
+        @overload
+        def __getitem__(
+            self,
+            keyword: Literal["type"],
+            /,
+        ) -> str: ...
+
+        @overload
+        def __getitem__(
+            self,
+            keyword: Literal["value"],
+            /,
+        ) -> Field: ...
+
+        @overload
+        def __getitem__(
+            self,
+            keyword: str,
+            /,
+        ) -> Data | FoamFile.SubDict | None: ...
+
+        @override
+        def __getitem__(
+            self,
+            keyword: str,
+            /,
+        ) -> Data | FoamFile.SubDict | None:
+            return super().__getitem__(keyword)
+
+        @overload
+        def __setitem__(
+            self,
+            keyword: Literal["type"],
+            data: str,
+            /,
+        ) -> None: ...
+
+        @overload
+        def __setitem__(
+            self,
+            keyword: Literal["value"],
+            data: FieldLike,
+            /,
+        ) -> None: ...
+
+        @overload
+        def __setitem__(
+            self,
+            keyword: str,
+            data: DataLike | SubDictLike | None,
+            /,
+        ) -> None: ...
+
+        @override
+        def __setitem__(  # ty: ignore[invalid-method-override]
+            self,
+            keyword: str,
+            data: DataLike | SubDictLike | None,
+            /,
+        ) -> None:
+            super().__setitem__(keyword, data)
+
         @property
         def type(self) -> str:
             """Alias of ``self["type"]``."""
-            ret = self["type"]
-            if not isinstance(ret, str):
-                msg = "type is not a string"
-                raise TypeError(msg)
-            return ret
+            return self["type"]
 
         @type.setter
         def type(self, data: str) -> None:
@@ -1401,10 +1498,7 @@ class FoamFieldFile(FoamFile):
             self,
         ) -> Field:
             """Alias of ``self["value"]``."""
-            return cast(
-                "Field",
-                self["value"],
-            )
+            return self["value"]
 
         @value.setter
         def value(
@@ -1418,22 +1512,6 @@ class FoamFieldFile(FoamFile):
         def value(self) -> None:
             del self["value"]
 
-    @overload
-    @with_default
-    def getall(
-        self, keywords: str | tuple[str, *tuple[str, ...]], /
-    ) -> Collection["Data | FoamFieldFile.SubDict | None"]: ...
-
-    @overload
-    @with_default
-    def getall(self, keywords: None | tuple[()], /) -> Collection[StandaloneData]: ...
-
-    @overload
-    @with_default
-    def getall(
-        self, keywords: str | tuple[str, ...] | None, /
-    ) -> Collection["Data | StandaloneData | FoamFieldFile.SubDict | None"]: ...
-
     @override
     @with_default
     def getall(
@@ -1441,19 +1519,103 @@ class FoamFieldFile(FoamFile):
     ) -> Collection["Data | StandaloneData | FoamFieldFile.SubDict | None"]:
         keywords = FoamFieldFile._normalized_keywords(keywords)
 
-        ret = list(super().getall(keywords))
+        ret = super().getall(keywords)
 
         match keywords:
             case ("boundaryField",):
-                for i, r in enumerate(ret):
-                    if isinstance(r, FoamFile.SubDict):
-                        ret[i] = FoamFieldFile.BoundariesSubDict(self, keywords)
+                (r,) = ret
+                if isinstance(r, FoamFile.SubDict):
+                    return [FoamFieldFile.BoundariesSubDict(self, keywords)]
             case ("boundaryField", _):
-                for i, r in enumerate(ret):
-                    if isinstance(r, FoamFile.SubDict):
-                        ret[i] = FoamFieldFile.BoundarySubDict(self, keywords)
+                (r,) = ret
+                if isinstance(r, FoamFile.SubDict):
+                    return [FoamFieldFile.BoundarySubDict(self, keywords)]
 
         return ret
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: Literal["FoamFile"] | tuple[Literal["FoamFile"]],
+        /,
+    ) -> "FoamFile.SubDict": ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["version"]],
+        /,
+    ) -> float: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["format"]],
+        /,
+    ) -> Literal["ascii", "binary"]: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["class"]],
+        /,
+    ) -> str: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["location"]],
+        /,
+    ) -> str: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["object"]],
+        /,
+    ) -> str: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: Literal["dimensions"] | tuple[Literal["dimensions"]],
+        /,
+    ) -> DimensionSet: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: Literal["internalField"] | tuple[Literal["internalField"]],
+        /,
+    ) -> Field: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: Literal["boundaryField"] | tuple[Literal["boundaryField"]],
+        /,
+    ) -> "FoamFieldFile.BoundariesSubDict": ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["boundaryField"], str],
+        /,
+    ) -> "FoamFieldFile.BoundarySubDict": ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["boundaryField"], str, Literal["type"]],
+        /,
+    ) -> str: ...
+
+    @overload
+    def __getitem__(
+        self,
+        keywords: tuple[Literal["boundaryField"], str, Literal["value"]],
+        /,
+    ) -> Field: ...
 
     @overload
     def __getitem__(
@@ -1482,27 +1644,146 @@ class FoamFieldFile(FoamFile):
         keywords: str | tuple[str, ...] | None,
         /,
     ) -> "Data | StandaloneData | FoamFieldFile.SubDict | None":
-        keywords = FoamFieldFile._normalized_keywords(keywords)
+        return super().__getitem__(keywords)
 
-        ret = super().__getitem__(keywords)
+    @overload
+    def __setitem__(
+        self,
+        keywords: Literal["FoamFile"] | tuple[Literal["FoamFile"]],
+        data: SubDictLike,
+        /,
+    ) -> None: ...
 
-        if isinstance(ret, FoamFile.SubDict):
-            match keywords:
-                case ("boundaryField",):
-                    return FoamFieldFile.BoundariesSubDict(self, keywords)
-                case ("boundaryField", _):
-                    return FoamFieldFile.BoundarySubDict(self, keywords)
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["version"]],
+        data: float,
+        /,
+    ) -> None: ...
 
-        return ret
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["format"]],
+        data: Literal["ascii", "binary"],
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["class"]],
+        data: str,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["location"]],
+        data: str,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["FoamFile"], Literal["object"]],
+        data: str,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: Literal["dimensions"] | tuple[Literal["dimensions"]],
+        data: DimensionSet | Sequence[float],
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: Literal["internalField"] | tuple[Literal["internalField"]],
+        data: FieldLike,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: Literal["boundaryField"] | tuple[Literal["boundaryField"]],
+        data: Mapping[str, SubDictLike],
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["boundaryField"], str],
+        data: SubDictLike,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["boundaryField"], str, Literal["type"]],
+        data: str,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: tuple[Literal["boundaryField"], str, Literal["value"]],
+        data: FieldLike,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: str | tuple[str, *tuple[str, ...]],
+        data: DataLike | SubDictLike | None,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self, keywords: None | tuple[()], data: StandaloneDataLike, /
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: slice,
+        data: FileDictLike | StandaloneDataLike,
+        /,
+    ) -> None: ...
+
+    @overload
+    def __setitem__(
+        self,
+        keywords: str | tuple[str, ...] | None | slice,
+        data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
+        /,
+    ) -> None: ...
+
+    @override
+    def __setitem__(
+        self,
+        keywords: str | tuple[str, ...] | None | slice,
+        data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
+        /,
+    ) -> None:
+        super().__setitem__(keywords, data)  # ty: ignore[no-matching-overload]
 
     @property
     def dimensions(self) -> DimensionSet:
         """Alias of ``self["dimensions"]``."""
-        ret = self["dimensions"]
-        if not isinstance(ret, DimensionSet):
-            msg = "dimensions is not a DimensionSet"
-            raise TypeError(msg)
-        return ret
+        return self["dimensions"]
 
     @dimensions.setter
     def dimensions(self, value: DimensionSet | Sequence[float], /) -> None:
@@ -1513,25 +1794,16 @@ class FoamFieldFile(FoamFile):
         self,
     ) -> Field:
         """Alias of ``self["internalField"]``."""
-        return cast("Field", self["internalField"])
+        return self["internalField"]
 
     @internal_field.setter
-    def internal_field(
-        self,
-        value: FieldLike,
-        /,
-    ) -> None:
+    def internal_field(self, value: FieldLike, /) -> None:
         self["internalField"] = value
 
     @property
     def boundary_field(self) -> "FoamFieldFile.BoundariesSubDict":
         """Alias of ``self["boundaryField"]``."""
-        ret = self["boundaryField"]
-        if not isinstance(ret, FoamFieldFile.BoundariesSubDict):
-            assert not isinstance(ret, FoamFile.SubDict)
-            msg = "boundaryField is not a dictionary"
-            raise TypeError(msg)
-        return ret
+        return self["boundaryField"]
 
     @boundary_field.setter
     def boundary_field(self, value: Mapping[str, SubDictLike], /) -> None:

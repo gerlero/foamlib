@@ -1,11 +1,13 @@
 import os
 from collections.abc import Generator
 from pathlib import Path
+from typing import assert_type
 
 import numpy as np
 import pytest
 
 from foamlib import Dimensioned, DimensionSet, FoamCase, FoamFieldFile, FoamFile
+from foamlib.typing import Field
 
 
 def test_write_read(tmp_path: Path) -> None:
@@ -115,6 +117,63 @@ def test_new_field(tmp_path: Path) -> None:
     assert isinstance(field, np.ndarray)
     assert np.array_equal(f.internal_field, [1, 2, 3])
     assert f.class_ == "volVectorField"
+
+
+def test_field_file_types(tmp_path: Path) -> None:
+    with FoamFieldFile(tmp_path / "testField") as f:
+        f["dimensions"] = [0, 1, 2, 0, 0, 0, 0]
+
+        f["internalField"] = [1, 2, 3]
+
+        f["boundaryField"] = {
+            "inlet": {"type": "fixedValue", "value": [1, 2, 3]},
+        }
+
+        assert_type(f.dimensions, DimensionSet)
+        assert_type(f["dimensions"], DimensionSet)
+        assert isinstance(f.dimensions, DimensionSet)
+        assert isinstance(f["dimensions"], DimensionSet)
+
+        assert_type(f.boundary_field, FoamFieldFile.BoundariesSubDict)
+        assert_type(f["boundaryField"], FoamFieldFile.BoundariesSubDict)
+        assert isinstance(f.boundary_field, FoamFieldFile.BoundariesSubDict)
+        assert isinstance(f["boundaryField"], FoamFieldFile.BoundariesSubDict)
+
+        assert_type(f.boundary_field["inlet"], FoamFieldFile.BoundarySubDict)
+        assert_type(f["boundaryField"]["inlet"], FoamFieldFile.BoundarySubDict)
+        assert_type(f["boundaryField", "inlet"], FoamFieldFile.BoundarySubDict)
+        assert isinstance(f.boundary_field["inlet"], FoamFieldFile.BoundarySubDict)
+        assert isinstance(f["boundaryField"]["inlet"], FoamFieldFile.BoundarySubDict)
+        assert isinstance(f["boundaryField", "inlet"], FoamFieldFile.BoundarySubDict)
+
+        assert_type(f.boundary_field["inlet"]["type"], str)
+        assert_type(f["boundaryField"]["inlet"]["type"], str)
+        assert_type(f["boundaryField", "inlet", "type"], str)
+        assert_type(f["boundaryField", "inlet"]["type"], str)
+        assert_type(f.boundary_field["inlet"].type, str)
+        assert_type(f["boundaryField"]["inlet"].type, str)
+        assert_type(f["boundaryField", "inlet"].type, str)
+        assert isinstance(f.boundary_field["inlet"]["type"], str)
+        assert isinstance(f["boundaryField"]["inlet"]["type"], str)
+        assert isinstance(f["boundaryField", "inlet", "type"], str)
+        assert isinstance(f["boundaryField", "inlet"]["type"], str)
+        assert isinstance(f.boundary_field["inlet"].type, str)
+        assert isinstance(f["boundaryField"]["inlet"].type, str)
+        assert isinstance(f["boundaryField", "inlet"].type, str)
+
+        assert_type(f.boundary_field["inlet"]["value"], Field)
+        assert_type(f["boundaryField"]["inlet"]["value"], Field)
+        assert_type(f["boundaryField", "inlet", "value"], Field)
+        assert_type(f["boundaryField", "inlet"]["value"], Field)
+        assert_type(f.boundary_field["inlet"].value, Field)
+        assert_type(f["boundaryField"]["inlet"].value, Field)
+        assert_type(f["boundaryField", "inlet"].value, Field)
+        assert isinstance(f.boundary_field["inlet"]["value"], np.ndarray)
+        assert isinstance(f["boundaryField"]["inlet"]["value"], np.ndarray)
+        assert isinstance(f["boundaryField", "inlet", "value"], np.ndarray)
+        assert isinstance(f["boundaryField", "inlet"]["value"], np.ndarray)
+        assert isinstance(f.boundary_field["inlet"].value, np.ndarray)
+        assert isinstance(f["boundaryField"]["inlet"].value, np.ndarray)
 
 
 @pytest.fixture
