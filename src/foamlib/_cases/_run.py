@@ -479,7 +479,7 @@ class FoamCaseRunBase(FoamCaseBase):
                 cpus = 1
 
             yield self.run(
-                [self.application],
+                [self._cmd],
                 parallel=parallel,
                 cpus=cpus,
                 check=check,
