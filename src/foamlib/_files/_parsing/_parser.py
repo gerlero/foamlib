@@ -1384,6 +1384,7 @@ def parse[T: (FileDict, DataEntry, StandaloneDataEntry, str)](
 
     try:
         pos = _skip(contents, 0)
+
         if target == FileDict:
             ret, pos = _parse_file(contents, pos)
         elif target == DataEntry:
@@ -1394,7 +1395,9 @@ def parse[T: (FileDict, DataEntry, StandaloneDataEntry, str)](
             ret, pos = _parse_token(contents, pos)
         else:
             assert_never(target)  # ty: ignore[type-assertion-failure]
-        _skip(contents, pos)
+
+        pos = _skip(contents, pos)
+
     except ParseError as e:
         raise e.make_fatal() from None
 
@@ -1540,7 +1543,7 @@ def parse_located(
     try:
         pos = _skip(contents, 0)
         ret, pos = _parse_file_located(contents, pos)
-        _skip(contents, pos)
+        pos = _skip(contents, pos)
     except ParseError as e:
         raise e.make_fatal() from None
     if pos != len(contents):
