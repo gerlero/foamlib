@@ -2,10 +2,10 @@ def _expect_field(keywords: tuple[str, ...], /) -> bool:
     match keywords:
         case ("internalField",):
             return True
-        case ("boundaryField", str(), str() as kw) if kw in (
+        case ("boundaryField", _, k) if k in (
             "value",
             "gradient",
-        ) or kw.endswith(("Value", "Gradient")):
+        ) or k.endswith(("Value", "Gradient")):
             return True
     return False
 
