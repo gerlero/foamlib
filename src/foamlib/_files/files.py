@@ -750,15 +750,16 @@ class FoamFile(
 
         ret = parsed.getall(keywords)
 
-        try:
-            (r,) = ret
-        except (ValueError, TypeError):
-            return deepcopy(ret)  # ty: ignore[invalid-return-type]
+        if keywords:
+            try:
+                (r,) = ret
+            except (ValueError, TypeError):
+                pass
+            else:
+                if r is ...:
+                    return [FoamFile.SubDict(self, keywords)]  # ty: ignore[invalid-argument-type]
 
-        if r is ...:
-            assert keywords
-            return [FoamFile.SubDict(self, keywords)]  # ty: ignore[invalid-argument-type]
-
+        assert not any(r is ... for r in ret)
         return deepcopy(ret)  # ty: ignore[invalid-return-type]
 
     @overload
