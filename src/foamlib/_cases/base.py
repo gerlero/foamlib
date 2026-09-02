@@ -201,27 +201,24 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
 
     @property
     def _nsubdomains(self) -> int | None:
-        """Return the number of subdomains as set in the :attr:`decompose_par_dict`, or ``None`` if no decomposeParDict is found."""
         try:
-            nsubdomains = self.decompose_par_dict["numberOfSubdomains"]
-            if not isinstance(nsubdomains, int):
-                msg = (
-                    f"numberOfSubdomains in {self.decompose_par_dict} is not an integer"
-                )
-                raise TypeError(msg)
+            ret = self.decompose_par_dict["numberOfSubdomains"]
         except FileNotFoundError:
             return None
-        else:
-            return nsubdomains
+        except KeyError:
+            msg = "numberOfSubdomains not specified in decomposeParDict"
+            raise ValueError(msg)
+
+        if not isinstance(ret, int) or isinstance(ret, bool):
+            msg = f"Invalid type for numberOfSubdomains: {ret!r}"
+            raise TypeError(msg)
 
     @property
     def _nprocessors(self) -> int:
-        """Return the number of processor directories in the case."""
         return len(list(self.path.glob("processor*")))
 
     @property
-    def application(self) -> str:
-        """The application name."""
+    def _cmd(self) -> str:
         with self.control_dict as control_dict:
             match control_dict:
                 case {"application": str() as app}:
@@ -235,7 +232,12 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
                     return "foamMultiRun"
                 case _:
                     msg = "controlDict does not specify application, solver, or regionSolvers"
-                    raise KeyError(msg)
+                    raise ValueError(msg)
+
+    @property
+    def application(self) -> str:
+        """The application name as set in the controlDict file."""
+        return self.control_dict["application"]  # ty: ignore[invalid-return-type]
 
     @property
     def control_dict(self) -> FoamFile:
