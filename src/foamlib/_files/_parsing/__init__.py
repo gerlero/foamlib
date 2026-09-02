@@ -1,6 +1,6 @@
 from collections.abc import Collection, Iterator
 from types import EllipsisType
-from typing import Never, NoReturn, cast, overload, override
+from typing import Never, NoReturn, overload, override
 
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
@@ -267,8 +267,8 @@ class ParsedFile(
                     grandparent = sub
                 sub = grandparent[keywords[-2]]
                 assert isinstance(sub, (dict, MultiDict))
-                grandparent[keywords[-2]] = add_to_mapping(
-                    sub, keywords[-1], cast("Data", entry.data)
+                grandparent[keywords[-2]] = add_to_mapping(  # ty: ignore[no-matching-overload]
+                    sub, keywords[-1], entry.data
                 )
 
         return ret
