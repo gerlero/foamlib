@@ -1,10 +1,11 @@
 import numpy as np
+import pytest
 from multicollections import MultiDict
 
 from foamlib import Dimensioned, DimensionSet, FoamFile
 from foamlib._files._normalization import normalized
 from foamlib._files._serialization import dumps
-from foamlib.typing import Data
+from foamlib.typing import Data, FileDict
 
 
 def test_serialize_data() -> None:
@@ -201,6 +202,25 @@ def test_faces_like_list() -> None:
     assert faces_like_list[1].dtype == int
     assert faces_like_list[1].tolist() == [4, 5, 6, 7]
     assert dumps(faces_like_list) == b"(3(1 2 3) 4(4 5 6 7))"
+
+
+def test_bool_tokens() -> None:
+    with pytest.warns(UserWarning):
+        assert normalized("no") is False
+    with pytest.warns(UserWarning):
+        assert normalized("yes") is True
+
+    assert normalized("no", target=str) == "no"
+    assert normalized("yes", target=str) == "yes"
+
+    with pytest.warns(UserWarning):
+        assert normalized({"no": "no", "yes": "yes"}, target=FileDict) == {
+            "no": False,
+            "yes": True,
+        }
+
+    with pytest.raises(TypeError, match="False"):
+        normalized({False: True}, target=FileDict)  # ty: ignore[no-matching-overload]
 
 
 def test_serialize_file() -> None:

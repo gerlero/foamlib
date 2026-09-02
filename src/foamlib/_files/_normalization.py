@@ -42,31 +42,17 @@ from ._util import add_to_mapping
 from .types import Dimensioned, DimensionSet
 
 
-def _normalized_token(value: str, /, *, keywords: tuple[str, ...] | None) -> str | bool:
+def _normalized_token(value: str, /) -> str:
     if not isinstance(value, str):
         msg = f"expected a string, got {value!r}"
         raise TypeError(msg)
     try:
-        parsed = parse(
-            value,
-            target=StandaloneDataEntry if keywords == () else DataEntry,
-        )
+        parsed = parse(value, target=str)
     except FoamFileDecodeError:
         msg = f"invalid string: {value!r}"
         raise ValueError(msg) from None
-    match parsed:
-        case "":
-            msg = "empty string cannot be stored"
-            raise ValueError(msg)
-        case str():
-            return parsed
-        case bool():
-            msg = f"{value!r} will be stored as {parsed!r}"
-            warn(msg, stacklevel=2)
-            return parsed
-        case _:
-            msg = f"{value!r} cannot be stored as a string (would be stored as {parsed!r})"
-            raise ValueError(msg)
+
+    return parsed
 
 
 def _normalized_switch(value: bool, /) -> bool:
@@ -153,7 +139,7 @@ def _normalized_dict(value: DictLike, /) -> Dict:
     for k, v in value.items():
         match k:
             case str():
-                if k != _normalized_token(k, keywords=None):
+                if k != _normalized_token(k):
                     msg = f"invalid keyword: {k!r}"
                     raise ValueError(msg)
                 if k.startswith("#"):
@@ -191,7 +177,7 @@ def _normalized_subdict(
     for k, v in value.items():
         match k:
             case str():
-                if k != _normalized_token(k, keywords=None):
+                if k != _normalized_token(k):
                     msg = f"invalid keyword: {k!r}"
                     raise ValueError(msg)
                 if k.startswith("#") and isinstance(v, Mapping):
@@ -237,7 +223,7 @@ def _normalized_file_dict(value: FileDictLike, /) -> FileDict:
                     msg = "duplicate None keyword found"
                     raise ValueError(msg)
             case str():
-                if k != _normalized_token(k, keywords=None):
+                if k != _normalized_token(k):
                     msg = f"invalid keyword: {k!r}"
                     raise ValueError(msg)
                 if k.startswith("#") and isinstance(v, Mapping):
@@ -279,9 +265,9 @@ def _normalized_keyword_entry(value: KeywordEntryLike, /) -> KeywordEntry:
             msg = f"expected a KeywordEntry (2-tuple), got {value!r}"
             raise TypeError(msg)
         case tuple((k, {} as d)):
-            return _normalized_token(k, keywords=None), _normalized_dict(d)  # ty: ignore[invalid-argument-type]
+            return _normalized_token(k), _normalized_dict(d)  # ty: ignore[invalid-argument-type]
         case tuple((k, v)):
-            return _normalized_token(k, keywords=None), _normalized_data_entry(  # ty: ignore[invalid-argument-type]
+            return _normalized_token(k), _normalized_data_entry(  # ty: ignore[invalid-argument-type]
                 v,  # ty: ignore[invalid-argument-type]
                 keywords=None,
                 binary=False,
@@ -326,7 +312,18 @@ def _normalized_data_entry(
     if isinstance(value, (Dimensioned, DimensionSet)):
         return value
     if isinstance(value, str):
-        return _normalized_token(value, keywords=keywords)
+        ret = _normalized_token(value)
+        match ret:
+            case "no" | "false" | "off":
+                msg = f"{ret!r} will be stored as False"
+                warn(msg, stacklevel=2)
+                return False
+            case "yes" | "true" | "on":
+                msg = f"{ret!r} will be stored as True"
+                warn(msg, stacklevel=2)
+                return True
+            case _:
+                return ret
     if isinstance(value, bool):
         return _normalized_switch(value)
     if keywords == _common.FIELD_KEYWORDS:
@@ -426,7 +423,7 @@ def normalized(
     *,
     target: type[str],
     keywords: tuple[str, ...] | None = ...,
-) -> str | bool: ...
+) -> str: ...
 
 
 @overload
@@ -493,10 +490,10 @@ def normalized(
     ] = StandaloneData,
     keywords: tuple[str, ...] | None = None,
     binary: bool = False,
-) -> str | bool | Tensor | FileDict | SubDict | Data | StandaloneData:
+) -> str | Tensor | FileDict | SubDict | Data | StandaloneData:
     if target is str:
         assert not binary
-        return _normalized_token(value, keywords=keywords)  # ty: ignore[invalid-argument-type]
+        return _normalized_token(value)  # ty: ignore[invalid-argument-type]
     if target is Tensor:
         assert keywords is None
         assert not binary
