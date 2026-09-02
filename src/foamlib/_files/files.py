@@ -750,14 +750,10 @@ class FoamFile(
 
         ret = parsed.getall(keywords)
 
-        if keywords:
-            try:
-                (r,) = ret
-            except (ValueError, TypeError):
-                pass
-            else:
-                if r is ...:
-                    return [FoamFile.SubDict(self, keywords)]  # ty: ignore[invalid-argument-type]
+        if keywords and len(ret) == 1:
+            (r,) = ret
+            if r is ...:
+                return [FoamFile.SubDict(self, keywords)]  # ty: ignore[invalid-argument-type]
 
         assert not any(r is ... for r in ret)
         return deepcopy(ret)  # ty: ignore[invalid-return-type]
@@ -1523,11 +1519,11 @@ class FoamFieldFile(FoamFile):
         ret = super().getall(keywords)
 
         match keywords:
-            case ("boundaryField",):
+            case ("boundaryField",) if len(ret) == 1:
                 (r,) = ret
                 if isinstance(r, FoamFile.SubDict):
                     return [FoamFieldFile.BoundariesSubDict(self, keywords)]
-            case ("boundaryField", _):
+            case ("boundaryField", _) if len(ret) == 1:
                 (r,) = ret
                 if isinstance(r, FoamFile.SubDict):
                     return [FoamFieldFile.BoundarySubDict(self, keywords)]
