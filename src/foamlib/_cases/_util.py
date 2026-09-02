@@ -7,7 +7,7 @@ from contextlib import (
     asynccontextmanager,
 )
 from types import TracebackType
-from typing import cast, override
+from typing import override
 
 
 class ValuedGenerator[Y, S, R]:
@@ -57,8 +57,8 @@ class SingletonContextManager[R](AbstractContextManager[R]):
         self._factory = factory
         self._users = 0
         self._cm: AbstractContextManager[R] | None = None
-        self._ret: R | None = None
         self._lock = threading.Lock()
+        self._ret: R
 
     @override
     def __enter__(self) -> R:
@@ -67,7 +67,7 @@ class SingletonContextManager[R](AbstractContextManager[R]):
                 self._cm = self._factory()
                 self._ret = self._cm.__enter__()
             self._users += 1
-            return cast(R, self._ret)
+            return self._ret
 
     @override
     def __exit__(
