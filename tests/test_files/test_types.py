@@ -157,8 +157,12 @@ def test_dimensioned_invalid_name_type() -> None:
 def test_dimensioned_invalid_name_value() -> None:
     """Test Dimensioned with invalid name value (not parseable due to spaces)."""
     # Name with spaces cannot be parsed as a valid OpenFOAM token
-    with pytest.raises(ValueError, match="str"):
+    with pytest.raises(ValueError):
         Dimensioned(1.0, DimensionSet(), name="invalid name with spaces")
+    with pytest.raises(ValueError):
+        Dimensioned(1.0, DimensionSet(), name=" another")
+    with pytest.raises(ValueError):
+        Dimensioned(1.0, DimensionSet(), name="another ")
 
 
 def test_dimensioned_with_sequence_init() -> None:

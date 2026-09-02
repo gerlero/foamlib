@@ -49,7 +49,7 @@ def _normalized_token(value: str, /) -> str:
     try:
         parsed = parse(value, target=str)
     except FoamFileDecodeError:
-        msg = f"invalid string: {value!r}"
+        msg = f"invalid token: {value!r}"
         raise ValueError(msg) from None
 
     return parsed
@@ -59,14 +59,14 @@ def _normalized_switch(value: bool, /) -> bool:
     if not isinstance(value, bool):
         msg = f"expected a bool, got {value!r}"
         raise TypeError(msg)
-    return value
+    return bool(value)
 
 
 def _normalized_int(value: int, /) -> int:
     if not isinstance(value, int):
         msg = f"expected an int, got {value!r}"
         raise TypeError(msg)
-    return value
+    return int(value)
 
 
 def _normalized_float(value: float, /) -> float:
@@ -422,7 +422,6 @@ def normalized(
     /,
     *,
     target: type[str],
-    keywords: tuple[str, ...] | None = ...,
 ) -> str: ...
 
 
@@ -492,6 +491,7 @@ def normalized(
     binary: bool = False,
 ) -> str | Tensor | FileDict | SubDict | Data | StandaloneData:
     if target is str:
+        assert keywords is None
         assert not binary
         return _normalized_token(value)  # ty: ignore[invalid-argument-type]
     if target is Tensor:
