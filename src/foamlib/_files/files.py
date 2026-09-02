@@ -2,7 +2,7 @@ import contextlib
 import os
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
-from typing import Literal, cast, overload, override
+from typing import Literal, overload, override
 
 import numpy as np
 from multicollections import MultiDict
@@ -1241,20 +1241,13 @@ class FoamFile(
         """
         file = parse(s, target=FileDict)
 
-        ret = (
-            cast("StandaloneData", file[None])
-            if len(file) == 1 and None in file
-            else file
-        )
+        if not include_header:
+            file.pop("FoamFile", None)
 
-        if not include_header and isinstance(ret, Mapping) and "FoamFile" in ret:
-            del ret["FoamFile"]  # ty: ignore[invalid-argument-type,not-subscriptable]
-            if len(ret) == 1 and None in ret:
-                val = ret[None]
-                assert not isinstance(val, Mapping)
-                return val  # ty: ignore[invalid-return-type]
+        if len(file) == 1 and None in file:
+            return file[None]  # ty: ignore[invalid-return-type]
 
-        return ret
+        return file
 
     @staticmethod
     def dumps(
