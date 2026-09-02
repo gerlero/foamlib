@@ -384,7 +384,7 @@ class Dimensioned:
 
         if isinstance(value, np.ndarray):
             value = value.copy()
-        self.value: Tensor = normalized(value, target=Tensor)  # ty: ignore[no-matching-overload]
+        self.value: Tensor = normalized(value, target=Tensor)
 
         if not isinstance(dimensions, DimensionSet):
             self.dimensions = DimensionSet(*dimensions)

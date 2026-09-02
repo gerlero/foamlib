@@ -15,7 +15,7 @@ from foamlib.typing import FileDict
 
 
 def _file_dict(contents: bytes) -> FileDict:
-    return parse(contents, target=FileDict)  # ty: ignore[invalid-argument-type]
+    return parse(contents, target=FileDict)
 
 
 def test_spurious_semicolon_after_subdictionary() -> None:

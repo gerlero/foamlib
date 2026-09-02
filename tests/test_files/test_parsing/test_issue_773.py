@@ -88,7 +88,7 @@ def test_add_directives() -> None:
     assert len(parsed) == 2
     assert parsed[("#directive",)] == "value1"
     assert parsed.getall(("#directive",)) == ["value1", "value2"]
-    new_value = normalized("newValue", target=Data, keywords=("#directive",))  # ty: ignore[no-matching-overload]
+    new_value = normalized("newValue", target=Data, keywords=("#directive",))
     parsed.add(("#directive",), new_value, dumps(new_value))
     assert parsed[("#directive",)] == "value1"  # Should not overwrite or warn
 
@@ -103,7 +103,7 @@ def test_write_other() -> None:
         ("b", MultiDict([("entry1", "value2"), ("entry1", "value3")])),
     ]
     with pytest.warns(match="entry1"):
-        new_list = normalized(new_list, target=Data, keywords=("list",))  # ty: ignore[no-matching-overload]
+        new_list = normalized(new_list, target=Data, keywords=("list",))
     parsed.put(("list",), new_list, dumps(new_list))
     assert parsed[("list",)] == [
         ("a", {"entry1": "value1"}),
