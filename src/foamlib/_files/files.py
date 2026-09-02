@@ -619,30 +619,10 @@ class FoamFile(
 
         return before, after
 
-    @overload
-    def _perform_entry_operation(
-        self,
-        keywords: tuple[str, *tuple[str, ...]],
-        data: DataLike | SubDictLike | None,
-        /,
-        *,
-        add: bool,
-    ) -> None: ...
-
-    @overload
-    def _perform_entry_operation(
-        self,
-        keywords: tuple[()],
-        data: StandaloneDataLike,
-        /,
-        *,
-        add: bool,
-    ) -> None: ...
-
     def _perform_entry_operation(
         self,
         keywords: tuple[str, ...],
-        data: DataLike | StandaloneDataLike | SubDictLike | None,
+        data: object,
         /,
         *,
         add: bool,
@@ -692,6 +672,7 @@ class FoamFile(
                 format_ = None
 
             if isinstance(data, Mapping):
+                assert keywords
                 keywords = cast("tuple[str, *tuple[str, ...]]", keywords)
 
                 if keyword.startswith("#"):
@@ -718,7 +699,6 @@ class FoamFile(
                     self[(*keywords, k)] = v
 
             elif keywords:
-                keywords = cast("tuple[str, *tuple[str, ...]]", keywords)
                 val = dumps(data, keywords=keywords, format_=format_)  # ty: ignore[invalid-argument-type]
 
                 # When updating existing subdictionary entries, check if the existing entry
@@ -974,7 +954,7 @@ class FoamFile(
             return
 
         assert not isinstance(keywords, slice)
-        self._perform_entry_operation(keywords, data, add=False)  # ty: ignore[no-matching-overload]
+        self._perform_entry_operation(keywords, data, add=False)
 
     @override
     def __delitem__(self, keywords: str | tuple[str, ...] | None | slice, /) -> None:
@@ -1014,7 +994,7 @@ class FoamFile(
         /,
     ) -> None:
         keywords = FoamFile._normalized_keywords(keywords)
-        self._perform_entry_operation(keywords, data, add=True)  # ty: ignore[no-matching-overload]
+        self._perform_entry_operation(keywords, data, add=True)
 
     @overload
     @with_default
