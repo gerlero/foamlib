@@ -1519,11 +1519,13 @@ class FoamFieldFile(FoamFile):
         ret = super().getall(keywords)
 
         match keywords:
-            case ("boundaryField",) if len(ret) == 1:
+            case ("boundaryField",):
+                assert len(ret) == 1
                 (r,) = ret
                 if isinstance(r, FoamFile.SubDict):
                     return [FoamFieldFile.BoundariesSubDict(self, keywords)]
-            case ("boundaryField", _) if len(ret) == 1:
+            case ("boundaryField", _):
+                assert len(ret) == 1
                 (r,) = ret
                 if isinstance(r, FoamFile.SubDict):
                     return [FoamFieldFile.BoundarySubDict(self, keywords)]
