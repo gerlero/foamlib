@@ -1376,7 +1376,7 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0, /) -> tuple[FileDict,
     return ret, pos
 
 
-def parse[T: (FileDict, DataEntry, StandaloneDataEntry)](
+def parse[T: (FileDict, DataEntry, StandaloneDataEntry, str)](
     contents: bytes | bytearray | str, /, *, target: TypeForm[T]
 ) -> T:
     if isinstance(contents, str):
@@ -1390,6 +1390,8 @@ def parse[T: (FileDict, DataEntry, StandaloneDataEntry)](
             ret, pos = _parse_data_entry(contents, pos)
         elif target == StandaloneDataEntry:
             ret, pos = _parse_standalone_data_entry(contents, pos)
+        elif target == str:
+            ret, pos = _parse_token(contents, pos)
         else:
             assert_never(target)  # ty: ignore[type-assertion-failure]
         _skip(contents, pos)

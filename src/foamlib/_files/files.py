@@ -628,13 +628,6 @@ class FoamFile(
         add: bool,
     ) -> None:
         """Shared method for performing entry operations (setitem and add)."""
-        if keywords:
-            keyword = keywords[-1]
-
-            if keyword != normalized(keyword, target=str):
-                msg = f"Invalid keyword string: {keywords[-1]!r}"
-                raise ValueError(msg)
-
         match keywords, data:
             case (), Mapping():
                 msg = "Cannot set a mapping as a standalone value.\nNote: use file[:] = {...} to replace file contents with a mapping"
@@ -675,8 +668,8 @@ class FoamFile(
                 assert keywords
                 keywords = cast("tuple[str, *tuple[str, ...]]", keywords)
 
-                if keyword.startswith("#"):
-                    msg = f"Cannot set a directive as the keyword for a dictionary: {keyword}"
+                if keywords[-1].startswith("#"):
+                    msg = f"Cannot set a directive as the keyword for a dictionary: {keywords[-1]!r}"
                     raise ValueError(msg)
 
                 if add and keywords in parsed:
@@ -685,7 +678,7 @@ class FoamFile(
                 empty_dict_content = (
                     before
                     + indentation
-                    + dumps(keyword)
+                    + dumps(keywords[-1])
                     + b"\n"
                     + indentation
                     + b"{\n"
@@ -727,7 +720,7 @@ class FoamFile(
                 content = (
                     before
                     + content_indentation
-                    + dumps(keyword)
+                    + dumps(keywords[-1])
                     + ((b" " + val) if val else b"")
                     + (b";" if not keywords[-1].startswith("#") else b"")
                     + after
@@ -1302,19 +1295,26 @@ class FoamFile(
     ) -> tuple[str, ...] | slice:
         match keywords:
             case None:
-                return ()
+                ret = ()
             case str():
-                return (keywords,)
-            case tuple((*_,)) if all(isinstance(k, str) for k in keywords):
-                return tuple(keywords)
+                ret = (keywords,)
+            case tuple():
+                ret = keywords
             case slice(start=None, stop=None, step=None) if slice_ok:
                 return slice(None)
             case slice() if slice_ok:
                 msg = "Only empty slices (:) are supported"
                 raise ValueError(msg)
             case _:
-                msg = f"Invalid keyword type: {keywords!r}"
+                msg = f"Invalid key type: {keywords!r}"
                 raise TypeError(msg)
+
+        for k in ret:
+            if k != normalized(k, target=str):
+                msg = f"Invalid keyword: {k!r}"
+                raise ValueError(msg)
+
+        return ret
 
     @staticmethod
     def _vol_field_class(field: object, /) -> str:
