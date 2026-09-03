@@ -53,7 +53,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         openfoam-version: [2606, 14]
-        python-version: ['3.12', '3.13', '3.14']
+        python-version: ['3.12', '3.13', '3.14', '3.15']
         dependency-resolution: [highest]
         slurm: [false]
         include:
@@ -69,12 +69,12 @@ jobs:
             slurm: false
           - os: ubuntu-latest
             openfoam-version: 2606
-            python-version: '3.14'
+            python-version: '3.15'
             dependency-resolution: highest
             slurm: true
           - os: ubuntu-latest
             openfoam-version: 14
-            python-version: '3.14'
+            python-version: '3.15'
             dependency-resolution: highest
             slurm: true
           - os: ubuntu-22.04
@@ -104,6 +104,7 @@ jobs:
       uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
+        allow-prereleases: true
     - name: Test with pytest
       run: >
         uv run
