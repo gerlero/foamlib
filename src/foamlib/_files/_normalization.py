@@ -169,7 +169,6 @@ def _normalized_subdict(
     keywords: tuple[str, *tuple[str, ...]],
     binary: bool,
 ) -> SubDict:
-    assert keywords
     if not isinstance(value, Mapping):
         msg = f"expected a mapping, got {value!r}"
         raise TypeError(msg)
