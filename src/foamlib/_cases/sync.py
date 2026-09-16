@@ -106,11 +106,13 @@ class FoamCase(FoamCaseRunBase):
     def __getitem__(self, index: int | float | str, /) -> "FoamCase.TimeDirectory": ...  # noqa: PYI041
 
     @overload
-    def __getitem__(self, index: slice, /) -> Sequence["FoamCase.TimeDirectory"]: ...
+    def __getitem__(
+        self, index: "slice[int | None]", /
+    ) -> Sequence["FoamCase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
-        self, index: slice | float | str
+        self, index: "slice[int | None] | float | str"
     ) -> "FoamCase.TimeDirectory | Sequence[FoamCase.TimeDirectory]":
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):
