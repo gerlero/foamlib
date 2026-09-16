@@ -141,7 +141,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
     @override
     def __getitem__(
         self,
-        key: int | slice | float | str,  # noqa: PYI041
+        key: "int | slice[int | None] | float | str",
         /,
     ) -> "FoamCaseBase.TimeDirectory | Sequence[FoamCaseBase.TimeDirectory]":
         """Return the time directory at the given index (``int``), indices (``slice``), name (``str``), or time (``float``)."""

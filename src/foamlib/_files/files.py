@@ -342,11 +342,11 @@ class FoamFile(
         ) -> None: ...
 
         @overload
-        def __setitem__(self, keyword: slice, data: SubDictLike, /) -> None: ...
+        def __setitem__(self, keyword: "slice[None]", data: SubDictLike, /) -> None: ...
 
         @override
         def __setitem__(
-            self, keyword: str | slice, data: DataLike | SubDictLike | None, /
+            self, keyword: "str | slice[None]", data: DataLike | SubDictLike | None, /
         ) -> None:
             if keyword == slice(None):
                 if not isinstance(data, Mapping):
@@ -381,7 +381,7 @@ class FoamFile(
             return ret
 
         @override
-        def __delitem__(self, keyword: str | slice, /) -> None:
+        def __delitem__(self, keyword: "str | slice[None]", /) -> None:
             if keyword == slice(None):
                 self.clear()
                 return
@@ -947,7 +947,7 @@ class FoamFile(
     @overload
     def __setitem__(
         self,
-        keywords: slice,
+        keywords: "slice[None]",
         data: FileDictLike | StandaloneDataLike,
         /,
     ) -> None: ...
@@ -955,7 +955,7 @@ class FoamFile(
     @override
     def __setitem__(  # ty: ignore[invalid-method-override]
         self,
-        keywords: str | tuple[str, ...] | None | slice,
+        keywords: "str | tuple[str, ...] | None | slice[None]",
         data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
         /,
     ) -> None:
@@ -980,7 +980,9 @@ class FoamFile(
         self._perform_entry_operation(keywords, data, add=False)
 
     @override
-    def __delitem__(self, keywords: str | tuple[str, ...] | None | slice, /) -> None:
+    def __delitem__(
+        self, keywords: "str | tuple[str, ...] | None | slice[None]", /
+    ) -> None:
         keywords = FoamFile._normalized_keywords(keywords, slice_ok=True)
 
         if keywords == slice(None):
@@ -1303,8 +1305,8 @@ class FoamFile(
     @overload
     @staticmethod
     def _normalized_keywords(
-        keywords: slice, /, *, slice_ok: Literal[True] = ...
-    ) -> slice: ...
+        keywords: "slice[None]", /, *, slice_ok: Literal[True] = ...
+    ) -> "slice[None]": ...
 
     @overload
     @staticmethod
@@ -1314,8 +1316,11 @@ class FoamFile(
 
     @staticmethod
     def _normalized_keywords(
-        keywords: str | tuple[str, ...] | None | slice, /, *, slice_ok: bool = False
-    ) -> tuple[str, ...] | slice:
+        keywords: "str | tuple[str, ...] | None | slice[None]",
+        /,
+        *,
+        slice_ok: bool = False,
+    ) -> "tuple[str, ...] | slice[None]":
         match keywords:
             case None:
                 ret = ()
@@ -1758,7 +1763,7 @@ class FoamFieldFile(FoamFile):
     @overload
     def __setitem__(
         self,
-        keywords: str | tuple[str, ...] | None | slice,
+        keywords: "str | tuple[str, ...] | None | slice[None]",
         data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
         /,
     ) -> None: ...
@@ -1766,7 +1771,7 @@ class FoamFieldFile(FoamFile):
     @override
     def __setitem__(
         self,
-        keywords: str | tuple[str, ...] | None | slice,
+        keywords: "str | tuple[str, ...] | None | slice[None]",
         data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
         /,
     ) -> None:

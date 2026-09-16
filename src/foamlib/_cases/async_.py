@@ -182,12 +182,12 @@ class AsyncFoamCase(FoamCaseRunBase):
 
     @overload
     def __getitem__(
-        self, index: slice, /
+        self, index: "slice[int | None]", /
     ) -> Sequence["AsyncFoamCase.TimeDirectory"]: ...
 
     @override
     def __getitem__(
-        self, index: slice | float | str, /
+        self, index: "slice[int | None] | float | str", /
     ) -> "AsyncFoamCase.TimeDirectory | Sequence[AsyncFoamCase.TimeDirectory]":
         ret = super().__getitem__(index)
         if isinstance(ret, FoamCaseBase.TimeDirectory):
