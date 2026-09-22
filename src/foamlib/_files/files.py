@@ -1276,7 +1276,7 @@ class FoamFile(
             with contextlib.suppress(KeyError, TypeError):
                 class_ = FoamFile._vol_field_class(file["internalField"])
 
-            new: FileDict = MultiDict(
+            new = MultiDict[str | None, StandaloneData | Data | SubDict | None](
                 FoamFile={"version": 2.0, "format": "ascii", "class": class_}
             )
             new.extend(file)
