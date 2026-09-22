@@ -1383,7 +1383,7 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0, /) -> tuple[FileDict,
                 )
                 del ret[keyword]
 
-            ret = add_to_mapping(ret, keyword, value)
+            ret = add_to_mapping(ret, keyword, value)  # ty: ignore[no-matching-overload]
 
             pos = new_pos
         except ParseError:

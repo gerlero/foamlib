@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, MutableMapping
 from typing import Protocol, overload
 
 from multicollections import MultiDict
@@ -16,19 +16,37 @@ def add_to_mapping[K, V](
 
 @overload
 def add_to_mapping[K, V](
-    d: dict[K, V],
+    d: dict[K, V] | MultiDict[K, V],
     key: K,
     value: V,
     /,
 ) -> dict[K, V] | MultiDict[K, V]: ...
 
 
+@overload
 def add_to_mapping[K, V](
-    d: dict[K, V] | MultiDict[K, V],
+    d: MutableMultiMapping[K, V],
     key: K,
     value: V,
     /,
-) -> dict[K, V] | MultiDict[K, V]:
+) -> MutableMultiMapping[K, V]: ...
+
+
+@overload
+def add_to_mapping[K, V](
+    d: MutableMapping[K, V],
+    key: K,
+    value: V,
+    /,
+) -> MutableMapping[K, V]: ...
+
+
+def add_to_mapping[K, V](
+    d: MutableMapping[K, V],
+    key: K,
+    value: V,
+    /,
+) -> MutableMapping[K, V]:
     if isinstance(d, MutableMultiMapping):
         d.add(key, value)
         return d

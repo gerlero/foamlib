@@ -195,9 +195,9 @@ def _normalized_subdict(
             case {}:
                 ret[k] = _normalized_subdict(v, keywords=(*keywords, k), binary=binary)  # ty: ignore[invalid-argument-type]
             case None:
-                ret = add_to_mapping(ret, k, None)
+                ret = add_to_mapping(ret, k, None)  # ty: ignore[no-matching-overload]
             case _:
-                ret = add_to_mapping(
+                ret = add_to_mapping(  # ty: ignore[no-matching-overload]
                     ret,
                     k,
                     _normalized_data(v, keywords=(*keywords, k), binary=binary),
@@ -245,12 +245,12 @@ def _normalized_file_dict(value: FileDictLike, /) -> FileDict:
                 if k is None:
                     msg = "None keyword cannot have None value"
                     raise TypeError(msg)
-                ret = add_to_mapping(ret, k, None)
+                ret = add_to_mapping(ret, k, None)  # ty: ignore[no-matching-overload]
             case _:
                 if k is None:
                     ret[None] = _normalized_standalone_data(v, binary=binary)
                 else:
-                    ret = add_to_mapping(
+                    ret = add_to_mapping(  # ty: ignore[no-matching-overload]
                         ret,
                         k,
                         _normalized_data(v, keywords=(k,), binary=binary),  # ty: ignore[invalid-argument-type]
