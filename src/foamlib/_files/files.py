@@ -4,8 +4,6 @@ from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
 from typing import Literal, overload, override
 
-import numpy as np
-from multicollections import MultiDict
 from multicollections.abc import (
     ItemsView,
     KeysView,
@@ -14,7 +12,7 @@ from multicollections.abc import (
     with_default,
 )
 
-from .._files import _common
+from .._files import _common, standalone
 from ..typing import (
     Data,
     DataLike,
@@ -29,7 +27,6 @@ from ..typing import (
 )
 from ._io import FoamFileIO
 from ._normalization import normalized
-from ._parsing import parse
 from ._serialization import dumps
 from ._util import SupportsKeysAndGetItem
 from .types import Dimensioned, DimensionSet
@@ -628,7 +625,7 @@ class FoamFile(
                 else:
                     if class_ == "dictionary":
                         with contextlib.suppress(TypeError):
-                            self.class_ = FoamFile._vol_field_class(data)
+                            self.class_ = _common.vol_field_class(data)
 
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords, add=add)
@@ -1232,57 +1229,18 @@ class FoamFile(
         include_header: bool = False,
     ) -> FileDict | StandaloneData:
         """
-        Standalone deserializing function.
-
-        Deserialize the OpenFOAM FoamFile format to Python objects.
-
-        :param s: The string to deserialize. This can be a dictionary, list, or any
-            other object that can be serialized to the OpenFOAM format.
-        :param include_header: Whether to include the "FoamFile" header in the output.
-            If `True`, the header will be included if it is present in the input object.
+        Alias of :func:`foamlib.loads`.
         """
-        file = parse(s, target=FileDict)
-
-        if not include_header:
-            file.pop("FoamFile", None)
-
-        if len(file) == 1 and None in file:
-            return file[None]  # ty: ignore[invalid-return-type]
-
-        return file
+        return standalone.loads(s, include_header=include_header)
 
     @staticmethod
     def dumps(
         file: FileDictLike | StandaloneDataLike, *, ensure_header: bool = True
     ) -> bytes:
         """
-        Standalone serializing function.
-
-        Serialize Python objects to the OpenFOAM FoamFile format.
-
-        :param file: The Python object to serialize. This can be a dictionary, list,
-            or any other object that can be serialized to the OpenFOAM format.
-        :param ensure_header: Whether to include the "FoamFile" header in the output.
-            If ``True``, a header will be included if it is not already present in the
-            input object.
+        Alias of :func:`foamlib.dumps`.
         """
-        if not isinstance(file, Mapping):
-            file = {None: file}
-
-        file = normalized(file, target=FileDict)
-
-        if "FoamFile" not in file and ensure_header:
-            class_ = "dictionary"
-            with contextlib.suppress(KeyError, TypeError):
-                class_ = FoamFile._vol_field_class(file["internalField"])
-
-            new = MultiDict[str | None, StandaloneData | Data | SubDict | None](
-                FoamFile={"version": 2.0, "format": "ascii", "class": class_}
-            )
-            new.extend(file)
-            file = new
-
-        return dumps(file, keywords=())
+        return standalone.dumps(file, ensure_header=ensure_header)
 
     @overload
     @staticmethod
@@ -1343,21 +1301,6 @@ class FoamFile(
                 raise ValueError(msg)
 
         return ret
-
-    @staticmethod
-    def _vol_field_class(field: object, /) -> str:
-        match field:
-            case np.ndarray(shape=(3,) | (_, 3), dtype=np.dtype(kind="f")):
-                return "volVectorField"
-            case np.ndarray(shape=(6,) | (_, 6), dtype=np.dtype(kind="f")):
-                return "volSymmTensorField"
-            case np.ndarray(shape=(9,) | (_, 9), dtype=np.dtype(kind="f")):
-                return "volTensorField"
-            case float() | np.ndarray(shape=(_,), dtype=np.dtype(kind="f")):
-                return "volScalarField"
-            case _:
-                msg = "Cannot determine field class for data"
-                raise TypeError(msg)
 
 
 class FoamFieldFile(FoamFile):

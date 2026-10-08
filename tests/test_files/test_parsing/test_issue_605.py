@@ -1,4 +1,4 @@
-from foamlib import FoamFile
+from foamlib import loads
 
 CONTENTS = """7
 (
@@ -53,4 +53,4 @@ CONTENTS = """7
 
 
 def test_issue_605() -> None:
-    FoamFile.loads(CONTENTS)
+    loads(CONTENTS)

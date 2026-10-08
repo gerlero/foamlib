@@ -1,7 +1,7 @@
 import pytest
 from multicollections import MultiDict
 
-from foamlib import FoamFile
+from foamlib import loads
 from foamlib._files._parsing import ParsedFile
 
 CONTENTS = b"""
@@ -20,7 +20,7 @@ key2 value2;
 
 
 def test_loads() -> None:
-    parsed = FoamFile.loads(CONTENTS)
+    parsed = loads(CONTENTS)
     assert isinstance(parsed, MultiDict)
     items = list(parsed.items())
 

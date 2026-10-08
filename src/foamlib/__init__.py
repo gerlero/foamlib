@@ -15,6 +15,10 @@ from ._files import (
     FoamFieldFile,
     FoamFile,
     FoamFileDecodeError,
+    dump,
+    dumps,
+    load,
+    loads,
 )
 
 __version__ = version("foamlib")
@@ -30,4 +34,8 @@ __all__ = [
     "FoamFieldFile",
     "FoamFile",
     "FoamFileDecodeError",
+    "dump",
+    "dumps",
+    "load",
+    "loads",
 ]

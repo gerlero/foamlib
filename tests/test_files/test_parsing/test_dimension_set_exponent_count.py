@@ -12,7 +12,7 @@ calls are valid and pad the missing trailing exponents.
 import numpy as np
 import pytest
 
-from foamlib import DimensionSet, FoamFile, FoamFileDecodeError
+from foamlib import DimensionSet, FoamFileDecodeError, dumps, loads
 from foamlib._files._parsing import ParsedFile
 
 _READ_REJECT = [
@@ -49,7 +49,7 @@ _READ_ACCEPT = [
 @pytest.mark.parametrize("contents", _READ_REJECT)
 def test_read_rejects_wrong_exponent_count(contents: bytes) -> None:
     with pytest.raises(FoamFileDecodeError):
-        FoamFile.loads(b"dimensions " + contents + b";")
+        loads(b"dimensions " + contents + b";")
 
 
 @pytest.mark.parametrize(("contents", "expected"), _READ_ACCEPT)
@@ -74,7 +74,7 @@ def test_constructor_rejects_too_few_or_too_many_arguments(n: int) -> None:
 @pytest.mark.parametrize("n", [5, 6, 7])
 def test_dumps_dimension_set_round_trips(n: int) -> None:
     data = {"dimensions": list(range(1, n + 1))}
-    dumped = FoamFile.dumps(data)  # ty: ignore[invalid-argument-type]
+    dumped = dumps(data)  # ty: ignore[invalid-argument-type]
     exponents = " ".join([str(i) for i in range(1, n + 1)] + ["0"] * (7 - n))
     assert dumped.endswith(f"dimensions [{exponents}];".encode())
     assert ParsedFile(dumped)[("dimensions",)] == DimensionSet(*range(1, n + 1))
