@@ -9,7 +9,7 @@ dictionaryIO.C, dimensionSetIO.C) and round-trips through the data model.
 
 import pytest
 
-from foamlib import Dimensioned, DimensionSet, FoamFile, FoamFileDecodeError
+from foamlib import Dimensioned, DimensionSet, FoamFileDecodeError, dumps
 from foamlib._files._parsing import ParsedFile, parse
 from foamlib.typing import FileDict
 
@@ -216,7 +216,7 @@ def test_bare_dollar_reference_entry() -> None:
     assert _file_dict(b"TiO2_s {$TiO2;}") == {"TiO2_s": {"$TiO2": None}}
     parsed = ParsedFile(b"TiO2 {rho 2000;} TiO2_s {$TiO2}")
     assert parsed[("TiO2_s", "$TiO2")] is None
-    assert FoamFile.dumps(_file_dict(b"TiO2_s {$TiO2}"), ensure_header=False) == (
+    assert dumps(_file_dict(b"TiO2_s {$TiO2}"), ensure_header=False) == (
         b"TiO2_s {$TiO2}"
     )
 
@@ -231,5 +231,5 @@ def test_grammar_tolerance_round_trip() -> None:
         b"TiO2_s {$TiO2}",
     ]
     for contents in cases:
-        dumped = FoamFile.dumps(_file_dict(contents), ensure_header=False)
+        dumped = dumps(_file_dict(contents), ensure_header=False)
         assert _file_dict(dumped) == _file_dict(contents)

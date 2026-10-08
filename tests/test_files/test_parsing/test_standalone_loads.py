@@ -1,35 +1,35 @@
 import numpy as np
 
-from foamlib import Dimensioned, DimensionSet, FoamFile
+from foamlib import Dimensioned, DimensionSet, loads
 
 
 def test_loads() -> None:
-    assert FoamFile.loads("") == {}
-    assert FoamFile.loads("1") == 1
-    assert FoamFile.loads("FoamFile {} 1") == 1
-    assert FoamFile.loads("FoamFile {} 1", include_header=True) == {
+    assert loads("") == {}
+    assert loads("1") == 1
+    assert loads("FoamFile {} 1") == 1
+    assert loads("FoamFile {} 1", include_header=True) == {
         "FoamFile": {},
         None: 1,
     }
-    assert FoamFile.loads("1.0") == 1.0
-    assert FoamFile.loads("1.0e-3") == 1.0e-3
-    assert FoamFile.loads("yes") is True
-    assert FoamFile.loads("no") is False
-    assert FoamFile.loads("word") == "word"
-    assert FoamFile.loads("word word") == ("word", "word")
-    assert FoamFile.loads('"a string"') == '"a string"'
-    assert FoamFile.loads("(word word)") == ["word", "word"]
-    assert FoamFile.loads("keyword value;") == {"keyword": "value"}
-    assert FoamFile.loads("uniform 1") == 1
-    assert FoamFile.loads("uniform 1.0") == 1.0
-    assert FoamFile.loads("uniform 1.0e-3") == 1.0e-3
-    arr = FoamFile.loads("(1 2 3)")
+    assert loads("1.0") == 1.0
+    assert loads("1.0e-3") == 1.0e-3
+    assert loads("yes") is True
+    assert loads("no") is False
+    assert loads("word") == "word"
+    assert loads("word word") == ("word", "word")
+    assert loads('"a string"') == '"a string"'
+    assert loads("(word word)") == ["word", "word"]
+    assert loads("keyword value;") == {"keyword": "value"}
+    assert loads("uniform 1") == 1
+    assert loads("uniform 1.0") == 1.0
+    assert loads("uniform 1.0e-3") == 1.0e-3
+    arr = loads("(1 2 3)")
     assert isinstance(arr, np.ndarray)
     assert np.array_equal(arr, [1, 2, 3])
-    arr = FoamFile.loads("3(1 2 3)")
+    arr = loads("3(1 2 3)")
     assert isinstance(arr, np.ndarray)
     assert np.array_equal(arr, [1, 2, 3])
-    arr = FoamFile.loads("2((1 2 3) (4 5 6))")
+    arr = loads("2((1 2 3) (4 5 6))")
     assert isinstance(arr, np.ndarray)
     assert np.array_equal(
         arr,
@@ -38,7 +38,7 @@ def test_loads() -> None:
             [4, 5, 6],
         ],
     )
-    arr = FoamFile.loads("2{(1 2 3)}")
+    arr = loads("2{(1 2 3)}")
     assert isinstance(arr, np.ndarray)
     assert np.array_equal(
         arr,
@@ -47,8 +47,8 @@ def test_loads() -> None:
             [1, 2, 3],
         ],
     )
-    assert FoamFile.loads("0()") == []
-    arr = FoamFile.loads(
+    assert loads("0()") == []
+    arr = loads(
         b"nonuniform List<scalar> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@)"
     )
     assert isinstance(arr, np.ndarray)
@@ -56,7 +56,7 @@ def test_loads() -> None:
         arr,
         [1, 2],
     )
-    arr = FoamFile.loads(
+    arr = loads(
         b"nonuniform List<vector> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@)"
     )
     assert isinstance(arr, np.ndarray)
@@ -64,30 +64,30 @@ def test_loads() -> None:
         arr,
         [[1, 2, 3], [4, 5, 6]],
     )
-    arr = FoamFile.loads(b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)")
+    arr = loads(b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)")
     assert isinstance(arr, np.ndarray)
     assert np.array_equal(
         arr,
         [1, 2],
     )
-    assert FoamFile.loads("[1 1 -2 0 0 0 0]") == DimensionSet(mass=1, length=1, time=-2)
-    dimensioned = FoamFile.loads("g [1 1 -2 0 0 0 0] (0 0 -9.81)")
+    assert loads("[1 1 -2 0 0 0 0]") == DimensionSet(mass=1, length=1, time=-2)
+    dimensioned = loads("g [1 1 -2 0 0 0 0] (0 0 -9.81)")
     assert isinstance(dimensioned, Dimensioned)
     assert dimensioned.dimensions == DimensionSet(mass=1, length=1, time=-2)
     assert np.array_equal(dimensioned.value, [0, 0, -9.81])
     assert dimensioned.name == "g"
-    dimensioned = FoamFile.loads("[1 1 -2 0 0 0 0] 9.81")
+    dimensioned = loads("[1 1 -2 0 0 0 0] 9.81")
     assert isinstance(dimensioned, Dimensioned)
     assert dimensioned.dimensions == DimensionSet(mass=1, length=1, time=-2)
     assert dimensioned.value == 9.81
     assert dimensioned.name is None
-    assert FoamFile.loads("a {b c; d e;}") == {"a": {"b": "c", "d": "e"}}
-    assert FoamFile.loads("(a b; c d;)") == [("a", "b"), ("c", "d")]
-    assert FoamFile.loads("keyword;") == {"keyword": None}
-    assert FoamFile.loads("#include $FOAM_CASE/simControls\n") == {
+    assert loads("a {b c; d e;}") == {"a": {"b": "c", "d": "e"}}
+    assert loads("(a b; c d;)") == [("a", "b"), ("c", "d")]
+    assert loads("keyword;") == {"keyword": None}
+    assert loads("#include $FOAM_CASE/simControls\n") == {
         "#include": "$FOAM_CASE/simControls"
     }
-    faces = FoamFile.loads("2(3(1 2 3) 4(4 5 6 7))")
+    faces = loads("2(3(1 2 3) 4(4 5 6 7))")
     assert isinstance(faces, list)
     assert len(faces) == 2
     assert isinstance(faces[0], np.ndarray)
@@ -98,7 +98,7 @@ def test_loads() -> None:
     assert faces[1].dtype == np.int64
     assert np.array_equal(faces[0], [1, 2, 3])
     assert np.array_equal(faces[1], [4, 5, 6, 7])
-    faces = FoamFile.loads(
+    faces = loads(
         b"3\n(\x00\x00\x00\x00\x03\x00\x00\x00\x07\x00\x00\x00)\n7\n(h\xcb\r\x00\x1f\xcd\r\x00\x08\x1b\x0e\x00\xd7\xa85\x00\xda\xa85\x00\xd9\xa85\x00\xd8\xa85\x00)"
     )
     assert isinstance(faces, tuple)

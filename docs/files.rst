@@ -98,6 +98,18 @@ Additional classes
 .. autoclass:: foamlib.DimensionSet
 
 
+Additional functions
+--------------------
+
+.. autofunction:: foamlib.dump
+
+.. autofunction:: foamlib.dumps
+
+.. autofunction:: foamlib.load
+
+.. autofunction:: foamlib.loads
+
+
 Exceptions
 ----------
 

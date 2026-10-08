@@ -1,4 +1,4 @@
-from foamlib import FoamFile
+from foamlib import dumps, loads
 
 
 def test_issue_730() -> None:
@@ -16,6 +16,6 @@ def test_issue_730() -> None:
         }
     }
 
-    contents = FoamFile.dumps(file)  # ty: ignore[invalid-argument-type]
-    read = FoamFile.loads(contents)
+    contents = dumps(file)  # ty: ignore[invalid-argument-type]
+    read = loads(contents)
     assert read == file

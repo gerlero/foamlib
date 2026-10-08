@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from foamlib import FoamFile
+from foamlib import FoamFile, dumps, loads
 
 
 @pytest.mark.parametrize(
@@ -25,12 +25,12 @@ from foamlib import FoamFile
     ],
 )
 def test_unquoted_path_parses_as_string(path: str) -> None:
-    assert FoamFile.loads(f"p {path};".encode()) == {"p": path}
+    assert loads(f"p {path};".encode()) == {"p": path}
 
 
 def test_unquoted_path_dumps_round_trip() -> None:
     path = "./../mechanisms/H2/CRECK/syngas-creck.yaml"
-    assert FoamFile.loads(FoamFile.dumps(path)) == path
+    assert loads(dumps(path)) == path
 
 
 def test_add_path_entry_round_trips(tmp_path: Path) -> None:
@@ -62,4 +62,4 @@ def test_add_path_entry_round_trips(tmp_path: Path) -> None:
 )
 def test_floats_still_parse_as_numbers(text: str, expected: float) -> None:
     """Allowing '.'/'/' word starts must not turn genuine floats into strings."""
-    assert FoamFile.loads(f"x {text};".encode()) == {"x": expected}
+    assert loads(f"x {text};".encode()) == {"x": expected}

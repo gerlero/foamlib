@@ -1,7 +1,7 @@
 import pytest
 from multicollections import MultiDict
 
-from foamlib import FoamFile
+from foamlib import FoamFile, loads
 from foamlib._files._normalization import normalized
 from foamlib._files._parsing import ParsedFile
 from foamlib._files._serialization import dumps
@@ -20,7 +20,7 @@ def test_read() -> None:
 
 def test_read_loads() -> None:
     with pytest.warns(match="entry1"):
-        assert FoamFile.loads(b"""
+        assert loads(b"""
             entry1 value1;
             entry1 value2;
         """) == {"entry1": "value2"}
