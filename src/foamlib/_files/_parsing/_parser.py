@@ -18,7 +18,7 @@ from multicollections import MultiDict
 from foamlib._files._util import add_to_mapping
 from foamlib._files.types import _NAMED_DIMENSIONS
 
-from ...typing import (
+from ..typing import (
     Data,
     DataEntry,
     Dict,

@@ -11,7 +11,9 @@ else:
 from multicollections import MultiDict
 
 from .._files import _common, _serialization
-from ..typing import (
+from ._normalization import normalized
+from ._parsing import parse
+from .typing import (
     Data,
     FileDict,
     FileDictLike,
@@ -19,8 +21,6 @@ from ..typing import (
     StandaloneDataLike,
     SubDict,
 )
-from ._normalization import normalized
-from ._parsing import parse
 
 
 def dump(

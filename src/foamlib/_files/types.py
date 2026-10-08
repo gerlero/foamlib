@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Literal, Self, overload, override
 import numpy as np
 
 if TYPE_CHECKING:
-    from ..typing import DimensionSetLike, Tensor, TensorLike
+    from .typing import DimensionSetLike, Tensor, TensorLike
 
 
 class DimensionSet(
@@ -379,8 +379,8 @@ class Dimensioned:
         dimensions: "DimensionSetLike",
         name: str | None = None,
     ) -> None:
-        from ..typing import Tensor
         from ._normalization import normalized
+        from .typing import Tensor
 
         if isinstance(value, np.ndarray):
             value = value.copy()

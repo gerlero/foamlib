@@ -13,7 +13,12 @@ from multicollections.abc import (
 )
 
 from .._files import _common, standalone
-from ..typing import (
+from ._io import FoamFileIO
+from ._normalization import normalized
+from ._serialization import dumps
+from ._util import SupportsKeysAndGetItem
+from .types import Dimensioned, DimensionSet
+from .typing import (
     Data,
     DataLike,
     Field,
@@ -25,11 +30,6 @@ from ..typing import (
     SubDict,
     SubDictLike,
 )
-from ._io import FoamFileIO
-from ._normalization import normalized
-from ._serialization import dumps
-from ._util import SupportsKeysAndGetItem
-from .types import Dimensioned, DimensionSet
 
 
 class FoamFile(

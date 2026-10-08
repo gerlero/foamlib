@@ -11,7 +11,8 @@ else:
 import numpy as np
 
 from .._files import _common
-from ..typing import (
+from .types import _NAMED_DIMENSION_IDS, Dimensioned, DimensionSet
+from .typing import (
     Data,
     Dict,
     FileDict,
@@ -19,7 +20,6 @@ from ..typing import (
     StandaloneData,
     SubDict,
 )
-from .types import _NAMED_DIMENSION_IDS, Dimensioned, DimensionSet
 
 
 class _PrefixedWriter[B: Buffer](Writer[B]):

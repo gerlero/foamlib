@@ -5,8 +5,8 @@ from typing import Never, NoReturn, overload, override
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping, with_default
 
-from ...typing import Data, FileDict, StandaloneData, SubDict
 from .._util import add_to_mapping
+from ..typing import Data, FileDict, StandaloneData, SubDict
 from ._parser import (
     ParsedEntry,
     parse,

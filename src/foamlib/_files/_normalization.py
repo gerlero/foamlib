@@ -12,7 +12,10 @@ else:
 import numpy as np
 
 from .._files import _common
-from ..typing import (
+from ._parsing import FoamFileDecodeError, parse
+from ._util import add_to_mapping
+from .types import Dimensioned, DimensionSet
+from .typing import (
     Data,
     DataEntry,
     DataEntryLike,
@@ -37,9 +40,6 @@ from ..typing import (
     Tensor,
     TensorLike,
 )
-from ._parsing import FoamFileDecodeError, parse
-from ._util import add_to_mapping
-from .types import Dimensioned, DimensionSet
 
 
 def _normalized_token(value: str, /) -> str:
