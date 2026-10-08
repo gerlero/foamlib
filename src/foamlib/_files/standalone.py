@@ -31,7 +31,7 @@ def dump(
     ensure_header: bool = True,
 ) -> None:
     """
-    Standalone serializing function (i.e., does not use the :class:`foamlib.FoamFile`).
+    Standalone serializing function (i.e., does not use :class:`foamlib.FoamFile`).
 
     Serialize Python objects directly to the OpenFOAM FoamFile format.
 
@@ -68,7 +68,7 @@ def dumps(
     value: FileDictLike | StandaloneDataLike, /, *, ensure_header: bool = True
 ) -> bytes:
     """
-    Standalone serializing function (i.e., does not use the :class:`foamlib.FoamFile`).
+    Standalone serializing function (i.e., does not use :class:`foamlib.FoamFile`).
 
     Serialize Python objects directly to the OpenFOAM FoamFile format.
 
@@ -90,7 +90,7 @@ def load(
     fp: Reader[bytes | str], /, *, include_header: bool = False
 ) -> FileDict | StandaloneData:
     """
-    Standalone deserializing function (i.e., does not use the :class:`foamlib.FoamFile`).
+    Standalone deserializing function (i.e., does not use :class:`foamlib.FoamFile`).
 
     Deserialize the OpenFOAM FoamFile format directly to Python objects.
 
@@ -111,7 +111,7 @@ def loads(
     include_header: bool = False,
 ) -> FileDict | StandaloneData:
     """
-    Standalone deserializing function (i.e., does not use the :class:`foamlib.FoamFile`).
+    Standalone deserializing function (i.e., does not use :class:`foamlib.FoamFile`).
 
     Deserialize the OpenFOAM FoamFile format directly to Python objects.
 
