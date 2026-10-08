@@ -89,6 +89,7 @@
       .. autoproperty:: foamlib.FoamFieldFile.BoundarySubDict.value
       .. autoproperty:: foamlib.FoamFieldFile.BoundarySubDict.type
 
+.. _additional-classes:
 
 Additional classes
 ------------------
