@@ -1,10 +1,13 @@
 """Tests for binary ScalarList parsing (issue: sporadic parsing errors with binary format)."""
 
+import io
+
 import numpy as np
 import pytest
 
+from foamlib._files._encoding import encoded
 from foamlib._files._parsing._parser import parse_located
-from foamlib._files._serialization import dumps
+from foamlib.typing import FileDict
 
 
 @pytest.mark.parametrize("seed", [141, 539, 566, 685, 728, 773, 777, 907, 953, 992])
@@ -14,7 +17,9 @@ def test_binary_scalar_list_round_trip(seed: int) -> None:
     n = int(rng.integers(1, 200))
     data = rng.random(n)
 
-    content = dumps({"FoamFile": {"format": "binary"}, None: data})
+    with io.BytesIO() as f:
+        encoded({"FoamFile": {"format": "binary"}, None: data}, f, target=FileDict)
+        content = f.getvalue()
     result = parse_located(content)
     parsed = result[()].data
 
@@ -30,7 +35,9 @@ def test_binary_scalar_list_with_paren_byte() -> None:
     n = int(rng.integers(1, 200))
     data = rng.random(n)
 
-    content = dumps({"FoamFile": {"format": "binary"}, None: data})
+    with io.BytesIO() as f:
+        encoded({"FoamFile": {"format": "binary"}, None: data}, f, target=FileDict)
+        content = f.getvalue()
     result = parse_located(content)
     parsed = result[()].data
 
@@ -46,7 +53,9 @@ def test_binary_scalar_list_with_token_start_byte() -> None:
     n = int(rng.integers(1, 200))
     data = rng.random(n)
 
-    content = dumps({"FoamFile": {"format": "binary"}, None: data})
+    with io.BytesIO() as f:
+        encoded({"FoamFile": {"format": "binary"}, None: data}, f, target=FileDict)
+        content = f.getvalue()
     result = parse_located(content)
     parsed = result[()].data
 
@@ -61,7 +70,9 @@ def test_binary_scalar_list_large_random() -> None:
         n = int(rng.integers(1, 200))
         data = rng.random(n)
 
-        content = dumps({"FoamFile": {"format": "binary"}, None: data})
+        with io.BytesIO() as f:
+            encoded({"FoamFile": {"format": "binary"}, None: data}, f, target=FileDict)
+            content = f.getvalue()
         result = parse_located(content)
         parsed = result[()].data
 

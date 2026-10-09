@@ -1,4 +1,5 @@
 import contextlib
+import io
 import os
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
@@ -25,9 +26,8 @@ from ..typing import (
     SubDict,
     SubDictLike,
 )
+from ._encoding import encoded
 from ._io import FoamFileIO
-from ._normalization import normalized
-from ._serialization import dumps
 from ._util import SupportsKeysAndGetItem
 from .types import Dimensioned, DimensionSet
 
@@ -605,13 +605,13 @@ class FoamFile(
                 msg = "Cannot set a mapping as a standalone value.\nNote: use file[:] = {...} to replace file contents with a mapping"
                 raise TypeError(msg)
             case (), _:
-                data = normalized(data, target=StandaloneData)  # ty: ignore[no-matching-overload]
+                data = encoded(data, target=StandaloneData)  # ty: ignore[no-matching-overload]
             case _, {}:
-                data = normalized(data, target=SubDict, keywords=keywords)  # ty: ignore[no-matching-overload]
+                data = encoded(data, target=SubDict, keywords=keywords)  # ty: ignore[no-matching-overload]
             case _, None:
                 pass
             case _, _:
-                data = normalized(data, target=Data, keywords=keywords)  # ty: ignore[no-matching-overload]
+                data = encoded(data, target=Data, keywords=keywords)  # ty: ignore[no-matching-overload]
 
         indentation = b"    " * (len(keywords) - 1)
 
@@ -646,10 +646,13 @@ class FoamFile(
                 if add and keywords in parsed:
                     raise KeyError(keywords)
 
+                with io.BytesIO() as f:
+                    encoded(keywords[-1], f, target=str)
+                    token = f.getvalue()
                 empty_dict_content = (
                     before
                     + indentation
-                    + dumps(keywords[-1])
+                    + token
                     + b"\n"
                     + indentation
                     + b"{\n"
@@ -664,7 +667,15 @@ class FoamFile(
                     self[(*keywords, k)] = v  # ty: ignore[invalid-assignment]
 
             elif keywords:
-                val = dumps(data, keywords=keywords, format_=format_)  # ty: ignore[invalid-argument-type]
+                with io.BytesIO() as f:
+                    if data is not None:
+                        encoded(
+                            data, f, target=Data, keywords=keywords, format_=format_
+                        )
+                    val = f.getvalue()
+                with io.BytesIO() as f:
+                    encoded(keywords[-1], f, target=str)
+                    token = f.getvalue()
 
                 # When updating existing subdictionary entries, check if the existing entry
                 # includes indentation in its boundaries. If so, we need to preserve it.
@@ -692,7 +703,7 @@ class FoamFile(
                 content = (
                     before
                     + content_indentation
-                    + dumps(keywords[-1])
+                    + token
                     + ((b" " + val) if val else b"")
                     + (b";" if not keywords[-1].startswith("#") else b"")
                     + after
@@ -710,7 +721,9 @@ class FoamFile(
                 if add and () in parsed:
                     raise KeyError(None)
 
-                content = before + dumps(data, keywords=(), format_=format_) + after  # ty: ignore[invalid-argument-type]
+                with io.BytesIO() as f:
+                    encoded(data, f, target=StandaloneData, format_=format_)  # ty: ignore[no-matching-overload]
+                    content = before + f.getvalue() + after
 
                 parsed.put((), data, content)  # ty: ignore[no-matching-overload]
 
@@ -1296,7 +1309,7 @@ class FoamFile(
                 raise TypeError(msg)
 
         for k in ret:
-            if k != normalized(k, target=str):
+            if k != encoded(k, target=str):
                 msg = f"Invalid keyword: {k!r}"
                 raise ValueError(msg)
 
