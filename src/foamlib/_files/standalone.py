@@ -8,18 +8,14 @@ if sys.version_info >= (3, 14):
 else:
     from typing_extensions import Reader, Writer
 
-from multicollections import MultiDict
-
-from .._files import _common, _serialization
+from .._files import _common
 from ..typing import (
-    Data,
     FileDict,
     FileDictLike,
     StandaloneData,
     StandaloneDataLike,
-    SubDict,
 )
-from ._normalization import normalized
+from ._encoding import encoded
 from ._parsing import parse
 
 
@@ -48,20 +44,24 @@ def dump(
     if not isinstance(value, Mapping):
         value = {None: value}
 
-    value = normalized(value, target=FileDict)
-
-    if "FoamFile" not in value and ensure_header:
-        class_ = "dictionary"
-        with contextlib.suppress(KeyError, TypeError):
-            class_ = _common.vol_field_class(value["internalField"])
-
-        new = MultiDict[str | None, StandaloneData | Data | SubDict | None](
-            FoamFile={"version": 2.0, "format": "ascii", "class": class_}
-        )
-        new.extend(value)
-        value = new
-
-    _serialization.dump(value, fp)
+    if ensure_header and "FoamFile" not in value:
+        # Class inference needs the normalized internalField. Encode once to a
+        # buffer, then prepend the header without normalizing the data twice.
+        with io.BytesIO() as body:
+            result = encoded(value, body, target=FileDict)
+            class_ = "dictionary"
+            with contextlib.suppress(KeyError, TypeError):
+                class_ = _common.vol_field_class(result["internalField"])
+            encoded(
+                {"FoamFile": {"version": 2.0, "format": "ascii", "class": class_}},
+                fp,
+                target=FileDict,
+            )
+            if body.tell():
+                fp.write(b" ")
+                fp.write(body.getvalue())
+    else:
+        encoded(value, fp, target=FileDict)
 
 
 def dumps(

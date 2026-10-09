@@ -380,18 +380,18 @@ class Dimensioned:
         name: str | None = None,
     ) -> None:
         from ..typing import Tensor
-        from ._normalization import normalized
+        from ._encoding import encoded
 
         if isinstance(value, np.ndarray):
             value = value.copy()
-        self.value: Tensor = normalized(value, target=Tensor)
+        self.value: Tensor = encoded(value, target=Tensor)
 
         if not isinstance(dimensions, DimensionSet):
             self.dimensions = DimensionSet(*dimensions)
         else:
             self.dimensions = dimensions
 
-        if name is not None and name != normalized(name, target=str):
+        if name is not None and name != encoded(name, target=str):
             msg = f"Invalid name for Dimensioned: {name!r}"
             raise ValueError(msg)
         self.name = name

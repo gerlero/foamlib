@@ -1,11 +1,12 @@
+import io
+
 import pytest
 from multicollections import MultiDict
 
 from foamlib import FoamFile, loads
-from foamlib._files._normalization import normalized
+from foamlib._files._encoding import encoded
 from foamlib._files._parsing import ParsedFile
-from foamlib._files._serialization import dumps
-from foamlib.typing import Data
+from foamlib.typing import Data, StandaloneData
 
 
 def test_read() -> None:
@@ -88,8 +89,10 @@ def test_add_directives() -> None:
     assert len(parsed) == 2
     assert parsed[("#directive",)] == "value1"
     assert parsed.getall(("#directive",)) == ["value1", "value2"]
-    new_value = normalized("newValue", target=Data, keywords=("#directive",))
-    parsed.add(("#directive",), new_value, dumps(new_value))
+    new_value = encoded("newValue", target=Data, keywords=("#directive",))
+    with io.BytesIO() as f:
+        encoded(new_value, f, target=StandaloneData)
+        parsed.add(("#directive",), new_value, f.getvalue())
     assert parsed[("#directive",)] == "value1"  # Should not overwrite or warn
 
 
@@ -103,8 +106,10 @@ def test_write_other() -> None:
         ("b", MultiDict([("entry1", "value2"), ("entry1", "value3")])),
     ]
     with pytest.warns(match="entry1"):
-        new_list = normalized(new_list, target=Data, keywords=("list",))
-    parsed.put(("list",), new_list, dumps(new_list))
+        new_list = encoded(new_list, target=Data, keywords=("list",))
+    with io.BytesIO() as f:
+        encoded(new_list, f, target=StandaloneData)
+        parsed.put(("list",), new_list, f.getvalue())
     assert parsed[("list",)] == [
         ("a", {"entry1": "value1"}),
         ("b", {"entry1": "value3"}),
