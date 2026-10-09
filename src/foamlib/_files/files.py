@@ -13,7 +13,6 @@ from multicollections.abc import (
     with_default,
 )
 
-from .._files import _common, standalone
 from ..typing import (
     Data,
     DataLike,
@@ -26,9 +25,11 @@ from ..typing import (
     SubDict,
     SubDictLike,
 )
+from ._common import expect_field, vol_field_class
 from ._encoding import encoded
 from ._io import FoamFileIO
 from ._util import SupportsKeysAndGetItem
+from .standalone import dumps, loads
 from .types import Dimensioned, DimensionSet
 
 
@@ -617,7 +618,7 @@ class FoamFile(
 
         with self:
             self._write_header_if_needed(keywords)
-            if keywords == _common.FIELD_KEYWORDS:
+            if expect_field(keywords):
                 try:
                     class_ = self.class_
                 except (KeyError, FileNotFoundError):
@@ -625,7 +626,7 @@ class FoamFile(
                 else:
                     if class_ == "dictionary":
                         with contextlib.suppress(TypeError):
-                            self.class_ = _common.vol_field_class(data)
+                            self.class_ = vol_field_class(data)
 
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords, add=add)
@@ -1244,7 +1245,7 @@ class FoamFile(
         """
         Alias of :func:`foamlib.loads`.
         """
-        return standalone.loads(s, include_header=include_header)
+        return loads(s, include_header=include_header)
 
     @staticmethod
     def dumps(
@@ -1253,7 +1254,7 @@ class FoamFile(
         """
         Alias of :func:`foamlib.dumps`.
         """
-        return standalone.dumps(file, ensure_header=ensure_header)
+        return dumps(file, ensure_header=ensure_header)
 
     @overload
     @staticmethod
