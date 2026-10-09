@@ -16,7 +16,6 @@ else:
 
 import numpy as np
 
-from .._files import _common
 from ..typing import (
     Data,
     DataEntry,
@@ -42,6 +41,7 @@ from ..typing import (
     Tensor,
     TensorLike,
 )
+from ._common import expect_field
 from ._parsing import FoamFileDecodeError, parse
 from ._util import add_to_mapping
 from .types import _NAMED_DIMENSION_IDS, Dimensioned, DimensionSet
@@ -537,7 +537,7 @@ def _encoded_data_entry(
                 return ret
     if isinstance(value, bool):
         return _encoded_switch(value, fp)
-    if keywords == _common.FIELD_KEYWORDS:
+    if keywords is not None and expect_field(keywords):
         with contextlib.suppress(TypeError):
             return _encoded_field(value, fp, format_=format_)  # ty: ignore[invalid-argument-type]
     if keywords == ("dimensions",):
