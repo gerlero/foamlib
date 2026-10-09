@@ -10,7 +10,7 @@ else:
 
 from multicollections import MultiDict
 
-from .._files import _common, _serialization
+from .._files import _common
 from ..typing import (
     Data,
     FileDict,
@@ -19,7 +19,7 @@ from ..typing import (
     StandaloneDataLike,
     SubDict,
 )
-from ._normalization import normalized
+from ._encoding import encoded
 from ._parsing import parse
 
 
@@ -48,7 +48,7 @@ def dump(
     if not isinstance(value, Mapping):
         value = {None: value}
 
-    value = normalized(value, target=FileDict)
+    value = encoded(value, target=FileDict)
 
     if "FoamFile" not in value and ensure_header:
         class_ = "dictionary"
@@ -61,7 +61,7 @@ def dump(
         new.extend(value)
         value = new
 
-    _serialization.dump(value, fp)
+    encoded(value, fp, target=FileDict)
 
 
 def dumps(

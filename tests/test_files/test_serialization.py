@@ -1,198 +1,203 @@
+import io
+
 import numpy as np
 import pytest
 
 from foamlib import Dimensioned, DimensionSet
-from foamlib._files._normalization import normalized
-from foamlib._files._serialization import dumps
+from foamlib._files._encoding import encoded
 from foamlib.typing import Data, FileDict
 
 
 def test_serialize_data() -> None:
-    assert dumps(normalized(1)) == b"1"
-    assert dumps(normalized(1.0)) == b"1.0"
-    assert dumps(normalized(1.0e-3)) == b"0.001"
-    assert dumps(normalized(True)) == b"yes"
-    assert dumps(normalized(False)) == b"no"
-    assert dumps(normalized("word")) == b"word"
-    assert dumps(normalized(("word", "word"))) == b"word word"
-    assert dumps(normalized('"a string"')) == b'"a string"'
-    assert (
-        dumps(
-            normalized(1, target=Data, keywords=("internalField",)),
-            keywords=("internalField",),
+    with io.BytesIO() as f:
+        assert encoded(1, f) == 1
+        assert f.getvalue() == b"1"
+    with io.BytesIO() as f:
+        assert encoded(1.0, f) == 1.0
+        assert f.getvalue() == b"1.0"
+    with io.BytesIO() as f:
+        assert encoded(1.0e-3, f) == 0.001
+        assert f.getvalue() == b"0.001"
+    with io.BytesIO() as f:
+        assert encoded(True, f) is True
+        assert f.getvalue() == b"yes"
+    with io.BytesIO() as f:
+        assert encoded(False, f) is False
+        assert f.getvalue() == b"no"
+    with io.BytesIO() as f:
+        assert encoded("word", f) == "word"
+        assert f.getvalue() == b"word"
+    with io.BytesIO() as f:
+        assert encoded(("word", "word"), f) == ("word", "word")
+        assert f.getvalue() == b"word word"
+    with io.BytesIO() as f:
+        assert encoded('"a string"', f) == '"a string"'
+        assert f.getvalue() == b'"a string"'
+    with io.BytesIO() as f:
+        assert (
+            encoded(1, f, target=Data, keywords=("internalField",)) == 1.0  # ty: ignore[no-matching-overload]
         )
-        == b"uniform 1.0"
-    )
-    assert (
-        dumps(
-            normalized(1.0, target=Data, keywords=("internalField",)),
-            keywords=("internalField",),
+        assert f.getvalue() == b"uniform 1.0"
+    with io.BytesIO() as f:
+        assert encoded(1.0, f, target=Data, keywords=("internalField",)) == 1.0
+        assert f.getvalue() == b"uniform 1.0"
+    with io.BytesIO() as f:
+        assert encoded(1.0e-3, f, target=Data, keywords=("internalField",)) == 0.001
+        assert f.getvalue() == b"uniform 0.001"
+    with io.BytesIO() as f:
+        assert np.array_equal(encoded([1.0, 2.0, 3.0], f), np.array([1.0, 2.0, 3.0]))
+        assert f.getvalue() == b"(1.0 2.0 3.0)"
+    with io.BytesIO() as f:
+        assert np.array_equal(
+            encoded([1, 2, 3], f, target=Data, keywords=("internalField",)),  # ty: ignore[no-matching-overload]
+            np.array([1.0, 2.0, 3.0]),
         )
-        == b"uniform 1.0"
-    )
-    assert (
-        dumps(
-            normalized(1.0e-3, target=Data, keywords=("internalField",)),
-            keywords=("internalField",),
-        )
-        == b"uniform 0.001"
-    )
-    assert dumps(normalized([1.0, 2.0, 3.0])) == b"(1.0 2.0 3.0)"
-    assert (
-        dumps(
-            normalized([1, 2, 3], target=Data, keywords=("internalField",)),
-            keywords=("internalField",),
-        )
-        == b"uniform (1.0 2.0 3.0)"
-    )
-    assert (
-        dumps(
-            normalized(
+        assert f.getvalue() == b"uniform (1.0 2.0 3.0)"
+    with io.BytesIO() as f:
+        assert np.array_equal(
+            encoded(
                 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                f,
                 target=Data,
                 keywords=("internalField",),
-            ),
-            keywords=("internalField",),
+            ),  # ty: ignore[no-matching-overload]
+            np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]),
         )
-        == b"nonuniform List<scalar> 10(1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0)"
-    )
-    assert (
-        dumps(
-            normalized(
+        assert (
+            f.getvalue()
+            == b"nonuniform List<scalar> 10(1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0)"
+        )
+    with io.BytesIO() as f:
+        assert np.array_equal(
+            encoded(
                 [[1, 2, 3], [4, 5, 6]],
+                f,
                 target=Data,
                 keywords=("internalField",),
-            ),
-            keywords=("internalField",),
+            ),  # ty: ignore[no-matching-overload]
+            np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]),
         )
-        == b"nonuniform List<vector> 2((1.0 2.0 3.0) (4.0 5.0 6.0))"
-    )
-    assert (
-        dumps(
-            normalized(1, target=Data, keywords=("internalField",), binary=True),
-            keywords=("internalField",),
-            format_="binary",
+        assert f.getvalue() == b"nonuniform List<vector> 2((1.0 2.0 3.0) (4.0 5.0 6.0))"
+    with io.BytesIO() as f:
+        assert (
+            encoded(1, f, target=Data, keywords=("internalField",), format_="binary")  # ty: ignore[no-matching-overload]
+            == 1.0
         )
-        == b"uniform 1.0"
-    )
-    assert (
-        dumps(
-            normalized(1.0, target=Data, keywords=("internalField",), binary=True),
-            keywords=("internalField",),
-            format_="binary",
+        assert f.getvalue() == b"uniform 1.0"
+    with io.BytesIO() as f:
+        assert (
+            encoded(1.0, f, target=Data, keywords=("internalField",), format_="binary")
+            == 1.0
         )
-        == b"uniform 1.0"
-    )
-    assert (
-        dumps(
-            normalized(
+        assert f.getvalue() == b"uniform 1.0"
+    with io.BytesIO() as f:
+        assert np.array_equal(
+            encoded(
                 [1, 2, 3],
+                f,
                 target=Data,
                 keywords=("internalField",),
-                binary=True,
-            ),
-            keywords=("internalField",),
-            format_="binary",
+                format_="binary",
+            ),  # ty: ignore[no-matching-overload]
+            np.array([1.0, 2.0, 3.0]),
         )
-        == b"uniform (1.0 2.0 3.0)"
-    )
-    assert (
-        dumps(
-            normalized(
+        assert f.getvalue() == b"uniform (1.0 2.0 3.0)"
+    with io.BytesIO() as f:
+        assert np.array_equal(
+            encoded(
                 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                f,
                 target=Data,
                 keywords=("internalField",),
-                binary=True,
-            ),
-            keywords=("internalField",),
-            format_="binary",
+                format_="binary",
+            ),  # ty: ignore[no-matching-overload]
+            np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]),
         )
-        == b'nonuniform List<scalar> 10(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@\x00\x00\x00\x00\x00\x00\x1c@\x00\x00\x00\x00\x00\x00 @\x00\x00\x00\x00\x00\x00"@\x00\x00\x00\x00\x00\x00$@)'
-    )
-    assert (
-        dumps(
-            normalized(
+        assert (
+            f.getvalue()
+            == b'nonuniform List<scalar> 10(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@\x00\x00\x00\x00\x00\x00\x1c@\x00\x00\x00\x00\x00\x00 @\x00\x00\x00\x00\x00\x00"@\x00\x00\x00\x00\x00\x00$@)'
+        )
+    with io.BytesIO() as f:
+        assert np.array_equal(
+            encoded(
                 [[1, 2, 3], [4, 5, 6]],
+                f,
                 target=Data,
                 keywords=("internalField",),
-                binary=True,
-            ),
-            keywords=("internalField",),
-            format_="binary",
+                format_="binary",
+            ),  # ty: ignore[no-matching-overload]
+            np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]),
         )
-        == b"nonuniform List<vector> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@)"
-    )
-    assert (
-        dumps(
-            normalized(
+        assert (
+            f.getvalue()
+            == b"nonuniform List<vector> 2(\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x08@\x00\x00\x00\x00\x00\x00\x10@\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x18@)"
+        )
+    with io.BytesIO() as f:
+        assert (
+            encoded(
                 np.array([1, 2], dtype=np.float32),
+                f,
                 target=Data,
                 keywords=("internalField",),
-                binary=True,
+                format_="binary",
+            )  # ty: ignore[no-matching-overload]
+            is not None
+        )
+        assert f.getvalue() == b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)"
+    with io.BytesIO() as f:
+        assert encoded(DimensionSet(mass=1, length=1, time=-2), f) == DimensionSet(
+            mass=1, length=1, time=-2
+        )
+        assert f.getvalue() == b"[1 1 -2 0 0 0 0]"
+    with io.BytesIO() as f:
+        encoded(
+            Dimensioned(
+                name="g",
+                dimensions=DimensionSet(mass=1, length=1, time=-2),
+                value=9.81,
             ),
-            keywords=("internalField",),
-            format_="binary",
+            f,
         )
-        == b"nonuniform List<scalar> 2(\x00\x00\x80?\x00\x00\x00@)"
-    )
-    assert (
-        dumps(normalized(DimensionSet(mass=1, length=1, time=-2)))
-        == b"[1 1 -2 0 0 0 0]"
-    )
-    assert (
-        dumps(
-            normalized(
-                Dimensioned(
-                    name="g",
-                    dimensions=DimensionSet(mass=1, length=1, time=-2),
-                    value=9.81,
-                )
-            )
+        assert f.getvalue() == b"g [1 1 -2 0 0 0 0] 9.81"
+    with io.BytesIO() as f:
+        encoded(
+            Dimensioned(dimensions=DimensionSet(mass=1, length=1, time=-2), value=9.81),
+            f,
         )
-        == b"g [1 1 -2 0 0 0 0] 9.81"
-    )
-    assert (
-        dumps(
-            normalized(
-                Dimensioned(
-                    dimensions=DimensionSet(mass=1, length=1, time=-2), value=9.81
-                )
-            )
+        assert f.getvalue() == b"[1 1 -2 0 0 0 0] 9.81"
+    with io.BytesIO() as f:
+        encoded(
+            (
+                "hex",
+                [0, 1, 2, 3, 4, 5, 6, 7],
+                [1, 1, 1],
+                "simpleGrading",
+                [1, 1, 1],
+            ),
+            f,
         )
-        == b"[1 1 -2 0 0 0 0] 9.81"
-    )
-    assert (
-        dumps(
-            normalized(
-                (
-                    "hex",
-                    [0, 1, 2, 3, 4, 5, 6, 7],
-                    [1, 1, 1],
-                    "simpleGrading",
-                    [1, 1, 1],
-                ),
-            )
-        )
-        == b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
-    )
-    assert (
-        dumps(normalized([("a", "b"), ("c", "d"), ("n", False), ("y", True)]))
-        == b"(a b; c d; n no; y yes;)"
-    )
-    assert (
-        dumps(normalized([("a", {"b": "c"}), ("d", {"e": "g"})]))
-        == b"(a {b c;} d {e g;})"
-    )
-    assert dumps(normalized([("a", [0, 1, 2]), ("b", {})])) == b"(a (0 1 2); b {})"
-    assert (
-        dumps(normalized(["water", "oil", "mercury", "air"]))
-        == b"(water oil mercury air)"
-    )
-    assert dumps(normalized("div(phi,U)")) == b"div(phi,U)"
+        assert f.getvalue() == b"hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)"
+    with io.BytesIO() as f:
+        encoded([("a", "b"), ("c", "d"), ("n", False), ("y", True)], f)
+        assert f.getvalue() == b"(a b; c d; n no; y yes;)"
+    with io.BytesIO() as f:
+        encoded([("a", {"b": "c"}), ("d", {"e": "g"})], f)
+        assert f.getvalue() == b"(a {b c;} d {e g;})"
+    with io.BytesIO() as f:
+        encoded([("a", [0, 1, 2]), ("b", {})], f)
+        assert f.getvalue() == b"(a (0 1 2); b {})"
+    with io.BytesIO() as f:
+        encoded(["water", "oil", "mercury", "air"], f)
+        assert f.getvalue() == b"(water oil mercury air)"
+    with io.BytesIO() as f:
+        assert encoded("div(phi,U)", f) == "div(phi,U)"
+        assert f.getvalue() == b"div(phi,U)"
 
 
 def test_faces_like_list() -> None:
-    faces_like_list = normalized([[1, 2, 3], [4, 5, 6, 7]])
+    with io.BytesIO() as f:
+        faces_like_list = encoded([[1, 2, 3], [4, 5, 6, 7]], f)
+        assert f.getvalue() == b"(3(1 2 3) 4(4 5 6 7))"
     assert isinstance(faces_like_list, list)
     assert isinstance(faces_like_list[0], np.ndarray)
     assert faces_like_list[0].dtype == int
@@ -200,23 +205,22 @@ def test_faces_like_list() -> None:
     assert isinstance(faces_like_list[1], np.ndarray)
     assert faces_like_list[1].dtype == int
     assert faces_like_list[1].tolist() == [4, 5, 6, 7]
-    assert dumps(faces_like_list) == b"(3(1 2 3) 4(4 5 6 7))"
 
 
 def test_bool_tokens() -> None:
     with pytest.warns(UserWarning):
-        assert normalized("no") is False
+        assert encoded("no") is False
     with pytest.warns(UserWarning):
-        assert normalized("yes") is True
+        assert encoded("yes") is True
 
-    assert normalized("no", target=str) == "no"
-    assert normalized("yes", target=str) == "yes"
+    assert encoded("no", target=str) == "no"
+    assert encoded("yes", target=str) == "yes"
 
     with pytest.warns(UserWarning):
-        assert normalized({"no": "no", "yes": "yes"}, target=FileDict) == {
+        assert encoded({"no": "no", "yes": "yes"}, target=FileDict) == {
             "no": False,
             "yes": True,
         }
 
     with pytest.raises(TypeError, match="False"):
-        normalized({False: True}, target=FileDict)  # ty: ignore[no-matching-overload]
+        encoded({False: True}, target=FileDict)  # ty: ignore[no-matching-overload]
