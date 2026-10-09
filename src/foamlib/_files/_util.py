@@ -1,5 +1,12 @@
+import sys
 from collections.abc import Iterable, MutableMapping
 from typing import Protocol, overload
+
+if sys.version_info >= (3, 14):
+    from io import Reader
+else:
+    from typing_extensions import Reader
+
 
 from multicollections import MultiDict
 from multicollections.abc import MutableMultiMapping
@@ -63,3 +70,8 @@ def add_to_mapping[K, V](
 class SupportsKeysAndGetItem[K, V](Protocol):
     def keys(self) -> Iterable[K]: ...
     def __getitem__(self, key: K, /) -> V: ...
+
+
+class SeekableReader[T](Reader[T], Protocol):
+    def seek(self, offset: int, whence: int = 0, /) -> int: ...
+    def tell(self, /) -> int: ...
