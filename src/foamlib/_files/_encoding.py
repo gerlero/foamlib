@@ -1,6 +1,6 @@
 import contextlib
 import sys
-from collections.abc import Buffer, Mapping
+from collections.abc import Mapping
 from typing import Literal, assert_never, overload
 from warnings import warn
 
@@ -63,25 +63,34 @@ def _encoded_token(value: str, /, fp: Writer[bytes] | None = None) -> str:
     return parsed
 
 
-def _encoded_switch(value: bool, /) -> bool:
+def _encoded_switch(value: bool, /, fp: Writer[bytes] | None = None) -> bool:
     if not isinstance(value, bool):
         msg = f"expected a bool, got {value!r}"
         raise TypeError(msg)
-    return bool(value)
+    ret = bool(value)
+    if fp is not None:
+        fp.write(b"yes" if ret else b"no")
+    return ret
 
 
-def _encoded_int(value: int, /) -> int:
+def _encoded_int(value: int, /, fp: Writer[bytes] | None = None) -> int:
     if not isinstance(value, int):
         msg = f"expected an int, got {value!r}"
         raise TypeError(msg)
-    return int(value)
+    ret = int(value)
+    if fp is not None:
+        fp.write(str(ret).encode())
+    return ret
 
 
-def _encoded_float(value: float, /) -> float:
+def _encoded_float(value: float, /, fp: Writer[bytes] | None = None) -> float:
     if not isinstance(value, (float, int)):
         msg = f"expected float or int, got {value!r}"
         raise TypeError(msg)
-    return float(value)
+    ret = float(value)
+    if fp is not None:
+        fp.write(str(ret).encode())
+    return ret
 
 
 def _encoded_tensor(value: TensorLike, /, fp: Writer[bytes] | None = None) -> Tensor:
@@ -99,7 +108,10 @@ def _encoded_tensor(value: TensorLike, /, fp: Writer[bytes] | None = None) -> Te
             raise TypeError(msg)
 
     if fp is not None:
-        _dump(ret, fp, keywords=None)
+        if isinstance(ret, float):
+            _encoded_float(ret, fp)
+        else:
+            _encoded_list(ret.tolist(), fp)  # ty: ignore[invalid-argument-type]
 
     return ret
 
@@ -132,13 +144,27 @@ def _encoded_field(
             except (ValueError, TypeError):
                 msg = f"expected a Field, got {value!r}"
                 raise TypeError(msg) from None
-            ret = _encoded_field(arr, fp, format_=format_)
+            ret = _encoded_field(arr, format_=format_)
         case _:
             msg = f"expected a Field, got {value!r}"
             raise TypeError(msg)
 
     if fp is not None:
-        _dump(ret, fp, keywords=_common.FIELD_KEYWORDS, format_=format_)  # ty: ignore[invalid-argument-type]
+        match ret:
+            case float():
+                fp.write(b"uniform ")
+                _encoded_float(ret, fp)
+            case np.ndarray(shape=(3,) | (6,) | (9,)):
+                fp.write(b"uniform ")
+                _encoded_list(ret.tolist(), fp)  # ty: ignore[invalid-argument-type]
+            case np.ndarray(shape=(_,) | (_, 3) | (_, 6) | (_, 9)) as arr:
+                label = {1: "scalar", 3: "vector", 6: "symmTensor", 9: "tensor"}[
+                    1 if arr.ndim == 1 else arr.shape[1]
+                ]
+                fp.write(f"nonuniform List<{label}> ".encode())
+                _encoded_list(arr, fp, format_=format_, _n=len(arr))
+            case _:
+                assert_never(ret)
 
     return ret
 
@@ -158,7 +184,22 @@ def _encoded_dimension_set(
             raise TypeError(msg)
 
     if fp is not None:
-        _dump(ret, fp, keywords=None)
+        try:
+            name = _NAMED_DIMENSION_IDS[id(ret)]
+        except KeyError:
+            fp.write(b"[")
+            for i, v in enumerate(tuple(ret)):
+                if i:
+                    fp.write(b" ")
+                if isinstance(v, int):
+                    _encoded_int(v, fp)
+                else:
+                    _encoded_float(v, fp)
+            fp.write(b"]")
+        else:
+            fp.write(b"[")
+            _encoded_token(name, fp)
+            fp.write(b"]")
 
     return ret
 
@@ -203,7 +244,16 @@ def _encoded_dict(
             case _:
                 ret[k] = _encoded_data(v, keywords=None, format_=format_)
     if fp is not None:
-        _dump(ret, fp, keywords=keywords, format_=format_)
+        if keywords != ():
+            fp.write(b"{")
+        first = True
+        for k, v in ret.items():
+            if not first:
+                fp.write(b" ")
+            first = False
+            _encoded_keyword_entry((k, v), fp, keywords=keywords, format_=format_)
+        if keywords != ():
+            fp.write(b"}")
     return ret
 
 
@@ -253,7 +303,36 @@ def _encoded_subdict(
                     _encoded_data(v, keywords=(*keywords, k), format_=format_),
                 )
     if fp is not None:
-        _dump(ret, fp, keywords=keywords, format_=format_)
+        fp.write(b"{")
+        first = True
+        for k, v in ret.items():
+            if not first:
+                fp.write(b" ")
+            first = False
+            assert isinstance(k, str)
+            if v is not None and not isinstance(v, Mapping):
+                if k.startswith("#"):
+                    fp.write(b"\n")
+                _encoded_token(k, fp)
+                fp.write(b" ")
+                _encoded_data(
+                    v,  # ty: ignore[invalid-argument-type]
+                    fp,
+                    keywords=(*keywords, k),
+                    format_=format_,
+                )
+                if k.startswith("#"):
+                    fp.write(b"\n")
+                else:
+                    fp.write(b";")
+            else:
+                _encoded_keyword_entry(
+                    (k, v),
+                    fp,
+                    keywords=(*keywords, k),
+                    format_=format_,
+                )
+        fp.write(b"}")
     return ret
 
 
@@ -316,89 +395,234 @@ def _encoded_file_dict(
                         _encoded_data(v, keywords=(k,), format_=format_),  # ty: ignore[invalid-argument-type]
                     )
     if fp is not None:
-        _dump(ret, fp, keywords=(), format_=format_)
+        first = True
+        for k, v in ret.items():
+            if not first:
+                fp.write(b" ")
+            first = False
+            if k is None:
+                _encoded_standalone_data(v, fp, format_=format_)  # ty: ignore[invalid-argument-type]
+            elif v is not None and not isinstance(v, Mapping):
+                if k.startswith("#"):
+                    fp.write(b"\n")
+                _encoded_token(k, fp)
+                fp.write(b" ")
+                _encoded_data(v, fp, keywords=(k,), format_=format_)  # ty: ignore[invalid-argument-type]
+                if k.startswith("#"):
+                    fp.write(b"\n")
+                else:
+                    fp.write(b";")
+            else:
+                _encoded_keyword_entry(
+                    (k, v),
+                    fp,
+                    keywords=(k,),
+                    format_=format_,
+                )
     return ret
 
 
-def _encoded_keyword_entry(value: KeywordEntryLike, /) -> KeywordEntry:
+def _encoded_keyword_entry(
+    value: KeywordEntryLike,
+    /,
+    fp: Writer[bytes] | None = None,
+    *,
+    keywords: tuple[str, ...] = (),
+    format_: Literal["ascii", "binary"] | None = None,
+) -> KeywordEntry:
     match value:
         case DimensionSet():
             msg = f"expected a KeywordEntry (2-tuple), got {value!r}"
             raise TypeError(msg)
-        case tuple((k, {} as d)):
-            return _encoded_token(k), _encoded_dict(d, keywords=(), format_=None)  # ty: ignore[invalid-argument-type]
+        case tuple((k, {} as v)):
+            k, v = _encoded_token(k), _encoded_dict(v, keywords=keywords, format_=format_)  # ty: ignore[invalid-argument-type]
         case tuple((k, v)):
-            return _encoded_token(k), _encoded_data_entry(  # ty: ignore[invalid-argument-type]
+            k, v = _encoded_token(k), _encoded_data_entry(  # ty: ignore[invalid-argument-type]
                 v,  # ty: ignore[invalid-argument-type]
                 keywords=None,
-                format_=None,
+                format_=format_,
             )
         case _:
             msg = f"expected a KeywordEntry (2-tuple), got {value!r}"
             raise TypeError(msg)
 
+    if fp is not None:
+        if isinstance(k, str) and k.startswith("#"):
+            fp.write(b"\n")
+        _encoded_data_entry(k, fp, keywords=None, format_=format_)
+        fp.write(b" ")
+        if isinstance(v, Mapping):
+            _encoded_dict(
+                v,  # ty: ignore[invalid-argument-type]
+                fp,
+                keywords=keywords,
+                format_=format_,
+            )
+        else:
+            _encoded_data_entry(v, fp, keywords=keywords, format_=format_)
+        if isinstance(k, str) and k.startswith("#"):
+            fp.write(b"\n")
+        elif not isinstance(v, Mapping) and not (
+            isinstance(k, str) and k.startswith("$") and v is None
+        ):
+            fp.write(b";")
 
-def _encoded_list(value: ListLike, /) -> List:
+    return k, v  # ty: ignore[invalid-return-type]
+
+
+def _encoded_list(
+    value: ListLike,
+    /,
+    fp: Writer[bytes] | None = None,
+    *,
+    format_: Literal["ascii", "binary"] | None = None,
+    _n: int | None = None,
+) -> List:
+    if isinstance(value, np.ndarray) and fp is not None and format_ == "binary":
+        if _n is not None:
+            fp.write(str(_n).encode())
+        fp.write(b"(")
+        fp.write(value.tobytes())
+        fp.write(b")")
+        return _encoded_list(value)
+
     match value:
+        case np.ndarray(shape=(_,)):
+            ret = _encoded_list(value.tolist())
+        case np.ndarray(shape=(_, 3 | 4), dtype=np.dtype(kind="i")):
+            ret = _encoded_list(list(value))
         case np.ndarray(shape=(_, *_)):
-            return _encoded_list(value.tolist())
+            ret = _encoded_list(value.tolist())
         case tuple():
             msg = f"expected a List (sequence), got {value!r}"
             raise TypeError(msg)
         case [*_]:
-            ret: List = []
+            ret = []
             for v in value:
                 match v:
-                    case {}:
+                    case Mapping():
                         ret.append(_encoded_dict(v, keywords=(), format_=None))  # ty: ignore[invalid-argument-type]
+                    case np.ndarray():
+                        ret.append(v)  # ty: ignore[invalid-argument-type]
                     case tuple():
                         ret.append(_encoded_keyword_entry(v))  # ty: ignore[invalid-argument-type]
                     case _:
                         ret.append(_encoded_data_entry(v, keywords=None, format_=None))
-            return ret
         case _:
             msg = f"expected a List (sequence), got {value!r}"
             raise TypeError(msg)
+
+    if fp is not None:
+        if _n is not None:
+            fp.write(str(_n).encode())
+        fp.write(b"(")
+        for i, v in enumerate(ret):
+            if i:
+                fp.write(b" ")
+            match v:
+                case Mapping():
+                    fp.write(b"{")
+                    first = True
+                    for k, entry in v.items():
+                        if not first:
+                            fp.write(b" ")
+                        first = False
+                        _encoded_keyword_entry(
+                            (k, entry),
+                            fp,
+                            keywords=(),
+                            format_=format_,
+                        )
+                    fp.write(b"}")
+                case np.ndarray():
+                    _encoded_list(v, fp, _n=len(v), format_=format_)
+                case tuple():
+                    _encoded_keyword_entry(
+                        v, fp, keywords=(), format_=format_
+                    )
+                case _:
+                    _encoded_data_entry(
+                        v,  # ty: ignore[invalid-argument-type]
+                        fp,
+                        keywords=None,
+                        format_=format_,
+                    )
+        fp.write(b")")
+
+    return ret
 
 
 def _encoded_data_entry(
     value: DataEntryLike,
     /,
+    fp: Writer[bytes] | None = None,
     *,
     keywords: tuple[str, ...] | None,
     format_: Literal["ascii", "binary"] | None,
 ) -> DataEntry:
     if isinstance(value, (Dimensioned, DimensionSet)):
-        return value
-    if isinstance(value, str):
+        ret = value
+    elif isinstance(value, str):
         ret = _encoded_token(value)
         match ret:
             case "no" | "false" | "off":
                 msg = f"{ret!r} will be stored as False"
                 warn(msg, stacklevel=2)
-                return False
+                return _encoded_switch(False, fp)
             case "yes" | "true" | "on":
                 msg = f"{ret!r} will be stored as True"
                 warn(msg, stacklevel=2)
-                return True
+                return _encoded_switch(True, fp)
             case _:
+                if fp is not None:
+                    fp.write(ret.encode())
                 return ret
-    if isinstance(value, bool):
-        return _encoded_switch(value)
-    if keywords == _common.FIELD_KEYWORDS:
+    elif isinstance(value, bool):
+        return _encoded_switch(value, fp)
+    elif keywords == _common.FIELD_KEYWORDS:
         with contextlib.suppress(TypeError):
-            return _encoded_field(value, format_=format_)  # ty: ignore[invalid-argument-type]
-    if keywords == ("dimensions",):
+            return _encoded_field(value, fp, format_=format_)  # ty: ignore[invalid-argument-type]
+        if isinstance(value, int):
+            return _encoded_int(value, fp)
+        if isinstance(value, float):
+            return _encoded_float(value, fp)
         with contextlib.suppress(TypeError):
-            return _encoded_dimension_set(value)  # ty: ignore[invalid-argument-type]
-    if isinstance(value, int):
-        return _encoded_int(value)
-    if isinstance(value, float):
-        return _encoded_float(value)
-    with contextlib.suppress(TypeError):
-        return _encoded_list(value)  # ty: ignore[invalid-argument-type]
-    msg = f"expected a DataEntry, got {value!r}"
-    raise TypeError(msg)
+            return _encoded_list(value, fp, format_=format_)  # ty: ignore[invalid-argument-type]
+        msg = f"expected a DataEntry, got {value!r}"
+        raise TypeError(msg)
+    elif keywords == ("dimensions",):
+        with contextlib.suppress(TypeError):
+            return _encoded_dimension_set(value, fp)
+        if isinstance(value, int):
+            return _encoded_int(value, fp)
+        if isinstance(value, float):
+            return _encoded_float(value, fp)
+        with contextlib.suppress(TypeError):
+            return _encoded_list(value, fp, format_=format_)  # ty: ignore[invalid-argument-type]
+        msg = f"expected a DataEntry, got {value!r}"
+        raise TypeError(msg)
+    elif isinstance(value, int):
+        return _encoded_int(value, fp)
+    elif isinstance(value, float):
+        return _encoded_float(value, fp)
+    else:
+        with contextlib.suppress(TypeError):
+            return _encoded_list(value, fp, format_=format_)  # ty: ignore[invalid-argument-type]
+        msg = f"expected a DataEntry, got {value!r}"
+        raise TypeError(msg)
+
+    if fp is not None:
+        if isinstance(ret, DimensionSet):
+            _encoded_dimension_set(ret, fp)
+        else:
+            assert isinstance(ret, Dimensioned)
+            if ret.name is not None:
+                _encoded_token(ret.name, fp)
+                fp.write(b" ")
+            _encoded_dimension_set(ret.dimensions, fp)
+            fp.write(b" ")
+            _encoded_tensor(ret.value, fp)
+    return ret
 
 
 def _encoded_data(
@@ -420,29 +644,68 @@ def _encoded_data(
         case _:
             ret = _encoded_data_entry(value, keywords=keywords, format_=format_)
     if fp is not None:
-        _dump(ret, fp, keywords=keywords, format_=format_)
+        if isinstance(ret, tuple) and not isinstance(ret, DimensionSet):
+            first = True
+            for v in ret:
+                if not first:
+                    fp.write(b" ")
+                first = False
+                _encoded_data_entry(v, fp, keywords=keywords, format_=format_)
+        else:
+            _encoded_data_entry(ret, fp, keywords=keywords, format_=format_)
     return ret
 
 
 def _encoded_standalone_data_entry(
     value: StandaloneDataEntryLike,
     /,
+    fp: Writer[bytes] | None = None,
     *,
     format_: Literal["ascii", "binary"] | None,
 ) -> StandaloneDataEntry:
     match value:
         case np.ndarray(shape=(_,), dtype=np.dtype(kind="i")):
             if format_ != "binary" or value.dtype not in (np.int32, np.int64):
-                return value.astype(int, copy=False)
+                value = value.astype(int, copy=False)
+            if fp is not None:
+                if format_ == "binary":
+                    fp.write(str(len(value)).encode())
+                    fp.write(b"(")
+                    fp.write(value.tobytes())
+                    fp.write(b")")
+                else:
+                    _encoded_list(value.tolist(), fp, format_=format_)
             return value  # ty: ignore[invalid-return-type]
         case np.ndarray(shape=(_,), dtype=np.dtype(kind="f")):
-            return value.astype(np.float64, copy=False)
+            value = value.astype(np.float64, copy=False)
+            if fp is not None:
+                if format_ == "binary":
+                    fp.write(str(len(value)).encode())
+                    fp.write(b"(")
+                    fp.write(value.tobytes())
+                    fp.write(b")")
+                else:
+                    _encoded_list(value.tolist(), fp, format_=format_)
+            return value
         case np.ndarray(shape=(_, 3), dtype=np.dtype(kind="f")):
             if format_ != "binary" or value.dtype not in (np.float64, np.float32):
-                return value.astype(float, copy=False)
+                value = value.astype(float, copy=False)
+            if fp is not None:
+                if format_ == "binary":
+                    fp.write(str(len(value)).encode())
+                    fp.write(b"(")
+                    fp.write(value.tobytes())
+                    fp.write(b")")
+                else:
+                    _encoded_list(value.tolist(), fp, format_=format_)
             return value  # ty: ignore[invalid-return-type]
         case np.ndarray(shape=(_, 3 | 4), dtype=np.dtype(kind="i")):
-            return list(value.astype(int, copy=False))
+            value = list(value.astype(int, copy=False))
+            if fp is not None:
+                _encoded_list(
+                    [v.tolist() for v in value], fp, format_=format_
+                )
+            return value
         case np.ndarray() | Dimensioned() | DimensionSet() | tuple():
             pass
         case [*_]:
@@ -452,7 +715,7 @@ def _encoded_standalone_data_entry(
                 pass
             else:
                 if arr.dtype in (int, float):
-                    return _encoded_standalone_data_entry(arr, format_=format_)
+                    return _encoded_standalone_data_entry(arr, fp, format_=format_)
             ret = []
             for v in value:
                 try:
@@ -463,9 +726,11 @@ def _encoded_standalone_data_entry(
                     break
                 ret.append(e)
             else:
+                if fp is not None:
+                    _encoded_list([e.tolist() for e in ret], fp, format_=format_)
                 return ret
     try:
-        return _encoded_data_entry(value, keywords=(), format_=format_)  # ty: ignore[invalid-argument-type]
+        return _encoded_data_entry(value, fp, keywords=(), format_=format_)  # ty: ignore[invalid-argument-type]
     except TypeError:
         msg = f"expected a StandaloneDataEntry, got {value!r}"
         raise TypeError(msg) from None
@@ -489,191 +754,16 @@ def _encoded_standalone_data(
         case _:
             ret = _encoded_standalone_data_entry(value, format_=format_)
     if fp is not None:
-        _dump(ret, fp, keywords=(), format_=format_)
-    return ret
-
-
-class _PrefixedWriter[B: Buffer](Writer[B]):
-    def __init__(self, writer: Writer, prefix: bytes, /) -> None:
-        self._writer = writer
-        self._prefix = prefix
-
-    def write(self, b: B, /) -> int:
-        if self._prefix and b:
-            self._writer.write(self._prefix)
-            self._prefix = b""
-        return self._writer.write(b)
-
-
-def _dump(
-    data: FileDict
-    | Data
-    | StandaloneData
-    | KeywordEntry
-    | SubDict
-    | Dict
-    | np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]],
-    fp: Writer[bytes],
-    /,
-    *,
-    keywords: tuple[str, ...] | None = (),
-    format_: Literal["ascii", "binary"] | None = None,
-    _tuple_is_keyword_entry: bool = False,
-) -> None:
-    match data, keywords, format_:
-        case {"FoamFile": {"format": ("ascii" | "binary") as format_}}, (), None:  # ty: ignore[invalid-assignment]
-            pass
-    match data, keywords, format_:
-        case {}, _, _:
-            if keywords != ():
-                fp.write(b"{")
+        if isinstance(ret, tuple) and not isinstance(ret, DimensionSet):
             first = True
-            for k, v in data.items():
+            for v in ret:
                 if not first:
                     fp.write(b" ")
                 first = False
-                if k is not None:
-                    _dump(
-                        (k, v),  # ty: ignore[invalid-argument-type]
-                        fp,
-                        keywords=keywords,
-                        format_=format_,
-                        _tuple_is_keyword_entry=True,
-                    )
-                else:
-                    _dump(
-                        v,  # ty: ignore[invalid-argument-type]
-                        fp,
-                        keywords=keywords,
-                        format_=format_,
-                    )
-            if keywords != ():
-                fp.write(b"}")
-
-        case float(), _common.FIELD_KEYWORDS, _:
-            fp.write(b"uniform ")
-            _dump(data, fp, keywords=None, format_=format_)
-
-        case np.ndarray(shape=(3,) | (6,) | (9,)), _common.FIELD_KEYWORDS, _:
-            fp.write(b"uniform ")
-            _dump(data.tolist(), fp, keywords=None, format_=format_)  # ty: ignore[invalid-argument-type]
-        case np.ndarray(shape=(_,)), _common.FIELD_KEYWORDS, _:
-            fp.write(b"nonuniform List<scalar> ")
-            _dump(data, fp, keywords=None, format_=format_)
-
-        case np.ndarray(shape=(_, 3)), _common.FIELD_KEYWORDS, _:
-            fp.write(b"nonuniform List<vector> ")
-            _dump(data, fp, keywords=None, format_=format_)
-        case np.ndarray(shape=(_, 6)), _common.FIELD_KEYWORDS, _:
-            fp.write(b"nonuniform List<symmTensor> ")
-            _dump(data, fp, keywords=None, format_=format_)
-
-        case np.ndarray(shape=(_, 9)), _common.FIELD_KEYWORDS, _:
-            fp.write(b"nonuniform List<tensor> ")
-            _dump(data, fp, keywords=None, format_=format_)
-        case np.ndarray(), _, "binary":
-            _dump(len(data), fp, keywords=None, format_=None)
-            fp.write(b"(")
-            fp.write(data.tobytes())
-            fp.write(b")")
-
-        case np.ndarray(), (_, *_) | None, "ascii" | None:
-            _dump(len(data), fp, keywords=None, format_=None)
-            _dump(
-                data.tolist(),  # ty: ignore[invalid-argument-type]
-                fp,
-                keywords=None,
-                format_=format_,
-            )
-        case np.ndarray(), (), "ascii" | None:
-            _dump(data.tolist(), fp, keywords=None, format_=format_)  # ty: ignore[invalid-argument-type]
-
-        case DimensionSet(), _, _:
-            try:
-                name = _NAMED_DIMENSION_IDS[id(data)]
-            except KeyError:
-                fp.write(b"[")
-                _dump(tuple(data), fp, keywords=None, format_=format_)
-                fp.write(b"]")
-            else:
-                fp.write(b"[")
-                _dump(name, fp, keywords=None, format_=format_)
-                fp.write(b"]")
-        case Dimensioned(name=None), _, _:
-            _dump(data.dimensions, fp, keywords=None, format_=format_)
-            fp.write(b" ")
-            _dump(data.value, fp, keywords=None, format_=format_)
-        case Dimensioned(name=str()), _, _:
-            _dump(data.name, fp, keywords=None, format_=format_)  # ty: ignore[invalid-argument-type]
-            fp.write(b" ")
-            _dump(data.dimensions, fp, keywords=None, format_=format_)
-            fp.write(b" ")
-            _dump(data.value, fp, keywords=None, format_=format_)
-        case (
-            tuple((_, _)),
-            _,
-            _,
-        ) if _tuple_is_keyword_entry and not isinstance(data, DimensionSet):
-            assert len(data) == 2
-            k, v = data
-            if isinstance(k, str) and k[0] == "#":
-                fp.write(b"\n")
-            if k is not None:
-                _dump(k, fp, keywords=keywords)
-            _dump(
-                v,
-                _PrefixedWriter(fp, b" ") if k is not None else fp,
-                keywords=(*keywords, k)  # ty: ignore[invalid-argument-type]
-                if keywords is not None and k is not None
-                else ()
-                if k is None
-                else None,
-                format_=format_,
-            )
-            if isinstance(k, str) and k[0] == "#":
-                fp.write(b"\n")
-            elif (
-                k is not None
-                and not isinstance(v, Mapping)
-                and not (isinstance(k, str) and k.startswith("$") and v is None)
-            ):
-                fp.write(b";")
-
-        case tuple((_, _, *_)), _, _ if not isinstance(data, DimensionSet):
-            for i, v in enumerate(data):
-                if i:
-                    fp.write(b" ")
-                _dump(v, fp, keywords=keywords, format_=format_)
-        case [*_], _, _:
-            fp.write(b"(")
-            for i, v in enumerate(data):
-                if i:
-                    fp.write(b" ")
-                _dump(
-                    v,  # ty: ignore[invalid-argument-type]
-                    fp,
-                    keywords=None,
-                    format_=format_,
-                    _tuple_is_keyword_entry=True,
-                )
-            fp.write(b")")
-
-        case None, _, _:
-            pass
-        case True, _, _:
-            fp.write(b"yes")
-
-        case False, _, _:
-            fp.write(b"no")
-
-        case float() | int(), _, _:
-            fp.write(str(data).encode())
-
-        case str(), _, _:
-            fp.write(data.encode())
-
-        case _:
-            assert_never(data)  # ty: ignore[type-assertion-failure]
+                _encoded_standalone_data_entry(v, fp, format_=format_)
+        else:
+            _encoded_standalone_data_entry(ret, fp, format_=format_)
+    return ret
 
 
 @overload
