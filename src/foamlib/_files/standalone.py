@@ -4,9 +4,9 @@ import sys
 from collections.abc import Mapping
 
 if sys.version_info >= (3, 14):
-    from io import Reader, Writer
+    from io import Writer
 else:
-    from typing_extensions import Reader, Writer
+    from typing_extensions import Writer
 
 from .._files import _common
 from ..typing import (
@@ -17,6 +17,7 @@ from ..typing import (
 )
 from ._encoding import encoded
 from ._parsing import parse
+from ._util import SeekableReader
 
 
 def dump(
@@ -87,7 +88,7 @@ def dumps(
 
 
 def load(
-    fp: Reader[bytes | str], /, *, include_header: bool = False
+    fp: SeekableReader[bytes | str], /, *, include_header: bool = False
 ) -> FileDict | StandaloneData:
     """
     Standalone deserializing function (i.e., does not use :class:`foamlib.FoamFile`).
