@@ -25,7 +25,7 @@ from .base import FoamCaseBase
 
 
 class FoamCaseRunBase(FoamCaseBase):
-    class TimeDirectory(FoamCaseBase.TimeDirectory):
+    class TimeDirectory(FoamCaseBase.TimeDirectory):  # ty: ignore[invalid-attribute-override]
         @abstractmethod
         def cell_centers(
             self,

@@ -47,7 +47,7 @@ class AsyncFoamCase(FoamCaseRunBase):
             print(time["U"].internal_field) # Print the velocity field
     """
 
-    class TimeDirectory(FoamCaseRunBase.TimeDirectory):
+    class TimeDirectory(FoamCaseRunBase.TimeDirectory):  # ty: ignore[invalid-attribute-override]
         @override
         @property
         def _case(self) -> "AsyncFoamCase":
