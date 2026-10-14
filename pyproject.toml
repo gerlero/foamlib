@@ -59,7 +59,7 @@ Documentation = "https://foamlib.readthedocs.io"
 preprocessing = ["foamlib[preprocessing]"]
 postprocessing = ["foamlib[postprocessing]"]
 examples = ["foamlib[examples]"]
-lint = ["ruff>=0.16.5,<0.17"]
+lint = ["ruff>=0.16.5,<0.18"]
 typing = [
     {include-group = "preprocessing"},
     {include-group = "postprocessing"},
