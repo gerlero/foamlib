@@ -367,7 +367,7 @@ class FoamFile(
 
         @override
         @with_default
-        def popone(self, keyword: str, /) -> "Data | SubDict | None":
+        def popone(self, keyword: str, /) -> "Data | SubDict | None":  # ty: ignore[invalid-attribute-override]
             with self._file:
                 ret = self._file[(*self._keywords, keyword)]
                 if isinstance(ret, FoamFile.SubDict):
