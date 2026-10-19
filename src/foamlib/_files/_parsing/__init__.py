@@ -192,8 +192,10 @@ class ParsedFile(
         return keywords in self._parsed
 
     @override
-    def __iter__(self) -> Iterator[tuple[str, ...]]:
-        return iter(self._parsed)
+    def _iteritems(
+        self,
+    ) -> Iterator[tuple[tuple[str, ...], Data | StandaloneData | EllipsisType | None]]:
+        return ((k, v.data) for k, v in self._parsed.items())
 
     @override
     def __len__(self) -> int:

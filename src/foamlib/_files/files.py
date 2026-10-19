@@ -3,6 +3,7 @@ import io
 import os
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
+from types import EllipsisType
 from typing import Literal, overload, override
 
 from multicollections.abc import (
@@ -103,16 +104,19 @@ class FoamFile(
 
         @override
         def __iter__(self) -> Iterator[str | None]:
-            return self._file._iter(include_header=self._include_header)
+            for keywords in self._file._get_parsed():
+                match keywords:
+                    case ():
+                        yield None
+                    case ("FoamFile",):
+                        if self._include_header:
+                            yield "FoamFile"
+                    case (k,):
+                        yield k
 
         @override
         def __len__(self) -> int:
-            parsed = self._file._get_parsed()
-            return sum(
-                1
-                for k in parsed
-                if len(k) <= 1 and (k != ("FoamFile",) or self._include_header)
-            )
+            return sum(1 for _ in self)
 
         @override
         def __contains__(self, obj: object, /) -> bool:
@@ -138,27 +142,15 @@ class FoamFile(
         def __iter__(
             self,
         ) -> Iterator["Data | StandaloneData | FoamFile.SubDict | None"]:
-            for k, v in self._file._get_parsed().items():
-                if k != ("FoamFile",) or self._include_header:
-                    if v is ...:
-                        assert k
-
-                        yield FoamFile.SubDict(self._file, k)  # ty: ignore[invalid-argument-type]
-                    else:
-                        yield v
+            return (v for _, v in self._file.items(include_header=self._include_header))
 
         @override
         def __len__(self) -> int:
-            parsed = self._file._get_parsed()
-            return sum(
-                1
-                for k in parsed
-                if len(k) <= 1 and (k != ("FoamFile",) or self._include_header)
-            )
+            return sum(1 for _ in self)
 
         @override
         def __contains__(self, obj: object, /) -> bool:
-            return any(v == obj for v in iter(self))
+            return any(v == obj for v in self)
 
     class ItemsView(
         ItemsView[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]
@@ -181,28 +173,29 @@ class FoamFile(
         ) -> Iterator[
             tuple[str, "Data | FoamFile.SubDict | None"] | tuple[None, StandaloneData]
         ]:
-            for k, v in self._file._get_parsed().items():
-                if k != ("FoamFile",) or self._include_header:
-                    if not k:
-                        yield None, v  # ty: ignore[invalid-yield]
-                    else:
-                        yield (  # ty: ignore[invalid-yield]
-                            k[-1],
-                            v if v is not ... else FoamFile.SubDict(self._file, k),  # ty: ignore[invalid-argument-type]
-                        )
+            for keywords, value in self._file._get_parsed().items():
+                match keywords, value:
+                    case (), _:
+                        assert value is not ...
+                        yield None, value  # ty: ignore[invalid-yield]
+                    case ("FoamFile",), EllipsisType():
+                        if self._include_header:
+                            yield "FoamFile", FoamFile.SubDict(self._file, keywords)
+                    case ("FoamFile",), _:
+                        if self._include_header:
+                            yield "FoamFile", value  # ty: ignore[invalid-yield]
+                    case (k,), EllipsisType():
+                        yield k, FoamFile.SubDict(self._file, keywords)
+                    case (k,), _:
+                        yield k, value  # ty: ignore[invalid-yield]
 
         @override
         def __len__(self) -> int:
-            parsed = self._file._get_parsed()
-            return sum(
-                1
-                for k in parsed
-                if len(k) <= 1 and (k != ("FoamFile",) or self._include_header)
-            )
+            return sum(1 for _ in self)
 
         @override
         def __contains__(self, obj: object, /) -> bool:
-            return any(i == obj for i in iter(self))
+            return any(i == obj for i in self)
 
     class SubDict(
         MutableMultiMapping[str, "Data | FoamFile.SubDict | None"],
@@ -245,12 +238,13 @@ class FoamFile(
 
             @override
             def __iter__(self) -> Iterator[str]:
-                return self._subdict._file._iter(self._subdict._keywords)
+                for k in self._subdict._file._get_parsed():
+                    if k[:-1] == self._subdict._keywords:
+                        yield k[-1]
 
             @override
             def __len__(self) -> int:
-                parsed = self._subdict._file._get_parsed()
-                return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
+                return sum(1 for _ in self)
 
             @override
             def __contains__(self, obj: object, /) -> bool:
@@ -270,23 +264,15 @@ class FoamFile(
 
             @override
             def __iter__(self) -> Iterator["Data | FoamFile.SubDict | None"]:
-                for k, v in self._subdict._file._get_parsed().items():
-                    if k[:-1] == self._subdict._keywords:
-                        yield
-                        (
-                            v
-                            if v is not ...
-                            else FoamFile.SubDict(self._subdict._file, k)  # ty: ignore[invalid-argument-type]
-                        )
+                return (v for _, v in self._subdict.items())
 
             @override
             def __len__(self) -> int:
-                parsed = self._subdict._file._get_parsed()
-                return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
+                return sum(1 for _ in self)
 
             @override
             def __contains__(self, value: object, /) -> bool:
-                return any(v == value for v in iter(self))
+                return any(v == value for v in self)
 
         class ItemsView(ItemsView[str, "Data | FoamFile.SubDict | None"]):
             def __init__(self, _subdict: "FoamFile.SubDict", /) -> None:
@@ -310,12 +296,11 @@ class FoamFile(
 
             @override
             def __len__(self) -> int:
-                parsed = self._subdict._file._get_parsed()
-                return sum(1 for k in parsed if k[:-1] == self._subdict._keywords)
+                return sum(1 for _ in self)
 
             @override
             def __contains__(self, obj: object, /) -> bool:
-                return any(i == obj for i in iter(self))
+                return any(i == obj for i in self)
 
         def __init__(
             self, _file: "FoamFile", _keywords: tuple[str, *tuple[str, ...]], /
@@ -391,10 +376,8 @@ class FoamFile(
             del self._file[(*self._keywords, keyword)]
 
         @override
-        def __iter__(self) -> Iterator[str]:
-            for k in self._file._iter(self._keywords):
-                assert k is not None
-                yield k
+        def _iteritems(self) -> Iterator[tuple[str, "Data | FoamFile.SubDict | None"]]:
+            return self._file._iteritems(self._keywords)
 
         @override
         def __contains__(self, keyword: object, /) -> bool:
@@ -404,8 +387,7 @@ class FoamFile(
 
         @override
         def __len__(self) -> int:
-            parsed = self._file._get_parsed()
-            return sum(1 for k in parsed if k[:-1] == self._keywords)
+            return sum(1 for _ in self._iteritems())
 
         @override
         def keys(self) -> "FoamFile.SubDict.KeysView":
@@ -1073,32 +1055,31 @@ class FoamFile(
         return ret  # ty: ignore[invalid-return-type]
 
     @overload
-    def _iter(
+    def _iteritems(
         self,
         keywords: tuple[str, *tuple[str, ...]],
         /,
         *,
         include_header: bool = ...,
-    ) -> Iterator[str]: ...
+    ) -> Iterator[tuple[str, "Data | FoamFile.SubDict | None"]]: ...
 
     @overload
-    def _iter(
+    def _iteritems(
         self, keywords: tuple[str, ...] = ..., /, *, include_header: bool = ...
-    ) -> Iterator[str | None]: ...
-
-    def _iter(
-        self, keywords: tuple[str, ...] = (), /, *, include_header: bool = False
-    ) -> Iterator[str | None]:
-        yield from (
-            k[-1] if k else None
-            for k in self._get_parsed()
-            if k[:-1] == keywords and (k != ("FoamFile",) or include_header)
-        )
+    ) -> Iterator[
+        tuple[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]
+    ]: ...
 
     @override
-    def __iter__(self) -> Iterator[str | None]:
-        """Iterate over the top-level keys in the FoamFile (excluding the FoamFile header if present)."""
-        return self._iter()
+    def _iteritems(
+        self, keywords: tuple[str, ...] = (), /, *, include_header: bool = False
+    ) -> Iterator[tuple[str | None, "Data | StandaloneData | FoamFile.SubDict | None"]]:
+        for k, v in self._get_parsed().items():
+            if k[:-1] == keywords and (k != ("FoamFile",) or include_header):
+                yield (
+                    k[-1] if k else None,
+                    (v if v is not ... else FoamFile.SubDict(self, k)),  # ty: ignore[invalid-argument-type]
+                )
 
     @override
     def __contains__(self, keywords: object, /) -> bool:
@@ -1113,8 +1094,7 @@ class FoamFile(
     @override
     def __len__(self) -> int:
         """Return the number of top-level keywords in the FoamFile (excluding the FoamFile header if present)."""
-        parsed = self._get_parsed()
-        return sum(1 for k in parsed if len(k) <= 1 and k != ("FoamFile",))
+        return sum(1 for _ in self._iteritems())
 
     @override
     def keys(
