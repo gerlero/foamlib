@@ -42,12 +42,28 @@ type ListLike = Sequence[DataEntryLike | KeywordEntryLike | DictLike]
 type DimensionSetLike = DimensionSet | Sequence[int | float]
 """Any type that could be interpreted as a :class:`foamlib.DimensionSet`."""
 
-type DataEntry = str | int | float | bool | Dimensioned | DimensionSet | List | Field
+type DataEntry = (
+    str
+    | int
+    | float
+    | bool
+    | Dimensioned
+    | DimensionSet
+    | List
+    | Field
+    | np.ndarray[tuple[int], np.dtype[np.int32 | np.int64 | np.bool_]]
+)
 """
 A single OpenFOAM value.
 """
 type DataEntryLike = (
-    DataEntry | np.integer | np.floating | DimensionSetLike | ListLike | FieldLike
+    DataEntry
+    | np.integer
+    | np.floating
+    | DimensionSetLike
+    | ListLike
+    | FieldLike
+    | np.ndarray[tuple[int], np.dtype[np.integer | np.bool_]]
 )
 """Any type that could be interpreted as a :type:`DataEntry`."""
 

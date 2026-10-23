@@ -46,6 +46,13 @@ from ._parsing import FoamFileDecodeError, parse
 from ._util import add_to_mapping
 from .types import _NAMED_DIMENSION_IDS, Dimensioned, DimensionSet
 
+_ZONE_LIST_TYPES: dict[str, Literal["label", "bool"]] = {
+    "cellLabels": "label",
+    "faceLabels": "label",
+    "pointLabels": "label",
+    "flipMap": "bool",
+}
+
 
 def _write(fp: Writer[bytes] | None, data: bytes, /) -> None:
     if fp is not None:
@@ -301,6 +308,51 @@ def _encoded_dimension_set(
     return ret
 
 
+def _encoded_primitive_list(
+    value: object,
+    fp: Writer[bytes] | None = None,
+    /,
+    *,
+    type_: Literal["label", "bool"],
+    format_: Literal["ascii", "binary"] | None,
+) -> np.ndarray[tuple[int], np.dtype[np.int32 | np.int64 | np.bool_]]:
+    if not isinstance(value, (list, np.ndarray)):
+        msg = f"expected a List<{type_}>, got {value!r}"
+        raise TypeError(msg)
+    try:
+        arr = np.asarray(value)
+    except (TypeError, ValueError):
+        msg = f"expected a List<{type_}>, got {value!r}"
+        raise TypeError(msg) from None
+    if arr.ndim != 1 or (
+        arr.size
+        and (
+            arr.dtype.kind not in ("biu" if type_ == "bool" else "iu")
+            or (type_ == "bool" and not np.all((arr == 0) | (arr == 1)))
+            or (arr.dtype.kind == "u" and np.any(arr > np.iinfo(np.int64).max))
+        )
+    ):
+        msg = f"expected a List<{type_}>, got {value!r}"
+        raise TypeError(msg)
+    if type_ == "bool":
+        ret = arr.astype(np.bool_, copy=False)
+    elif arr.dtype in (np.int32, np.int64):
+        ret = arr
+    else:
+        ret = arr.astype(np.int64, copy=False)
+    _write(fp, f"List<{type_}> ".encode())
+    if format_ == "binary" and not len(ret):
+        _write(fp, b"0")
+    else:
+        _write_array(
+            fp,
+            ret.astype(np.uint8) if type_ == "bool" and format_ != "binary" else ret,
+            keywords=None,
+            format_=format_,
+        )
+    return ret
+
+
 def _encoded_plain_dict(
     value: DictLike,
     fp: Writer[bytes] | None = None,
@@ -345,7 +397,12 @@ def _encoded_plain_dict(
             case {}:
                 ret[k] = _encoded_plain_dict(v, item_fp, format_=format_)  # ty: ignore[invalid-argument-type]
             case _:
-                ret[k] = _encoded_data(v, item_fp, keywords=None, format_=format_)
+                ret[k] = _encoded_data(
+                    v,
+                    item_fp,
+                    keywords=(k,) if k in _ZONE_LIST_TYPES else None,
+                    format_=format_,
+                )
         _write_keyword_end(item_fp, k, v)
     _write(fp, b"}")
     return ret
@@ -462,7 +519,12 @@ def _encoded_keyword_entry(
             k = _encoded_data_entry(k, fp, keywords=None, format_=format_)
             if fp is not None:
                 fp.write(b" ")
-            v = _encoded_data(v, fp, keywords=None, format_=format_)
+            v = _encoded_data(
+                v,
+                fp,
+                keywords=(k,) if isinstance(k, str) and k in _ZONE_LIST_TYPES else None,
+                format_=format_,
+            )
             if fp is not None:
                 fp.write(b";")
             ret: KeywordEntry = (k, v)
@@ -488,9 +550,29 @@ def _encoded_list(
         case [*_]:
             ret: List = []
             _write(fp, b"(")
+            skip_next = False
             for i, v in enumerate(value):
-                if i:
+                if skip_next:
+                    skip_next = False
+                    continue
+                if ret:
                     _write(fp, b" ")
+                if (
+                    isinstance(v, str)
+                    and v in ("List<label>", "List<bool>")
+                    and i + 1 < len(value)
+                ):
+                    with contextlib.suppress(TypeError):
+                        ret.append(
+                            _encoded_primitive_list(
+                                value[i + 1],
+                                fp,
+                                type_="label" if v == "List<label>" else "bool",
+                                format_=format_,
+                            )
+                        )
+                        skip_next = True
+                        continue
                 match v:
                     case {}:
                         ret.append(_encoded_plain_dict(v, fp, format_=format_))  # ty: ignore[invalid-argument-type]
@@ -537,12 +619,24 @@ def _encoded_data_entry(
                 return ret
     if isinstance(value, bool):
         return _encoded_switch(value, fp)
+    if keywords and keywords[-1] in _ZONE_LIST_TYPES:
+        with contextlib.suppress(TypeError):
+            return _encoded_primitive_list(
+                value, fp, type_=_ZONE_LIST_TYPES[keywords[-1]], format_=format_
+            )
     if keywords is not None and expect_field(keywords):
         with contextlib.suppress(TypeError):
             return _encoded_field(value, fp, format_=format_)  # ty: ignore[invalid-argument-type]
     if keywords == ("dimensions",):
         with contextlib.suppress(TypeError):
             return _encoded_dimension_set(value, fp)  # ty: ignore[invalid-argument-type]
+    if isinstance(value, np.ndarray) and value.ndim == 1 and value.dtype.kind in "biu":
+        return _encoded_primitive_list(
+            value,
+            fp,
+            type_="bool" if value.dtype.kind == "b" else "label",
+            format_=format_,
+        )
     if isinstance(value, int):
         return _encoded_int(value, fp)
     if isinstance(value, float):
@@ -562,6 +656,10 @@ def _encoded_standalone_data_entry(
 ) -> StandaloneDataEntry:
     binary = format_ == "binary"
     match value:
+        case np.ndarray(shape=(0,), dtype=np.dtype(kind="i")):
+            return _encoded_primitive_list(value, fp, type_="label", format_=format_)
+        case np.ndarray(shape=(_,), dtype=np.dtype(kind="i", itemsize=8)) if binary:
+            return _encoded_primitive_list(value, fp, type_="label", format_=format_)
         case np.ndarray(shape=(_,), dtype=np.dtype(kind="i")):
             if not binary or value.dtype not in (np.int32, np.int64):
                 ret = value.astype(int, copy=False)
@@ -647,6 +745,20 @@ def _encoded_data(
         case DimensionSet():
             _write_dimension_set(fp, value)
             return value
+        case tuple((str("List<label>"), values)):
+            return _encoded_primitive_list(
+                values,
+                fp,
+                type_="label",
+                format_=format_,
+            )
+        case tuple((str("List<bool>"), values)):
+            return _encoded_primitive_list(
+                values,
+                fp,
+                type_="bool",
+                format_=format_,
+            )
         case tuple((_, _, *_)):
             ret = []
             for i, v in enumerate(value):
