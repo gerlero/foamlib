@@ -419,7 +419,7 @@ def _encoded_dict(
                 if k is None:
                     msg = "None keyword cannot have None value"
                     raise TypeError(msg)
-                ret = add_to_mapping(ret, k, None)  # ty: ignore[no-matching-overload]
+                ret = add_to_mapping(ret, k, None)
             case _:
                 if k is None:
                     ret[None] = _encoded_data(v, item_fp, keywords=(), format_=format_)
@@ -661,7 +661,7 @@ def _encoded_data(
             return tuple(ret)  # ty: ignore[invalid-return-type]
         case _:
             if keywords == ():
-                return _encoded_standalone_data_entry(value, fp, format_=format_)  # ty: ignore[invalid-argument-type]
+                return _encoded_standalone_data_entry(value, fp, format_=format_)
             return _encoded_data_entry(value, fp, keywords=keywords, format_=format_)  # ty: ignore[invalid-argument-type]
 
 

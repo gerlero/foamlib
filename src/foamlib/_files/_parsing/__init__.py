@@ -260,7 +260,7 @@ class ParsedFile(
                 assert keywords[-1] not in parent
                 parent[keywords[-1]] = {}
             elif len(keywords) == 1:
-                ret = add_to_mapping(ret, keywords[0], entry.data)  # ty: ignore[no-matching-overload]
+                ret = add_to_mapping(ret, keywords[0], entry.data)
             else:
                 grandparent: FileDict | SubDict = ret
                 for k in keywords[:-2]:
