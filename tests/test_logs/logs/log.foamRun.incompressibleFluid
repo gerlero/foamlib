@@ -1,0 +1,61 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  12
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 12-a4f91c3b7e02
+Exec   : foamRun -solver incompressibleFluid
+Date   : Oct 09 2026
+Time   : 12:00:00
+Host   : "workstation"
+PID    : 30001
+I/O    : uncollated
+Case   : /home/ivan/runs/bend
+nProcs : 1
+
+// * // * // * // * // * // * // * // * // * // * // * // * // * // * // * //
+Create time
+
+Create mesh for time = 0
+
+Selecting solver incompressibleFluid
+
+SIMPLE: convergence criteria
+    field p	 tolerance 0.0001
+    field U	 tolerance 0.0001
+
+Starting time loop
+
+Time = 1
+
+smoothSolver:  Solving for Ux, Initial residual = 1, Final residual = 0.0241, No Iterations 4
+GAMG:  Solving for p, Initial residual = 1, Final residual = 0.00881, No Iterations 5
+time step continuity errors : sum local = 1e-07, global = -1e-20, cumulative = -5e-19
+ExecutionTime = 0.41 s  ClockTime = 0 s
+
+Time = 2
+
+smoothSolver:  Solving for Ux, Initial residual = 0.188, Final residual = 0.00811, No Iterations 4
+GAMG:  Solving for p, Initial residual = 0.311, Final residual = 0.00241, No Iterations 5
+time step continuity errors : sum local = 1e-07, global = -1e-20, cumulative = -5e-19
+ExecutionTime = 0.78 s  ClockTime = 1 s
+
+Time = 182
+
+smoothSolver:  Solving for Ux, Initial residual = 0.000112, Final residual = 4.11e-06, No Iterations 4
+GAMG:  Solving for p, Initial residual = 0.000141, Final residual = 9.81e-07, No Iterations 5
+time step continuity errors : sum local = 1e-07, global = -1e-20, cumulative = -5e-19
+ExecutionTime = 71.20 s  ClockTime = 71 s
+
+Time = 183
+
+smoothSolver:  Solving for Ux, Initial residual = 9.81e-05, Final residual = 3.88e-06, No Iterations 4
+GAMG:  Solving for p, Initial residual = 9.88e-05, Final residual = 8.02e-07, No Iterations 5
+time step continuity errors : sum local = 1e-07, global = -1e-20, cumulative = -5e-19
+ExecutionTime = 71.60 s  ClockTime = 72 s
+
+SIMPLE solution converged in 183 iterations
+
+End

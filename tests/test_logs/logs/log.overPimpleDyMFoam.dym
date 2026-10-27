@@ -1,0 +1,60 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  12
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 12-a4f91c3b7e02
+Exec   : overPimpleDyMFoam -parallel
+Date   : Oct 09 2026
+Time   : 12:00:00
+Host   : "workstation"
+PID    : 30001
+I/O    : uncollated
+Case   : /home/ivan/runs/propeller
+nProcs : 8
+
+// * // * // * // * // * // * // * // * // * // * // * // * // * // * // * //
+Create time
+
+Create mesh for time = 0
+
+Courant Number mean: 0 max: 0
+
+Starting time loop
+
+Courant Number mean: 0.05275 max: 0.211
+deltaT = 0.001
+Time = 0.001
+
+Execution time for mesh.update() = 0.12 s
+PIMPLE: iteration 1
+PBiCGStab:  Solving for Ux, Initial residual = 0.4, Final residual = 4e-07, No Iterations 9
+PBiCGStab:  Solving for p, Initial residual = 0.6, Final residual = 6e-07, No Iterations 14
+time step continuity errors : sum local = 3e-09, global = -5e-20, cumulative = -1.5e-19
+ExecutionTime = 4.22 s  ClockTime = 4 s
+
+Courant Number mean: 0.097 max: 0.388
+deltaT = 0.001
+Time = 0.002
+
+Execution time for mesh.update() = 0.14 s
+PIMPLE: iteration 1
+PBiCGStab:  Solving for Ux, Initial residual = 0.2, Final residual = 2e-07, No Iterations 9
+PBiCGStab:  Solving for p, Initial residual = 0.3, Final residual = 3e-07, No Iterations 14
+time step continuity errors : sum local = 3e-09, global = -5e-20, cumulative = -1.5e-19
+ExecutionTime = 8.61 s  ClockTime = 8 s
+
+Courant Number mean: 0.1103 max: 0.441
+deltaT = 0.001
+Time = 0.003
+
+Execution time for mesh.update() = 0.11 s
+PIMPLE: iteration 1
+PBiCGStab:  Solving for Ux, Initial residual = 0.133333, Final residual = 1.33333e-07, No Iterations 9
+PBiCGStab:  Solving for p, Initial residual = 0.2, Final residual = 2e-07, No Iterations 14
+time step continuity errors : sum local = 3e-09, global = -5e-20, cumulative = -1.5e-19
+ExecutionTime = 12.92 s  ClockTime = 12 s
+
+End

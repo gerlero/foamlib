@@ -1,0 +1,81 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  12
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 12-a4f91c3b7e02
+Exec   : chtMultiRegionFoam
+Date   : Oct 09 2026
+Time   : 12:00:00
+Host   : "workstation"
+PID    : 30001
+I/O    : uncollated
+Case   : /home/ivan/runs/heatExchanger
+nProcs : 1
+
+// * // * // * // * // * // * // * // * // * // * // * // * // * // * // * //
+Create time
+
+Create fluid mesh for region fluid for time = 0
+
+Create solid mesh for region metal for time = 0
+
+Region: fluid Courant Number mean: 0 max: 0
+
+Starting time loop
+
+Time = 1
+
+Solving for fluid region fluid
+Region: fluid Courant Number mean: 0.047 max: 0.188
+DILUPBiCGStab:  Solving for h, Initial residual = 1, Final residual = 9.21e-08, No Iterations 3
+GAMG:  Solving for p_rgh, Initial residual = 1, Final residual = 8.11e-07, No Iterations 9
+time step continuity errors : sum local = 1.21e-06, global = -1e-19, cumulative = -1.11e-19
+Min/max T:300 348.2
+Solving for solid region metal
+DICPCG:  Solving for h, Initial residual = 1, Final residual = 4.22e-08, No Iterations 14
+Min/max T:300 351.8
+ExecutionTime = 3.11 s  ClockTime = 3 s
+
+Time = 2
+
+Solving for fluid region fluid
+Region: fluid Courant Number mean: 0.07775 max: 0.311
+DILUPBiCGStab:  Solving for h, Initial residual = 0.188, Final residual = 7.02e-08, No Iterations 3
+GAMG:  Solving for p_rgh, Initial residual = 0.311, Final residual = 6.11e-07, No Iterations 8
+time step continuity errors : sum local = 8.82e-07, global = -1e-19, cumulative = -2.01e-19
+Min/max T:301.2 352.4
+Solving for solid region metal
+DICPCG:  Solving for h, Initial residual = 0.0882, Final residual = 3.11e-08, No Iterations 12
+Min/max T:301.8 355.1
+ExecutionTime = 6.02 s  ClockTime = 6 s
+
+Time = 3
+
+Solving for fluid region fluid
+Region: fluid Courant Number mean: 0.1205 max: 0.482
+DILUPBiCGStab:  Solving for h, Initial residual = 0.0411, Final residual = 5.11e-08, No Iterations 2
+GAMG:  Solving for p_rgh, Initial residual = 0.0882, Final residual = 4.02e-07, No Iterations 7
+time step continuity errors : sum local = 5.11e-07, global = -1e-19, cumulative = -2.72e-19
+Min/max T:302.1 354.8
+Solving for solid region metal
+DICPCG:  Solving for h, Initial residual = 0.0211, Final residual = 2.02e-08, No Iterations 10
+Min/max T:302.4 357.2
+ExecutionTime = 8.91 s  ClockTime = 9 s
+
+Time = 4
+
+Solving for fluid region fluid
+Region: fluid Courant Number mean: 0.1527 max: 0.611
+DILUPBiCGStab:  Solving for h, Initial residual = 0.00982, Final residual = 3.88e-09, No Iterations 2
+GAMG:  Solving for p_rgh, Initial residual = 0.0211, Final residual = 2.11e-07, No Iterations 6
+time step continuity errors : sum local = 3.02e-07, global = -1e-19, cumulative = -3.22e-19
+Min/max T:302.8 355.9
+Solving for solid region metal
+DICPCG:  Solving for h, Initial residual = 0.00411, Final residual = 1.02e-09, No Iterations 9
+Min/max T:303.1 358.4
+ExecutionTime = 11.82 s  ClockTime = 12 s
+
+End

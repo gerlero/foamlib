@@ -1,0 +1,125 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _8993a5b1-20241231 OPENFOAM=2412 version=v2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : interFoam -parallel
+Date   : Oct 09 2026
+Time   : 16:40:11
+Host   : "node07"
+PID    : 71233
+I/O    : uncollated
+Case   : /home/ivan/runs/damBreak
+nProcs : 4
+Hosts  :
+(
+    (node07 4)
+)
+
+// * // * // * // * // * // * // * // * // * // * // * // * // * // * // * //
+Create time
+
+Create mesh for time = 0
+
+Reading field p_rgh
+
+Reading field U
+
+Reading/calculating face flux field phi
+
+Reading transportProperties
+
+Selecting incompressible transport model Newtonian
+Selecting turbulence model type RAS
+Selecting RAS turbulence model kEpsilon
+
+Reading g
+Calculating field g.h
+
+No MRF models present
+
+Courant Number mean: 0 max: 0
+Interface Courant Number mean: 0 max: 0
+
+Starting time loop
+
+Courant Number mean: 0.0211 max: 0.188
+Interface Courant Number mean: 0.00411 max: 0.0982
+deltaT = 0.001
+Time = 0.001
+
+PIMPLE: iteration 1
+MULES: Solving for alpha.water
+Phase-1 volume fraction = 0.241 Min(alpha.water) = 0 Max(alpha.water) = 1
+MULES: Solving for alpha.water
+Phase-1 volume fraction = 0.241 Min(alpha.water) = -2.11e-19 Max(alpha.water) = 1
+smoothSolver:  Solving for Ux, Initial residual = 1, Final residual = 6.11e-06, No Iterations 8
+smoothSolver:  Solving for Uy, Initial residual = 1, Final residual = 5.88e-06, No Iterations 8
+GAMG:  Solving for p_rgh, Initial residual = 1, Final residual = 7.21e-07, No Iterations 11
+time step continuity errors : sum local = 1.11e-09, global = -2.21e-20, cumulative = -2.21e-20
+smoothSolver:  Solving for epsilon, Initial residual = 0.188, Final residual = 1.02e-06, No Iterations 4
+smoothSolver:  Solving for k, Initial residual = 1, Final residual = 2.11e-06, No Iterations 5
+ExecutionTime = 2.41 s  ClockTime = 3 s
+
+Courant Number mean: 0.0388 max: 0.311
+Interface Courant Number mean: 0.00812 max: 0.211
+deltaT = 0.001
+Time = 0.002
+
+PIMPLE: iteration 1
+MULES: Solving for alpha.water
+Phase-1 volume fraction = 0.2409 Min(alpha.water) = -4.02e-18 Max(alpha.water) = 1.0000002
+MULES: Solving for alpha.water
+Phase-1 volume fraction = 0.2409 Min(alpha.water) = -1.11e-18 Max(alpha.water) = 1.0000001
+smoothSolver:  Solving for Ux, Initial residual = 0.211, Final residual = 4.11e-06, No Iterations 7
+smoothSolver:  Solving for Uy, Initial residual = 0.202, Final residual = 3.98e-06, No Iterations 7
+GAMG:  Solving for p_rgh, Initial residual = 0.388, Final residual = 6.02e-07, No Iterations 9
+time step continuity errors : sum local = 8.82e-10, global = -1.88e-20, cumulative = -4.09e-20
+smoothSolver:  Solving for epsilon, Initial residual = 0.0882, Final residual = 9.11e-07, No Iterations 3
+smoothSolver:  Solving for k, Initial residual = 0.211, Final residual = 1.82e-06, No Iterations 4
+ExecutionTime = 4.72 s  ClockTime = 5 s
+
+Courant Number mean: 0.0611 max: 0.482
+Interface Courant Number mean: 0.0122 max: 0.388
+deltaT = 0.001
+Time = 0.003
+
+PIMPLE: iteration 1
+MULES: Solving for alpha.water
+Phase-1 volume fraction = 0.2407 Min(alpha.water) = -8.11e-18 Max(alpha.water) = 1.0000008
+MULES: Solving for alpha.water
+Phase-1 volume fraction = 0.2407 Min(alpha.water) = -3.02e-18 Max(alpha.water) = 1.0000004
+smoothSolver:  Solving for Ux, Initial residual = 0.0982, Final residual = 2.11e-06, No Iterations 6
+smoothSolver:  Solving for Uy, Initial residual = 0.0941, Final residual = 2.02e-06, No Iterations 6
+GAMG:  Solving for p_rgh, Initial residual = 0.188, Final residual = 4.11e-07, No Iterations 8
+time step continuity errors : sum local = 5.11e-10, global = -1.02e-20, cumulative = -5.11e-20
+bounding epsilon, min: -1.02e+02 max: 4.11e+04 average: 2.02e+03
+smoothSolver:  Solving for epsilon, Initial residual = 0.0411, Final residual = 8.02e-07, No Iterations 3
+smoothSolver:  Solving for k, Initial residual = 0.0882, Final residual = 1.41e-06, No Iterations 4
+ExecutionTime = 7.02 s  ClockTime = 7 s
+
+Courant Number mean: 0.0812 max: 0.611
+Interface Courant Number mean: 0.0188 max: 0.542
+deltaT = 0.001
+Time = 0.004
+
+PIMPLE: iteration 1
+MULES: Solving for alpha.water
+Phase-1 volume fraction = 0.2404 Min(alpha.water) = -1.21e-17 Max(alpha.water) = 1.000002
+MULES: Solving for alpha.water
+Phase-1 volume fraction = 0.2404 Min(alpha.water) = -6.02e-18 Max(alpha.water) = 1.000001
+smoothSolver:  Solving for Ux, Initial residual = 0.0411, Final residual = 1.02e-06, No Iterations 5
+smoothSolver:  Solving for Uy, Initial residual = 0.0398, Final residual = 9.88e-07, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.0882, Final residual = 2.11e-07, No Iterations 7
+time step continuity errors : sum local = 3.02e-10, global = -8.11e-21, cumulative = -5.92e-20
+smoothSolver:  Solving for epsilon, Initial residual = 0.0211, Final residual = 6.11e-07, No Iterations 2
+smoothSolver:  Solving for k, Initial residual = 0.0411, Final residual = 1.02e-06, No Iterations 3
+ExecutionTime = 9.31 s  ClockTime = 9 s
+
+End
+
+Finalising parallel run

@@ -1,0 +1,41 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  12
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 12-a4f91c3b7e02
+Exec   : simpleFoam
+Date   : Oct 09 2026
+Time   : 08:14:02
+Host   : "workstation"
+PID    : 7781
+I/O    : uncollated
+Case   : /home/ivan/runs/duct
+nProcs : 1
+
+// * // * // * // * // * // * // * // * // * // * // * // * // * // * // * //
+Create time
+
+Create mesh for time = 0
+
+SIMPLE: convergence criteria
+    field p	 tolerance 0.0001
+    field U	 tolerance 0.0001
+
+Reading field p
+
+Reading field U
+
+
+--> FOAM FATAL IO ERROR:
+Cannot find patchField entry for outlet
+
+file: /home/ivan/runs/duct/0/U.boundaryField at line 42.
+
+    From function void Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::readField(const DimensionedField<Type, GeoMesh>&, const dictionary&)
+    in file fields/GeometricFields/GeometricField/GeometricBoundaryField.C at line 150.
+
+FOAM exiting
+

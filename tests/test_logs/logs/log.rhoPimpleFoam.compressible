@@ -1,0 +1,87 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  12
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 12-a4f91c3b7e02
+Exec   : rhoPimpleFoam
+Date   : Oct 09 2026
+Time   : 12:00:00
+Host   : "workstation"
+PID    : 30001
+I/O    : uncollated
+Case   : /home/ivan/runs/nozzle
+nProcs : 2
+
+// * // * // * // * // * // * // * // * // * // * // * // * // * // * // * //
+Create time
+
+Create mesh for time = 0
+
+Courant Number mean: 0 max: 0
+
+Starting time loop
+
+Courant Number mean: 0.05275 max: 0.211
+deltaT = 1e-05
+Time = 1e-05
+
+PIMPLE: iteration 1
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+smoothSolver:  Solving for Ux, Initial residual = 1, Final residual = 1e-06, No Iterations 5
+smoothSolver:  Solving for e, Initial residual = 1, Final residual = 1e-06, No Iterations 4
+Min/max T:288.15 301.2
+GAMG:  Solving for p, Initial residual = 1, Final residual = 1e-06, No Iterations 8
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 2e-09, global = -4e-20, cumulative = -1.6e-19
+rho max/min : 1.3012 1.1021
+ExecutionTime = 1.82 s  ClockTime = 1 s
+
+Courant Number mean: 0.097 max: 0.388
+deltaT = 1e-05
+Time = 2e-05
+
+PIMPLE: iteration 1
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+smoothSolver:  Solving for Ux, Initial residual = 0.188, Final residual = 1.88e-07, No Iterations 5
+smoothSolver:  Solving for e, Initial residual = 0.211, Final residual = 2.11e-07, No Iterations 4
+Min/max T:288.15 318.4
+GAMG:  Solving for p, Initial residual = 0.311, Final residual = 3.11e-07, No Iterations 8
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 2e-09, global = -4e-20, cumulative = -1.6e-19
+rho max/min : 1.3104 1.0988
+ExecutionTime = 3.61 s  ClockTime = 3 s
+
+Courant Number mean: 0.1205 max: 0.482
+deltaT = 1e-05
+Time = 3e-05
+
+PIMPLE: iteration 1
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+smoothSolver:  Solving for Ux, Initial residual = 0.0411, Final residual = 4.11e-08, No Iterations 5
+smoothSolver:  Solving for e, Initial residual = 0.0588, Final residual = 5.88e-08, No Iterations 4
+Min/max T:288.15 322.1
+GAMG:  Solving for p, Initial residual = 0.0882, Final residual = 8.82e-08, No Iterations 8
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 2e-09, global = -4e-20, cumulative = -1.6e-19
+rho max/min : 1.3208 1.0922
+ExecutionTime = 5.44 s  ClockTime = 5 s
+
+Courant Number mean: 0.1353 max: 0.541
+deltaT = 1e-05
+Time = 4e-05
+
+PIMPLE: iteration 1
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+smoothSolver:  Solving for Ux, Initial residual = 0.00982, Final residual = 9.82e-09, No Iterations 5
+smoothSolver:  Solving for e, Initial residual = 0.0122, Final residual = 1.22e-08, No Iterations 4
+Min/max T:288.15 324.8
+GAMG:  Solving for p, Initial residual = 0.0211, Final residual = 2.11e-08, No Iterations 8
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 2e-09, global = -4e-20, cumulative = -1.6e-19
+rho max/min : 1.3251 1.0901
+ExecutionTime = 7.22 s  ClockTime = 7 s
+
+End
