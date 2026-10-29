@@ -1,0 +1,97 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  12
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 12-a4f91c3b7e02
+Exec   : simpleFoam
+Date   : Oct 09 2026
+Time   : 09:11:42
+Host   : "workstation"
+PID    : 9931
+I/O    : uncollated
+Case   : /home/ivan/runs/pipe_steady
+nProcs : 1
+
+// * // * // * // * // * // * // * // * // * // * // * // * // * // * // * //
+Create time
+
+Create mesh for time = 0
+
+SIMPLE: convergence criteria
+    field p	 tolerance 0.0001
+    field U	 tolerance 0.0001
+    field "(k|epsilon)"	 tolerance 0.0001
+
+Reading field p
+
+Reading field U
+
+Selecting incompressible transport model Newtonian
+Selecting turbulence model type RAS
+Selecting RAS turbulence model kEpsilon
+
+Starting time loop
+
+Time = 1
+
+smoothSolver:  Solving for Ux, Initial residual = 1, Final residual = 0.0234, No Iterations 4
+smoothSolver:  Solving for Uy, Initial residual = 1, Final residual = 0.0221, No Iterations 4
+GAMG:  Solving for p, Initial residual = 1, Final residual = 0.00881, No Iterations 6
+time step continuity errors : sum local = 0.00211, global = -1.02e-19, cumulative = -1.02e-19
+smoothSolver:  Solving for epsilon, Initial residual = 0.411, Final residual = 0.0188, No Iterations 3
+smoothSolver:  Solving for k, Initial residual = 1, Final residual = 0.0241, No Iterations 4
+ExecutionTime = 0.41 s  ClockTime = 0 s
+
+Time = 2
+
+smoothSolver:  Solving for Ux, Initial residual = 0.188, Final residual = 0.00811, No Iterations 4
+smoothSolver:  Solving for Uy, Initial residual = 0.179, Final residual = 0.00788, No Iterations 4
+GAMG:  Solving for p, Initial residual = 0.311, Final residual = 0.00241, No Iterations 5
+time step continuity errors : sum local = 0.000881, global = -2.02e-19, cumulative = -3.04e-19
+smoothSolver:  Solving for epsilon, Initial residual = 0.0988, Final residual = 0.00411, No Iterations 3
+smoothSolver:  Solving for k, Initial residual = 0.211, Final residual = 0.00588, No Iterations 3
+ExecutionTime = 0.79 s  ClockTime = 1 s
+
+Time = 3
+
+smoothSolver:  Solving for Ux, Initial residual = 0.0882, Final residual = 0.00302, No Iterations 3
+smoothSolver:  Solving for Uy, Initial residual = 0.0841, Final residual = 0.00288, No Iterations 3
+GAMG:  Solving for p, Initial residual = 0.141, Final residual = 0.000981, No Iterations 5
+time step continuity errors : sum local = 0.000302, global = -1.11e-19, cumulative = -4.15e-19
+smoothSolver:  Solving for epsilon, Initial residual = 0.0411, Final residual = 0.00188, No Iterations 2
+smoothSolver:  Solving for k, Initial residual = 0.0882, Final residual = 0.00211, No Iterations 3
+ExecutionTime = 1.18 s  ClockTime = 1 s
+
+Time = 246
+
+smoothSolver:  Solving for Ux, Initial residual = 0.000112, Final residual = 4.11e-06, No Iterations 2
+smoothSolver:  Solving for Uy, Initial residual = 0.000108, Final residual = 3.98e-06, No Iterations 2
+GAMG:  Solving for p, Initial residual = 0.000141, Final residual = 9.81e-07, No Iterations 3
+time step continuity errors : sum local = 3.02e-07, global = -1.02e-20, cumulative = -8.11e-19
+smoothSolver:  Solving for epsilon, Initial residual = 4.88e-05, Final residual = 1.88e-06, No Iterations 2
+smoothSolver:  Solving for k, Initial residual = 9.02e-05, Final residual = 2.11e-06, No Iterations 2
+ExecutionTime = 96.41 s  ClockTime = 97 s
+
+Time = 247
+
+smoothSolver:  Solving for Ux, Initial residual = 9.81e-05, Final residual = 3.88e-06, No Iterations 2
+smoothSolver:  Solving for Uy, Initial residual = 9.42e-05, Final residual = 3.71e-06, No Iterations 2
+GAMG:  Solving for p, Initial residual = 9.88e-05, Final residual = 8.02e-07, No Iterations 3
+time step continuity errors : sum local = 2.41e-07, global = -9.11e-21, cumulative = -8.20e-19
+smoothSolver:  Solving for epsilon, Initial residual = 4.11e-05, Final residual = 1.42e-06, No Iterations 2
+smoothSolver:  Solving for k, Initial residual = 8.11e-05, Final residual = 1.88e-06, No Iterations 2
+ExecutionTime = 96.82 s  ClockTime = 97 s
+
+SIMPLE solution converged in 247 iterations
+
+streamLine streamLines write:
+    seeded 100 particles
+    Tracks:100
+    Total samples:12004
+    Writing data to "/home/ivan/runs/pipe_steady/postProcessing/sets/streamLines/247"
+
+End
+

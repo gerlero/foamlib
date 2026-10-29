@@ -1,0 +1,114 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  12
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 12-a4f91c3b7e02
+Exec   : reactingFoam
+Date   : Oct 09 2026
+Time   : 12:00:00
+Host   : "workstation"
+PID    : 30001
+I/O    : uncollated
+Case   : /home/ivan/runs/burner
+nProcs : 4
+
+// * // * // * // * // * // * // * // * // * // * // * // * // * // * // * //
+Create time
+
+Create mesh for time = 0
+
+Courant Number mean: 0 max: 0
+
+Starting time loop
+
+Courant Number mean: 0.047 max: 0.188
+deltaT = 1e-05
+Time = 1e-05
+
+PIMPLE: iteration 1
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+smoothSolver:  Solving for Ux, Initial residual = 0.4, Final residual = 4e-07, No Iterations 5
+smoothSolver:  Solving for Uy, Initial residual = 0.38, Final residual = 3.8e-07, No Iterations 5
+Solving chemistry
+smoothSolver:  Solving for CH4, Initial residual = 0.2, Final residual = 1e-07, No Iterations 2
+smoothSolver:  Solving for O2, Initial residual = 0.21, Final residual = 1.1e-07, No Iterations 2
+smoothSolver:  Solving for CO2, Initial residual = 0.22, Final residual = 1.2e-07, No Iterations 2
+smoothSolver:  Solving for H2O, Initial residual = 0.23, Final residual = 1.3e-07, No Iterations 2
+smoothSolver:  Solving for N2, Initial residual = 0.24, Final residual = 1.4e-07, No Iterations 2
+smoothSolver:  Solving for CO, Initial residual = 0.25, Final residual = 1.5e-07, No Iterations 2
+smoothSolver:  Solving for H2, Initial residual = 0.26, Final residual = 1.6e-07, No Iterations 2
+smoothSolver:  Solving for OH, Initial residual = 0.27, Final residual = 1.7e-07, No Iterations 2
+smoothSolver:  Solving for O, Initial residual = 0.28, Final residual = 1.8e-07, No Iterations 2
+smoothSolver:  Solving for H, Initial residual = 0.29, Final residual = 1.9e-07, No Iterations 2
+smoothSolver:  Solving for HO2, Initial residual = 0.3, Final residual = 2e-07, No Iterations 2
+smoothSolver:  Solving for H2O2, Initial residual = 0.31, Final residual = 2.1e-07, No Iterations 2
+smoothSolver:  Solving for CH3, Initial residual = 0.32, Final residual = 2.2e-07, No Iterations 2
+smoothSolver:  Solving for CH2O, Initial residual = 0.33, Final residual = 2.3e-07, No Iterations 2
+smoothSolver:  Solving for h, Initial residual = 0.3, Final residual = 3e-07, No Iterations 3
+Min/max T:293 1840.2
+GAMG:  Solving for p, Initial residual = 0.5, Final residual = 5e-07, No Iterations 9
+time step continuity errors : sum local = 2e-09, global = -4e-20, cumulative = -1.2e-19
+ExecutionTime = 14.20 s  ClockTime = 14 s
+
+Courant Number mean: 0.07775 max: 0.311
+deltaT = 1e-05
+Time = 2e-05
+
+PIMPLE: iteration 1
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+smoothSolver:  Solving for Ux, Initial residual = 0.04, Final residual = 4e-08, No Iterations 5
+smoothSolver:  Solving for Uy, Initial residual = 0.038, Final residual = 3.8e-08, No Iterations 5
+Solving chemistry
+smoothSolver:  Solving for CH4, Initial residual = 0.02, Final residual = 0.05, No Iterations 2
+smoothSolver:  Solving for O2, Initial residual = 0.021, Final residual = 1.1e-08, No Iterations 2
+smoothSolver:  Solving for CO2, Initial residual = 0.022, Final residual = 1.2e-08, No Iterations 2
+smoothSolver:  Solving for H2O, Initial residual = 0.023, Final residual = 1.3e-08, No Iterations 2
+smoothSolver:  Solving for N2, Initial residual = 0.024, Final residual = 1.4e-08, No Iterations 2
+smoothSolver:  Solving for CO, Initial residual = 0.025, Final residual = 1.5e-08, No Iterations 2
+smoothSolver:  Solving for H2, Initial residual = 0.026, Final residual = 1.6e-08, No Iterations 2
+smoothSolver:  Solving for OH, Initial residual = 0.027, Final residual = 1.7e-08, No Iterations 2
+smoothSolver:  Solving for O, Initial residual = 0.028, Final residual = 1.8e-08, No Iterations 2
+smoothSolver:  Solving for H, Initial residual = 0.029, Final residual = 1.9e-08, No Iterations 2
+smoothSolver:  Solving for HO2, Initial residual = 0.03, Final residual = 2e-08, No Iterations 2
+smoothSolver:  Solving for H2O2, Initial residual = 0.031, Final residual = 2.1e-08, No Iterations 2
+smoothSolver:  Solving for CH3, Initial residual = 0.032, Final residual = 2.2e-08, No Iterations 2
+smoothSolver:  Solving for CH2O, Initial residual = 0.033, Final residual = 2.3e-08, No Iterations 2
+smoothSolver:  Solving for h, Initial residual = 0.03, Final residual = 3e-08, No Iterations 3
+Min/max T:293 2050.8
+GAMG:  Solving for p, Initial residual = 0.05, Final residual = 5e-08, No Iterations 9
+time step continuity errors : sum local = 2e-09, global = -4e-20, cumulative = -1.2e-19
+ExecutionTime = 28.40 s  ClockTime = 28 s
+
+Courant Number mean: 0.103 max: 0.412
+deltaT = 1e-05
+Time = 3e-05
+
+PIMPLE: iteration 1
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+smoothSolver:  Solving for Ux, Initial residual = 0.004, Final residual = 4e-09, No Iterations 5
+smoothSolver:  Solving for Uy, Initial residual = 0.0038, Final residual = 3.8e-09, No Iterations 5
+Solving chemistry
+smoothSolver:  Solving for CH4, Initial residual = 0.002, Final residual = 2.5, No Iterations 2
+smoothSolver:  Solving for O2, Initial residual = 0.0021, Final residual = 1.1e-09, No Iterations 2
+smoothSolver:  Solving for CO2, Initial residual = 0.0022, Final residual = 1.2e-09, No Iterations 2
+smoothSolver:  Solving for H2O, Initial residual = 0.0023, Final residual = 1.3e-09, No Iterations 2
+smoothSolver:  Solving for N2, Initial residual = 0.0024, Final residual = 1.4e-09, No Iterations 2
+smoothSolver:  Solving for CO, Initial residual = 0.0025, Final residual = 1.5e-09, No Iterations 2
+smoothSolver:  Solving for H2, Initial residual = 0.0026, Final residual = 1.6e-09, No Iterations 2
+smoothSolver:  Solving for OH, Initial residual = 0.0027, Final residual = 1.7e-09, No Iterations 2
+smoothSolver:  Solving for O, Initial residual = 0.0028, Final residual = 1.8e-09, No Iterations 2
+smoothSolver:  Solving for H, Initial residual = 0.0029, Final residual = 1.9e-09, No Iterations 2
+smoothSolver:  Solving for HO2, Initial residual = 0.003, Final residual = 2e-09, No Iterations 2
+smoothSolver:  Solving for H2O2, Initial residual = 0.0031, Final residual = 2.1e-09, No Iterations 2
+smoothSolver:  Solving for CH3, Initial residual = 0.0032, Final residual = 2.2e-09, No Iterations 2
+smoothSolver:  Solving for CH2O, Initial residual = 0.0033, Final residual = 2.3e-09, No Iterations 2
+smoothSolver:  Solving for h, Initial residual = 0.003, Final residual = 3e-09, No Iterations 3
+Min/max T:293 2150.4
+GAMG:  Solving for p, Initial residual = 0.005, Final residual = 5e-09, No Iterations 9
+time step continuity errors : sum local = 2e-09, global = -4e-20, cumulative = -1.2e-19
+ExecutionTime = 42.60 s  ClockTime = 42 s
+
+End

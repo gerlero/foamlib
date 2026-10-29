@@ -1,0 +1,168 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  12
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 12-a4f91c3b7e02
+Exec   : pimpleFoam -parallel
+Date   : Oct 09 2026
+Time   : 14:22:08
+Host   : "node01"
+PID    : 48217
+I/O    : uncollated
+Case   : /home/ivan/runs/mixer_v3
+nProcs : 8
+Hosts  :
+(
+    (node01 8)
+)
+sigFpe : Enabling floating point exception trapping (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * // * // * // * // * // * // * // * // * // * // * // * // * // * // * //
+Create time
+
+Create mesh for time = 0
+
+PIMPLE: max iterations = 2
+
+Reading field p
+
+Reading field U
+
+Reading/calculating face flux field phi
+
+Selecting incompressible transport model Newtonian
+Selecting turbulence model type RAS
+Selecting RAS turbulence model kEpsilon
+No MRF models present
+
+No finite volume options present
+
+Courant Number mean: 0 max: 0
+
+Starting time loop
+
+Courant Number mean: 0.0241 max: 0.312
+deltaT = 0.001
+Time = 0.001
+
+PIMPLE: iteration 1
+smoothSolver:  Solving for Ux, Initial residual = 1, Final residual = 7.21043e-06, No Iterations 14
+smoothSolver:  Solving for Uy, Initial residual = 1, Final residual = 6.88211e-06, No Iterations 13
+smoothSolver:  Solving for Uz, Initial residual = 0, Final residual = 0, No Iterations 0
+GAMG:  Solving for p, Initial residual = 1, Final residual = 8.90511e-07, No Iterations 9
+time step continuity errors : sum local = 2.11e-09, global = -4.02e-20, cumulative = -4.02e-20
+PIMPLE: iteration 2
+smoothSolver:  Solving for Ux, Initial residual = 0.0241, Final residual = 4.11e-07, No Iterations 8
+smoothSolver:  Solving for Uy, Initial residual = 0.0233, Final residual = 3.97e-07, No Iterations 8
+GAMG:  Solving for p, Initial residual = 0.0812, Final residual = 7.02e-07, No Iterations 6
+time step continuity errors : sum local = 1.88e-10, global = -3.11e-20, cumulative = -7.13e-20
+smoothSolver:  Solving for epsilon, Initial residual = 0.142, Final residual = 1.02e-06, No Iterations 4
+smoothSolver:  Solving for k, Initial residual = 1, Final residual = 2.41e-06, No Iterations 5
+ExecutionTime = 1.82 s  ClockTime = 2 s
+
+Courant Number mean: 0.0388 max: 0.541
+deltaT = 0.001
+Time = 0.002
+
+PIMPLE: iteration 1
+smoothSolver:  Solving for Ux, Initial residual = 0.188, Final residual = 5.02e-06, No Iterations 12
+smoothSolver:  Solving for Uy, Initial residual = 0.179, Final residual = 4.88e-06, No Iterations 12
+GAMG:  Solving for p, Initial residual = 0.311, Final residual = 9.11e-07, No Iterations 8
+time step continuity errors : sum local = 3.02e-09, global = -5.11e-20, cumulative = -1.224e-19
+PIMPLE: iteration 2
+smoothSolver:  Solving for Ux, Initial residual = 0.0302, Final residual = 6.11e-07, No Iterations 7
+smoothSolver:  Solving for Uy, Initial residual = 0.0291, Final residual = 5.92e-07, No Iterations 7
+GAMG:  Solving for p, Initial residual = 0.0902, Final residual = 8.11e-07, No Iterations 6
+time step continuity errors : sum local = 2.01e-10, global = -2.88e-20, cumulative = -1.512e-19
+smoothSolver:  Solving for epsilon, Initial residual = 0.0881, Final residual = 9.02e-07, No Iterations 4
+smoothSolver:  Solving for k, Initial residual = 0.211, Final residual = 1.88e-06, No Iterations 5
+ExecutionTime = 3.61 s  ClockTime = 4 s
+
+Courant Number mean: 0.0912 max: 1.882
+deltaT = 0.001
+Time = 0.003
+
+PIMPLE: iteration 1
+smoothSolver:  Solving for Ux, Initial residual = 0.402, Final residual = 8.11e-06, No Iterations 18
+smoothSolver:  Solving for Uy, Initial residual = 0.388, Final residual = 7.92e-06, No Iterations 18
+GAMG:  Solving for p, Initial residual = 0.688, Final residual = 9.88e-07, No Iterations 14
+time step continuity errors : sum local = 8.11e-08, global = -1.02e-19, cumulative = -2.532e-19
+PIMPLE: iteration 2
+smoothSolver:  Solving for Ux, Initial residual = 0.112, Final residual = 9.02e-07, No Iterations 11
+smoothSolver:  Solving for Uy, Initial residual = 0.108, Final residual = 8.88e-07, No Iterations 11
+GAMG:  Solving for p, Initial residual = 0.288, Final residual = 9.11e-07, No Iterations 12
+time step continuity errors : sum local = 1.11e-08, global = -8.02e-20, cumulative = -3.332e-19
+bounding epsilon, min: -2.41e+03 max: 8.81e+05 average: 1.02e+04
+smoothSolver:  Solving for epsilon, Initial residual = 0.411, Final residual = 2.02e-06, No Iterations 6
+bounding k, min: -18.2 max: 4.11e+03 average: 221
+smoothSolver:  Solving for k, Initial residual = 0.602, Final residual = 4.11e-06, No Iterations 7
+ExecutionTime = 5.88 s  ClockTime = 6 s
+
+Courant Number mean: 0.411 max: 12.88
+deltaT = 0.001
+Time = 0.004
+
+PIMPLE: iteration 1
+smoothSolver:  Solving for Ux, Initial residual = 0.811, Final residual = 9.88e-05, No Iterations 41
+smoothSolver:  Solving for Uy, Initial residual = 0.802, Final residual = 9.11e-05, No Iterations 41
+GAMG:  Solving for p, Initial residual = 0.941, Final residual = 8.02e-06, No Iterations 48
+time step continuity errors : sum local = 4.11e-06, global = -2.02e-18, cumulative = -2.353e-18
+PIMPLE: iteration 2
+smoothSolver:  Solving for Ux, Initial residual = 0.488, Final residual = 7.11e-06, No Iterations 32
+smoothSolver:  Solving for Uy, Initial residual = 0.471, Final residual = 6.88e-06, No Iterations 32
+GAMG:  Solving for p, Initial residual = 0.711, Final residual = 9.02e-06, No Iterations 44
+time step continuity errors : sum local = 2.88e-06, global = -1.11e-18, cumulative = -3.463e-18
+bounding epsilon, min: -8.11e+05 max: 2.02e+08 average: 4.11e+06
+smoothSolver:  Solving for epsilon, Initial residual = 0.881, Final residual = 8.11e-06, No Iterations 12
+bounding k, min: -2.02e+03 max: 8.81e+05 average: 1.11e+04
+smoothSolver:  Solving for k, Initial residual = 0.911, Final residual = 9.88e-06, No Iterations 14
+ExecutionTime = 9.41 s  ClockTime = 10 s
+
+Courant Number mean: 4.88 max: 188.2
+deltaT = 0.001
+Time = 0.005
+
+PIMPLE: iteration 1
+smoothSolver:  Solving for Ux, Initial residual = 0.988, Final residual = 0.00411, No Iterations 1000
+smoothSolver:  Solving for Uy, Initial residual = 0.991, Final residual = 0.00388, No Iterations 1000
+GAMG:  Solving for p, Initial residual = 0.998, Final residual = 0.0211, No Iterations 1000
+time step continuity errors : sum local = 8.11e-03, global = -4.02e-16, cumulative = -4.023e-16
+PIMPLE: iteration 2
+smoothSolver:  Solving for Ux, Initial residual = 0.994, Final residual = 0.0188, No Iterations 1000
+smoothSolver:  Solving for Uy, Initial residual = 0.996, Final residual = 0.0211, No Iterations 1000
+GAMG:  Solving for p, Initial residual = 0.999, Final residual = 0.0882, No Iterations 1000
+time step continuity errors : sum local = 4.11e-02, global = -8.11e-16, cumulative = -1.2133e-15
+bounding epsilon, min: -4.02e+12 max: 8.11e+14 average: 2.02e+13
+smoothSolver:  Solving for epsilon, Initial residual = 0.998, Final residual = 0.0411, No Iterations 1000
+bounding k, min: -8.81e+08 max: 4.02e+11 average: 1.02e+10
+smoothSolver:  Solving for k, Initial residual = 0.999, Final residual = 0.0882, No Iterations 1000
+ExecutionTime = 48.22 s  ClockTime = 49 s
+
+Courant Number mean: 2.02e+03 max: 4.1182e+04
+deltaT = 0.001
+Time = 0.006
+
+PIMPLE: iteration 1
+smoothSolver:  Solving for Ux, Initial residual = 1, Final residual = 1e+30, No Iterations 1000
+#0  Foam::error::printStack(Foam::Ostream&) at ??:?
+#1  Foam::sigFpe::sigHandler(int) at ??:?
+#2  ? in /lib/x86_64-linux-gnu/libc.so.6
+#3  Foam::GAMGSolver::scale(Foam::Field<double>&, Foam::Field<double>&) const at ??:?
+#4  Foam::GAMGSolver::Vcycle() const at ??:?
+#5  Foam::GAMGSolver::solve(Foam::Field<double>&) const at ??:?
+#6  ? at ??:?
+#7  __libc_start_main in /lib/x86_64-linux-gnu/libc.so.6
+#8  ? at ??:?
+[node01:48217] *** Process received signal ***
+[node01:48217] Signal: Floating point exception (8)
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+mpirun detected that one or more processes exited with non-zero status.
+--------------------------------------------------------------------------
