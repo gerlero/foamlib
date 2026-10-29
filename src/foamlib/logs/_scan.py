@@ -69,6 +69,26 @@ _CLOCK_TIME = re.compile(rf"ClockTime\s*=\s*({_FLOAT})")
 _CONVERGED = re.compile(r"solution converged in (\d+) iterations")
 _FATAL_IO = re.compile(r"FOAM FATAL IO ERROR")
 _FATAL = re.compile(r"FOAM FATAL ERROR")
+#: Whether the run is steady is a property of the case (``ddtSchemes``), not of
+#: the log, so these only collect evidence. The PIMPLE loop is used for steady
+#: runs too ("PIMPLE: Operating solver in steady-state mode"), and Courant is
+#: not printed by every transient solver, so neither "PIMPLE" nor the absence
+#: of Courant decides anything on its own. The prefix matters: potentialFoam
+#: prints "potentialFlow: Operating solver in PISO mode".
+_STEADY_MODE = re.compile(
+    r"^(?:PIMPLE|SIMPLE): Operating solver in (?:steady-state|SIMPLE) mode"
+)
+_TRANSIENT_MODE = re.compile(
+    r"^(?:PIMPLE|PISO): Operating solver in (?:transient|PISO) mode|^PISO:"
+)
+#: weaker: see SIMPLE_BUT_TRANSIENT
+_SIMPLE = re.compile(r"^SIMPLE(?::| solution converged)")
+
+#: Transient solvers that drive their non-orthogonal loop with simpleControl
+#: and so print "SIMPLE:" lines whatever ``ddtSchemes`` says.
+SIMPLE_BUT_TRANSIENT: Final[frozenset[str]] = frozenset(
+    {"laplacianFoam", "scalarTransportFoam"}
+)
 
 #: OpenFOAM utilities that produce a log but never a time loop. Keyed off the
 #: Exec name, which parses reliably, rather than off guessed output formats.
@@ -179,7 +199,7 @@ def _new_step() -> dict[str, Any]:
 
 def scan(lines: Iterator[str]) -> dict[str, Any]:
     """One pass over the lines. Returns raw state; interpretation happens in
-    :mod:`foamlib._logs.logs`."""
+    :mod:`foamlib.logs._log`."""
     st: dict[str, Any] = {
         "solver": None,
         "solver_modules": [],
@@ -215,6 +235,14 @@ def scan(lines: Iterator[str]) -> dict[str, Any]:
         "pending_courant": None,
         "pending_icourant": None,
         "pending_delta_t": None,
+        "first_initial": {},
+        "last_initial": {},
+        # per step: (time, [(key, bare name, initial, final, iterations), ...])
+        "solves": [],
+        "solves_in_step": [],
+        "steady_evidence": False,
+        "simple_lines": False,
+        "transient_evidence": False,
     }
 
     def close_step() -> None:
@@ -224,6 +252,9 @@ def scan(lines: Iterator[str]) -> dict[str, Any]:
         for key, val in st["solves_this_step"].items():
             st["last_finals"].setdefault(key, []).append(val)
         st["solves_this_step"] = {}
+        if st["solves_in_step"]:
+            st["solves"].append((st["cur"]["time"], tuple(st["solves_in_step"])))
+        st["solves_in_step"] = []
 
     def open_step(value: float | None) -> None:
         close_step()
@@ -255,7 +286,13 @@ def scan(lines: Iterator[str]) -> dict[str, Any]:
                 st["field_seen"].add(key)
                 st["fields"].append(key)
             st["cur"]["n_solves"] += 1
-            st["solves_this_step"][key] = _num(m.group(3))
+            initial, final = _num(m.group(2)), _num(m.group(3))
+            st["solves_this_step"][key] = final
+            st["first_initial"].setdefault(key, initial)
+            st["last_initial"][key] = initial
+            st["solves_in_step"].append(
+                (key, m.group(1), initial, final, int(m.group(4)))
+            )
             continue
 
         if m := _REGION.match(line):
@@ -268,6 +305,7 @@ def scan(lines: Iterator[str]) -> dict[str, Any]:
             # Courant and deltaT print BEFORE the "Time =" line they belong to,
             # so they are held until that step opens.
             val = _num(m.group(2))
+            st["transient_evidence"] = True
             st["pending_courant"] = val
             if val is not None and (
                 st["courant_max"] is None or val > st["courant_max"]
@@ -279,6 +317,7 @@ def scan(lines: Iterator[str]) -> dict[str, Any]:
             # Unlike the plain Courant line, the per-region one is printed
             # INSIDE the step it describes, so it lands on the open step.
             val = _num(m.group(3))
+            st["transient_evidence"] = True
             if st["cur"] is not None:
                 st["cur"]["courant_max"] = val
             else:
@@ -299,6 +338,7 @@ def scan(lines: Iterator[str]) -> dict[str, Any]:
 
         if m := _DELTAT.match(line):
             st["pending_delta_t"] = _num(m.group(1))
+            st["transient_evidence"] = True
             continue
 
         if m := _PHASE.search(line):
@@ -353,6 +393,13 @@ def scan(lines: Iterator[str]) -> dict[str, Any]:
                 if m2 := _CLOCK_TIME.search(line):
                     st["cur"]["clock_time"] = _num(m2.group(1))
             continue
+
+        if _STEADY_MODE.match(line):
+            st["steady_evidence"] = True
+        elif _TRANSIENT_MODE.match(line):
+            st["transient_evidence"] = True
+        elif _SIMPLE.match(line):
+            st["simple_lines"] = True
 
         if (m := _CONVERGED.search(line)) and st["converged_in"] is None:
             st["converged_in"] = int(m.group(1))
@@ -440,84 +487,3 @@ def resolve_solver(st: dict[str, Any]) -> str:
     if st["solver_modules"]:
         return str(st["solver_modules"][0])
     return first
-
-
-def residual_rows(lines: Iterator[str], field: str) -> list[dict[str, Any]]:
-    """One row per time step, from the last solve of ``field`` in that step."""
-    rows: list[dict[str, Any]] = []
-    time: float | None = None
-    first_initial: float | None = None
-    final: float | None = None
-    iterations = 0
-    seen = False
-    region: str | None = None
-
-    for raw in lines:
-        line = raw.strip()
-        if m := _TIME.match(line):
-            if time is not None and seen:
-                rows.append(
-                    {
-                        "time": time,
-                        "initial": first_initial,
-                        "final": final,
-                        "iterations": iterations,
-                    }
-                )
-            time = _num(m.group(1))
-            first_initial = final = None
-            iterations = 0
-            seen = False
-            region = None
-            continue
-        if m := _REGION.match(line):
-            region = m.group(1)
-            continue
-        if m := _SOLVE.search(line):
-            key = f"{region}/{m.group(1)}" if region else m.group(1)
-            if key in {field, m.group(1)}:
-                seen = True
-                if first_initial is None:
-                    first_initial = _num(m.group(2))
-                final = _num(m.group(3))
-                iterations = int(m.group(4))
-
-    if time is not None and seen:
-        rows.append(
-            {
-                "time": time,
-                "initial": first_initial,
-                "final": final,
-                "iterations": iterations,
-            }
-        )
-    return rows
-
-
-def initial_residuals(
-    lines: Iterator[str], keys: frozenset[str]
-) -> tuple[dict[str, float | None], dict[str, float | None]]:
-    """First and last *initial* residual for each key, in one pass.
-
-    Kept separate from :func:`scan` so the main pass stays a single sweep; the
-    caller only needs this when it actually wants the initial residuals.
-    """
-    first: dict[str, float | None] = dict.fromkeys(keys)
-    last: dict[str, float | None] = dict.fromkeys(keys)
-    region: str | None = None
-    for raw in lines:
-        line = raw.strip()
-        if _TIME.match(line):
-            region = None
-            continue
-        if m := _REGION.match(line):
-            region = m.group(1)
-            continue
-        if m := _SOLVE.search(line):
-            key = f"{region}/{m.group(1)}" if region else m.group(1)
-            if key in first:
-                val = _num(m.group(2))
-                if first[key] is None:
-                    first[key] = val
-                last[key] = val
-    return first, last

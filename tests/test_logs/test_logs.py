@@ -17,7 +17,7 @@ LOGS = Path(__file__).parent / "logs"
 
 
 def test_transient_crash_after_a_courant_blow_up() -> None:
-    log = FoamLog.load(LOGS / "log.pimpleFoam.diverged")
+    log = FoamLog.read(LOGS / "log.pimpleFoam.diverged")
 
     assert log.solver == "pimpleFoam"
     assert log.exec_command == "pimpleFoam -parallel"
@@ -45,7 +45,7 @@ def test_transient_crash_after_a_courant_blow_up() -> None:
 
 
 def test_steady_run_meeting_its_criteria() -> None:
-    log = FoamLog.load(LOGS / "log.simpleFoam.converged")
+    log = FoamLog.read(LOGS / "log.simpleFoam.converged")
 
     # a classic solver is its own executable
     assert log.solver_source is SolverSource.EXEC
@@ -61,7 +61,7 @@ def test_steady_run_meeting_its_criteria() -> None:
 
 
 def test_esi_multiphase_tracks_mass_conservation() -> None:
-    log = FoamLog.load(LOGS / "log.interFoam.esi")
+    log = FoamLog.read(LOGS / "log.interFoam.esi")
 
     assert log.fork == "com"
     assert log.version == "v2412"
@@ -79,7 +79,7 @@ def test_esi_multiphase_tracks_mass_conservation() -> None:
 
 
 def test_multi_region_keeps_the_same_field_apart() -> None:
-    log = FoamLog.load(LOGS / "log.chtMultiRegionFoam.regions")
+    log = FoamLog.read(LOGS / "log.chtMultiRegionFoam.regions")
 
     assert list(log.regions) == ["fluid", "metal"]
     assert set(log.fields) == {"fluid/h", "fluid/p_rgh", "metal/h"}
@@ -98,7 +98,7 @@ def test_multi_region_keeps_the_same_field_apart() -> None:
 
 
 def test_missing_boundary_condition_names_the_patch() -> None:
-    log = FoamLog.load(LOGS / "log.simpleFoam.missing_bc")
+    log = FoamLog.read(LOGS / "log.simpleFoam.missing_bc")
 
     assert log.status is Status.FAILED
     assert log.reason == "missing_patch_field"
@@ -108,7 +108,7 @@ def test_missing_boundary_condition_names_the_patch() -> None:
 
 
 def test_org_module_runner() -> None:
-    log = FoamLog.load(LOGS / "log.foamRun.incompressibleFluid")
+    log = FoamLog.read(LOGS / "log.foamRun.incompressibleFluid")
 
     assert log.solver == "incompressibleFluid"
     assert log.exec_command == "foamRun -solver incompressibleFluid"
@@ -119,7 +119,7 @@ def test_org_module_runner() -> None:
 
 
 def test_compressible_density_bounds_are_ordered() -> None:
-    log = FoamLog.load(LOGS / "log.rhoPimpleFoam.compressible")
+    log = FoamLog.read(LOGS / "log.rhoPimpleFoam.compressible")
 
     assert log.rho_range is not None
     low, high = log.rho_range
@@ -134,7 +134,7 @@ def test_compressible_density_bounds_are_ordered() -> None:
 
 
 def test_many_species_do_not_drown_the_summary() -> None:
-    log = FoamLog.load(LOGS / "log.reactingFoam.species")
+    log = FoamLog.read(LOGS / "log.reactingFoam.species")
 
     assert len(log.fields) == 19
     assert list(log.diverging) == ["CH4"]
@@ -153,7 +153,7 @@ def test_many_species_do_not_drown_the_summary() -> None:
 
 
 def test_dynamic_mesh_reports_motion_cost() -> None:
-    log = FoamLog.load(LOGS / "log.overPimpleDyMFoam.dym")
+    log = FoamLog.read(LOGS / "log.overPimpleDyMFoam.dym")
     assert log.mesh_update_time == pytest.approx(0.37)
     assert log.n_steps == 3
 
@@ -161,7 +161,7 @@ def test_dynamic_mesh_reports_motion_cost() -> None:
 @pytest.mark.parametrize("name", [p.name for p in sorted(LOGS.iterdir())])
 def test_summary_size_is_flat(name: str) -> None:
     """The whole point: the payload must not grow with the run."""
-    s = FoamLog.load(LOGS / name).summary()
+    s = FoamLog.read(LOGS / name).summary()
     assert "steps" not in s
     assert len(json.dumps(s)) <= 2048
 
@@ -190,6 +190,98 @@ def test_diagnostics_table_is_well_formed() -> None:
 
 @pytest.mark.parametrize("name", [p.name for p in sorted(LOGS.iterdir())])
 def test_no_placeholder_reaches_the_caller(name: str) -> None:
-    for d in FoamLog.load(LOGS / name).diagnostics:
+    for d in FoamLog.read(LOGS / name).diagnostics:
         assert "{" not in d.cause
         assert "{" not in d.fix_note
+
+
+def test_every_way_in_gives_the_same_log() -> None:
+    path = LOGS / "log.interFoam.esi"
+    text = path.read_text()
+    with path.open() as t, path.open("rb") as b:
+        logs = [
+            FoamLog.read(path),
+            FoamLog.load(t),
+            FoamLog.load(b),
+            FoamLog.loads(text, name=str(path)),
+            FoamLog.loads(text.encode(), name=str(path)),
+        ]
+    first = logs[0]
+    # the initial residuals used to be re-read from disk, so came back None
+    # for anything that was not a path
+    assert first.residuals["Ux"].first_initial == pytest.approx(1)
+    for log in logs:
+        assert log.summary() == first.summary()
+        assert log.residual_history("p_rgh") == first.residual_history("p_rgh")
+        assert log.name == str(path)
+
+
+def test_residual_history_is_one_field_only() -> None:
+    rows = FoamLog.read(LOGS / "log.interFoam.esi").residual_history("Ux")
+    assert [(r.initial, r.final, r.iterations) for r in rows] == [
+        (1, 6.11e-06, 8),
+        (0.211, 4.11e-06, 7),
+        (0.0982, 2.11e-06, 6),
+        (0.0411, 1.02e-06, 5),
+    ]
+
+
+def test_name_is_only_a_filename_hint() -> None:
+    body = "Time = 1\n\nGAMG:  Solving for p, Initial residual = 1, Final residual = 0.1, No Iterations 3\n"
+    assert FoamLog.loads(body).solver == ""
+    log = FoamLog.loads(body, name="/nowhere/log.simpleFoam")
+    assert log.solver == "simpleFoam"
+    assert log.solver_source is SolverSource.FILENAME
+
+
+_STEP = (
+    "GAMG:  Solving for p, Initial residual = 1, Final residual = {}, No Iterations 3\n"
+)
+
+
+def _steps(*finals: float, before: str = "") -> str:
+    return "".join(
+        f"{before}Time = {i}\n{_STEP.format(f)}" for i, f in enumerate(finals, 1)
+    )
+
+
+@pytest.mark.parametrize(
+    ("text", "steady"),
+    [
+        # a transient solver that prints no Courant number
+        ("PISO: Operating solver in PISO mode\n" + _steps(0.1, 0.1), False),
+        ("deltaT = 0.01\n" + _steps(0.1, 0.1), False),
+        ("SIMPLE: convergence criteria\n" + _steps(0.1, 0.1), True),
+        # .org runs steady cases through the PIMPLE loop
+        (
+            "PIMPLE: Operating solver in steady-state mode with 1 outer corrector\n"
+            + _steps(0.1, 0.1),
+            True,
+        ),
+        # potentialFoam is not transient
+        ("potentialFlow: Operating solver in PISO mode\n" + _steps(0.1), None),
+        # laplacianFoam prints SIMPLE lines whether or not it is transient
+        (
+            "Exec   : laplacianFoam\nSIMPLE: No convergence criteria found\n"
+            + _steps(0.1, 0.1),
+            None,
+        ),
+        # evidence both ways, or none at all
+        ("SIMPLE: convergence criteria\ndeltaT = 0.01\n" + _steps(0.1, 0.1), None),
+        (_steps(0.1, 0.1), None),
+    ],
+)
+def test_steady_needs_evidence(text: str, steady: bool | None) -> None:
+    assert FoamLog.loads(text).steady is steady
+
+
+def test_tolerance_from_the_case() -> None:
+    text = _steps(1e-5, 1e-5)  # flat, and above the default floor
+    assert FoamLog.loads(text).residuals["p"].trend is Trend.STALLED
+    for tol in (1e-4, {"p": 1e-4}):
+        assert (
+            FoamLog.loads(text, tolerance=tol).residuals["p"].trend is Trend.CONVERGING
+        )
+    assert (
+        FoamLog.loads(text, tolerance={"U": 1e-4}).residuals["p"].trend is Trend.STALLED
+    )

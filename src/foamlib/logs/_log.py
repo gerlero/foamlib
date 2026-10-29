@@ -10,6 +10,7 @@ with a budget.
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -20,6 +21,11 @@ from ._diagnostics import BY_ID, PRE_EXEC_REASONS, Severity
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+
+    if sys.version_info >= (3, 14):
+        from io import Reader
+    else:
+        from typing_extensions import Reader
 
 __all__ = [
     "Diagnostic",
@@ -33,9 +39,11 @@ __all__ = [
     "Trend",
 ]
 
-#: A final residual at or below this is solved, whatever the ratio says. Real
-#: logs routinely start a field at exactly 0, which made a pure ratio test call
-#: a converged 1e-9 "diverging".
+#: Default floor below which a final residual counts as solved, whatever the
+#: ratio says. Real logs routinely start a field at exactly 0, which made a pure
+#: ratio test call a converged 1e-9 "diverging". The log never states the
+#: case's own ``tolerance`` (it lives in ``system/fvSolution``), so pass
+#: ``tolerance=`` to the constructors when it is known.
 SOLVED_TOL: Final = 1e-6
 
 
@@ -158,7 +166,9 @@ class PhaseInfo:
         return self.fraction_last - self.fraction_first
 
 
-def _trend(first_final: float | None, last_final: float | None, n: int) -> Trend:
+def _trend(
+    first_final: float | None, last_final: float | None, n: int, tol: float
+) -> Trend:
     if n < 2 or first_final is None or last_final is None:
         return Trend.UNKNOWN
     if first_final == 0.0 and last_final == 0.0:
@@ -167,7 +177,7 @@ def _trend(first_final: float | None, last_final: float | None, n: int) -> Trend
         # fields out of a capped summary.
         return Trend.NOT_SOLVED
     # absolute verdicts first; they need no reference value
-    if last_final <= SOLVED_TOL:
+    if last_final <= tol:
         return Trend.CONVERGING
     if last_final > 1.0:
         return Trend.DIVERGING
@@ -184,9 +194,10 @@ def _trend(first_final: float | None, last_final: float | None, n: int) -> Trend
 class FoamLog:
     """A parsed OpenFOAM log.
 
-    Build one with :meth:`load` or :meth:`loads`::
+    Build one with :meth:`read` (a path), :meth:`load` (an open file) or
+    :meth:`loads` (a string)::
 
-        log = FoamLog.load("log.simpleFoam")
+        log = FoamLog.read("log.simpleFoam")
         if log.status is not Status.CONVERGED:
             print(log.reason, log.fix)
     """
@@ -195,7 +206,8 @@ class FoamLog:
     MAX_SUMMARY_RESIDUALS: ClassVar[int] = 8
     MAX_SUMMARY_DIAGNOSTICS: ClassVar[int] = 3
 
-    path: Path | None
+    #: the filename the log came from, if known; see :meth:`loads`
+    name: str | None
     kind: Kind
     status: Status
     reason: str
@@ -208,7 +220,8 @@ class FoamLog:
     build: str
     case: str
     n_procs: int
-    steady: bool
+    #: ``None`` when the log carries no evidence either way; see :meth:`loads`
+    steady: bool | None
     n_steps: int
     last_time: float | None
     courant_max: float | None
@@ -228,25 +241,92 @@ class FoamLog:
     diagnostics: Sequence[Diagnostic]
     fix: Mapping[str, Any]
     steps: Sequence[Step]
+    _solves: Sequence[
+        tuple[float | None, Sequence[tuple[str, str, float | None, float | None, int]]]
+    ] = field(default=(), repr=False, compare=False)
 
     # -- construction ------------------------------------------------------
 
     @classmethod
-    def load(cls, path: os.PathLike[str] | str) -> FoamLog:
-        """Parse the log at ``path``."""
-        p = Path(path)
-        with p.open("r", errors="replace") as fh:
-            return cls._build(_scan.scan(fh), path=p)
+    def read(
+        cls,
+        path: os.PathLike[str] | str,
+        /,
+        *,
+        tolerance: float | Mapping[str, float] | None = None,
+    ) -> FoamLog:
+        """Parse the log file at ``path``, streaming it line by line."""
+        with Path(path).open("r", errors="replace") as fp:
+            return cls._build(_scan.scan(fp), name=os.fspath(path), tolerance=tolerance)
 
     @classmethod
-    def loads(cls, text: str, *, name: str = "log") -> FoamLog:
-        """Parse a log held in a string. ``name`` stands in for the filename,
-        which is the only evidence of the solver when the header was stripped."""
-        return cls._build(_scan.scan(iter(text.splitlines())), path=Path(name))
+    def load(
+        cls,
+        fp: Reader[bytes] | Reader[str],
+        /,
+        *,
+        name: str | None = None,
+        tolerance: float | Mapping[str, float] | None = None,
+    ) -> FoamLog:
+        """Parse a log from an open file, text or binary.
+
+        ``name`` defaults to ``fp.name`` when the file has one; see :meth:`loads`.
+        """
+        if name is None and isinstance(fp_name := getattr(fp, "name", None), str):
+            name = fp_name
+        return cls.loads(fp.read(), name=name, tolerance=tolerance)
 
     @classmethod
-    def _build(cls, st: dict[str, Any], *, path: Path) -> FoamLog:
+    def loads(
+        cls,
+        s: bytes | bytearray | str,
+        /,
+        *,
+        name: str | None = None,
+        tolerance: float | Mapping[str, float] | None = None,
+    ) -> FoamLog:
+        """Parse a log held in memory.
+
+        :param name: The filename the log was saved under, such as
+            ``"log.simpleFoam"``. It is never opened. It is only consulted when
+            the header naming the solver was stripped or blanked, in which case
+            the solver is taken from a ``log.<solver>`` filename and
+            :attr:`solver_source` says so. ``None`` skips that fallback.
+        :param tolerance: The solver tolerance from ``system/fvSolution``, either
+            one value or one per field name. A final residual at or below it
+            counts as solved. Fields not listed use :data:`SOLVED_TOL`.
+
+        :attr:`steady` is ``True`` or ``False`` only when the log says so: a
+        SIMPLE or steady-state-mode line for steady (not from laplacianFoam or
+        scalarTransportFoam, which print SIMPLE lines either way); Courant,
+        ``deltaT``, PISO or transient-mode lines for transient. With no
+        evidence, or evidence both ways, it is ``None``: the authoritative
+        answer is ``ddtSchemes`` in the case, not the log.
+        """
+        if isinstance(s, (bytes, bytearray)):
+            s = bytes(s).decode(errors="replace")
+        return cls._build(
+            _scan.scan(iter(s.splitlines())), name=name, tolerance=tolerance
+        )
+
+    @classmethod
+    def _build(
+        cls,
+        st: dict[str, Any],
+        *,
+        name: str | None,
+        tolerance: float | Mapping[str, float] | None,
+    ) -> FoamLog:
         steps = [Step(**s) for s in st["steps"]]
+
+        def tol_for(key: str) -> float:
+            if tolerance is None:
+                return SOLVED_TOL
+            if isinstance(tolerance, (int, float)):
+                return float(tolerance)
+            # a region's field ("fluid/h") falls back to its bare name ("h")
+            bare = key.rsplit("/", 1)[-1]
+            return tolerance.get(key, tolerance.get(bare, SOLVED_TOL))
 
         residuals: dict[str, ResidualHistory] = {}
         for key in st["fields"]:
@@ -254,25 +334,12 @@ class FoamLog:
             if not series:
                 continue
             residuals[key] = ResidualHistory(
-                first_initial=None,
-                last_initial=None,
+                first_initial=st["first_initial"].get(key),
+                last_initial=st["last_initial"].get(key),
                 first_final=series[0],
                 last_final=series[-1],
-                trend=_trend(series[0], series[-1], len(series)),
+                trend=_trend(series[0], series[-1], len(series), tol_for(key)),
             )
-        if residuals and path.exists():
-            with path.open("r", errors="replace") as fh:
-                first, last = _scan.initial_residuals(fh, frozenset(residuals))
-            residuals = {
-                k: ResidualHistory(
-                    first_initial=first[k],
-                    last_initial=last[k],
-                    first_final=v.first_final,
-                    last_final=v.last_final,
-                    trend=v.trend,
-                )
-                for k, v in residuals.items()
-            }
 
         diags = dict(st["diagnostics"])
         if st["bounding"]:
@@ -311,11 +378,16 @@ class FoamLog:
             # Real logs exist with the header fields blanked out, or with no
             # header at all; the filename is then the only evidence, and the
             # caller should be told it was inferred.
-            inferred = _scan.solver_from_filename(path)
+            inferred = _scan.solver_from_filename(name) if name else None
             if inferred:
                 solver, source = inferred, SolverSource.FILENAME
 
-        steady = st["courant_max"] is None
+        steady_ev = st["steady_evidence"] or (
+            st["simple_lines"] and solver not in _scan.SIMPLE_BUT_TRANSIENT
+        )
+        steady: bool | None = None
+        if steady_ev != st["transient_evidence"]:
+            steady = steady_ev
         if reason in PRE_EXEC_REASONS:
             kind = Kind.LAUNCHER_FAILURE
         elif solver in _scan.UTILITIES:
@@ -326,7 +398,7 @@ class FoamLog:
             kind = Kind.UNKNOWN
 
         return cls(
-            path=path,
+            name=name,
             kind=kind,
             status=status,
             reason=reason,
@@ -342,7 +414,7 @@ class FoamLog:
             steady=steady,
             n_steps=len(steps),
             last_time=steps[-1].time if steps else None,
-            courant_max=None if steady else st["courant_max"],
+            courant_max=st["courant_max"],
             interface_courant_max=st["interface_courant_max"],
             wallclock=st["wallclock"],
             mesh_update_time=st["mesh_update"],
@@ -367,6 +439,7 @@ class FoamLog:
             diagnostics=tuple(diagnostics),
             fix=fix,
             steps=tuple(steps),
+            _solves=tuple(st["solves"]),
         )
 
     # -- drill-down --------------------------------------------------------
@@ -376,15 +449,22 @@ class FoamLog:
     ) -> list[Residual]:
         """One row per time step for ``field``, optionally only the final
         ``last`` of them. ``field`` matches either the composite key
-        (``"fluid/h"``) or the bare name (``"h"``)."""
-        if self.path is None or not self.path.exists():
-            msg = "residual_history needs the original file"
-            raise FileNotFoundError(msg)
-        with self.path.open("r", errors="replace") as fh:
-            rows = _scan.residual_rows(fh, field)
-        if last is not None:
-            rows = rows[-last:]
-        return [Residual(**r) for r in rows]
+        (``"fluid/h"``) or the bare name (``"h"``). Within a step, ``initial``
+        is from the first solve of the field and ``final`` from the last."""
+        rows: list[Residual] = []
+        for time, solves in self._solves:
+            hits = [x for x in solves if field in {x[0], x[1]}]
+            if time is None or not hits:
+                continue
+            rows.append(
+                Residual(
+                    time=time,
+                    initial=hits[0][2],
+                    final=hits[-1][3],
+                    iterations=hits[-1][4],
+                )
+            )
+        return rows[-last:] if last is not None else rows
 
     # -- the bounded payload ----------------------------------------------
 

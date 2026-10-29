@@ -1,8 +1,9 @@
 """Known OpenFOAM failure modes.
 
 The regexes and severities are domain data: every pattern here was observed in
-a real log. The table was built by running the parser over a corpus of 364 logs
-from 104 public repositories and adding every failure it could not name.
+a real log. The table was built by running the parser over a corpus of 884
+public logs (364 solver runs, 520 utility runs) and adding every failure it
+could not name.
 """
 
 from __future__ import annotations
