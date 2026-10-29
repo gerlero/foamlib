@@ -328,16 +328,6 @@ class _ASCIINumericListParser[DType: (float, int), *ElShape]:
 
     @overload
     def __call__(
-        self: "_ASCIINumericListParser[float, *ElShape]",
-        contents: bytes | bytearray,
-        pos: int,
-        /,
-        *,
-        empty_ok: bool = ...,
-    ) -> tuple[np.ndarray[tuple[int, *ElShape], np.dtype[np.float64]], int]: ...  # ty: ignore[invalid-type-arguments]
-
-    @overload
-    def __call__(
         self: "_ASCIINumericListParser[int, *ElShape]",
         contents: bytes | bytearray,
         pos: int,
@@ -345,6 +335,16 @@ class _ASCIINumericListParser[DType: (float, int), *ElShape]:
         *,
         empty_ok: bool = ...,
     ) -> tuple[np.ndarray[tuple[int, *ElShape], np.dtype[np.int64]], int]: ...  # ty: ignore[invalid-type-arguments]
+
+    @overload
+    def __call__(
+        self: "_ASCIINumericListParser[float, *ElShape]",
+        contents: bytes | bytearray,
+        pos: int,
+        /,
+        *,
+        empty_ok: bool = ...,
+    ) -> tuple[np.ndarray[tuple[int, *ElShape], np.dtype[np.float64]], int]: ...  # ty: ignore[invalid-type-arguments]
 
     def __call__(
         self,
@@ -589,7 +589,7 @@ def _parse_ascii_faces_like_list(
 
 @overload
 def _parse_binary_numeric_list[
-    T: (np.float64, np.float32, np.int64, np.int32),
+    T: (np.float64, np.float32, np.int64, np.int32, np.bool_),
 ](
     contents: bytes | bytearray,
     pos: int,
@@ -603,7 +603,7 @@ def _parse_binary_numeric_list[
 
 @overload
 def _parse_binary_numeric_list[
-    T: (np.float64, np.float32, np.int64, np.int32),
+    T: (np.float64, np.float32, np.int64, np.int32, np.bool_),
     N: int,
 ](
     contents: bytes | bytearray,
@@ -617,7 +617,7 @@ def _parse_binary_numeric_list[
 
 
 def _parse_binary_numeric_list[
-    T: (np.float64, np.float32, np.int64, np.int32),
+    T: (np.float64, np.float32, np.int64, np.int32, np.bool_),
     N: int,
 ](
     contents: bytes | bytearray,
@@ -793,6 +793,82 @@ def _parse_list(
         raise ParseError(contents, pos, expected="list")
 
     return ret, pos
+
+
+def _parse_primitive_list(
+    contents: bytes | bytearray,
+    pos: int,
+    /,
+    *,
+    dtype: type[int] | type[bool],
+) -> tuple[np.ndarray[tuple[int], np.dtype[np.int32 | np.int64 | np.bool_]], int]:
+    # Empty binary lists may omit the parentheses entirely.
+    with contextlib.suppress(ParseError):
+        count, end = _parse_number(contents, pos, target=int)
+        end = _skip(contents, end)
+        if count == 0 and contents[end : end + 1] not in (b"(", b"{"):
+            return np.empty(0, dtype=dtype), end
+
+    with contextlib.suppress(ParseError):
+        values, end = _parse_ascii_integer_list(contents, pos, empty_ok=True)
+        if dtype is int:
+            return values, end
+        if np.isin(values, (0, 1)).all():
+            return values.astype(bool), end
+
+    if dtype is bool:
+        with contextlib.suppress(ParseError):
+            values, end = _parse_list(contents, pos)
+            if all(
+                isinstance(value, (int, bool)) and value in (0, 1) for value in values
+            ):
+                return np.array(values, dtype=bool), end
+
+    result = None
+    for binary_dtype in (np.int32, np.int64) if dtype is int else (np.bool_,):
+        with contextlib.suppress(ParseError):
+            candidate = _parse_binary_numeric_list(
+                contents, pos, dtype=binary_dtype, elshape=(), empty_ok=True
+            )
+            if binary_dtype is np.bool_ and np.any(candidate[0].view(np.uint8) > 1):
+                continue
+            # Prefer 32-bit labels when followed by a value terminator, rather
+            # than mistaking following entries for part of a 64-bit payload.
+            with contextlib.suppress(FoamFileDecodeError):
+                end = _skip(contents, candidate[1])
+                if contents[end : end + 1] in (b"", b";", b")", b"}"):
+                    while contents[end : end + 1] in (b";", b")", b"}"):
+                        end = _skip(contents, end + 1)
+                    # Bytes inside a 64-bit label can resemble comment starts.
+                    # Such comments must not swallow the remaining raw payload.
+                    if b"\0" not in contents[candidate[1] : end] and (
+                        end == len(contents)
+                        or _IS_TOKEN_START[contents[end]]
+                        or contents[end] in b'"([0123456789-+'
+                    ):
+                        return candidate
+            # A ')' byte inside a label may also match the shorter candidate.
+            if result is None or candidate[1] > result[1]:
+                result = candidate
+
+    if result is None:
+        raise ParseError(contents, pos, expected=f"list of {dtype.__name__} values")
+    return result
+
+
+def _parse_typed_list(
+    contents: bytes | bytearray, pos: int, /
+) -> tuple[np.ndarray[tuple[int], np.dtype[np.int32 | np.int64 | np.bool_]], int]:
+    token, pos = _parse_token(contents, pos)
+    match token:
+        case "List<label>":
+            dtype = int
+        case "List<bool>":
+            dtype = bool
+        case _:
+            raise ParseError(contents, pos, expected="List<label> or List<bool>")
+    pos = _skip(contents, pos)
+    return _parse_primitive_list(contents, pos, dtype=dtype)
 
 
 _UNIT_SYMBOLS: dict[str, tuple[int, int, int, int, int, int, int]] = {
@@ -1101,7 +1177,9 @@ def _parse_keyword_entry(
     try:
         value, pos = _parse_dictionary(contents, pos)
     except ParseError:
-        value, pos = _parse_data(contents, pos)
+        value, pos = _parse_data(
+            contents, pos, keyword=keyword if isinstance(keyword, str) else None
+        )
         pos = _skip(contents, pos)
         pos = _expect(contents, pos, b";")
 
@@ -1142,7 +1220,7 @@ def _parse_dictionary(contents: bytes | bytearray, pos: int, /) -> tuple[Dict, i
         try:
             value, pos = _parse_dictionary(contents, pos)
         except ParseError:
-            value, pos = _parse_data(contents, pos)
+            value, pos = _parse_data(contents, pos, keyword=keyword)
             pos = _skip(contents, pos)
             pos = _expect(contents, pos, b";")
 
@@ -1156,6 +1234,7 @@ def _parse_data_entry(
 ) -> tuple[DataEntry, int]:
     for parser in (
         _parse_field,
+        _parse_typed_list,
         _parse_list,
         _parse_dimensioned,
         _parse_dimensions,
@@ -1168,7 +1247,15 @@ def _parse_data_entry(
     return _parse_token(contents, pos)
 
 
-def _parse_data(contents: bytes | bytearray, pos: int, /) -> tuple[Data, int]:
+def _parse_data(
+    contents: bytes | bytearray, pos: int, /, *, keyword: str | None = None
+) -> tuple[Data, int]:
+    if keyword in ("cellLabels", "faceLabels", "pointLabels", "flipMap"):
+        with contextlib.suppress(ParseError):
+            return _parse_primitive_list(
+                contents, pos, dtype=bool if keyword == "flipMap" else int
+            )
+
     entry, pos = _parse_data_entry(contents, pos)
     entries: list[DataEntry] = [entry]
 
@@ -1213,7 +1300,7 @@ def _parse_subdictionary(
                 value, pos = _parse_subdictionary(contents, pos)
             except ParseError:
                 try:
-                    value, pos = _parse_data(contents, pos)
+                    value, pos = _parse_data(contents, pos, keyword=keyword)
                 except ParseError:
                     value = None
                 if keyword.startswith("$") and value is None:
@@ -1366,7 +1453,7 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0, /) -> tuple[FileDict,
                     value, new_pos = _parse_subdictionary(contents, new_pos)
                 except ParseError:
                     try:
-                        value, new_pos = _parse_data(contents, new_pos)
+                        value, new_pos = _parse_data(contents, new_pos, keyword=keyword)
                     except ParseError:
                         value = None
                     if keyword.startswith("$") and value is None:
@@ -1512,7 +1599,7 @@ def _parse_file_located(
                 ret.extend(subdict_result)
             else:
                 try:
-                    value, new_pos = _parse_data(contents, new_pos)
+                    value, new_pos = _parse_data(contents, new_pos, keyword=keyword)
                 except ParseError:
                     value = None
                 if keyword.startswith("$") and value is None:
