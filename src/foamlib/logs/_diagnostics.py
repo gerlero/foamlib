@@ -2,9 +2,10 @@
 
 The regexes and severities are domain data: entries marked ``CORPUS`` were
 observed in real logs, and the wording of the ``INFERRED`` ones comes from the
-OpenFOAM source (the MPI runtime for segfaults). The table was built by running the parser over a corpus of 884
-public logs (364 solver runs, 520 utility runs) and adding every failure it
-could not name.
+OpenFOAM source (the MPI runtime for segfaults), except for
+``solution_singularity``, which is kept for compatibility. The table was built
+by running the parser over a corpus of 884 public logs (364 solver runs, 520
+utility runs) and adding every failure it could not name.
 """
 
 from __future__ import annotations
@@ -107,7 +108,7 @@ DIAGNOSTICS: Final[Sequence[DiagnosticSpec]] = (
     DiagnosticSpec(
         id="cast_failure",
         severity=Severity.FATAL,
-        pattern=re.compile("Attempt to cast type (.+?) to type (.+)"),
+        pattern=re.compile("[Aa]ttempt to cast type (.+?) to type (.+)"),
         groups=("from_type", "to_type"),
         cause="a boundary condition of the wrong kind was used where another kind was required",
         fix_note="replace the {from_type} boundary condition with one of kind {to_type} to match the field",
@@ -117,7 +118,7 @@ DIAGNOSTICS: Final[Sequence[DiagnosticSpec]] = (
         id="field_mesh_mismatch",
         severity=Severity.FATAL,
         pattern=re.compile(
-            "[Ss]ize (\\d+) is not equal to the (?:given value of|expected length) (\\d+)"
+            "Number of cells in mesh and field do not match|[Ss]ize (\\d+) is not equal to the (?:given value of|expected length) (\\d+)"
         ),
         groups=("got", "expected"),
         cause="a field file was written for a different mesh than the one currently loaded",
@@ -132,6 +133,17 @@ DIAGNOSTICS: Final[Sequence[DiagnosticSpec]] = (
         cause="a file the case needs, such as the mesh, a 0/ field, or a dictionary, is absent",
         fix_note="create or restore the missing file at {path} and check the case path settings",
         source=Source.CORPUS,
+    ),
+    # Neither current source prints this; kept so existing callers keep working.
+    DiagnosticSpec(
+        id="solution_singularity",
+        severity=Severity.FATAL,
+        pattern=re.compile("Solution singularity"),
+        groups=(),
+        cause="the linear system has no unique solution because pressure has no reference level in the closed domain",
+        fix_note="set a pressure reference by adding pRefCell and pRefValue to the PIMPLE or SIMPLE dictionary",
+        fix_extra={"pRefCell": 0, "pRefValue": 0},
+        source=Source.INFERRED,
     ),
     DiagnosticSpec(
         id="fp_exception",
@@ -162,7 +174,7 @@ DIAGNOSTICS: Final[Sequence[DiagnosticSpec]] = (
     ),
     DiagnosticSpec(
         id="continuity_not_removable",
-        severity=Severity.FATAL,
+        severity=Severity.WARNING,
         pattern=re.compile(
             "Continuity error cannot be removed by adjusting the outflow"
         ),

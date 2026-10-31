@@ -193,7 +193,7 @@ def test_diagnostics_table_is_well_formed() -> None:
     assert len(confirmed) >= 40, len(confirmed)
     # DiagnosticSpec.__post_init__ enforces group counts; assert the table size
     # so an accidental deletion is noticed
-    assert len(DIAGNOSTICS) == 55
+    assert len(DIAGNOSTICS) == 56
 
 
 def test_time_line_in_crank_angle_degrees() -> None:
@@ -245,12 +245,28 @@ def test_diagnostics_match_the_printed_wording(line: str, expected: str) -> None
     assert expected in [d.id for d in FoamLog.loads(line + "\n").diagnostics]
 
 
-def test_unremovable_continuity_error_is_fatal() -> None:
-    """``adjustPhi`` raises it through ``FatalErrorInFunction``."""
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("attempt to cast type Foam::a to type Foam::b", "cast_failure"),
+        ("Number of cells in mesh and field do not match", "field_mesh_mismatch"),
+        ("Solution singularity", "solution_singularity"),
+        (" ***Number of severely non-orthogonal faces: 2", "severe_non_orthogonality"),
+    ],
+)
+def test_wordings_matched_by_earlier_releases_still_match(
+    line: str, expected: str
+) -> None:
+    assert expected in [d.id for d in FoamLog.loads(line + "\n").diagnostics]
+
+
+def test_continuity_diagnostic_keeps_its_severity_and_reason() -> None:
     log = FoamLog.loads(
+        "--> FOAM FATAL ERROR:\n"
         "Continuity error cannot be removed by adjusting the outflow.\n"
     )
-    assert log.diagnostics[0].severity is Severity.FATAL
+    assert log.reason == "fatal_error"
+    assert log.diagnostics[0].severity is Severity.WARNING
 
 
 @pytest.mark.parametrize("name", [p.name for p in sorted(LOGS.iterdir())])
