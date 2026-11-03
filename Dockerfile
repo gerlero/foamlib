@@ -1,5 +1,4 @@
-
-ARG BASE=python:3.14-slim
+ARG BASE=python:3.15-slim
 
 ARG OPENFOAM_VERSION=latest
 FROM microfluidica/openfoam:${OPENFOAM_VERSION} AS openfoam
