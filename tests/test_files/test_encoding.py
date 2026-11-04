@@ -127,6 +127,17 @@ def test_serialize_data() -> None:
         assert f.getvalue() == b"[1 1 -2 0 0 0 0] 9.81"
     with io.BytesIO() as f:
         encoded(
+            Dimensioned(
+                name="g",
+                dimensions=DimensionSet(length=1, time=-2),
+                value=[0, 0, -9.81],
+            ),
+            f,
+            target=StandaloneData,
+        )
+        assert f.getvalue() == b"g [0 1 -2 0 0 0 0] (0.0 0.0 -9.81)"
+    with io.BytesIO() as f:
+        encoded(
             (
                 "hex",
                 [0, 1, 2, 3, 4, 5, 6, 7],

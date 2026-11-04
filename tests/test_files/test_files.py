@@ -90,6 +90,9 @@ def test_write_read(tmp_path: Path) -> None:
     assert sd["g"].name == "g"
     assert sd["g"].dimensions == DimensionSet(length=1, time=-2)
     assert np.array_equal(sd["g"].value, [0, 0, -9.81])
+    g = FoamFile(d.path)["subdict", "g"]  # read back from disk
+    assert isinstance(g, Dimensioned)
+    assert np.array_equal(g.value, [0, 0, -9.81])
 
     sd["n"] = 1
     sd["y"] = 2
