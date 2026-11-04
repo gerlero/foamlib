@@ -752,19 +752,30 @@ def _parse_list(
     if contents[pos : pos + 1] == b"(":
         pos += 1
         ret: list[DataEntry | KeywordEntry | Dict] = []
+        # Reading an item as "keyword value;" parses the items after it as the
+        # value. If no ";" follows them, the attempt fails at the same position
+        # for every item up to there, so it is not repeated (keeps this O(n)).
+        no_semicolon_before = -1
         while count is None or len(ret) < count:
             pos = _skip(contents, pos)
             if count is None and contents[pos : pos + 1] == b")":
                 pos += 1
                 break
 
-            try:
-                item, pos = _parse_dictionary(contents, pos)
-            except ParseError:
+            if pos < no_semicolon_before:
+                item, pos = _parse_data_entry(contents, pos)
+                with contextlib.suppress(ParseError):
+                    value, pos = _parse_dictionary(contents, _skip(contents, pos))
+                    item = (item, value)
+            else:
                 try:
-                    item, pos = _parse_keyword_entry(contents, pos)
+                    item, pos = _parse_dictionary(contents, pos)
                 except ParseError:
-                    item, pos = _parse_data_entry(contents, pos)
+                    try:
+                        item, pos = _parse_keyword_entry(contents, pos)
+                    except ParseError as e:
+                        no_semicolon_before = e.pos
+                        item, pos = _parse_data_entry(contents, pos)
 
             ret.append(item)
 
