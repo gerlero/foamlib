@@ -4,7 +4,7 @@ import math
 import re
 import sys
 from types import EllipsisType
-from typing import Literal, assert_never, overload
+from typing import Any, Literal, assert_never, overload
 from warnings import warn
 
 if sys.version_info >= (3, 15):
@@ -585,6 +585,57 @@ def _parse_ascii_faces_like_list(
         raise ParseError(contents, pos, expected=f"{count} faces (got {len(ret)})")
 
     return ret, pos
+
+
+_UNCOMMENTED_ANY_SIZE_FACES_LIST = re.compile(
+    rb"(?:\s*[0-9]+\s*\(\s*[0-9\s]*\))*\s*\)", re.ASCII
+)
+
+
+def _parse_ascii_any_size_faces_list(
+    contents: bytes | bytearray, pos: int, /
+) -> tuple[list[DataEntry | KeywordEntry | Dict], int]:
+    """Parse faces of any size (5+ vertices need this) without the generic parser.
+
+    The result has the same form the generic parser gives: lists of ints.
+    """
+    try:
+        count, pos = _parse_number(contents, pos, target=int)
+    except ParseError:
+        count = None
+    else:
+        pos = _skip(contents, pos)
+
+    pos = _expect(contents, pos, b"(")
+
+    match = _UNCOMMENTED_ANY_SIZE_FACES_LIST.match(contents, pos)
+    if not match:
+        raise ParseError(contents, pos, expected="faces-like list")
+    data = bytes(contents[pos : match.end() - 1])
+
+    chars = np.frombuffer(data, dtype=np.uint8)
+    is_digit = (chars >= ord("0")) & (chars <= ord("9"))
+    numbers_so_far = np.cumsum(is_digit & ~np.concatenate(([False], is_digit[:-1])))
+    sizes = numbers_so_far[chars == ord(")")] - numbers_so_far[chars == ord("(")]
+
+    values = np.fromstring(
+        data.replace(b"(", b" ").replace(b")", b" ").decode("ascii"),
+        sep=" ",
+        dtype=np.int64,
+    )
+    ends = np.cumsum(sizes + 1)
+
+    # Each face must have as many vertices as its size says
+    if (count is not None and len(sizes) != count) or not np.array_equal(
+        values[ends - sizes - 1], sizes
+    ):
+        raise ParseError(contents, pos, expected="faces-like list")
+
+    flat: list[Any] = values.tolist()
+    ret: list[DataEntry | KeywordEntry | Dict] = [
+        flat[end - size : end] for end, size in zip(ends.tolist(), sizes.tolist())
+    ]
+    return ret, match.end()
 
 
 @overload
@@ -1380,6 +1431,8 @@ def _parse_standalone_data_entry(
         return _parse_ascii_vector_list(contents, pos)
     with contextlib.suppress(ParseError):
         return _parse_ascii_faces_like_list(contents, pos)
+    with contextlib.suppress(ParseError):
+        return _parse_ascii_any_size_faces_list(contents, pos)
 
     try:
         entry1, pos1 = _parse_data_entry(contents, pos)
