@@ -24,15 +24,6 @@ from ._util import SingletonContextManager
 from .base import FoamCaseBase
 
 
-def _parse_time(value: str, /) -> float:
-    """Parse the value of a "Time = " line.
-
-    OpenFOAM.org v11+ appends the unit of the user time: "1s", or "180CAD" for
-    engine cases.
-    """
-    return float(value.removesuffix("s").removesuffix("CAD"))
-
-
 class FoamCaseRunBase(FoamCaseBase):
     class TimeDirectory(FoamCaseBase.TimeDirectory):  # ty: ignore[invalid-attribute-override]
         @abstractmethod
@@ -306,7 +297,9 @@ class FoamCaseRunBase(FoamCaseBase):
             def process_stdout(line: str) -> None:
                 if line.startswith("Time = "):
                     try:
-                        time = _parse_time(line.split()[2])
+                        time = float(
+                            line.split()[2].removesuffix("s").removesuffix("CAD")
+                        )
                     except (ValueError, IndexError):
                         progress.update(task)
                     else:
