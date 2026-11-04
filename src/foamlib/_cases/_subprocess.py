@@ -316,8 +316,7 @@ class _AsyncLogFileMonitor(
     @override
     async def __aenter__(self) -> Self:
         """Enter async context manager."""
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self._skip_existing_content)
+        await asyncio.to_thread(self._skip_existing_content)
         return self
 
     @override
@@ -333,9 +332,7 @@ class _AsyncLogFileMonitor(
 
     async def monitor_once_async(self) -> None:
         """Async version of monitor_once."""
-        # Run the sync version in an executor to avoid blocking
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self.monitor_once)
+        await asyncio.to_thread(self.monitor_once)
 
     async def start_monitoring_async(self, interval: float = 0.5, /) -> None:
         """Start monitoring log files asynchronously."""
