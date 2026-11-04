@@ -35,9 +35,10 @@ _SELECTING_SOLVER = re.compile(r"^Selecting solver (\S+)")
 _LOGNAME = re.compile(r"log\.([A-Za-z][A-Za-z0-9_]*)")
 
 # --- time loop ------------------------------------------------------------
-#: openfoam.org v11+ appends a unit: "Time = 0.001s". Older versions and the
-#: .com fork print "Time = 0.001". Both must match.
-_TIME = re.compile(rf"^Time\s*=\s*({_FLOAT})\s*s?\s*$")
+#: openfoam.org v11+ appends a unit: "Time = 0.001s", or "Time = 180CAD" for
+#: engine cases. Older versions and the .com fork print "Time = 0.001". All must
+#: match.
+_TIME = re.compile(rf"^Time\s*=\s*({_FLOAT})\s*(?:s|CAD)?\s*$")
 _COURANT = re.compile(rf"^Courant Number mean:\s*({_FLOAT})\s+max:\s*({_FLOAT})")
 _REGION_COURANT = re.compile(
     rf"^Region: (\S+) Courant Number mean:\s*({_FLOAT})\s+max:\s*({_FLOAT})"

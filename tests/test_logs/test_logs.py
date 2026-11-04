@@ -11,7 +11,15 @@ from pathlib import Path
 
 import pytest
 
-from foamlib.logs import DIAGNOSTICS, FoamLog, Kind, SolverSource, Status, Trend
+from foamlib.logs import (
+    DIAGNOSTICS,
+    FoamLog,
+    Kind,
+    Severity,
+    SolverSource,
+    Status,
+    Trend,
+)
 
 LOGS = Path(__file__).parent / "logs"
 
@@ -186,6 +194,79 @@ def test_diagnostics_table_is_well_formed() -> None:
     # DiagnosticSpec.__post_init__ enforces group counts; assert the table size
     # so an accidental deletion is noticed
     assert len(DIAGNOSTICS) == 56
+
+
+def test_time_line_in_crank_angle_degrees() -> None:
+    """Engine cases (``userTime { type engine; }``) print "Time = -180CAD".
+
+    From ``engineTime.C``; no public log with this format has been seen yet.
+    """
+    log = FoamLog.loads(
+        "Time = -180CAD\n"
+        "ExecutionTime = 1 s  ClockTime = 1 s\n"
+        "Time = -179.5CAD\n"
+        "ExecutionTime = 2 s  ClockTime = 2 s\n"
+    )
+    assert log.n_steps == 2
+    assert log.last_time == -179.5
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("Cannot find patchField entry for inlet", "missing_patch_field"),
+        ("incompatible dimensions for operation [U] + [p]", "incompatible_dimensions"),
+        ("incompatible dimensions for matrix addition", "incompatible_dimensions"),
+        ("Unknown patchField type foo for patch inlet", "unknown_patch_field_type"),
+        ("Attempt to cast type Foam::a to type Foam::b", "cast_failure"),
+        ("Attempt to cast type Foam::a<b, c> to type Foam::d<e, f>", "cast_failure"),
+        ("size 10 is not equal to the given value of 20", "field_mesh_mismatch"),
+        ("Size 10 is not equal to the expected length 20", "field_mesh_mismatch"),
+        ("[host:1] Signal: Segmentation fault (11)", "segfault"),
+        ("Maximum number of iterations exceeded: 100", "max_iterations"),
+        (
+            "Continuity error cannot be removed by adjusting the outflow.",
+            "continuity_not_removable",
+        ),
+        (" ***Zero or negative cell volume detected.", "zero_negative_cell_volume"),
+        (" ***Zero or negative face area detected.", "zero_negative_face_area"),
+        (
+            " ***Error in face pyramids: 7 faces are incorrectly oriented.",
+            "incorrectly_oriented_faces",
+        ),
+        (
+            "   *Number of severely non-orthogonal (> 70 degrees) faces: 2.",
+            "severe_non_orthogonality",
+        ),
+    ],
+)
+def test_diagnostics_match_the_printed_wording(line: str, expected: str) -> None:
+    """Lines as the OpenFOAM source prints them (the segfault one is from MPI)."""
+    assert expected in [d.id for d in FoamLog.loads(line + "\n").diagnostics]
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("attempt to cast type Foam::a to type Foam::b", "cast_failure"),
+        ("Number of cells in mesh and field do not match", "field_mesh_mismatch"),
+        ("Solution singularity", "solution_singularity"),
+        (" ***Number of severely non-orthogonal faces: 2", "severe_non_orthogonality"),
+    ],
+)
+def test_wordings_matched_by_earlier_releases_still_match(
+    line: str, expected: str
+) -> None:
+    assert expected in [d.id for d in FoamLog.loads(line + "\n").diagnostics]
+
+
+def test_continuity_diagnostic_keeps_its_severity_and_reason() -> None:
+    log = FoamLog.loads(
+        "--> FOAM FATAL ERROR:\n"
+        "Continuity error cannot be removed by adjusting the outflow.\n"
+    )
+    assert log.reason == "fatal_error"
+    assert log.diagnostics[0].severity is Severity.WARNING
 
 
 @pytest.mark.parametrize("name", [p.name for p in sorted(LOGS.iterdir())])

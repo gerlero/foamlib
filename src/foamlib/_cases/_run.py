@@ -273,6 +273,8 @@ class FoamCaseRunBase(FoamCaseBase):
     def __process_stdout(
         self, cmd: Sequence[str | os.PathLike[str]] | str, /
     ) -> Generator[Callable[[str], None], None, None]:
+        end_time = None
+        offset = 0
         try:
             with self.control_dict as control_dict:
                 match control_dict:
@@ -280,11 +282,12 @@ class FoamCaseRunBase(FoamCaseBase):
                         "stopAt": "endTime",
                         "endTime": (float() | int()) as end_time,
                     }:
-                        pass
-                    case _:
-                        end_time = None
+                        # Engine cases start before 0 (e.g. at -180 CAD)
+                        match control_dict.get("startTime"):
+                            case (float() | int()) as start_time if start_time < 0:
+                                offset = start_time
         except FileNotFoundError:
-            end_time = None
+            pass
 
         with self.__progress as progress:
             task = progress.add_task(
@@ -294,11 +297,17 @@ class FoamCaseRunBase(FoamCaseBase):
             def process_stdout(line: str) -> None:
                 if line.startswith("Time = "):
                     try:
-                        time = float(line.split()[2])
+                        time = float(
+                            line.split()[2].removesuffix("s").removesuffix("CAD")
+                        )
                     except (ValueError, IndexError):
                         progress.update(task)
                     else:
-                        progress.update(task, completed=time, total=end_time)
+                        progress.update(
+                            task,
+                            completed=time - offset,
+                            total=None if end_time is None else end_time - offset,
+                        )
                 else:
                     progress.update(task)
 

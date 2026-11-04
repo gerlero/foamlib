@@ -28,28 +28,28 @@ SIMPLE: convergence criteria
 
 Starting time loop
 
-Time = 1
+Time = 1s
 
 smoothSolver:  Solving for Ux, Initial residual = 1, Final residual = 0.0241, No Iterations 4
 GAMG:  Solving for p, Initial residual = 1, Final residual = 0.00881, No Iterations 5
 time step continuity errors : sum local = 1e-07, global = -1e-20, cumulative = -5e-19
 ExecutionTime = 0.41 s  ClockTime = 0 s
 
-Time = 2
+Time = 2s
 
 smoothSolver:  Solving for Ux, Initial residual = 0.188, Final residual = 0.00811, No Iterations 4
 GAMG:  Solving for p, Initial residual = 0.311, Final residual = 0.00241, No Iterations 5
 time step continuity errors : sum local = 1e-07, global = -1e-20, cumulative = -5e-19
 ExecutionTime = 0.78 s  ClockTime = 1 s
 
-Time = 182
+Time = 182s
 
 smoothSolver:  Solving for Ux, Initial residual = 0.000112, Final residual = 4.11e-06, No Iterations 4
 GAMG:  Solving for p, Initial residual = 0.000141, Final residual = 9.81e-07, No Iterations 5
 time step continuity errors : sum local = 1e-07, global = -1e-20, cumulative = -5e-19
 ExecutionTime = 71.20 s  ClockTime = 71 s
 
-Time = 183
+Time = 183s
 
 smoothSolver:  Solving for Ux, Initial residual = 9.81e-05, Final residual = 3.88e-06, No Iterations 4
 GAMG:  Solving for p, Initial residual = 9.88e-05, Final residual = 8.02e-07, No Iterations 5

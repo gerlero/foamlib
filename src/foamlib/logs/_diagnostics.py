@@ -1,9 +1,11 @@
 """Known OpenFOAM failure modes.
 
-The regexes and severities are domain data: every pattern here was observed in
-a real log. The table was built by running the parser over a corpus of 884
-public logs (364 solver runs, 520 utility runs) and adding every failure it
-could not name.
+The regexes and severities are domain data: entries marked ``CORPUS`` were
+observed in real logs, and the wording of the ``INFERRED`` ones comes from the
+OpenFOAM source (the MPI runtime for segfaults), except for
+``solution_singularity``, which is kept for compatibility. The table was built
+by running the parser over a corpus of 884 public logs (364 solver runs, 520
+utility runs) and adding every failure it could not name.
 """
 
 from __future__ import annotations
@@ -88,7 +90,7 @@ DIAGNOSTICS: Final[Sequence[DiagnosticSpec]] = (
     DiagnosticSpec(
         id="incompatible_dimensions",
         severity=Severity.FATAL,
-        pattern=re.compile("incompatible dimensions for operation"),
+        pattern=re.compile("incompatible dimensions for (?:operation|matrix addition)"),
         groups=(),
         cause="quantities with different physical units were combined in one operation",
         fix_note="check that every coefficient includes its dimensions and the correct fields are used in expressions",
@@ -106,7 +108,7 @@ DIAGNOSTICS: Final[Sequence[DiagnosticSpec]] = (
     DiagnosticSpec(
         id="cast_failure",
         severity=Severity.FATAL,
-        pattern=re.compile("attempt to cast type (\\S+) to type (\\S+)"),
+        pattern=re.compile("[Aa]ttempt to cast type (.+?) to type (.+)"),
         groups=("from_type", "to_type"),
         cause="a boundary condition of the wrong kind was used where another kind was required",
         fix_note="replace the {from_type} boundary condition with one of kind {to_type} to match the field",
@@ -116,7 +118,7 @@ DIAGNOSTICS: Final[Sequence[DiagnosticSpec]] = (
         id="field_mesh_mismatch",
         severity=Severity.FATAL,
         pattern=re.compile(
-            "Number of cells in mesh and field do not match|size (\\d+) is not equal to the given value of (\\d+)"
+            "Number of cells in mesh and field do not match|[Ss]ize (\\d+) is not equal to the (?:given value of|expected length) (\\d+)"
         ),
         groups=("got", "expected"),
         cause="a field file was written for a different mesh than the one currently loaded",
@@ -132,6 +134,7 @@ DIAGNOSTICS: Final[Sequence[DiagnosticSpec]] = (
         fix_note="create or restore the missing file at {path} and check the case path settings",
         source=Source.CORPUS,
     ),
+    # Neither current source prints this; kept so existing callers keep working.
     DiagnosticSpec(
         id="solution_singularity",
         severity=Severity.FATAL,
@@ -216,7 +219,7 @@ DIAGNOSTICS: Final[Sequence[DiagnosticSpec]] = (
         groups=(),
         cause="checkMesh found cells with zero or inverted volume, so the mesh is unusable",
         fix_note="regenerate or repair the mesh so every cell has positive volume before retrying the run",
-        source=Source.INFERRED,
+        source=Source.CORPUS,
     ),
     DiagnosticSpec(
         id="zero_negative_face_area",
@@ -236,18 +239,16 @@ DIAGNOSTICS: Final[Sequence[DiagnosticSpec]] = (
         groups=("faces",),
         cause="{faces} faces point away from their owner cell so fluxes would get the wrong sign",
         fix_note="fix the mesh so all {faces} incorrectly oriented faces point outward from their owner cell",
-        source=Source.INFERRED,
+        source=Source.CORPUS,
     ),
     DiagnosticSpec(
         id="severe_non_orthogonality",
         severity=Severity.WARNING,
-        pattern=re.compile(
-            "\\*\\*\\*\\s*Number of severely non-orthogonal[^:]*: (\\d+)"
-        ),
+        pattern=re.compile("\\*\\s*Number of severely non-orthogonal[^:]*: (\\d+)"),
         groups=("faces",),
         cause="{faces} faces meet their neighbours at a very oblique angle, degrading gradient accuracy",
         fix_note="raise nNonOrthogonalCorrectors in fvSolution or regenerate the mesh with better orthogonality",
-        source=Source.INFERRED,
+        source=Source.CORPUS,
     ),
     DiagnosticSpec(
         id="mesh_checks_failed",
