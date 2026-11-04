@@ -230,6 +230,7 @@ class _LogFileMonitor(AbstractContextManager["_LogFileMonitor"]):
     @override
     def __enter__(self) -> Self:
         """Enter context manager."""
+        self._skip_existing_content()
         return self
 
     @override
@@ -247,14 +248,23 @@ class _LogFileMonitor(AbstractContextManager["_LogFileMonitor"]):
         """Find all log files in the case directory."""
         return list(self.case_path.glob("log.*"))
 
+    def _skip_existing_content(self) -> None:
+        """Ignore what the log files already hold, which is from earlier runs."""
+        for log_file in self._find_log_files():
+            with contextlib.suppress(OSError):
+                self._monitored_files[log_file] = log_file.stat().st_size
+
     def _read_new_lines(self, log_file: Path, /) -> list[str]:
         """Read new lines from a log file since last check."""
         try:
             current_size = log_file.stat().st_size
             last_size = self._monitored_files.get(log_file, 0)
 
-            if current_size <= last_size:
+            if current_size == last_size:
                 return []
+
+            if current_size < last_size:  # rewritten by the current run
+                last_size = 0
 
             with log_file.open("r", encoding="utf-8", errors="ignore") as f:
                 f.seek(last_size)
@@ -306,6 +316,8 @@ class _AsyncLogFileMonitor(
     @override
     async def __aenter__(self) -> Self:
         """Enter async context manager."""
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self._skip_existing_content)
         return self
 
     @override
