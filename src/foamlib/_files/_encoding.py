@@ -136,7 +136,8 @@ def _write_dimensioned(
     _write_dimension_set(fp, value.dimensions)
     _write(fp, b" ")
     if isinstance(value.value, np.ndarray):
-        _write_array(fp, value.value, keywords=None, format_=format_)
+        # A vector or tensor is written as "(x y z)", with no length prefix
+        _write_array(fp, value.value, keywords=(), format_=None)
     else:
         _write(fp, str(value.value).encode())
 
