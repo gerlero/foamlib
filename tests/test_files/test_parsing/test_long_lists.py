@@ -38,3 +38,21 @@ def test_parsing_work_grows_linearly(
         return parsed_entries
 
     assert work(200) < 2.5 * work(100)
+
+
+def test_label_keywords_keep_their_value_parser() -> None:
+    # After a failed "keyword value;" attempt, cellLabels still gets its own
+    # (here binary) value parser
+    contents = b"(plain cellLabels 1(\x07\x00\x00\x00);)"
+    ret: Any = _parser._parse_list(contents, 0)
+    assert ret[1] == len(contents)
+    [plain, (keyword, labels)] = ret[0]
+    assert (plain, keyword, labels.tolist()) == ("plain", "cellLabels", [7])
+
+    # A failed faceLabels attempt does not stop the next item from being tried
+    # as "keyword value;"
+    contents = b"2(faceLabels 0 foo bar;)"
+    assert _parser._parse_list(contents, 0) == (
+        ["faceLabels", (0, ("foo", "bar"))],
+        len(contents),
+    )
