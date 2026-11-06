@@ -12,6 +12,7 @@ from foamlib._files._parsing import _parser
     "item",
     [
         "patch{i}",
+        "cellLabels{i}",
         "6({i} 1 2 3 4 5)",
         "hex ({i} 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)",
     ],

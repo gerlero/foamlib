@@ -768,7 +768,11 @@ def _parse_list(
 
             # These keywords have their own value parser, so the position
             # where their attempt fails says nothing about the other items
-            generic = not contents.startswith(_PRIMITIVE_LIST_KEYWORDS_BYTES, pos)
+            generic = True
+            if contents.startswith(_PRIMITIVE_LIST_KEYWORDS_BYTES, pos):
+                with contextlib.suppress(ParseError):
+                    token, _ = _parse_token(contents, pos)
+                    generic = token not in _PRIMITIVE_LIST_KEYWORDS
 
             if generic and pos < no_semicolon_before:
                 item, pos = _parse_data_entry(contents, pos)
