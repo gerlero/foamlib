@@ -240,6 +240,7 @@ def _encoded_field(
     /,
     *,
     format_: Literal["ascii", "binary"] | None,
+    scalar: bool = False,
 ) -> Field:
     binary = format_ == "binary"
     match value:
@@ -263,14 +264,15 @@ def _encoded_field(
             except (ValueError, TypeError):
                 msg = f"expected a Field, got {value!r}"
                 raise TypeError(msg) from None
-            return _encoded_field(arr, fp, format_=format_)
+            return _encoded_field(arr, fp, format_=format_, scalar=scalar)
         case _:
             msg = f"expected a Field, got {value!r}"
             raise TypeError(msg)
 
     if isinstance(ret, np.ndarray):
         match ret.shape:
-            case (3,) | (6,) | (9,):
+            # In a scalar field, a 1-D array is always a list of scalars
+            case (3,) | (6,) | (9,) if not scalar:
                 _write(fp, b"uniform ")
                 if fp is not None:
                     _write_sequence(fp, ret.tolist())
@@ -416,6 +418,7 @@ def _encoded_dict(
     *,
     keywords: tuple[str, ...],
     format_: Literal["ascii", "binary"] | None,
+    class_: str | None = None,
 ) -> FileDict | SubDict:
     if not isinstance(value, Mapping):
         msg = f"expected a mapping, got {value!r}"
@@ -424,6 +427,10 @@ def _encoded_dict(
     if is_file and format_ is None:
         match value:
             case {"FoamFile": {"format": ("ascii" | "binary") as format_}}:  # ty: ignore[invalid-assignment]
+                pass
+    if is_file and class_ is None:
+        match value:
+            case {"FoamFile": {"class": str() as class_}}:
                 pass
 
     ret: FileDict = {}
@@ -471,6 +478,7 @@ def _encoded_dict(
                     item_fp,
                     keywords=(*keywords, k),
                     format_=format_,
+                    class_=class_,
                 )
                 ret[k] = child  # ty: ignore[invalid-assignment]
             case None:
@@ -485,11 +493,12 @@ def _encoded_dict(
                     ret = add_to_mapping(
                         ret,
                         k,
-                        _encoded_data(  # ty: ignore[no-matching-overload]
-                            v,
+                        _encoded_data(
+                            v,  # ty: ignore[invalid-argument-type]
                             item_fp,
                             keywords=(*keywords, k),
                             format_=format_,
+                            class_=class_,
                         ),
                     )
         _write_keyword_end(item_fp, k, v)
@@ -597,6 +606,7 @@ def _encoded_data_entry(
     *,
     keywords: tuple[str, ...] | None,
     format_: Literal["ascii", "binary"] | None,
+    class_: str | None = None,
 ) -> DataEntry:
     if isinstance(value, Dimensioned):
         _write_dimensioned(fp, value, format_=format_)
@@ -627,7 +637,12 @@ def _encoded_data_entry(
             )
     if keywords is not None and expect_field(keywords):
         with contextlib.suppress(TypeError):
-            return _encoded_field(value, fp, format_=format_)  # ty: ignore[invalid-argument-type]
+            return _encoded_field(
+                value,  # ty: ignore[invalid-argument-type]
+                fp,
+                format_=format_,
+                scalar=class_ is not None and "Scalar" in class_,
+            )
     if keywords == ("dimensions",):
         with contextlib.suppress(TypeError):
             return _encoded_dimension_set(value, fp)  # ty: ignore[invalid-argument-type]
@@ -720,6 +735,7 @@ def _encoded_data(
     *,
     keywords: tuple[str, *tuple[str, ...]] | None,
     format_: Literal["ascii", "binary"] | None,
+    class_: str | None = ...,
 ) -> Data: ...
 
 
@@ -741,6 +757,7 @@ def _encoded_data(
     *,
     keywords: tuple[str, ...] | None,
     format_: Literal["ascii", "binary"] | None,
+    class_: str | None = None,
 ) -> Data | StandaloneData:
     match value:
         case DimensionSet():
@@ -769,13 +786,25 @@ def _encoded_data(
                     ret.append(_encoded_standalone_data_entry(v, fp, format_=format_))  # ty: ignore[invalid-argument-type]
                 else:
                     ret.append(
-                        _encoded_data_entry(v, fp, keywords=keywords, format_=format_)  # ty: ignore[invalid-argument-type]
+                        _encoded_data_entry(
+                            v,  # ty: ignore[invalid-argument-type]
+                            fp,
+                            keywords=keywords,
+                            format_=format_,
+                            class_=class_,
+                        )
                     )
             return tuple(ret)  # ty: ignore[invalid-return-type]
         case _:
             if keywords == ():
                 return _encoded_standalone_data_entry(value, fp, format_=format_)
-            return _encoded_data_entry(value, fp, keywords=keywords, format_=format_)  # ty: ignore[invalid-argument-type]
+            return _encoded_data_entry(
+                value,  # ty: ignore[invalid-argument-type]
+                fp,
+                keywords=keywords,
+                format_=format_,
+                class_=class_,
+            )
 
 
 @overload
@@ -817,6 +846,7 @@ def encoded(
     target: TypeForm[SubDict],
     keywords: tuple[str, *tuple[str, ...]],
     format_: Literal["ascii", "binary"] | None = ...,
+    class_: str | None = ...,
 ) -> SubDict: ...
 
 
@@ -829,6 +859,7 @@ def encoded(
     target: TypeForm[Data],
     keywords: tuple[str, ...] | None = ...,
     format_: Literal["ascii", "binary"] | None = ...,
+    class_: str | None = ...,
 ) -> Data: ...
 
 
@@ -853,24 +884,37 @@ def encoded(
     ] = StandaloneData,
     keywords: tuple[str, ...] | None = None,
     format_: Literal["ascii", "binary"] | None = None,
+    class_: str | None = None,
 ) -> object:
     if target is str:
-        assert keywords is None and format_ is None
+        assert keywords is None and format_ is None and class_ is None
         return _encoded_token(value, fp)  # ty: ignore[invalid-argument-type]
     if target is Tensor:
-        assert keywords is None and format_ is None
+        assert keywords is None and format_ is None and class_ is None
         return _encoded_tensor(value, fp)  # ty: ignore[invalid-argument-type]
     if target is FileDict:
-        assert keywords is None and format_ is None
+        assert keywords is None and format_ is None and class_ is None
         return _encoded_dict(value, fp, keywords=(), format_=None)  # ty: ignore[invalid-argument-type]
     if target is SubDict:
         assert keywords is not None
-        return _encoded_dict(value, fp, keywords=keywords, format_=format_)  # ty: ignore[invalid-argument-type]
+        return _encoded_dict(
+            value,  # ty: ignore[invalid-argument-type]
+            fp,
+            keywords=keywords,
+            format_=format_,
+            class_=class_,
+        )
     if target is Data:
         assert keywords is not None
-        return _encoded_data(value, fp, keywords=keywords, format_=format_)  # ty: ignore[no-matching-overload]
+        return _encoded_data(
+            value,  # ty: ignore[invalid-argument-type]
+            fp,
+            keywords=keywords,  # ty: ignore[invalid-argument-type]
+            format_=format_,
+            class_=class_,
+        )
     if target is StandaloneData:
-        assert keywords is None
+        assert keywords is None and class_ is None
         return _encoded_data(value, fp, keywords=(), format_=format_)  # ty: ignore[no-matching-overload]
     msg = f"unsupported target type: {target}"
     raise TypeError(msg)
