@@ -249,6 +249,34 @@ def test_file_dict_ascii() -> None:
         )
 
 
+@pytest.mark.parametrize("n", [3, 6, 9])
+def test_file_dict_field_class_decides_uniform(n: int) -> None:
+    values = np.arange(1.0, n + 1)
+    items = " ".join(str(v) for v in values.tolist())
+
+    with io.BytesIO() as fp:
+        encoded(
+            {"FoamFile": {"class": "volScalarField"}, "internalField": values},
+            fp,
+            target=FileDict,
+        )
+        assert fp.getvalue() == (
+            b"FoamFile {class volScalarField;} "
+            + f"internalField nonuniform List<scalar> {n}({items});".encode()
+        )
+
+    with io.BytesIO() as fp:
+        encoded(
+            {"FoamFile": {"class": "volVectorField"}, "internalField": values},
+            fp,
+            target=FileDict,
+        )
+        assert fp.getvalue() == (
+            b"FoamFile {class volVectorField;} "
+            + f"internalField uniform ({items});".encode()
+        )
+
+
 def test_file_dict_binary_preserves_float32() -> None:
     values = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
     with io.BytesIO() as fp:
