@@ -480,9 +480,7 @@ def _encoded_dict(
                 ret = add_to_mapping(ret, k, None)
             case _:
                 if k is None:
-                    ret[None] = _encoded_data(  # ty: ignore[invalid-assignment]
-                        v, item_fp, keywords=(), format_=format_
-                    )
+                    ret[None] = _encoded_data(v, item_fp, keywords=(), format_=format_)
                 else:
                     ret = add_to_mapping(
                         ret,
