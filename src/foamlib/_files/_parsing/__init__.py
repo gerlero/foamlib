@@ -77,7 +77,7 @@ class ParsedFile(
         return entry.data
 
     @override
-    def __setitem__(self, key: Never, value: Never, /) -> NoReturn:  # ty: ignore[invalid-method-override] # pragma: no cover
+    def __setitem__(self, key: Never, value: Never, /) -> NoReturn:  # ty: ignore[incompatible-method-override] # pragma: no cover
         msg = "Use 'put' method instead"
         raise NotImplementedError(msg)
 
@@ -141,7 +141,7 @@ class ParsedFile(
     ) -> None: ...
 
     @override
-    def add(  # ty: ignore[invalid-method-override]
+    def add(  # ty: ignore[incompatible-method-override]
         self,
         keywords: tuple[str, ...],
         data: Data | StandaloneData | EllipsisType | None,
