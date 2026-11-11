@@ -292,6 +292,27 @@ def test_file_dict_binary_preserves_float32() -> None:
         )
 
 
+@pytest.mark.parametrize("n", [3, 6, 9])
+def test_file_dict_binary_scalar_field_preserves_float32(n: int) -> None:
+    values = np.arange(1.0, n + 1, dtype=np.float32)
+    with io.BytesIO() as fp:
+        result = encoded(
+            {
+                "FoamFile": {"format": "binary", "class": "volScalarField"},
+                "internalField": values,
+            },
+            fp,
+            target=FileDict,
+        )
+        assert result["internalField"] is values
+        assert fp.getvalue() == (
+            b"FoamFile {format binary; class volScalarField;} "
+            + f"internalField nonuniform List<scalar> {n}(".encode()
+            + values.tobytes()
+            + b");"
+        )
+
+
 def test_file_dict_ascii_loses_float32() -> None:
     values = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
     with io.BytesIO() as fp:

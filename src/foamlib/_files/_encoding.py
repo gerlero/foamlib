@@ -246,7 +246,9 @@ def _encoded_field(
     match value:
         case float() | int():
             ret = float(value)
-        case np.ndarray(shape=(3,) | (6,) | (9,), dtype=np.dtype(kind="f" | "i")):
+        case np.ndarray(shape=(3,) | (6,) | (9,), dtype=np.dtype(kind="f" | "i")) if (
+            not scalar
+        ):
             ret = value.astype(float, copy=False)
         case np.ndarray(
             shape=(_,) | (_, 3) | (_, 6) | (_, 9), dtype=np.dtype(kind="f" | "i")
