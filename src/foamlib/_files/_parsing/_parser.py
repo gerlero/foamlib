@@ -737,6 +737,10 @@ def _parse_field(contents: bytes | bytearray, pos: int, /) -> tuple[Field, int]:
             raise ParseError(contents, pos, expected="'uniform' or 'nonuniform'")
 
 
+_PRIMITIVE_LIST_KEYWORDS = ("cellLabels", "faceLabels", "pointLabels", "flipMap")
+_PRIMITIVE_LIST_KEYWORDS_BYTES = tuple(k.encode() for k in _PRIMITIVE_LIST_KEYWORDS)
+
+
 def _parse_list(
     contents: bytes | bytearray, pos: int, /
 ) -> tuple[list[DataEntry | KeywordEntry | Dict], int]:
@@ -752,19 +756,39 @@ def _parse_list(
     if contents[pos : pos + 1] == b"(":
         pos += 1
         ret: list[DataEntry | KeywordEntry | Dict] = []
+        # Reading an item as "keyword value;" parses the items after it as the
+        # value. If no ";" follows them, the attempt fails at the same position
+        # for every item up to there, so it is not repeated (keeps this O(n)).
+        no_semicolon_before = -1
         while count is None or len(ret) < count:
             pos = _skip(contents, pos)
             if count is None and contents[pos : pos + 1] == b")":
                 pos += 1
                 break
 
-            try:
-                item, pos = _parse_dictionary(contents, pos)
-            except ParseError:
+            # These keywords have their own value parser, so the position
+            # where their attempt fails says nothing about the other items
+            generic = True
+            if contents.startswith(_PRIMITIVE_LIST_KEYWORDS_BYTES, pos):
+                with contextlib.suppress(ParseError):
+                    token, _ = _parse_token(contents, pos)
+                    generic = token not in _PRIMITIVE_LIST_KEYWORDS
+
+            if generic and pos < no_semicolon_before:
+                item, pos = _parse_data_entry(contents, pos)
+                with contextlib.suppress(ParseError):
+                    value, pos = _parse_dictionary(contents, _skip(contents, pos))
+                    item = (item, value)
+            else:
                 try:
-                    item, pos = _parse_keyword_entry(contents, pos)
+                    item, pos = _parse_dictionary(contents, pos)
                 except ParseError:
-                    item, pos = _parse_data_entry(contents, pos)
+                    try:
+                        item, pos = _parse_keyword_entry(contents, pos)
+                    except ParseError as e:
+                        if generic:
+                            no_semicolon_before = e.pos
+                        item, pos = _parse_data_entry(contents, pos)
 
             ret.append(item)
 
@@ -1250,7 +1274,7 @@ def _parse_data_entry(
 def _parse_data(
     contents: bytes | bytearray, pos: int, /, *, keyword: str | None = None
 ) -> tuple[Data, int]:
-    if keyword in ("cellLabels", "faceLabels", "pointLabels", "flipMap"):
+    if keyword in _PRIMITIVE_LIST_KEYWORDS:
         with contextlib.suppress(ParseError):
             return _parse_primitive_list(
                 contents, pos, dtype=bool if keyword == "flipMap" else int
