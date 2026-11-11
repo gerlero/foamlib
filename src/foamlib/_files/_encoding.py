@@ -426,7 +426,7 @@ def _encoded_dict(
             case {"FoamFile": {"format": ("ascii" | "binary") as format_}}:  # ty: ignore[invalid-assignment]
                 pass
 
-    ret: FileDict | SubDict = {}
+    ret: FileDict = {}
     items = list(value.items())
     last = _last_indices(items, directives=True)
     if not is_file:

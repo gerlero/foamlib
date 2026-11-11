@@ -352,7 +352,7 @@ class FoamFile(
 
         @override
         @with_default
-        def popone(self, keyword: str, /) -> "Data | SubDict | None":  # ty: ignore[invalid-attribute-override]
+        def popone(self, keyword: str, /) -> "Data | SubDict | None":  # ty: ignore[incompatible-attribute-override]
             with self._file:
                 ret = self._file[(*self._keywords, keyword)]
                 if isinstance(ret, FoamFile.SubDict):
@@ -802,7 +802,7 @@ class FoamFile(
         keywords: str | tuple[str, ...] | None,
         default: D | None = None,
         /,
-    ) -> "Data | StandaloneData | FoamFile.SubDict | None | D":  # ty: ignore[invalid-method-override]
+    ) -> "Data | StandaloneData | FoamFile.SubDict | None | D":  # ty: ignore[incompatible-method-override]
         return super().get(keywords, default)
 
     @overload
@@ -946,7 +946,7 @@ class FoamFile(
     ) -> None: ...
 
     @override
-    def __setitem__(  # ty: ignore[invalid-method-override]
+    def __setitem__(  # ty: ignore[incompatible-method-override]
         self,
         keywords: "str | tuple[str, ...] | None | slice[None]",
         data: DataLike | StandaloneDataLike | SubDictLike | None | FileDictLike,
@@ -1005,7 +1005,7 @@ class FoamFile(
     ) -> None: ...
 
     @override
-    def add(  # ty: ignore[invalid-method-override]
+    def add(  # ty: ignore[incompatible-method-override]
         self,
         keywords: str | tuple[str, ...] | None,
         data: DataLike | StandaloneDataLike | SubDictLike | None,
@@ -1136,7 +1136,7 @@ class FoamFile(
         return FoamFile.ItemsView(self, include_header=include_header)
 
     @override
-    def update(  # ty: ignore[invalid-method-override]
+    def update(  # ty: ignore[incompatible-method-override]
         self,
         other: SupportsKeysAndGetItem[
             str | None,
@@ -1155,7 +1155,7 @@ class FoamFile(
             super().update(other, **kwargs)  # ty: ignore[no-matching-overload]
 
     @override
-    def extend(  # ty: ignore[invalid-method-override]
+    def extend(  # ty: ignore[incompatible-method-override]
         self,
         other: SupportsKeysAndGetItem[
             str | None,
@@ -1174,7 +1174,7 @@ class FoamFile(
             super().extend(other, **kwargs)  # ty: ignore[no-matching-overload]
 
     @override
-    def merge(  # ty: ignore[invalid-method-override]
+    def merge(  # ty: ignore[incompatible-method-override]
         self,
         other: SupportsKeysAndGetItem[
             str | None, DataLike | StandaloneDataLike | SubDictLike | None
@@ -1343,7 +1343,7 @@ class FoamFieldFile(FoamFile):
             return super().__getitem__(keyword)  # ty: ignore[invalid-return-type]
 
         @override
-        def __setitem__(  # ty: ignore[invalid-method-override]
+        def __setitem__(  # ty: ignore[incompatible-method-override]
             self,
             keyword: str,
             data: SubDictLike,
@@ -1408,7 +1408,7 @@ class FoamFieldFile(FoamFile):
         ) -> None: ...
 
         @override
-        def __setitem__(  # ty: ignore[invalid-method-override]
+        def __setitem__(  # ty: ignore[incompatible-method-override]
             self,
             keyword: str,
             data: DataLike | SubDictLike | None,
