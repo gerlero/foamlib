@@ -63,3 +63,28 @@ def test_generic_parser_is_not_used(monkeypatch: pytest.MonkeyPatch) -> None:
     faces = " ".join(f"{4 + i % 3}({' '.join(['1'] * (4 + i % 3))})" for i in range(n))
     assert len(loads(f"{n}({faces})")) == n  # ty: ignore[invalid-argument-type]
     assert calls <= 1  # only the check for another entry after the list
+
+
+@pytest.mark.parametrize(
+    "faces",
+    [
+        b"3(4(0 1 2 3) 3(7 8 9) 4(4 5 6 7))",
+        b"(\n3 ( 1 2 3 )\n4(0 1\n2 3)\n)",
+        b"0()",
+    ],
+)
+def test_faces_of_3_and_4_vertices_give_arrays(faces: bytes) -> None:
+    fast, end = _parser._parse_ascii_any_size_faces_list(faces, 0)
+    reference, reference_end = _parser._parse_ascii_faces_like_list(faces, 0)
+
+    assert end == reference_end
+    assert len(fast) == len(reference)
+    for face, reference_face in zip(fast, reference, strict=True):
+        assert face.dtype == reference_face.dtype
+        assert face.tolist() == reference_face.tolist()
+
+
+def test_zero_padded_sizes_are_left_to_other_parsers() -> None:
+    with pytest.raises(ParseError):
+        _parser._parse_ascii_any_size_faces_list(b"1(03(1 2 3))", 0)
+    assert loads("1(03(1 2 3))") == [[1, 2, 3]]

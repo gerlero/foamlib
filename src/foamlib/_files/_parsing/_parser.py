@@ -587,17 +587,21 @@ def _parse_ascii_faces_like_list(
     return ret, pos
 
 
+# Sizes can't start with 0, so that a list of faces with 3 and 4 vertices only
+# is one that `_parse_ascii_faces_like_list` also accepts
 _UNCOMMENTED_ANY_SIZE_FACES_LIST = re.compile(
-    rb"(?:\s*[0-9]+\s*\(\s*[0-9\s]*\))*\s*\)", re.ASCII
+    rb"(?:\s*+[1-9][0-9]*+\s*+\(\s*+[0-9\s]*+\))*+\s*\)", re.ASCII
 )
 
 
 def _parse_ascii_any_size_faces_list(
     contents: bytes | bytearray, pos: int, /
-) -> tuple[list[DataEntry | KeywordEntry | Dict], int]:
-    """Parse faces of any size (5+ vertices need this) without the generic parser.
+) -> tuple[list[Any], int]:
+    """Parse faces of any size, without comments, in one pass.
 
-    The result has the same form the generic parser gives: lists of ints.
+    Faces with 3 and 4 vertices only give what `_parse_ascii_faces_like_list`
+    gives (arrays). Otherwise the result has the same form the generic parser
+    gives (lists of ints).
     """
     try:
         count, pos = _parse_number(contents, pos, target=int)
@@ -613,29 +617,25 @@ def _parse_ascii_any_size_faces_list(
         raise ParseError(contents, pos, expected="faces-like list")
     data = bytes(contents[pos : match.end() - 1])
 
-    chars = np.frombuffer(data, dtype=np.uint8)
-    is_digit = (chars >= ord("0")) & (chars <= ord("9"))
-    numbers_so_far = np.cumsum(is_digit & ~np.concatenate(([False], is_digit[:-1])))
-    sizes = numbers_so_far[chars == ord(")")] - numbers_so_far[chars == ord("(")]
-
+    # A -1 marks where each face opens (the list itself has no signs)
     values = np.fromstring(
-        data.replace(b"(", b" ").replace(b")", b" ").decode("ascii"),
+        data.replace(b"(", b" -1 ").replace(b")", b" ").decode("ascii"),
         sep=" ",
-        dtype=np.int64,
+        dtype=int,
     )
-    ends = np.cumsum(sizes + 1)
+    starts = np.flatnonzero(values == -1) + 1
+    sizes = np.diff(starts, append=len(values) + 2) - 2
 
     # Each face must have as many vertices as its size says
     if (count is not None and len(sizes) != count) or not np.array_equal(
-        values[ends - sizes - 1], sizes
+        values[starts - 2], sizes
     ):
         raise ParseError(contents, pos, expected="faces-like list")
 
-    flat: list[Any] = values.tolist()
-    ret: list[DataEntry | KeywordEntry | Dict] = [
-        flat[end - size : end] for end, size in zip(ends.tolist(), sizes.tolist())
-    ]
-    return ret, match.end()
+    slices = map(slice, starts.tolist(), (starts + sizes).tolist())
+    if ((sizes == 3) | (sizes == 4)).all():
+        return list(map(values.__getitem__, slices)), match.end()
+    return list(map(values.tolist().__getitem__, slices)), match.end()
 
 
 @overload
@@ -1430,9 +1430,9 @@ def _parse_standalone_data_entry(
     with contextlib.suppress(ParseError):
         return _parse_ascii_vector_list(contents, pos)
     with contextlib.suppress(ParseError):
-        return _parse_ascii_faces_like_list(contents, pos)
-    with contextlib.suppress(ParseError):
         return _parse_ascii_any_size_faces_list(contents, pos)
+    with contextlib.suppress(ParseError):
+        return _parse_ascii_faces_like_list(contents, pos)
 
     try:
         entry1, pos1 = _parse_data_entry(contents, pos)
