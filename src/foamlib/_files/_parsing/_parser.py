@@ -1417,7 +1417,7 @@ def _parse_standalone_data_entry(
         case None, _:
             assert pos2 is not None
             return entry2, pos2  # ty: ignore[invalid-return-type]
-        case _ if pos1 > pos2:  # ty: ignore[unsupported-operator]
+        case _ if pos1 >= pos2:  # ty: ignore[unsupported-operator]
             assert pos1 is not None
             assert pos2 is not None
             return entry1, pos1
