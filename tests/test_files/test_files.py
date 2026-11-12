@@ -179,6 +179,37 @@ def test_field_file_types(tmp_path: Path) -> None:
         assert isinstance(f["boundaryField"]["inlet"].value, np.ndarray)
 
 
+@pytest.mark.parametrize("shape", [(4,), (4, 3)])
+def test_binary_field_keeps_float32(tmp_path: Path, shape: tuple[int, ...]) -> None:
+    values = np.arange(np.prod(shape), dtype=np.float32).reshape(shape)
+    path = tmp_path / "testField"
+
+    f = FoamFieldFile(path)
+    f.format = "binary"
+    f.internal_field = values
+    f.boundary_field = {"inlet": {"type": "fixedValue", "value": values}}
+
+    assert path.read_bytes().count(b"4(" + values.tobytes() + b")") == 2
+
+    f = FoamFieldFile(path)
+    for field in (f.internal_field, f.boundary_field["inlet"].value):
+        assert isinstance(field, np.ndarray)
+        assert field.dtype == np.float32
+        assert np.array_equal(field, values)
+
+
+def test_ascii_field_loses_float32(tmp_path: Path) -> None:
+    path = tmp_path / "testField"
+
+    f = FoamFieldFile(path)
+    f.internal_field = np.arange(4, dtype=np.float32)
+
+    for field in (f.internal_field, FoamFieldFile(path).internal_field):
+        assert isinstance(field, np.ndarray)
+        assert field.dtype == np.float64
+        assert np.array_equal(field, [0, 1, 2, 3])
+
+
 @pytest.fixture
 def cavity() -> Generator[FoamCase, None, None]:
     tutorials_path = Path(os.environ["FOAM_TUTORIALS"])
