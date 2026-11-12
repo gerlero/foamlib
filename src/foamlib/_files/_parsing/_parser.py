@@ -57,10 +57,13 @@ _IS_POSSIBLE_INTEGER = [False] * 256
 for c in b"0123456789-+":
     _IS_POSSIBLE_INTEGER[c] = True
 
-_COMMENTS = re.compile(rb"(?:(?:/\*(?:[^*]|\*(?!/))*\*/)|(?://(?:\\\n|[^\n])*))+")
-_SKIP = re.compile(rb"(?:\s+|" + _COMMENTS.pattern + rb")+")
-_POSSIBLE_FLOAT = re.compile(rb"[0-9.\-+einfatyEINFATY]+", re.ASCII)
-_POSSIBLE_INTEGER = re.compile(rb"[0-9\-+]+", re.ASCII)
+# The quantifiers are possessive ("++", "*+") so that a list that does not match
+# is rejected in linear time, without trying every way to split a run of
+# digits or whitespace
+_COMMENTS = re.compile(rb"(?:(?:/\*(?:[^*]|\*(?!/))*+\*/)|(?://(?:\\\n|[^\n])*+))++")
+_SKIP = re.compile(rb"(?:\s++|" + _COMMENTS.pattern + rb")++")
+_POSSIBLE_FLOAT = re.compile(rb"[0-9.\-+einfatyEINFATY]++", re.ASCII)
+_POSSIBLE_INTEGER = re.compile(rb"[0-9\-+]++", re.ASCII)
 
 
 class ParseError(Exception):
@@ -305,7 +308,7 @@ class _ASCIINumericListParser[DType: (float, int), *ElShape]:
                     + rb")?\)"
                 )
                 self._uncommented_pattern = re.compile(
-                    rb"(?:\s*(?:" + _POSSIBLE_FLOAT.pattern + rb"))*\s*\)", re.ASCII
+                    rb"(?:\s*+(?:" + _POSSIBLE_FLOAT.pattern + rb"))*+\s*+\)", re.ASCII
                 )
             case (int() as dim,):
                 self._pattern = re.compile(
@@ -318,9 +321,9 @@ class _ASCIINumericListParser[DType: (float, int), *ElShape]:
                     + rb")?\)"
                 )
                 self._uncommented_pattern = re.compile(
-                    rb"(?:\s*\("
-                    + (rb"(?:" + _POSSIBLE_FLOAT.pattern + rb")\s*") * dim
-                    + rb"\)\s*)*\)",
+                    rb"(?:\s*+\("
+                    + (rb"(?:" + _POSSIBLE_FLOAT.pattern + rb")\s*+") * dim
+                    + rb"\)\s*+)*+\)",
                     re.ASCII,
                 )
             case _:
