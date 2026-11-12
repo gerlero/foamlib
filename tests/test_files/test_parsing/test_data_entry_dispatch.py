@@ -49,3 +49,7 @@ def test_each_kind_of_entry_is_still_read() -> None:
     assert parsed["g"] == float("inf")
     assert parsed["h"] is False
     assert parsed["i"] == [("k", 1), ("k", 1)]
+
+
+def test_item_followed_by_a_dictionary_in_a_list() -> None:
+    assert loads("x (a b { c 1; } d);") == {"x": ["a", ("b", {"c": 1}), "d"]}
