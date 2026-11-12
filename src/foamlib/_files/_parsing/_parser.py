@@ -776,13 +776,17 @@ def _parse_list(
 
             if generic and pos < no_semicolon_before:
                 item, pos = _parse_data_entry(contents, pos)
-                with contextlib.suppress(ParseError):
-                    value, pos = _parse_dictionary(contents, _skip(contents, pos))
-                    item = (item, value)
+                after = _skip(contents, pos)
+                if contents[after : after + 1] == b"{":
+                    with contextlib.suppress(ParseError):
+                        value, pos = _parse_dictionary(contents, after)
+                        item = (item, value)
             else:
-                try:
-                    item, pos = _parse_dictionary(contents, pos)
-                except ParseError:
+                item = None
+                if contents[pos : pos + 1] == b"{":
+                    with contextlib.suppress(ParseError):
+                        item, pos = _parse_dictionary(contents, pos)
+                if item is None:
                     try:
                         item, pos = _parse_keyword_entry(contents, pos)
                     except ParseError as e:
@@ -1256,17 +1260,60 @@ def _parse_dictionary(contents: bytes | bytearray, pos: int, /) -> tuple[Dict, i
 def _parse_data_entry(
     contents: bytes | bytearray, pos: int, /
 ) -> tuple[DataEntry, int]:
-    for parser in (
-        _parse_field,
-        _parse_typed_list,
-        _parse_list,
-        _parse_dimensioned,
-        _parse_dimensions,
-        _parse_number,
-        _parse_switch,
-    ):
+    # Only try the parsers that can accept an entry starting with this byte
+    # (in the same order as trying them all)
+    first = contents[pos : pos + 1]
+
+    if first == b"(":
         with contextlib.suppress(ParseError):
-            return parser(contents, pos)
+            return _parse_list(contents, pos)
+
+    elif first and first in b"0123456789+-":
+        with contextlib.suppress(ParseError):
+            number, end = _parse_number(contents, pos)
+            if isinstance(number, int) and number >= 0:
+                # May be the count of a list
+                after = _skip(contents, end)
+                if contents[after : after + 1] in (b"(", b"{"):
+                    with contextlib.suppress(ParseError):
+                        return _parse_list(contents, pos)
+            return number, end
+
+    elif first == b"[":
+        with contextlib.suppress(ParseError):
+            return _parse_dimensioned(contents, pos)
+        with contextlib.suppress(ParseError):
+            return _parse_dimensions(contents, pos)
+
+    elif first:
+        if contents.startswith((b"uniform", b"nonuniform"), pos):
+            with contextlib.suppress(ParseError):
+                return _parse_field(contents, pos)
+        elif contents.startswith(b"List<", pos):
+            with contextlib.suppress(ParseError):
+                return _parse_typed_list(contents, pos)
+
+        try:
+            token, end = _parse_token(contents, pos)
+        except ParseError:
+            token = None
+        else:
+            after = _skip(contents, end)
+            if contents[after : after + 1] == b"[":
+                with contextlib.suppress(ParseError):
+                    return _parse_dimensioned(contents, pos)
+
+        if _IS_POSSIBLE_FLOAT[first[0]]:
+            with contextlib.suppress(ParseError):
+                return _parse_number(contents, pos)
+
+        match token:
+            case "yes" | "true" | "on":
+                return True, end
+            case "no" | "false" | "off":
+                return False, end
+            case str():
+                return token, end
 
     return _parse_token(contents, pos)
 
