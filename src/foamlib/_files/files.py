@@ -313,7 +313,7 @@ class FoamFile(
         def getall(
             self, keyword: str, /
         ) -> Collection["Data | FoamFile.SubDict | None"]:
-            return self._file.getall((*self._keywords, keyword))  # ty: ignore[invalid-return-type]
+            return self._file.getall((*self._keywords, keyword))  # ty: ignore[invalid-explicit-return]
 
         @override
         def __getitem__(self, keyword: str, /) -> "Data | FoamFile.SubDict | None":
@@ -453,7 +453,7 @@ class FoamFile(
                 ret = ret[k]
                 assert isinstance(ret, Mapping)
 
-            return ret  # ty: ignore[invalid-return-type]
+            return ret  # ty: ignore[invalid-explicit-return]
 
     @property
     def version(self) -> float:
@@ -749,7 +749,7 @@ class FoamFile(
                 return [FoamFile.SubDict(self, keywords)]  # ty: ignore[invalid-argument-type]
 
         assert not any(r is ... for r in ret)
-        return deepcopy(ret)  # ty: ignore[invalid-return-type]
+        return deepcopy(ret)  # ty: ignore[invalid-explicit-return]
 
     @overload
     def get(
@@ -1052,7 +1052,7 @@ class FoamFile(
                 ret = deepcopy(ret)
             self._get_parsed().popone(keywords)
 
-        return ret  # ty: ignore[invalid-return-type]
+        return ret  # ty: ignore[invalid-explicit-return]
 
     @overload
     def _iteritems(
@@ -1340,7 +1340,7 @@ class FoamFieldFile(FoamFile):
             keyword: str,
             /,
         ) -> "FoamFieldFile.BoundarySubDict":
-            return super().__getitem__(keyword)  # ty: ignore[invalid-return-type]
+            return super().__getitem__(keyword)  # ty: ignore[invalid-explicit-return]
 
         @override
         def __setitem__(  # ty: ignore[incompatible-method-override]
