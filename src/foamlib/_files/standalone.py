@@ -130,6 +130,6 @@ def loads(
         file.pop("FoamFile", None)
 
     if len(file) == 1 and None in file:
-        return file[None]  # ty: ignore[invalid-return-type]
+        return file[None]  # ty: ignore[invalid-explicit-return]
 
     return file
