@@ -122,6 +122,27 @@ def test_new_field(tmp_path: Path) -> None:
     assert f.class_ == "volVectorField"
 
 
+def test_scalar_field_of_length_3_is_nonuniform(tmp_path: Path) -> None:
+    path = tmp_path / "p"
+    path.write_text(
+        "FoamFile { version 2.0; format ascii; class volScalarField; object p; }\n"
+        "internalField uniform 0;\n"
+        "boundaryField { inlet { type fixedValue; value uniform 0; } }\n"
+    )
+    values = np.array([1.0, 2.0, 3.0])
+
+    f = FoamFieldFile(path)
+    f.internal_field = values
+    f.boundary_field["inlet"].value = values
+
+    contents = path.read_text()
+    assert "internalField nonuniform List<scalar> 3(1.0 2.0 3.0);" in contents
+    assert "value nonuniform List<scalar> 3(1.0 2.0 3.0);" in contents
+    f = FoamFieldFile(path)
+    assert np.array_equal(f.internal_field, values)
+    assert np.array_equal(f.boundary_field["inlet"].value, values)
+
+
 def test_field_file_types(tmp_path: Path) -> None:
     with FoamFieldFile(tmp_path / "testField") as f:
         f["dimensions"] = [0, 1, 2, 0, 0, 0, 0]
