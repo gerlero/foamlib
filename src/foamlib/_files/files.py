@@ -583,22 +583,32 @@ class FoamFile(
         add: bool,
     ) -> None:
         """Shared method for performing entry operations (setitem and add)."""
-        match keywords, data:
-            case (), Mapping():
-                msg = "Cannot set a mapping as a standalone value.\nNote: use file[:] = {...} to replace file contents with a mapping"
-                raise TypeError(msg)
-            case (), _:
-                data = encoded(data, target=StandaloneData)  # ty: ignore[no-matching-overload]
-            case _, {}:
-                data = encoded(data, target=SubDict, keywords=keywords)  # ty: ignore[no-matching-overload]
-            case _, None:
-                pass
-            case _, _:
-                data = encoded(data, target=Data, keywords=keywords)  # ty: ignore[no-matching-overload]
-
         indentation = b"    " * (len(keywords) - 1)
 
         with self:
+            # Fields keep float32 only in binary files, so the format is needed here
+            try:
+                format_ = self.format
+            except (KeyError, FileNotFoundError):
+                format_ = None
+
+            match keywords, data:
+                case (), Mapping():
+                    msg = "Cannot set a mapping as a standalone value.\nNote: use file[:] = {...} to replace file contents with a mapping"
+                    raise TypeError(msg)
+                case (), _:
+                    data = encoded(data, target=StandaloneData)  # ty: ignore[no-matching-overload]
+                case _, {}:
+                    data = encoded(  # ty: ignore[no-matching-overload]
+                        data, target=SubDict, keywords=keywords, format_=format_
+                    )
+                case _, None:
+                    pass
+                case _, _:
+                    data = encoded(  # ty: ignore[no-matching-overload]
+                        data, target=Data, keywords=keywords, format_=format_
+                    )
+
             self._write_header_if_needed(keywords)
             if expect_field(keywords):
                 try:
@@ -613,11 +623,6 @@ class FoamFile(
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords, add=add)
             before, after = self._calculate_spacing(keywords, start, end, add=add)
-
-            try:
-                format_ = self.format
-            except (KeyError, FileNotFoundError):
-                format_ = None
 
             if isinstance(data, Mapping):
                 assert keywords
