@@ -706,7 +706,7 @@ def _parse_binary_numeric_list[
         except ValueError as e:
             raise ParseError(contents, pos, expected="binary numeric list") from e
 
-    return ret, end + 1  # ty: ignore[invalid-return-type]
+    return ret, end + 1  # ty: ignore[invalid-explicit-return]
 
 
 def _parse_tensor(contents: bytes | bytearray, pos: int, /) -> tuple[Tensor, int]:
@@ -1345,7 +1345,7 @@ def _parse_data(
     if len(entries) == 1:
         return entries[0], pos
 
-    return tuple(entries), pos  # ty: ignore[invalid-return-type]
+    return tuple(entries), pos  # ty: ignore[invalid-explicit-return]
 
 
 def _parse_subdictionary(
@@ -1469,15 +1469,15 @@ def _parse_standalone_data_entry(
             return entry1, pos1
         case None, _:
             assert pos2 is not None
-            return entry2, pos2  # ty: ignore[invalid-return-type]
-        case _ if pos1 > pos2:  # ty: ignore[unsupported-operator]
+            return entry2, pos2  # ty: ignore[invalid-explicit-return]
+        case _ if pos1 >= pos2:  # ty: ignore[unsupported-operator]
             assert pos1 is not None
             assert pos2 is not None
             return entry1, pos1
         case _:
             assert pos1 is not None
             assert pos2 is not None
-            return entry2, pos2  # ty: ignore[invalid-return-type]
+            return entry2, pos2  # ty: ignore[invalid-explicit-return]
 
 
 def _parse_standalone_data(
@@ -1497,7 +1497,7 @@ def _parse_standalone_data(
     if len(entries) == 1:
         return entries[0], pos
 
-    return tuple(entries), pos  # ty: ignore[invalid-return-type]
+    return tuple(entries), pos  # ty: ignore[invalid-explicit-return]
 
 
 def _parse_file(contents: bytes | bytearray, pos: int = 0, /) -> tuple[FileDict, int]:
@@ -1601,7 +1601,7 @@ def parse[T: (FileDict, DataEntry, StandaloneDataEntry, str)](
             expected="end of file",
         )
 
-    return ret  # ty: ignore[invalid-return-type]
+    return ret  # ty: ignore[invalid-explicit-return]
 
 
 @dataclasses.dataclass

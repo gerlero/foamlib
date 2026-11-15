@@ -313,7 +313,7 @@ class FoamFile(
         def getall(
             self, keyword: str, /
         ) -> Collection["Data | FoamFile.SubDict | None"]:
-            return self._file.getall((*self._keywords, keyword))  # ty: ignore[invalid-return-type]
+            return self._file.getall((*self._keywords, keyword))  # ty: ignore[invalid-explicit-return]
 
         @override
         def __getitem__(self, keyword: str, /) -> "Data | FoamFile.SubDict | None":
@@ -453,7 +453,7 @@ class FoamFile(
                 ret = ret[k]
                 assert isinstance(ret, Mapping)
 
-            return ret  # ty: ignore[invalid-return-type]
+            return ret  # ty: ignore[invalid-explicit-return]
 
     @property
     def version(self) -> float:
@@ -600,6 +600,7 @@ class FoamFile(
 
         with self:
             self._write_header_if_needed(keywords)
+            class_ = None
             if expect_field(keywords):
                 try:
                     class_ = self.class_
@@ -608,7 +609,8 @@ class FoamFile(
                 else:
                     if class_ == "dictionary":
                         with contextlib.suppress(TypeError):
-                            self.class_ = vol_field_class(data)
+                            class_ = vol_field_class(data)
+                            self.class_ = class_
 
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords, add=add)
@@ -653,7 +655,12 @@ class FoamFile(
                 with io.BytesIO() as f:
                     if data is not None:
                         encoded(
-                            data, f, target=Data, keywords=keywords, format_=format_
+                            data,
+                            f,
+                            target=Data,
+                            keywords=keywords,
+                            format_=format_,
+                            class_=class_,
                         )
                     val = f.getvalue()
                 with io.BytesIO() as f:
@@ -749,7 +756,7 @@ class FoamFile(
                 return [FoamFile.SubDict(self, keywords)]  # ty: ignore[invalid-argument-type]
 
         assert not any(r is ... for r in ret)
-        return deepcopy(ret)  # ty: ignore[invalid-return-type]
+        return deepcopy(ret)  # ty: ignore[invalid-explicit-return]
 
     @overload
     def get(
@@ -1052,7 +1059,7 @@ class FoamFile(
                 ret = deepcopy(ret)
             self._get_parsed().popone(keywords)
 
-        return ret  # ty: ignore[invalid-return-type]
+        return ret  # ty: ignore[invalid-explicit-return]
 
     @overload
     def _iteritems(
@@ -1340,7 +1347,7 @@ class FoamFieldFile(FoamFile):
             keyword: str,
             /,
         ) -> "FoamFieldFile.BoundarySubDict":
-            return super().__getitem__(keyword)  # ty: ignore[invalid-return-type]
+            return super().__getitem__(keyword)  # ty: ignore[invalid-explicit-return]
 
         @override
         def __setitem__(  # ty: ignore[incompatible-method-override]

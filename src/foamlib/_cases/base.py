@@ -237,7 +237,7 @@ class FoamCaseBase(Sequence["FoamCaseBase.TimeDirectory"], os.PathLike[str]):
     @property
     def application(self) -> str:
         """The application name as set in the controlDict file."""
-        return self.control_dict["application"]  # ty: ignore[invalid-return-type]
+        return self.control_dict["application"]  # ty: ignore[invalid-explicit-return]
 
     @property
     def control_dict(self) -> FoamFile:
