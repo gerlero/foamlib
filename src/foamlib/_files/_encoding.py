@@ -289,7 +289,7 @@ def _encoded_field(
     else:
         _write(fp, b"uniform ")
         _write(fp, str(ret).encode())
-    return ret  # ty: ignore[invalid-return-type]
+    return ret  # ty: ignore[invalid-explicit-return]
 
 
 def _encoded_dimension_set(
@@ -667,7 +667,7 @@ def _encoded_standalone_data_entry(
             else:
                 ret = value
             _write_array(fp, ret, keywords=(), format_=format_)
-            return ret  # ty: ignore[invalid-return-type]
+            return ret  # ty: ignore[invalid-explicit-return]
         case np.ndarray(shape=(_,), dtype=np.dtype(kind="f")):
             ret = value.astype(np.float64, copy=False)
             _write_array(fp, ret, keywords=(), format_=format_)
@@ -678,7 +678,7 @@ def _encoded_standalone_data_entry(
             else:
                 ret = value
             _write_array(fp, ret, keywords=(), format_=format_)
-            return ret  # ty: ignore[invalid-return-type]
+            return ret  # ty: ignore[invalid-explicit-return]
         case np.ndarray(shape=(_, 3 | 4), dtype=np.dtype(kind="i")):
             ret = list(value.astype(int, copy=False))
             _write_faces(fp, ret, format_=format_)
@@ -771,7 +771,7 @@ def _encoded_data(
                     ret.append(
                         _encoded_data_entry(v, fp, keywords=keywords, format_=format_)  # ty: ignore[invalid-argument-type]
                     )
-            return tuple(ret)  # ty: ignore[invalid-return-type]
+            return tuple(ret)  # ty: ignore[invalid-explicit-return]
         case _:
             if keywords == ():
                 return _encoded_standalone_data_entry(value, fp, format_=format_)
