@@ -1,7 +1,7 @@
 import contextlib
 import sys
 from collections.abc import Mapping
-from typing import Literal, overload
+from typing import Any, Literal, overload
 from warnings import warn
 
 if sys.version_info >= (3, 14):
@@ -106,6 +106,13 @@ def _write_faces(
             _write(fp, b" ")
         _write_array(fp, face, keywords=None, format_=format_)
     _write(fp, b")")
+
+
+def _faces_as_parsed(faces: list[np.ndarray], /) -> list[Any]:
+    # Faces with negative labels read back as lists of ints, not arrays
+    if any((face < 0).any() for face in faces):
+        return [face.tolist() for face in faces]
+    return faces
 
 
 def _write_dimension_set(fp: Writer[bytes] | None, value: DimensionSet, /) -> None:
@@ -699,7 +706,7 @@ def _encoded_standalone_data_entry(
         case np.ndarray(shape=(_, 3 | 4), dtype=np.dtype(kind="i")):
             ret = list(value.astype(int, copy=False))
             _write_faces(fp, ret, format_=format_)
-            return ret
+            return _faces_as_parsed(ret)
         case np.ndarray() | Dimensioned() | DimensionSet() | tuple():
             pass
         case [*_]:
@@ -721,7 +728,7 @@ def _encoded_standalone_data_entry(
                 ret.append(e)
             else:
                 _write_faces(fp, ret, format_=format_)
-                return ret
+                return _faces_as_parsed(ret)
     try:
         return _encoded_data_entry(value, fp, keywords=(), format_=format_)  # ty: ignore[invalid-argument-type]
     except TypeError:

@@ -1,10 +1,12 @@
-"""Face lists with faces of 5+ vertices take a fast path."""
+"""Face lists with faces of any size are parsed in one pass."""
 
 from typing import Any
 
+import numpy as np
 import pytest
 
-from foamlib import loads
+from foamlib import dumps, loads
+from foamlib._files._encoding import _encoded_standalone_data_entry
 from foamlib._files._parsing import _parser
 from foamlib._files._parsing._parser import ParseError
 
@@ -25,7 +27,7 @@ def test_same_result_as_the_generic_parser(monkeypatch: pytest.MonkeyPatch) -> N
     def unavailable(*_: Any) -> Any:
         raise ParseError(b"", 0, expected="")
 
-    monkeypatch.setattr(_parser, "_parse_ascii_any_size_faces_list", unavailable)
+    monkeypatch.setattr(_parser, "_parse_ascii_faces_like_list", unavailable)
     generic = loads(MIXED)
 
     assert (
@@ -42,11 +44,12 @@ def test_same_result_as_the_generic_parser(monkeypatch: pytest.MonkeyPatch) -> N
         b"2(4(0 1 2 3) 5(1 2 3 4))",  # a face shorter than its size
         b"2(4(0 1 2 3) 5(1 2 3 4 5 6))",  # a face longer than its size
         b"3(4(0 1 2 3) 5(1 2 3 4 5))",  # fewer faces than the count
+        b"2(3(0 1 2) 4(1 2 3))",  # the same with 3 and 4 vertices only
     ],
 )
 def test_inconsistent_sizes_are_rejected(faces: bytes) -> None:
     with pytest.raises(ParseError):
-        _parser._parse_ascii_any_size_faces_list(faces, 0)
+        _parser._parse_ascii_faces_like_list(faces, 0)
 
 
 def test_generic_parser_is_not_used(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -66,25 +69,53 @@ def test_generic_parser_is_not_used(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.parametrize(
-    "faces",
+    ("faces", "expected"),
     [
-        b"3(4(0 1 2 3) 3(7 8 9) 4(4 5 6 7))",
-        b"(\n3 ( 1 2 3 )\n4(0 1\n2 3)\n)",
-        b"0()",
+        (b"3(4(0 1 2 3) 3(7 8 9) 4(4 5 6 7))", [[0, 1, 2, 3], [7, 8, 9], [4, 5, 6, 7]]),
+        (b"(\n3 ( 1 2 3 )\n4(0 1\n2 3)\n)", [[1, 2, 3], [0, 1, 2, 3]]),
+        (b"2(3(1 /* a */ 2 3) // b\n 4 /**/ (0 1 2 3))", [[1, 2, 3], [0, 1, 2, 3]]),
     ],
 )
-def test_faces_of_3_and_4_vertices_give_arrays(faces: bytes) -> None:
-    fast, end = _parser._parse_ascii_any_size_faces_list(faces, 0)
-    reference, reference_end = _parser._parse_ascii_faces_like_list(faces, 0)
+def test_faces_of_3_and_4_vertices_give_arrays(faces: bytes, expected: Any) -> None:
+    parsed, end = _parser._parse_ascii_faces_like_list(faces, 0)
 
-    assert end == reference_end
-    assert len(fast) == len(reference)
-    for face, reference_face in zip(fast, reference, strict=True):
-        assert face.dtype == reference_face.dtype
-        assert face.tolist() == reference_face.tolist()
+    assert end == len(faces)
+    assert all(
+        isinstance(face, np.ndarray) and face.dtype == np.int64 for face in parsed
+    )
+    assert [face.tolist() for face in parsed] == expected
+
+
+def test_comments_between_faces_of_any_size() -> None:
+    faces = b"2(3(1 2 3) /* a */ 5(1 2 // b\n 3 4 5))"
+    assert _parser._parse_ascii_faces_like_list(faces, 0) == (
+        [[1, 2, 3], [1, 2, 3, 4, 5]],
+        len(faces),
+    )
 
 
 def test_zero_padded_sizes_are_left_to_other_parsers() -> None:
     with pytest.raises(ParseError):
-        _parser._parse_ascii_any_size_faces_list(b"1(03(1 2 3))", 0)
+        _parser._parse_ascii_faces_like_list(b"1(03(1 2 3))", 0)
     assert loads("1(03(1 2 3))") == [[1, 2, 3]]
+
+
+@pytest.mark.parametrize(
+    ("faces", "face_type"),
+    [
+        ([[1, 2, 3], [0, 1, 2, 3]], np.ndarray),
+        (np.array([[1, 2, 3], [4, 5, 6]]), np.ndarray),
+        ([[1, 2, 3], [1, 2, 3, 4, 5]], list),
+        ([[-1, 2, 3], [0, 1, 2, 3]], list),
+        ([[-1, 2, 3]], list),
+        (np.array([[-1, 2, 3], [4, 5, 6]]), list),
+    ],
+)
+def test_written_faces_read_back_as_written(faces: Any, face_type: type) -> None:
+    written: Any = _encoded_standalone_data_entry(faces, format_="ascii")
+    read: Any = loads(dumps(faces, ensure_header=False))
+
+    assert type(read) is list
+    assert [type(face) for face in written] == [face_type] * len(faces)
+    assert [type(face) for face in read] == [face_type] * len(faces)
+    assert [list(face) for face in read] == [list(face) for face in faces]

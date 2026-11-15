@@ -4,7 +4,7 @@ import math
 import re
 import sys
 from types import EllipsisType
-from typing import Any, Literal, assert_never, overload
+from typing import Any, assert_never, overload
 from warnings import warn
 
 if sys.version_info >= (3, 15):
@@ -454,157 +454,32 @@ _parse_ascii_symm_tensor_list = _ASCIINumericListParser(dtype=float, elshape=(6,
 _parse_ascii_tensor_list = _ASCIINumericListParser(dtype=float, elshape=(9,))
 
 
-_THREE_FACE_LIKE = re.compile(
-    rb"3(?:"
-    + _SKIP.pattern
-    + rb")?\((?:"
-    + _SKIP.pattern
-    + rb")?(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")(?:"
-    + _SKIP.pattern
-    + rb")?\)"
-)
-_UNCOMMENTED_THREE_FACE_LIKE = re.compile(
-    rb"3\s*\(\s*(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")\s*\)",
-    re.ASCII,
-)
-_FOUR_FACE_LIKE = re.compile(
-    rb"4(?:"
-    + _SKIP.pattern
-    + rb")?\((?:"
-    + _SKIP.pattern
-    + rb")?(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")(?:"
-    + _SKIP.pattern
-    + rb")?\)"
-)
-_UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
-    rb"4\s*\(\s*(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")\s*\)",
-    re.ASCII,
+# Sizes can't start with 0 and labels can't be negative, so that a -1 can
+# mark where each face opens
+_UNCOMMENTED_FACES_LIKE_LIST = re.compile(
+    rb"(?:\s*+[1-9][0-9]*+\s*+\(\s*+[0-9\s]*+\))*+\s*\)", re.ASCII
 )
 _FACES_LIKE_LIST = re.compile(
-    rb"(?:(?:"
-    + _SKIP.pattern
-    + rb")?(?:"
-    + _THREE_FACE_LIKE.pattern
-    + rb"|"
-    + _FOUR_FACE_LIKE.pattern
-    + rb"))*(?:"
-    + _SKIP.pattern
-    + rb")?\)"
-)
-_UNCOMMENTED_FACES_LIKE_LIST = re.compile(
-    rb"(?:\s*(?:"
-    + _UNCOMMENTED_THREE_FACE_LIKE.pattern
-    + rb"|"
-    + _UNCOMMENTED_FOUR_FACE_LIKE.pattern
-    + rb"))*\s*\)",
+    rb"(?:(?:\s++|"
+    + _COMMENTS.pattern
+    + rb")*+[1-9][0-9]*+(?:\s++|"
+    + _COMMENTS.pattern
+    + rb")*+\((?:[0-9\s]++|"
+    + _COMMENTS.pattern
+    + rb")*+\))*+(?:\s++|"
+    + _COMMENTS.pattern
+    + rb")*+\)",
     re.ASCII,
 )
 
 
 def _parse_ascii_faces_like_list(
     contents: bytes | bytearray, pos: int, /
-) -> tuple[list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]], int]:
-    try:
-        count, pos = _parse_number(contents, pos, target=int)
-    except ParseError:
-        count = None
-    else:
-        if count < 0:
-            raise ParseError(contents, pos, expected="non-negative list count")
-        pos = _skip(contents, pos)
-
-    pos = _expect(contents, pos, b"(")
-
-    if match := _UNCOMMENTED_FACES_LIKE_LIST.match(contents, pos):
-        data = contents[pos : match.end() - 1]
-        pos = match.end()
-
-    elif match := _FACES_LIKE_LIST.match(contents, pos):
-        data = contents[pos : match.end() - 1]
-        pos = match.end()
-
-        data = _COMMENTS.sub(b" ", data)
-
-    if not match:
-        raise ParseError(contents, pos, expected="faces-like list")
-
-    data = data.replace(b"(", b" ").replace(b")", b" ")
-    try:
-        data = data.decode("ascii")
-    except UnicodeDecodeError as e:
-        raise ParseError(contents, pos, expected="faces-like list") from e
-
-    try:
-        values = np.fromstring(data, sep=" ", dtype=int)
-    except ValueError as e:
-        raise ParseError(contents, pos, expected="faces-like list") from e
-
-    ret: list[np.ndarray] = []
-    i = 0
-    while i < len(values):
-        n = values[i]
-        ret.append(values[i + 1 : i + n + 1])
-        i += n + 1
-
-    if count is not None and len(ret) != count:
-        raise ParseError(contents, pos, expected=f"{count} faces (got {len(ret)})")
-
-    return ret, pos
-
-
-# Sizes can't start with 0, so that a list of faces with 3 and 4 vertices only
-# is one that `_parse_ascii_faces_like_list` also accepts
-_UNCOMMENTED_ANY_SIZE_FACES_LIST = re.compile(
-    rb"(?:\s*+[1-9][0-9]*+\s*+\(\s*+[0-9\s]*+\))*+\s*\)", re.ASCII
-)
-
-
-def _parse_ascii_any_size_faces_list(
-    contents: bytes | bytearray, pos: int, /
 ) -> tuple[list[Any], int]:
-    """Parse faces of any size, without comments, in one pass.
+    """Parse a list of faces of any size, in one pass.
 
-    Faces with 3 and 4 vertices only give what `_parse_ascii_faces_like_list`
-    gives (arrays). Otherwise the result has the same form the generic parser
-    gives (lists of ints).
+    Faces with 3 and 4 vertices only give arrays, as they always have.
+    Otherwise each face is a list of ints, as the generic parser gives.
     """
     try:
         count, pos = _parse_number(contents, pos, target=int)
@@ -615,12 +490,13 @@ def _parse_ascii_any_size_faces_list(
 
     pos = _expect(contents, pos, b"(")
 
-    match = _UNCOMMENTED_ANY_SIZE_FACES_LIST.match(contents, pos)
-    if not match:
+    if match := _UNCOMMENTED_FACES_LIKE_LIST.match(contents, pos):
+        data = bytes(contents[pos : match.end() - 1])
+    elif match := _FACES_LIKE_LIST.match(contents, pos):
+        data = _COMMENTS.sub(b" ", contents[pos : match.end() - 1])
+    else:
         raise ParseError(contents, pos, expected="faces-like list")
-    data = bytes(contents[pos : match.end() - 1])
 
-    # A -1 marks where each face opens (the list itself has no signs)
     values = np.fromstring(
         data.replace(b"(", b" -1 ").replace(b")", b" ").decode("ascii"),
         sep=" ",
@@ -1432,8 +1308,6 @@ def _parse_standalone_data_entry(
         return _parse_ascii_float_list(contents, pos)
     with contextlib.suppress(ParseError):
         return _parse_ascii_vector_list(contents, pos)
-    with contextlib.suppress(ParseError):
-        return _parse_ascii_any_size_faces_list(contents, pos)
     with contextlib.suppress(ParseError):
         return _parse_ascii_faces_like_list(contents, pos)
 
