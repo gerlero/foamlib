@@ -600,6 +600,7 @@ class FoamFile(
 
         with self:
             self._write_header_if_needed(keywords)
+            class_ = None
             if expect_field(keywords):
                 try:
                     class_ = self.class_
@@ -608,7 +609,8 @@ class FoamFile(
                 else:
                     if class_ == "dictionary":
                         with contextlib.suppress(TypeError):
-                            self.class_ = vol_field_class(data)
+                            class_ = vol_field_class(data)
+                            self.class_ = class_
 
             parsed = self._get_parsed(missing_ok=True)
             start, end = parsed.entry_location(keywords, add=add)
@@ -653,7 +655,12 @@ class FoamFile(
                 with io.BytesIO() as f:
                     if data is not None:
                         encoded(
-                            data, f, target=Data, keywords=keywords, format_=format_
+                            data,
+                            f,
+                            target=Data,
+                            keywords=keywords,
+                            format_=format_,
+                            class_=class_,
                         )
                     val = f.getvalue()
                 with io.BytesIO() as f:
