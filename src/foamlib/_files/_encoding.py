@@ -1,7 +1,7 @@
 import contextlib
 import sys
 from collections.abc import Mapping
-from typing import Any, Literal, overload
+from typing import Literal, overload
 from warnings import warn
 
 if sys.version_info >= (3, 14):
@@ -108,7 +108,9 @@ def _write_faces(
     _write(fp, b")")
 
 
-def _faces_as_parsed(faces: list[np.ndarray], /) -> list[Any]:
+def _faces_as_parsed(
+    faces: list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]], /
+) -> list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]] | List:
     # Faces with negative labels read back as lists of ints, not arrays
     if any((face < 0).any() for face in faces):
         return [face.tolist() for face in faces]

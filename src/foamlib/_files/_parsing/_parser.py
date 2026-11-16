@@ -4,7 +4,7 @@ import math
 import re
 import sys
 from types import EllipsisType
-from typing import Any, assert_never, overload
+from typing import Literal, assert_never, overload
 from warnings import warn
 
 if sys.version_info >= (3, 15):
@@ -27,6 +27,7 @@ from ...typing import (
     Field,
     FileDict,
     KeywordEntry,
+    List,
     StandaloneData,
     StandaloneDataEntry,
     SubDict,
@@ -475,7 +476,10 @@ _FACES_LIKE_LIST = re.compile(
 
 def _parse_ascii_faces_like_list(
     contents: bytes | bytearray, pos: int, /
-) -> tuple[list[Any], int]:
+) -> tuple[
+    list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]] | List,
+    int,
+]:
     """Parse a list of faces of any size, in one pass.
 
     Faces with 3 and 4 vertices only give arrays, as they always have.
