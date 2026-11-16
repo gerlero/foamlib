@@ -27,6 +27,7 @@ from ...typing import (
     Field,
     FileDict,
     KeywordEntry,
+    List,
     StandaloneData,
     StandaloneDataEntry,
     SubDict,
@@ -454,140 +455,70 @@ _parse_ascii_symm_tensor_list = _ASCIINumericListParser(dtype=float, elshape=(6,
 _parse_ascii_tensor_list = _ASCIINumericListParser(dtype=float, elshape=(9,))
 
 
-_THREE_FACE_LIKE = re.compile(
-    rb"3(?:"
-    + _SKIP.pattern
-    + rb")?\((?:"
-    + _SKIP.pattern
-    + rb")?(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")(?:"
-    + _SKIP.pattern
-    + rb")?\)"
-)
-_UNCOMMENTED_THREE_FACE_LIKE = re.compile(
-    rb"3\s*\(\s*(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")\s*\)",
-    re.ASCII,
-)
-_FOUR_FACE_LIKE = re.compile(
-    rb"4(?:"
-    + _SKIP.pattern
-    + rb")?\((?:"
-    + _SKIP.pattern
-    + rb")?(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"(?:"
-    + _SKIP.pattern
-    + rb"))(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")(?:"
-    + _SKIP.pattern
-    + rb")?\)"
-)
-_UNCOMMENTED_FOUR_FACE_LIKE = re.compile(
-    rb"4\s*\(\s*(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb"\s*)(?:"
-    + _POSSIBLE_INTEGER.pattern
-    + rb")\s*\)",
-    re.ASCII,
+# Sizes can't start with 0 and labels can't be negative, so that a -1 can
+# mark where each face opens
+_UNCOMMENTED_FACES_LIKE_LIST = re.compile(
+    rb"(?:\s*+[1-9][0-9]*+\s*+\(\s*+[0-9\s]*+\))*+\s*\)", re.ASCII
 )
 _FACES_LIKE_LIST = re.compile(
-    rb"(?:(?:"
-    + _SKIP.pattern
-    + rb")?(?:"
-    + _THREE_FACE_LIKE.pattern
-    + rb"|"
-    + _FOUR_FACE_LIKE.pattern
-    + rb"))*(?:"
-    + _SKIP.pattern
-    + rb")?\)"
-)
-_UNCOMMENTED_FACES_LIKE_LIST = re.compile(
-    rb"(?:\s*(?:"
-    + _UNCOMMENTED_THREE_FACE_LIKE.pattern
-    + rb"|"
-    + _UNCOMMENTED_FOUR_FACE_LIKE.pattern
-    + rb"))*\s*\)",
+    rb"(?:(?:\s++|"
+    + _COMMENTS.pattern
+    + rb")*+[1-9][0-9]*+(?:\s++|"
+    + _COMMENTS.pattern
+    + rb")*+\((?:[0-9\s]++|"
+    + _COMMENTS.pattern
+    + rb")*+\))*+(?:\s++|"
+    + _COMMENTS.pattern
+    + rb")*+\)",
     re.ASCII,
 )
 
 
 def _parse_ascii_faces_like_list(
     contents: bytes | bytearray, pos: int, /
-) -> tuple[list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]], int]:
+) -> tuple[
+    list[np.ndarray[tuple[Literal[3, 4]], np.dtype[np.int64]]] | List,
+    int,
+]:
+    """Parse a list of faces of any size, in one pass.
+
+    Faces with 3 and 4 vertices only give arrays, as they always have.
+    Otherwise each face is a list of ints, as the generic parser gives.
+    """
     try:
         count, pos = _parse_number(contents, pos, target=int)
     except ParseError:
         count = None
     else:
-        if count < 0:
-            raise ParseError(contents, pos, expected="non-negative list count")
         pos = _skip(contents, pos)
 
     pos = _expect(contents, pos, b"(")
 
     if match := _UNCOMMENTED_FACES_LIKE_LIST.match(contents, pos):
-        data = contents[pos : match.end() - 1]
-        pos = match.end()
-
+        data = bytes(contents[pos : match.end() - 1])
     elif match := _FACES_LIKE_LIST.match(contents, pos):
-        data = contents[pos : match.end() - 1]
-        pos = match.end()
-
-        data = _COMMENTS.sub(b" ", data)
-
-    if not match:
+        data = _COMMENTS.sub(b" ", contents[pos : match.end() - 1])
+    else:
         raise ParseError(contents, pos, expected="faces-like list")
 
-    data = data.replace(b"(", b" ").replace(b")", b" ")
-    try:
-        data = data.decode("ascii")
-    except UnicodeDecodeError as e:
-        raise ParseError(contents, pos, expected="faces-like list") from e
+    values = np.fromstring(
+        data.replace(b"(", b" -1 ").replace(b")", b" ").decode("ascii"),
+        sep=" ",
+        dtype=int,
+    )
+    starts = np.flatnonzero(values == -1) + 1
+    sizes = np.diff(starts, append=len(values) + 2) - 2
 
-    try:
-        values = np.fromstring(data, sep=" ", dtype=int)
-    except ValueError as e:
-        raise ParseError(contents, pos, expected="faces-like list") from e
+    # Each face must have as many vertices as its size says
+    if (count is not None and len(sizes) != count) or not np.array_equal(
+        values[starts - 2], sizes
+    ):
+        raise ParseError(contents, pos, expected="faces-like list")
 
-    ret: list[np.ndarray] = []
-    i = 0
-    while i < len(values):
-        n = values[i]
-        ret.append(values[i + 1 : i + n + 1])
-        i += n + 1
-
-    if count is not None and len(ret) != count:
-        raise ParseError(contents, pos, expected=f"{count} faces (got {len(ret)})")
-
-    return ret, pos
+    slices = map(slice, starts.tolist(), (starts + sizes).tolist())
+    if ((sizes == 3) | (sizes == 4)).all():
+        return list(map(values.__getitem__, slices)), match.end()
+    return list(map(values.tolist().__getitem__, slices)), match.end()
 
 
 @overload
