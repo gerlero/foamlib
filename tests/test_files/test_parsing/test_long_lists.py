@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from foamlib import loads
+from foamlib import DimensionSet, loads
 from foamlib._files._parsing import _parser
 
 
@@ -39,6 +39,30 @@ def test_parsing_work_grows_linearly(
         return parsed_entries
 
     assert work(200) < 2.5 * work(100)
+
+
+def test_items_are_parsed_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The entries read while trying an item as "keyword value;" are kept as
+    # the next items instead of being parsed again
+    parsed_entries = 0
+    parse_data_entry = _parser._parse_data_entry
+
+    def counting(*args: Any) -> Any:
+        nonlocal parsed_entries
+        parsed_entries += 1
+        return parse_data_entry(*args)
+
+    monkeypatch.setattr(_parser, "_parse_data_entry", counting)
+    n = 100
+    assert loads(f"x ({' '.join(f'patch{i}' for i in range(n))});") == {
+        "x": [f"patch{i}" for i in range(n)]
+    }
+    assert parsed_entries <= n + 3
+
+
+def test_kept_items_are_the_same_as_parsed_items() -> None:
+    # A dimension set is a tuple, but it is one item
+    assert loads("x ($v [0 1 0 0 0 0 0]);") == {"x": ["$v", DimensionSet(length=1)]}
 
 
 def test_label_keywords_keep_their_value_parser() -> None:
