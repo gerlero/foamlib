@@ -107,10 +107,12 @@ class ParsedFile(
         /,
     ) -> None:
         start, end = self.entry_location(keywords)
+        # A new entry has no children to remove
+        existed = keywords in self._parsed
 
         self._update_content(start, end, content)
         self._parsed[keywords] = ParsedEntry(data, start, start + len(content))
-        if keywords:
+        if keywords and existed:
             self._remove_child_entries(keywords)
 
     @overload

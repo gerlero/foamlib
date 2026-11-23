@@ -526,3 +526,35 @@ def test_view_repr(tmp_path: Path) -> None:
     popped_none = d.popone("test_key")
     assert popped_none is None
     assert "test_key" not in d
+
+
+def test_dict_write_does_not_rescan_the_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A dictionary is written one entry at a time, so anything that walks the
+    # whole file for every entry makes writing it quadratic
+    from foamlib._files._parsing import ParsedFile
+
+    lens = removals = 0
+    file_len = FoamFile.__len__
+    remove_child_entries = ParsedFile._remove_child_entries
+
+    def counting_len(self: FoamFile) -> int:
+        nonlocal lens
+        lens += 1
+        return file_len(self)
+
+    def counting_removals(self: ParsedFile, keywords: tuple[str, ...]) -> None:
+        nonlocal removals
+        removals += 1
+        remove_child_entries(self, keywords)
+
+    monkeypatch.setattr(FoamFile, "__len__", counting_len)
+    monkeypatch.setattr(ParsedFile, "_remove_child_entries", counting_removals)
+
+    n = 100
+    f = FoamFile(tmp_path / "testDict")
+    f["sub"] = {f"k{i}": i for i in range(n)}
+    assert f.as_dict()["sub"] == {f"k{i}": i for i in range(n)}
+    assert lens < 10
+    assert removals < 10

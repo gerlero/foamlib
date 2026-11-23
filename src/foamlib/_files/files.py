@@ -1,6 +1,7 @@
 import contextlib
 import io
 import os
+import re
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
 from types import EllipsisType
@@ -32,6 +33,8 @@ from ._io import FoamFileIO
 from ._util import SupportsKeysAndGetItem
 from .standalone import dumps, loads
 from .types import Dimensioned, DimensionSet
+
+_NONSPACE = re.compile(rb"\S")
 
 
 class FoamFile(
@@ -504,7 +507,7 @@ class FoamFile(
         """Write FoamFile header if needed."""
         try:
             write_header = (
-                not self and "FoamFile" not in self and keywords != ("FoamFile",)
+                "FoamFile" not in self and not self and keywords != ("FoamFile",)
             )
         except FileNotFoundError:
             write_header = keywords != ("FoamFile",)
@@ -538,16 +541,16 @@ class FoamFile(
                 # The content before 'start' already includes both spacing and indentation,
                 # so we don't add any leading newlines to prevent blank line accumulation
                 before = b""
-            elif start and not parsed.contents[:start].endswith(b"\n\n"):
-                if parsed.contents[:start].endswith(b"\n"):
+            elif start and not parsed.contents.endswith(b"\n\n", 0, start):
+                if parsed.contents.endswith(b"\n", 0, start):
                     before = b"\n" if len(keywords) <= 1 else b""
                 else:
                     before = b"\n\n" if len(keywords) <= 1 else b"\n"
             else:
                 before = b""
         # Add operations use simpler spacing logic
-        elif start and not parsed.contents[:start].endswith(b"\n\n"):
-            if parsed.contents[:start].endswith(b"\n"):
+        elif start and not parsed.contents.endswith(b"\n\n", 0, start):
+            if parsed.contents.endswith(b"\n", 0, start):
                 before = b"\n" if len(keywords) <= 1 else b""
             else:
                 before = b"\n\n" if len(keywords) <= 1 else b"\n"
@@ -565,9 +568,9 @@ class FoamFile(
                 after = b"\n"
             else:
                 after = b""
-        elif not parsed.contents[end:].strip() or parsed.contents[end:].startswith(
-            b"}"
-        ):
+        elif _NONSPACE.search(
+            parsed.contents, end
+        ) is None or parsed.contents.startswith(b"}", end):
             after = b"\n" + b"    " * (len(keywords) - 2)
         else:
             after = b""
