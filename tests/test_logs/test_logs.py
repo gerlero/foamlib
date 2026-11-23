@@ -297,6 +297,31 @@ def test_every_way_in_gives_the_same_log() -> None:
         assert log.name == str(path)
 
 
+@pytest.mark.parametrize("binary", [False, True])
+def test_load_does_not_depend_on_how_the_file_is_read(binary: bool) -> None:
+    # load() reads the file in chunks, so lines, "\r\n" and UTF-8 characters
+    # can be split between reads
+    text = (LOGS / "log.pimpleFoam.diverged").read_text().replace("\n", "\r\n")
+    text = "Case   : /home/usér\r\n" + text
+    data = text.encode() if binary else text
+
+    class Trickle:
+        pos = 0
+
+        def read(self, size: int = -1, /) -> str | bytes:
+            n = 1 + self.pos % 7
+            chunk = data[self.pos : self.pos + n]
+            self.pos += n
+            return chunk
+
+    log = FoamLog.load(Trickle())  # ty: ignore[invalid-argument-type]
+    expected = FoamLog.loads(data)
+    assert log.case == "/home/usér"
+    assert log.summary() == expected.summary()
+    assert log.diagnostics == expected.diagnostics
+    assert log.steps == expected.steps
+
+
 def test_residual_history_is_one_field_only() -> None:
     rows = FoamLog.read(LOGS / "log.interFoam.esi").residual_history("Ux")
     assert [(r.initial, r.final, r.iterations) for r in rows] == [
