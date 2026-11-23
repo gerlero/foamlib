@@ -721,12 +721,61 @@ def _parse_list(
                     with contextlib.suppress(ParseError):
                         item, pos = _parse_dictionary(contents, pos)
                 if item is None:
-                    try:
-                        item, pos = _parse_keyword_entry(contents, pos)
-                    except ParseError as e:
-                        if generic:
-                            no_semicolon_before = e.pos
-                        item, pos = _parse_data_entry(contents, pos)
+                    # Try "keyword value;", parsing the keyword and the value
+                    # only once
+                    item, pos = _parse_data_entry(contents, pos)
+                    value_pos = _skip(contents, pos)
+                    if contents[value_pos : value_pos + 1] == b"{":
+                        with contextlib.suppress(ParseError):
+                            value, pos = _parse_dictionary(contents, value_pos)
+                            item = (item, value)
+                    else:
+                        try:
+                            value, end = _parse_data(
+                                contents,
+                                value_pos,
+                                keyword=item if isinstance(item, str) else None,
+                            )
+                        except ParseError as e:
+                            if generic:
+                                no_semicolon_before = e.pos
+                        else:
+                            end = _skip(contents, end)
+                            if contents[end : end + 1] == b";":
+                                item = (item, value)
+                                pos = end + 1
+                            elif generic:
+                                no_semicolon_before = end
+                                # No ";", so the entries parsed as the value
+                                # are the next items of the list. Keep them
+                                # instead of parsing them again, unless
+                                # parsing them as items could give something
+                                # else: they'd go past the count, one is a
+                                # keyword with its own value parser, or the
+                                # last one is followed by a dictionary.
+                                # (a dimension set is a tuple, but one entry)
+                                entries = (
+                                    list(value)
+                                    if isinstance(value, tuple)
+                                    and not isinstance(value, DimensionSet)
+                                    else [value]
+                                )
+                                if (
+                                    (
+                                        count is None
+                                        or len(ret) + 1 + len(entries) <= count
+                                    )
+                                    and not any(
+                                        isinstance(entry, str)
+                                        and entry in _PRIMITIVE_LIST_KEYWORDS
+                                        for entry in entries
+                                    )
+                                    and contents[end : end + 1] != b"{"
+                                ):
+                                    ret.append(item)
+                                    ret.extend(entries[:-1])
+                                    item = entries[-1]
+                                    pos = end
 
             ret.append(item)
 
