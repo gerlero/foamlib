@@ -9,6 +9,7 @@ with a budget.
 
 from __future__ import annotations
 
+import codecs
 import os
 import sys
 from dataclasses import dataclass, field
@@ -20,7 +21,7 @@ from . import _scan
 from ._diagnostics import BY_ID, PRE_EXEC_REASONS, Severity
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Iterator, Mapping, Sequence
 
     if sys.version_info >= (3, 14):
         from io import Reader
@@ -166,6 +167,24 @@ class PhaseInfo:
         return self.fraction_last - self.fraction_first
 
 
+def _lines(fp: Reader[bytes] | Reader[str], /) -> Iterator[str]:
+    """Split a file into lines as :meth:`str.splitlines` does, without reading it
+    all into memory."""
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    rest = ""
+    while chunk := fp.read(1 << 16):
+        if isinstance(chunk, bytes):
+            chunk = decoder.decode(chunk)
+        lines = (rest + chunk).splitlines(keepends=True)
+        # the last line may continue in the next chunk (even "\r" may be
+        # followed by "\n"), so keep it back
+        rest = lines.pop() if lines else ""
+        for line in lines:
+            yield from line.splitlines()
+    rest += decoder.decode(b"", final=True)
+    yield from rest.splitlines()
+
+
 def _trend(
     first_final: float | None, last_final: float | None, n: int, tol: float
 ) -> Trend:
@@ -274,7 +293,7 @@ class FoamLog:
         """
         if name is None and isinstance(fp_name := getattr(fp, "name", None), str):
             name = fp_name
-        return cls.loads(fp.read(), name=name, tolerance=tolerance)
+        return cls._build(_scan.scan(_lines(fp)), name=name, tolerance=tolerance)
 
     @classmethod
     def loads(
