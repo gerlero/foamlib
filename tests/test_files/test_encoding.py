@@ -203,6 +203,21 @@ def test_bool_tokens() -> None:
         encoded({False: True}, target=FileDict)  # ty: ignore[no-matching-overload]
 
 
+@pytest.mark.parametrize("token", ["nan", "NaN", "inf", "Infinity", ".5", ".5e1"])
+def test_numeric_tokens(token: str) -> None:
+    number = float(token)
+    with pytest.warns(UserWarning, match="will be stored as"):
+        assert encoded({"a": token, "b": [token, "x"]}, target=FileDict) == {
+            "a": pytest.approx(number, nan_ok=True),
+            "b": [pytest.approx(number, nan_ok=True), "x"],
+        }
+
+    assert encoded(token, target=str) == token
+
+    for word in ["inflow", "nanoparticle", "infinityWall", ".5mm"]:
+        assert encoded(word) == word
+
+
 def test_token_without_writer() -> None:
     assert encoded("myKeyword", target=str) == "myKeyword"
 
