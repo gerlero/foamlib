@@ -43,6 +43,7 @@ from ..typing import (
 )
 from ._common import expect_field
 from ._parsing import FoamFileDecodeError, parse
+from ._parsing._parser import _POSSIBLE_FLOAT
 from ._util import add_to_mapping
 from .types import _NAMED_DIMENSION_IDS, Dimensioned, DimensionSet
 
@@ -637,6 +638,14 @@ def _encoded_data_entry(
                 warn(msg, stacklevel=2)
                 return _encoded_switch(True, fp)
             case _:
+                # Some tokens are read back as numbers (e.g. "nan", "Infinity", ".5")
+                with contextlib.suppress(FoamFileDecodeError):
+                    if _POSSIBLE_FLOAT.fullmatch(ret.encode()) and isinstance(
+                        number := parse(ret, target=DataEntry), float
+                    ):
+                        msg = f"{ret!r} will be stored as {number!r}"
+                        warn(msg, stacklevel=2)
+                        return _encoded_float(number, fp)
                 _write(fp, ret.encode())
                 return ret
     if isinstance(value, bool):
