@@ -392,6 +392,9 @@ def _encoded_plain_dict(
                 if k.startswith("#"):
                     msg = f"#-directive {k!r} not allowed here"
                     raise ValueError(msg)
+                if k.startswith("$") and v is not None and not isinstance(v, Mapping):
+                    msg = f"$-entry {k!r} cannot have a value; got value {v!r}"
+                    raise ValueError(msg)
                 if k in ret:
                     warn(
                         f"Duplicate dictionary keyword found: {k!r}. Only the last entry will be stored.",
@@ -464,6 +467,9 @@ def _encoded_dict(
                 if k.startswith("#") and isinstance(v, Mapping):
                     msg = f"#-directive {k!r} cannot have a mapping as value; got value {v!r}"
                     raise TypeError(msg)
+                if k.startswith("$") and v is not None and not isinstance(v, Mapping):
+                    msg = f"$-entry {k!r} cannot have a value; got value {v!r}"
+                    raise ValueError(msg)
                 if not k.startswith("#") and k in ret:
                     kind = "file" if is_file else "subdictionary"
                     warn(

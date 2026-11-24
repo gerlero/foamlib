@@ -660,6 +660,10 @@ class FoamFile(
                     self[(*keywords, k)] = v  # ty: ignore[invalid-assignment]
 
             elif keywords:
+                if keywords[-1].startswith("$") and data is not None:
+                    msg = f"$-entry {keywords[-1]!r} cannot have a value; got value {data!r}"
+                    raise ValueError(msg)
+
                 with io.BytesIO() as f:
                     if data is not None:
                         encoded(
