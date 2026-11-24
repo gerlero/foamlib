@@ -404,6 +404,17 @@ class Dimensioned:
             )
         return f"{type(self).__name__}({self.value}, {self.dimensions})"
 
+    @override
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Dimensioned):
+            return NotImplemented
+
+        return (
+            self.dimensions == other.dimensions
+            and np.array_equal(self.value, other.value)
+            and self.name == other.name
+        )
+
     def __add__(self, other: "Dimensioned | Tensor", /) -> "Dimensioned":
         if not isinstance(other, Dimensioned):
             other = Dimensioned(other, DimensionSet())

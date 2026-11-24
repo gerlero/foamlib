@@ -117,6 +117,22 @@ def test_dimensioned() -> None:
         np.array(dimensioned)
 
 
+def test_dimensioned_eq() -> None:
+    g = Dimensioned(9.81, DimensionSet(length=1, time=-2), "g")
+    assert g == Dimensioned(9.81, DimensionSet(length=1, time=-2), "g")
+    assert g != Dimensioned(9.8, DimensionSet(length=1, time=-2), "g")
+    assert g != Dimensioned(9.81, DimensionSet(length=1), "g")
+    assert g != Dimensioned(9.81, DimensionSet(length=1, time=-2))
+    assert g != 9.81
+
+    u = Dimensioned([1, 2, 3], DimensionSet(length=1, time=-1))
+    assert u == Dimensioned(np.array([1.0, 2.0, 3.0]), DimensionSet(length=1, time=-1))
+    assert u != Dimensioned([1, 2, 4], DimensionSet(length=1, time=-1))
+    assert u != Dimensioned(1, DimensionSet(length=1, time=-1))
+
+    assert loads(dumps({"g": g}, ensure_header=False)) == {"g": g}
+
+
 def test_dimensioned_invalid_array() -> None:
     """Test Dimensioned with invalid numpy array shapes."""
     # Array with wrong shape
