@@ -221,6 +221,26 @@ def test_bare_dollar_reference_entry() -> None:
     )
 
 
+def test_dollar_entry_is_followed_by_the_next_entry() -> None:
+    # entry::New reads nothing after a $name keyword that is not followed by
+    # '{', so what follows is the next entry (as in the movingCone tutorial)
+    contents = b'solvers {p {tolerance 1e-6;} "pcorr.*" {$p tolerance 0.02;}}'
+    expected: FileDict = {
+        "solvers": {
+            "p": {"tolerance": 1e-6},
+            '"pcorr.*"': {"$p": None, "tolerance": 0.02},
+        }
+    }
+    assert _file_dict(contents) == expected
+    parsed = ParsedFile(contents)
+    assert parsed[("solvers", '"pcorr.*"', "$p")] is None
+    assert parsed[("solvers", '"pcorr.*"', "tolerance")] == 0.02
+    assert _file_dict(dumps(expected, ensure_header=False)) == expected
+
+    with pytest.raises(ValueError, match="cannot have a value"):
+        dumps({"a": {"$p": 1}})
+
+
 def test_grammar_tolerance_round_trip() -> None:
     cases = [
         b"a {x 1;}; b 2;",

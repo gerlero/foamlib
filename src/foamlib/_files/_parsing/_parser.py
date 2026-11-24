@@ -1353,15 +1353,17 @@ def _parse_subdictionary(
             try:
                 value, pos = _parse_subdictionary(contents, pos)
             except ParseError:
-                try:
-                    value, pos = _parse_data(contents, pos, keyword=keyword)
-                except ParseError:
+                if keyword.startswith("$"):
+                    # A '$' entry is replaced by the entry it refers to and takes no value
+                    # (what follows is the next entry, as in OpenFOAM's entry::New)
                     value = None
-                if keyword.startswith("$") and value is None:
-                    # Bare '$'-reference entry (whole-entry substitution)
                     if contents[pos : pos + 1] == b";":
                         pos += 1
                 else:
+                    try:
+                        value, pos = _parse_data(contents, pos, keyword=keyword)
+                    except ParseError:
+                        value = None
                     pos = _expect(contents, pos, b";")
 
         if keyword in ret and not keyword.startswith("#"):
@@ -1506,15 +1508,19 @@ def _parse_file(contents: bytes | bytearray, pos: int = 0, /) -> tuple[FileDict,
                 try:
                     value, new_pos = _parse_subdictionary(contents, new_pos)
                 except ParseError:
-                    try:
-                        value, new_pos = _parse_data(contents, new_pos, keyword=keyword)
-                    except ParseError:
+                    if keyword.startswith("$"):
+                        # A '$' entry is replaced by the entry it refers to and takes no value
+                        # (what follows is the next entry, as in OpenFOAM's entry::New)
                         value = None
-                    if keyword.startswith("$") and value is None:
-                        # Bare '$'-reference entry (whole-entry substitution)
                         if contents[new_pos : new_pos + 1] == b";":
                             new_pos += 1
                     else:
+                        try:
+                            value, new_pos = _parse_data(
+                                contents, new_pos, keyword=keyword
+                            )
+                        except ParseError:
+                            value = None
                         new_pos = _expect(contents, new_pos, b";")
 
             if keyword in ret and not keyword.startswith("#"):
@@ -1652,15 +1658,17 @@ def _parse_file_located(
                 ret[(*_keywords, keyword)] = ParsedEntry(..., entry_start, new_pos)
                 ret.extend(subdict_result)
             else:
-                try:
-                    value, new_pos = _parse_data(contents, new_pos, keyword=keyword)
-                except ParseError:
+                if keyword.startswith("$"):
+                    # A '$' entry is replaced by the entry it refers to and takes no value
+                    # (what follows is the next entry, as in OpenFOAM's entry::New)
                     value = None
-                if keyword.startswith("$") and value is None:
-                    # Bare '$'-reference entry (whole-entry substitution)
                     if contents[new_pos : new_pos + 1] == b";":
                         new_pos += 1
                 else:
+                    try:
+                        value, new_pos = _parse_data(contents, new_pos, keyword=keyword)
+                    except ParseError:
+                        value = None
                     new_pos = _expect(contents, new_pos, b";")
 
                 if not keyword.startswith("#"):
