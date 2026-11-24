@@ -452,6 +452,29 @@ def test_slice_assign(tmp_path: Path) -> None:
     assert d.as_dict() == {None: "standalone2"}
 
 
+def test_exception_in_with_block_discards_changes(tmp_path: Path) -> None:
+    path = tmp_path / "testDict"
+    f = FoamFile(path)
+    f["a"] = 1
+    before = path.read_bytes()
+
+    with pytest.raises(RuntimeError), f:
+        f["a"] = 2
+        f["b"] = {"c": 3}
+        raise RuntimeError
+
+    assert path.read_bytes() == before
+    assert f.as_dict() == {"a": 1}
+
+    with f:
+        with pytest.raises(RuntimeError), f:
+            f["b"] = 2
+            raise RuntimeError
+        f["c"] = 3
+
+    assert FoamFile(path).as_dict() == {"a": 1, "b": 2, "c": 3}
+
+
 def test_invalid_standalone_assignment(tmp_path: Path) -> None:
     path = tmp_path / "testDict"
     d = FoamFile(path)

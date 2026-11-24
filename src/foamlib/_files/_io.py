@@ -34,9 +34,9 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
         exc_tb: TracebackType | None,
         /,
     ) -> None:
-        """If this is the outermost context, write any deferred file changes to disk."""
+        """If this is the outermost context, write any deferred file changes to disk (unless an exception was raised, in which case they are discarded)."""
         try:
-            if self.__context_depth == 1:
+            if self.__context_depth == 1 and exc_type is None:
                 assert self.__cached_parsed is not None
                 if self.__cached_parsed.modified:
                     contents = self.__cached_parsed.contents

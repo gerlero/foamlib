@@ -65,7 +65,7 @@ class FoamFile(
 
     You can also use the :class:`FoamFile` as a context manager (i.e., within a ``with`` block)
     to make multiple changes to the file while saving any and all changes only once at
-    the end.
+    the end. If the block exits with an exception, the changes are discarded.
 
     :param path: The path to the file. If the file does not exist, it will be created
         when the first change is made. However, if an attempt is made to access entries
