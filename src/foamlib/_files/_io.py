@@ -1,5 +1,7 @@
+import contextlib
 import gzip
 import os
+import tempfile
 import threading
 from contextlib import AbstractContextManager, nullcontext
 from pathlib import Path
@@ -7,6 +9,27 @@ from types import TracebackType
 from typing import Self, override
 
 from ._parsing import ParsedFile
+
+
+def _replace_contents(path: Path, contents: bytes | bytearray, /) -> None:
+    """Write the file so that a failed write leaves it as it was."""
+    path = path.resolve()  # replace the target of a symlink, not the link
+    try:
+        mode = path.stat().st_mode
+    except FileNotFoundError:
+        path.write_bytes(contents)
+        return
+
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(contents)
+        os.chmod(tmp, mode)
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
 
 
 class FoamFileIO(AbstractContextManager["FoamFileIO"]):
@@ -44,7 +67,7 @@ class FoamFileIO(AbstractContextManager["FoamFileIO"]):
                     if self.path.suffix == ".gz":
                         contents = gzip.compress(contents)
 
-                    self.path.write_bytes(contents)
+                    _replace_contents(self.path, contents)
                     self.__cached_parsed.modified = False
                     self.__file_exists = True
         finally:

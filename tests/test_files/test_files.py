@@ -558,3 +558,41 @@ def test_dict_write_does_not_rescan_the_file(
     assert f.as_dict()["sub"] == {f"k{i}": i for i in range(n)}
     assert lens < 10
     assert removals < 10
+
+
+def test_failed_write_leaves_the_file_as_it_was(tmp_path: Path) -> None:
+    resource = pytest.importorskip("resource")
+    import signal
+
+    path = tmp_path / "testDict"
+    f = FoamFile(path)
+    f["a"] = list(range(500))
+    before = path.read_bytes()
+
+    soft, hard = resource.getrlimit(resource.RLIMIT_FSIZE)
+    handler = signal.signal(signal.SIGXFSZ, signal.SIG_IGN)
+    resource.setrlimit(resource.RLIMIT_FSIZE, (len(before) // 2, hard))
+    try:
+        with pytest.raises(OSError):
+            f["a"] = list(range(1000))
+    finally:
+        resource.setrlimit(resource.RLIMIT_FSIZE, (soft, hard))
+        signal.signal(signal.SIGXFSZ, handler)
+
+    assert path.read_bytes() == before
+    assert os.listdir(tmp_path) == ["testDict"]
+
+
+def test_write_keeps_symlink_and_mode(tmp_path: Path) -> None:
+    target = tmp_path / "target"
+    FoamFile(target)["a"] = 1
+    target.chmod(0o640)
+    link = tmp_path / "link"
+    link.symlink_to(target)
+
+    FoamFile(link)["a"] = 2
+
+    assert link.is_symlink()
+    assert FoamFile(target)["a"] == 2
+    assert target.stat().st_mode & 0o777 == 0o640
+    assert sorted(os.listdir(tmp_path)) == ["link", "target"]
